@@ -7,6 +7,7 @@ import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassCard
 import com.anilili.ui.components.glassPanelColor
 import com.anilili.ui.components.glassRimColor
+import com.anilili.ui.components.glassSelectionColor
 import com.anilili.ui.components.glassAtmosphere
 import android.Manifest
 import android.net.Uri
@@ -1148,7 +1149,7 @@ private fun LibraryViewChips(
                         } else {
                             FilterChipDefaults.filterChipColors(
                                 containerColor = glassPanelColor(),
-                                selectedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
+                                selectedContainerColor = glassSelectionColor(),
                                 selectedLabelColor = MaterialTheme.colorScheme.onSurface,
                             )
                         },
@@ -1181,7 +1182,7 @@ private fun LibraryViewChips(
                         } else {
                             FilterChipDefaults.filterChipColors(
                                 containerColor = glassPanelColor(),
-                                selectedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
+                                selectedContainerColor = glassSelectionColor(),
                                 selectedLabelColor = MaterialTheme.colorScheme.onSurface,
                             )
                         },

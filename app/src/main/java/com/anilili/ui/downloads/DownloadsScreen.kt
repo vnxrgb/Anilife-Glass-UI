@@ -1,6 +1,8 @@
 package com.anilili.ui.downloads
 
 import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassSelectionColor
 
 import com.anilili.ui.theme.appCanvas
 import android.content.Context
@@ -509,13 +511,18 @@ fun DownloadsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = device.pagePadding, vertical = 4.dp),
+                    .padding(horizontal = device.pagePadding, vertical = 4.dp)
+                    // Keep trailing categories available in narrow and split-screen windows.
+                    .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 val controlFocus3 = rememberFocusFill()
                 FilterChip(
                     shape = RoundedCornerShape(50),
-                    colors = controlFocus3.chipColors(FilterChipDefaults.filterChipColors()),
+                    colors = controlFocus3.chipColors(FilterChipDefaults.filterChipColors(
+                        containerColor = glassPanelColor(),
+                        selectedContainerColor = glassSelectionColor(),
+                    )),
                     selected = selectedCategory == null,
                     onClick = { selectedCategory = null },
                     label = { Text("All") },
@@ -525,7 +532,10 @@ fun DownloadsScreen(
                     val controlFocus4 = rememberFocusFill()
                     FilterChip(
                     shape = RoundedCornerShape(50),
-                        colors = controlFocus4.chipColors(FilterChipDefaults.filterChipColors()),
+                        colors = controlFocus4.chipColors(FilterChipDefaults.filterChipColors(
+                            containerColor = glassPanelColor(),
+                            selectedContainerColor = glassSelectionColor(),
+                        )),
                         selected = selectedCategory == category,
                         onClick = { selectedCategory = category },
                         label = { Text(category.uppercase()) },
@@ -544,7 +554,10 @@ fun DownloadsScreen(
                     val controlFocus5 = rememberFocusFill()
                     FilterChip(
                     shape = RoundedCornerShape(50),
-                        colors = controlFocus5.chipColors(FilterChipDefaults.filterChipColors()),
+                        colors = controlFocus5.chipColors(FilterChipDefaults.filterChipColors(
+                            containerColor = glassPanelColor(),
+                            selectedContainerColor = glassSelectionColor(),
+                        )),
                         selected = blockIndex == index,
                         onClick = { selectedBlock = index },
                         label = { Text(blocks[index].label) },

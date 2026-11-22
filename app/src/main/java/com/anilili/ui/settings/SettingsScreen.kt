@@ -2113,6 +2113,11 @@ fun SettingsScreen(
                         Modifier.fillMaxWidth().padding(vertical = 2.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
+                        // Center an incomplete final phone row without stretching its cards.
+                        val missing = columns - row.size
+                        if (!device.isTv && missing > 0) {
+                            Spacer(Modifier.weight(missing / 2f))
+                        }
                         row.forEach { tile ->
                             SettingsSectionCard(
                                 tile = tile,
@@ -2121,7 +2126,11 @@ fun SettingsScreen(
                                 modifier = Modifier.weight(1f),
                             )
                         }
-                        repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                        if (!device.isTv && missing > 0) {
+                            Spacer(Modifier.weight(missing / 2f))
+                        } else if (device.isTv) {
+                            repeat(missing) { Spacer(Modifier.weight(1f)) }
+                        }
                     }
                 }
             }

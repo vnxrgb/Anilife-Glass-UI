@@ -1297,7 +1297,7 @@ private fun DetailTabs(
                         )
                         .border(
                             1.dp,
-                            if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.42f)
+                            if (active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.34f)
                             else glassRimColor().copy(alpha = 0.45f),
                             RoundedCornerShape(50),
                         )
