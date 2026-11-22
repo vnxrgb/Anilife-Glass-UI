@@ -55,6 +55,9 @@ fun NextEpisodeCountdown(
         else -> "THE NEXT EPISODE WILL BE RELEASED IN"
     }
     val value = if (remaining <= 0L) "AVAILABLE NOW" else formatAiringCountdown(remaining)
+    // A screen reader should not be interrupted every second by a changing countdown.
+    // Keep the visual clock precise while announcing only minute-level changes.
+    val spokenRemaining = if (remaining <= 0L) 0L else ((remaining + 59L) / 60L) * 60L
 
     Column(
         modifier = modifier
@@ -76,7 +79,7 @@ fun NextEpisodeCountdown(
             // abbreviations letter by letter.
             .clearAndSetSemantics {
                 liveRegion = LiveRegionMode.Polite
-                contentDescription = spokenAiringCountdown(remaining, episode)
+                contentDescription = spokenAiringCountdown(spokenRemaining, episode)
             },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
