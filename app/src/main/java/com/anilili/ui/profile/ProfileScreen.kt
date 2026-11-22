@@ -626,7 +626,7 @@ fun ProfileScreen(
                             top = padding.calculateTopPadding(),
                             bottom = padding.calculateBottomPadding()
                                 .coerceAtLeast(LocalAppChromeBottomInset.current) +
-                                AppChromeListBottomGap + if (device.isTv) 0.dp else 20.dp,
+                                AppChromeListBottomGap + (if (device.isTv) 0.dp else 20.dp),
                         ),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
