@@ -2271,19 +2271,9 @@ fun PlayerSurface(
                     })
                 },
                 bottomRightIcons = {
-                // Labelled pills rather than bare glyphs: which of these opens subtitles and which
-                // opens audio was previously something you found out by pressing one. The label is
-                // dropped again on the narrow tiers, where the row really has no room for it.
-                if (!isFullscreen && episodes.isNotEmpty() && onSelectEpisode != null) {
-                    PlayerActionPill(
-                        label = "Episodes",
-                        icon = Icons.AutoMirrored.Filled.ViewList,
-                        onClick = {
-                            episodeDrawerExpanded = true
-                            phoneControlsInteraction++
-                        },
-                    )
-                }
+                // Portrait inline player shows only the controls not already obvious on
+                // the watch page: subtitles, casting, fullscreen, and settings. The
+                // episode list remains below the video instead of consuming its toolbar.
                 if (isFullscreen && sourceOptions.size > 1) {
                     PlayerActionPill(
                         label = "Sources",

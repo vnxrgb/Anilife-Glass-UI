@@ -1706,13 +1706,37 @@ private fun ContinueRail(
                         // One reachable action menu instead of two large corner discs
                         // obscuring most of the artwork on a 124dp thumbnail. It still
                         // contains Details, Remove and account list-management actions.
-                        CardCornerAction(
-                            icon = Icons.Default.MoreVert,
-                            contentDescription = "More options for ${entry.title}",
-                            onClick = { managedEntry = entry },
-                            modifier = Modifier.align(Alignment.TopEnd).padding(5.dp),
-                            backdrop = thumbnail,
-                        )
+                        // Keep a full 48dp accessible touch target, but paint only a
+                        // 28dp translucent disc. The previous 48dp frosted circle covered
+                        // nearly half of the 124dp thumbnail in the reference screenshots.
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(3.dp)
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .clickable(onClickLabel = "More options for ${entry.title}") {
+                                    managedEntry = entry
+                                },
+                            contentAlignment = Alignment.TopEnd,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(3.dp)
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.65f))
+                                    .border(1.dp, Color.White.copy(alpha = 0.28f), CircleShape),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        }
                         // Keep the resume-time badge inside the artwork rather than adding a
                         // third text line to every small card. Show it only for real playback
                         // history; remote list sync alone does not establish a duration.
