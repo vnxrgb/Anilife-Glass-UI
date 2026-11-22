@@ -959,16 +959,16 @@ private fun SignInOptionRow(
     val shape = RoundedCornerShape(20.dp)
     val focus = rememberFocusFill()
     val container = if (emphasized) {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
     } else {
-        Color.Transparent
+        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.32f)
     }
     Surface(
         onClick = onClick,
         shape = shape,
         color = focus.background(container),
         contentColor = focus.content(MaterialTheme.colorScheme.onSurface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = if (emphasized) 0.9f else 0.6f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = if (emphasized) 0.30f else 0.17f)),
         modifier = Modifier
             .fillMaxWidth()
             .focusFill(focus, shape),
@@ -1652,7 +1652,7 @@ private fun EpisodeDownloadCard(
             onClick = onPlay,
         ),
         shape = shape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.82f),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.54f),
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f)),
     ) {
         Column {

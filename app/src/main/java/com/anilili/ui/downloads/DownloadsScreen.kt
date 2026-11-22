@@ -690,8 +690,7 @@ private fun DownloadSeriesCard(
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
-                .clip(RoundedCornerShape(18.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .glassCard(RoundedCornerShape(22.dp)),
         ) {
             AsyncImage(
                 model = series.artworkUrl,
@@ -845,7 +844,7 @@ private fun EpisodeRow(
             containerColor = if (selected) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
-                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.78f)
+                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.54f)
             },
         ),
         modifier = Modifier

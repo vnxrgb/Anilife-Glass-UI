@@ -811,7 +811,7 @@ private fun HeroPager(
         // a portrait cover fills this box by its width and is trimmed top and bottom, so every dp
         // added here is artwork kept rather than cut. At 270dp it lost a fifth of its height; at
         // this it loses about a ninth.
-        else -> 334.dp
+        else -> 382.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -1064,8 +1064,38 @@ private fun HeroCard(
             }
             val genreLabel = media.genres.take(3).joinToString("  ·  ")
             if (genreLabel.isNotBlank()) {
-                HeroPill(Modifier.padding(top = 12.dp), backdrop = heroArt) {
+                HeroPill(Modifier.padding(top = 10.dp), backdrop = heroArt) {
                     Text(genreLabel, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
+                }
+            }
+            if (!device.isTv) {
+                // The hero is a destination as well as artwork. Keep the actionable
+                // call-to-action visible instead of relying on an undocumented poster tap.
+                Row(
+                    modifier = Modifier.padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Button(
+                        onClick = { onAnimeClick(media.id) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White.copy(alpha = 0.92f),
+                            contentColor = Color.Black,
+                        ),
+                        shape = RoundedCornerShape(50),
+                    ) {
+                        Text("Watch now", fontWeight = FontWeight.Bold)
+                    }
+                    OutlinedButton(
+                        onClick = { onAnimeClick(media.id) },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = Color.Black.copy(alpha = 0.30f),
+                            contentColor = Color.White,
+                        ),
+                        shape = RoundedCornerShape(50),
+                    ) {
+                        Text("Details")
+                    }
                 }
             }
         }

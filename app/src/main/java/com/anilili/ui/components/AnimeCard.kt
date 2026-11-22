@@ -128,7 +128,7 @@ fun AnimeCard(
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
-                .glassCard(RoundedCornerShape(16.dp)),
+                .glassCard(RoundedCornerShape(22.dp)),
         ) {
             // Decorative: the title text below is part of the same merged semantics node.
             AsyncImage(
@@ -161,7 +161,7 @@ fun AnimeCard(
                 maxLines = titleMaxLines,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .padding(top = 5.dp)
+                    .padding(top = 8.dp)
                     .heightIn(min = titleBlockMinHeight),
             )
         }

@@ -405,13 +405,13 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
                     .focusFill(fillFocus1, RoundedCornerShape(14.dp))
                     .clip(RoundedCornerShape(14.dp))
                     .background(
-                        fillFocus1.background(if (active) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surface),
+                        fillFocus1.background(if (active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.17f)
+                        else glassPanelColor()),
                     )
                     .border(
                         width = 1.dp,
-                        color = fillFocus1.content(if (active) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline),
+                        color = fillFocus1.content(if (active) glassRimColor()
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
                         shape = RoundedCornerShape(14.dp),
                     )
                     .clickable { onSelect(date) }
@@ -422,14 +422,14 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
                 Text(
                     text = relativeDayName(date, today) ?: date.format(dayFmt),
                     style = MaterialTheme.typography.labelLarge,
-                    color = fillFocus1.content(if (active) MaterialTheme.colorScheme.onPrimary
+                    color = fillFocus1.content(if (active) MaterialTheme.colorScheme.onSurface
                     else MaterialTheme.colorScheme.onSurface),
                     maxLines = 1,
                 )
                 Text(
                     text = date.format(shortDateFmt),
                     style = MaterialTheme.typography.labelSmall,
-                    color = fillFocus1.content(if (active) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.72f)
+                    color = fillFocus1.content(if (active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
                     else MaterialTheme.colorScheme.onSurfaceVariant),
                 )
             }

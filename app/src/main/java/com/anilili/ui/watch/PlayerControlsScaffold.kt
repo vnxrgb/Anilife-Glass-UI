@@ -679,7 +679,7 @@ internal fun PlayerActionPill(
         modifier = modifier
             .focusFill(fillFocus1, shape)
             .clip(shape)
-            .background(fillFocus1.background(Color(0xFF242738).copy(alpha = 0.68f)), shape)
+            .background(fillFocus1.background(Color.Black.copy(alpha = 0.44f)), shape)
             .border(1.dp, Color.White.copy(alpha = 0.16f), shape)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = if (showLabel) 12.dp else 10.dp, vertical = 8.dp)
@@ -725,7 +725,7 @@ internal fun PlayerTimePill(
     Box(
         modifier = modifier
             .clip(CircleShape)
-            .background(Color(0xFF202333).copy(alpha = 0.72f))
+            .background(Color.Black.copy(alpha = 0.48f))
             .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
             .padding(horizontal = 9.dp, vertical = 3.dp),
     ) {
@@ -858,7 +858,7 @@ internal fun PlayerControlIconButton(
             modifier = Modifier
                 .size(circle)
                 .clip(CircleShape)
-                .background(extraFocus2.background(if (isTv) Color.Black.copy(alpha = 0.58f) else Color(0xFF242738).copy(alpha = 0.72f)), CircleShape)
+                .background(extraFocus2.background(if (isTv) Color.Black.copy(alpha = 0.58f) else Color.Black.copy(alpha = 0.48f)), CircleShape)
                 .then(if (!isTv) Modifier.border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape) else Modifier)
                 .then(
                     if (isTv && !extraFocus2.focused) {
