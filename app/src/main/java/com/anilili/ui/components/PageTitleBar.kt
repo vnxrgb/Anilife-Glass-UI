@@ -68,9 +68,7 @@ fun PageTitleBar(
                         )
                 },
             )
-            // A full rectangular border framed each header like an isolated panel and
-            // created a hard horizontal seam above the screen's first card.
-            .then(if (device.isTv || background != null) Modifier else Modifier)
+            // Keep a soft canvas-backed header without drawing another rectangular border.
             .statusBarsPadding()
             .padding(
                 // A back arrow carries its own touch padding, so the page inset would set it in

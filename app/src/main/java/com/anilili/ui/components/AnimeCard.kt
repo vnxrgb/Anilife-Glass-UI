@@ -117,7 +117,7 @@ fun AnimeCard(
             // combinedClickable's long press is pointer-only; the remote gets its own.
             .dpadClickable(onClick = onClick, onLongClick = { actionsVisible = true })
             .combinedClickable(
-                onClickLabel = "Open details",
+                onClickLabel = "Open details for ${media.title.preferred}",
                 onLongClickLabel = "Move ${media.title.preferred} on your anime list",
                 role = Role.Button,
                 onClick = onClick,

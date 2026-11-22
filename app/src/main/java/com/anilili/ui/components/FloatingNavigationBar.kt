@@ -155,7 +155,7 @@ fun FloatingNavigationBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
-            .padding(bottom = bottomInset + FloatingNavBarMargin),
+            .padding(bottom = bottomInset.coerceAtLeast(0.dp) + FloatingNavBarMargin),
         contentAlignment = Alignment.BottomCenter,
     ) {
         // RenderEffect arrived in Android 12; below it Haze only lays a flat scrim, which is worse
@@ -172,7 +172,7 @@ fun FloatingNavigationBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(FloatingNavBarExpandedHeight)
-                .shadow(9.dp, BarShape)
+                .shadow(6.dp, BarShape)
                 .clip(BarShape)
                 .then(
                     if (blurred) {
@@ -221,7 +221,7 @@ fun FloatingNavDisc(
     Box(
         modifier = modifier
             .size(FloatingNavDiscSize)
-            .shadow(6.dp, CircleShape)
+            .shadow(5.dp, CircleShape)
             .clip(CircleShape)
             .then(
                 if (blurred) {
