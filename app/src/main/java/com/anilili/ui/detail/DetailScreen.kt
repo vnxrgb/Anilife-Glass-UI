@@ -1117,7 +1117,12 @@ private fun DetailActions(
         val controlFocus4 = rememberFocusFill()
         OutlinedButton(
             shape = RoundedCornerShape(50),
-            colors = controlFocus4.buttonColors(ButtonDefaults.outlinedButtonColors()),
+            // A neutral frosted secondary action, even when the anime's accent is vivid.
+            colors = controlFocus4.buttonColors(ButtonDefaults.outlinedButtonColors(
+                containerColor = glassPanelColor(),
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            )),
+            border = androidx.compose.foundation.BorderStroke(1.dp, glassRimColor()),
             onClick = { listMenuVisible = true },
             modifier = Modifier
                 .weight(1f)
