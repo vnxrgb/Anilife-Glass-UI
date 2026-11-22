@@ -136,7 +136,10 @@ fun PageSearchField(
             {
                 val extraFocus1 = rememberFocusFill()
                 IconButton(
-                    colors = extraFocus1.iconButtonColors(IconButtonDefaults.iconButtonColors()),onClick = { onValueChange("") }, modifier = Modifier.focusFill(extraFocus1, CircleShape),) {
+                    colors = extraFocus1.iconButtonColors(IconButtonDefaults.iconButtonColors()),
+                    onClick = { onValueChange("") },
+                    modifier = Modifier.size(48.dp).focusFill(extraFocus1, CircleShape),
+                ) {
                     Icon(Icons.Default.Close, contentDescription = clearLabel)
                 }
             }
@@ -179,7 +182,7 @@ private fun PageSearchButton(
             .fillMaxWidth()
             .heightIn(min = 56.dp)
             .focusFill(fillFocus1, shape)
-            .clickable(role = Role.Button, onClick = onClick),
+            .clickable(role = Role.Button, onClickLabel = "Search ${value.ifEmpty { placeholder }}", onClick = onClick),
         shape = shape,
         color = fillFocus1.background(glassPanelColor()),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)),
@@ -266,7 +269,10 @@ private fun PageSearchDialog(
                 // cannot reach; this is the same affordance as something the D-pad can land on.
                 val extraFocus2 = rememberFocusFill()
                 TextButton(
-                    colors = extraFocus2.buttonColors(ButtonDefaults.textButtonColors()),onClick = { onValueChange("") }, modifier = Modifier.focusFill(extraFocus2, RoundedCornerShape(24.dp)),) { Text(clearLabel) }
+                    colors = extraFocus2.buttonColors(ButtonDefaults.textButtonColors()),
+                    onClick = { onValueChange("") },
+                    modifier = Modifier.heightIn(min = 48.dp).focusFill(extraFocus2, RoundedCornerShape(24.dp)),
+                ) { Text(clearLabel) }
             }
         }
     }
