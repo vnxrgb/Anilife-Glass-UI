@@ -187,6 +187,9 @@ import com.anilili.ui.adaptive.focusFill
 import com.anilili.ui.adaptive.focusHighlight
 import com.anilili.ui.adaptive.rememberFocusFill
 import com.anilili.ui.adaptive.rememberTvFocusTarget
+import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
 import com.anilili.ui.components.AnimeListStatusDialog
 import com.anilili.ui.components.BulkDownloadStatus
 import com.anilili.ui.components.compactMemberCount
@@ -2520,21 +2523,17 @@ private fun MobileEpisodeRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 5.dp)
-            .focusHighlight(RoundedCornerShape(12.dp))
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (selected) MaterialTheme.colorScheme.surfaceVariant
-                else Color.Transparent,
-            )
+            .focusHighlight(RoundedCornerShape(20.dp))
+            .glassCard(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .padding(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             Modifier
-                .width(132.dp)
+                .width(124.dp)
                 .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(9.dp)),
+                .clip(RoundedCornerShape(14.dp)),
         ) {
             EpisodeArtwork(
                 image = episodeArtworkImage(episode.image, fallbackImage),
@@ -3112,12 +3111,12 @@ private fun CompactClickablePill(
             .focusFill(fillFocus7, RoundedCornerShape(10.dp))
             .clip(RoundedCornerShape(10.dp))
             .background(
-                fillFocus7.background(if (active) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.surface),
+                fillFocus7.background(if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
+                else glassPanelColor()),
             )
             .border(
                 1.dp,
-                if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.65f) else glassRimColor(),
                 RoundedCornerShape(10.dp),
             )
             .clickable(enabled = enabled, onClick = onClick)
@@ -3146,7 +3145,7 @@ private fun CompactClickablePill(
         Text(
             label,
             style = MaterialTheme.typography.bodyMedium,
-            color = fillFocus7.content(if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface),
+            color = fillFocus7.content(MaterialTheme.colorScheme.onSurface),
         )
         if (showArrow) {
             Icon(
@@ -3174,8 +3173,8 @@ private fun CompactDropdown(
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
                 .focusFill(fillFocus8, RoundedCornerShape(10.dp))
                 .clip(RoundedCornerShape(10.dp))
-                .background(fillFocus8.background(MaterialTheme.colorScheme.surface))
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
+                .background(fillFocus8.background(glassPanelColor()))
+                .border(1.dp, glassRimColor(), RoundedCornerShape(10.dp))
                 .clickable(enabled = enabled) { expanded = true }
                 .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,

@@ -4,6 +4,7 @@ package com.anilili.ui.profile
 
 
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassCard
 import com.anilili.ui.components.glassAtmosphere
 import android.Manifest
 import android.net.Uri
@@ -2034,14 +2035,23 @@ private fun HistoryCard(
     val cardModifier = if (modifier != Modifier) {
         modifier.focusHighlight(CaptionedCardShape).then(pressModifier)
     } else {
-        Modifier.width(device.posterWidth).focusHighlight(CaptionedCardShape).then(pressModifier)
+        Modifier.width(device.posterWidth.coerceAtMost(148.dp)).focusHighlight(CaptionedCardShape).then(pressModifier)
     }
     Column(cardModifier) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+            Modifier.fillMaxWidth().aspectRatio(1f).glassCard(RoundedCornerShape(20.dp)),
         ) {
             AsyncImage(entry.cover, entry.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Icon(Icons.Default.PlayArrow, contentDescription = "Resume", tint = Color.White, modifier = Modifier.align(Alignment.Center))
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.56f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = "Resume", tint = Color.White)
+            }
             if (poster.shows(PosterElement.DUB) && DubIndex.hasDub(entry.anilistId)) {
                 // Bottom-start like every other card, lifted clear of the progress bar that owns
                 // the last four pixels of this one.

@@ -1081,9 +1081,19 @@ private fun HeroCard(
                     Button(
                         onClick = { onAnimeClick(media.id) },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White.copy(alpha = 0.92f),
-                            contentColor = Color.Black,
+                            containerColor = Color.Transparent,
+                            contentColor = Color.White,
                         ),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.94f),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.94f),
+                                    ),
+                                ),
+                            ),
                         shape = RoundedCornerShape(50),
                     ) {
                         Text("Watch now", fontWeight = FontWeight.Bold)
