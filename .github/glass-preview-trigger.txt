@@ -1,5 +1,5 @@
-Batch 1 coordinated cinematic and inline player preview.
-Source implementation head: f73e0797a4fc42c3f08616bfc1b1fc4210cbe6e6
-Verify mobile unit tests, lint and universal debug APK from this trigger commit.
-Changes include compact inline transport simplification, horizontally scrollable fullscreen action dock, stable seek geometry, chroma-weighted ambient sampling, PixelCopy cancellation safety, frosted player panels, and responsive layout tests.
-Compilation, real-device screenshots, subtitle and Android TV regression acceptance remain pending until independently verified.
+Batch 2 coordinated Home / Details / Browse / floating navigation glass milestone.
+Source implementation commit: 302c16f6664387b3293357284a0d47ff18d09065
+Check: mobile unit tests, lint and one universal mobile APK; Android CI also checks TV.
+Includes consistent neutral glass across search filters and nav, hero artwork/CTA contrast, bounded feature-page dots, accessible Details tabs and overflow-safe facts, narrow navigation, resilient Browse grid columns and pagination guards.
+Pending separate physical-device screenshot comparison and real playback / casting / login smoke test; passing CI is not a claim of visual acceptance.
