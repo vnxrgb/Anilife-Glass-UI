@@ -98,6 +98,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.paneTitle
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
 import com.anilili.ui.components.PageMenuChoice
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.material3.DropdownMenu
@@ -583,14 +585,18 @@ private fun SearchTopBar(
                                     focusManager.moveFocus(FocusDirection.Down)
                                 }),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    focusedContainerColor = glassPanelColor(),
+                                    unfocusedContainerColor = glassPanelColor(),
                                 ),
                             )
                         }
                         val controlFocus1 = rememberFocusFill()
                         Button(
-                            colors = controlFocus1.buttonColors(ButtonDefaults.buttonColors()),
+                            colors = controlFocus1.buttonColors(ButtonDefaults.buttonColors(
+                                containerColor = glassPanelColor(),
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                            )),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, glassRimColor()),
                             onClick = onOpenFilters,
                             contentPadding = PaddingValues(horizontal = 13.dp),
                             modifier = Modifier

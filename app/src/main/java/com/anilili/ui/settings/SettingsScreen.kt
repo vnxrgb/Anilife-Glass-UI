@@ -71,6 +71,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.BorderStroke
+import com.anilili.ui.components.glassCard
 import com.anilili.ui.components.glassPanelColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -3406,11 +3407,11 @@ private fun SettingsSectionCard(
     val fillFocus1 = rememberFocusFill()
     Surface(
         modifier = modifier
-            .focusFill(fillFocus1, RoundedCornerShape(23.dp))
+            .focusFill(fillFocus1, RoundedCornerShape(26.dp))
+            .glassCard(RoundedCornerShape(26.dp))
             .clickable(role = Role.Button, onClick = onClick),
-        shape = RoundedCornerShape(23.dp),
-        color = fillFocus1.background(glassPanelColor()),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.13f)),
+        shape = RoundedCornerShape(26.dp),
+        color = Color.Transparent,
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Column(

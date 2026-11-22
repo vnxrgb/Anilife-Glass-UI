@@ -29,9 +29,9 @@ fun Modifier.glassCard(
         .clip(shape)
         .background(
             Brush.verticalGradient(
-                0f to Color.White.copy(alpha = 0.10f),
-                0.20f to tint.copy(alpha = 0.77f),
-                1f to tint.copy(alpha = 0.57f),
+                0f to Color.White.copy(alpha = 0.16f),
+                0.30f to tint.copy(alpha = 0.76f),
+                1f to tint.copy(alpha = 0.47f),
             ),
         )
         .border(1.dp, rim, shape)
@@ -40,3 +40,11 @@ fun Modifier.glassCard(
 @Composable
 fun glassPanelColor(): Color =
     MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.82f)
+
+/** Consistent selected glass pill, independent of the user's accent hue. */
+@Composable
+fun glassSelectionColor(): Color = Color.White.copy(alpha = 0.18f)
+
+/** A neutral hairline for translucent panels on light artwork and OLED black. */
+@Composable
+fun glassRimColor(): Color = Color.White.copy(alpha = 0.22f)

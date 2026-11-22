@@ -133,6 +133,10 @@ import com.anilili.ui.adaptive.TvRefreshRequest
 import com.anilili.ui.adaptive.focusFill
 import com.anilili.ui.adaptive.focusHighlight
 import com.anilili.ui.adaptive.rememberFocusFill
+import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
+import com.anilili.ui.components.glassSelectionColor
 import com.anilili.ui.components.compactMemberCount
 import com.anilili.ui.components.LocalAppChromeBottomInset
 import com.anilili.ui.components.AnimeListActionsDialog
@@ -1251,15 +1255,16 @@ private fun DetailTabs(
                 Text(
                     text = tab.label,
                     style = MaterialTheme.typography.labelLarge,
-                    color = fillFocus4.content(if (active) MaterialTheme.colorScheme.onPrimary
+                    color = fillFocus4.content(if (active) Color.White
                     else MaterialTheme.colorScheme.onSurfaceVariant),
                     modifier = Modifier
-                        .focusFill(fillFocus4, RoundedCornerShape(18.dp))
-                        .clip(RoundedCornerShape(18.dp))
+                        .focusFill(fillFocus4, RoundedCornerShape(50))
+                        .clip(RoundedCornerShape(50))
                         .background(
-                            fillFocus4.background(if (active) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.surface),
+                            fillFocus4.background(if (active) glassSelectionColor()
+                            else glassPanelColor().copy(alpha = 0.52f)),
                         )
+                        .border(1.dp, if (active) glassRimColor() else Color.White.copy(alpha = 0.09f), RoundedCornerShape(50))
                         .clickable { onSelect(tab) }
                         .padding(horizontal = 18.dp, vertical = 9.dp),
                 )
@@ -1288,9 +1293,7 @@ private fun QuickFacts(info: Media) {
             Column(
                 modifier = Modifier
                     .widthIn(min = 112.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                    .glassCard(RoundedCornerShape(22.dp))
                     .padding(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -1333,8 +1336,9 @@ private fun GenreRow(genres: List<String>) {
                     text = genre,
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clip(RoundedCornerShape(50))
+                        .background(glassPanelColor())
+                        .border(1.dp, glassRimColor(), RoundedCornerShape(50))
                         .padding(horizontal = 11.dp, vertical = 6.dp),
                 )
             }
@@ -1462,9 +1466,7 @@ private fun MetadataCard(info: Media) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+            .glassCard(RoundedCornerShape(22.dp))
             .padding(horizontal = 14.dp, vertical = 8.dp),
     ) {
         rows.forEach { (label, value) ->

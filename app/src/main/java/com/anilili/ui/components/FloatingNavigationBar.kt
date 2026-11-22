@@ -254,7 +254,8 @@ private fun FloatingNavIcon(
     maxWidth: Dp,
     onClick: () -> Unit,
 ) {
-    val accent = LocalMidnightAccent.current
+    // Selected navigation is frosted neutral glass; the theme accent remains on actions.
+    val accent = Color.White
     val idleTint = Midnight.Text2
     val selectedText = Color.White
     val progress = remember { Animatable(if (selected) 1f else 0f) }
@@ -282,11 +283,11 @@ private fun FloatingNavIcon(
                 val fraction = p()
                 val radius = size.height / 2f
                 drawRoundRect(
-                    color = accent.copy(alpha = 0.34f * fraction),
+                    color = accent.copy(alpha = 0.17f * fraction),
                     cornerRadius = CornerRadius(radius, radius),
                 )
                 drawRoundRect(
-                    color = Color.White.copy(alpha = 0.23f * fraction),
+                    color = Color.White.copy(alpha = 0.30f * fraction),
                     cornerRadius = CornerRadius(radius, radius),
                     style = Stroke(width = 1.dp.toPx()),
                 )

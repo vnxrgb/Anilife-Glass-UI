@@ -753,7 +753,7 @@ private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, 
     Text(
         label,
         style = MaterialTheme.typography.labelLarge,
-        color = fillFocus1.content(if (highlighted) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = .92f)),
+        color = fillFocus1.content(Color.White.copy(alpha = if (highlighted) 1f else .92f)),
         fontWeight = if (highlighted) FontWeight.Bold else FontWeight.SemiBold,
         modifier = Modifier
             .focusFill(fillFocus1, shape)
@@ -762,7 +762,7 @@ private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, 
             .background(
                 fillFocus1.background(
                     when {
-                        highlighted -> MaterialTheme.colorScheme.primary
+                        highlighted -> Color.White.copy(alpha = 0.23f)
                         frosted -> Color.Transparent
                         else -> Color.Black.copy(alpha = .52f)
                     },
@@ -770,7 +770,7 @@ private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, 
             )
             .border(
                 1.dp,
-                if (highlighted) Color.Transparent else Color.White.copy(alpha = .18f),
+                if (highlighted) Color.White.copy(alpha = .38f) else Color.White.copy(alpha = .18f),
                 shape,
             )
             .clickable(onClick = onClick)
