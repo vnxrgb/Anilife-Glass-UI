@@ -26,7 +26,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 /** Colours are sampled from the live picture, not guessed from the episode poster. */
-internal data class VideoAmbientPalette(val left: Color, val right: Color) {
+data class VideoAmbientPalette(val left: Color, val right: Color) {
     companion object {
         val Empty = VideoAmbientPalette(Color.Transparent, Color.Transparent)
     }
