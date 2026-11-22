@@ -111,3 +111,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - `AMBIENT COMPOSITION PASS` (`764a282`): Replaced the watch-page solid video-colour slab with three feathered radial colour blooms and a subtle shared gradient. The video remains unchanged; colours continue to come from sampled frames. Code implementation; live visual result still requires testing.
 
 - NAVIGATION REFINEMENT: Selected destination now uses a neutral glass gradient with a restrained theme-accent outline instead of a permanently accent-filled background. Explicit accessibility labels retained for all five tabs. Code only; device screenshot comparison remains pending.
+
+- `GLASS VISUAL COHESION PASS`: Shared glassCard gradient now has top highlight and better depth without allocating live blur; Home hero page dots sit in a frosted capsule and both hero CTAs include icons; Details tabs use a theme-responsive translucent sticky bar and selected pill. Implemented in code, not yet device-verified.

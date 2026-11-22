@@ -1244,8 +1244,12 @@ private fun DetailTabs(
 ) {
     // Centred while the pills fit, so three short tabs do not hug the left edge of a wide row; the
     // box keeps the sticky header's canvas full width behind them. Too many to fit, they scroll.
+    val device = LocalAppDeviceProfile.current
     Box(
-        modifier = Modifier.fillMaxWidth().appCanvas(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (device.isTv) Modifier.appCanvas()
+                else Modifier.background(glassPanelColor().copy(alpha = 0.76f))),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -1261,16 +1265,21 @@ private fun DetailTabs(
                 Text(
                     text = tab.label,
                     style = MaterialTheme.typography.labelLarge,
-                    color = fillFocus4.content(if (active) Color.White
+                    color = fillFocus4.content(if (active) MaterialTheme.colorScheme.onSurface
                     else MaterialTheme.colorScheme.onSurfaceVariant),
                     modifier = Modifier
                         .focusFill(fillFocus4, RoundedCornerShape(50))
                         .clip(RoundedCornerShape(50))
                         .background(
-                            fillFocus4.background(if (active) glassSelectionColor()
+                            fillFocus4.background(if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)
                             else glassPanelColor().copy(alpha = 0.52f)),
                         )
-                        .border(1.dp, if (active) glassRimColor() else Color.White.copy(alpha = 0.09f), RoundedCornerShape(50))
+                        .border(
+                            1.dp,
+                            if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+                            else glassRimColor().copy(alpha = 0.45f),
+                            RoundedCornerShape(50),
+                        )
                         .clickable { onSelect(tab) }
                         .padding(horizontal = 18.dp, vertical = 9.dp),
                 )

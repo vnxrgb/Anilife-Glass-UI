@@ -894,7 +894,13 @@ private fun HeroPager(
             }
         }
         Row(
-            Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp),
+            Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 9.dp)
+                .clip(RoundedCornerShape(50))
+                .background(Color.Black.copy(alpha = 0.26f))
+                .border(1.dp, Color.White.copy(alpha = 0.17f), RoundedCornerShape(50))
+                .padding(horizontal = 10.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             repeat(items.size) { i ->
@@ -1096,16 +1102,23 @@ private fun HeroCard(
                             ),
                         shape = RoundedCornerShape(50),
                     ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(19.dp))
+                        Spacer(Modifier.width(4.dp))
                         Text("Watch now", fontWeight = FontWeight.Bold)
                     }
                     OutlinedButton(
                         onClick = { onAnimeClick(media.id) },
                         colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.Black.copy(alpha = 0.30f),
+                            containerColor = Color.Black.copy(alpha = 0.34f),
                             contentColor = Color.White,
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp, Color.White.copy(alpha = 0.43f),
                         ),
                         shape = RoundedCornerShape(50),
                     ) {
+                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(5.dp))
                         Text("Details")
                     }
                 }
