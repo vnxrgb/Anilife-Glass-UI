@@ -321,21 +321,47 @@ fun DownloadsScreen(
         )
 
         if (allSeries.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 24.dp), contentAlignment = Alignment.Center) {
                 Box(
                     Modifier
                         .fillMaxWidth()
                         .widthIn(max = 440.dp)
-                        .glassCard(RoundedCornerShape(28.dp))
-                        .padding(horizontal = 20.dp, vertical = 22.dp),
+                        .glassCard(RoundedCornerShape(24.dp))
+                        .padding(horizontal = 24.dp, vertical = 28.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        "Your offline library is empty. Download an episode from its watch page to start watching offline.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Box(
+                            Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f), CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Default.Download,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
+                        Text(
+                            "Ready for offline viewing",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        )
+                        Text(
+                            "Download an episode from its watch page. Saved episodes will appear here, ready to play without a connection.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        )
+                    }
                 }
             }
             return@Column
@@ -402,7 +428,7 @@ fun DownloadsScreen(
                     if (series.isEmpty()) {
                         item {
                             Box(
-                                Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp).glassCard(RoundedCornerShape(22.dp)).padding(horizontal = 18.dp, vertical = 20.dp),
+                                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp).glassCard(RoundedCornerShape(22.dp)).padding(horizontal = 18.dp, vertical = 20.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
@@ -719,9 +745,10 @@ private fun DownloadSeriesCard(
                 Modifier
                     .align(Alignment.TopEnd)
                     .padding(4.dp)
-                    .size(28.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = .6f))
+                    .background(Color.Black.copy(alpha = .72f))
+                    .border(1.dp, Color.White.copy(alpha = 0.28f), CircleShape)
                     .clickable(
                         role = Role.Button,
                         onClick = onRemoveSeries,
@@ -732,7 +759,7 @@ private fun DownloadSeriesCard(
                     Icons.Default.Delete,
                     contentDescription = "Remove every episode of ${series.title}",
                     tint = Color.White,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(18.dp),
                 )
             }
             if (series.totalBytes > 0) {

@@ -1280,17 +1280,17 @@ private fun DetailTabs(
                         .focusFill(fillFocus4, RoundedCornerShape(50))
                         .clip(RoundedCornerShape(50))
                         .background(
-                            fillFocus4.background(if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)
+                            fillFocus4.background(if (active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f)
                             else glassPanelColor().copy(alpha = 0.52f)),
                         )
                         .border(
                             1.dp,
-                            if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+                            if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.42f)
                             else glassRimColor().copy(alpha = 0.45f),
                             RoundedCornerShape(50),
                         )
                         .clickable { onSelect(tab) }
-                        .padding(horizontal = 18.dp, vertical = 9.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
         }
@@ -1308,8 +1308,8 @@ private fun QuickFacts(info: Media) {
     // Centred like the tabs above while the cards fit; a fourth (Duration) on a narrow phone scrolls.
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        contentPadding = PaddingValues(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 7.dp),
+        horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
     ) {
         items(facts) { (value, label) ->
             // At least 112dp, wider when the value needs it: at a fixed width "Not yet released"
@@ -1317,8 +1317,8 @@ private fun QuickFacts(info: Media) {
             Column(
                 modifier = Modifier
                     .widthIn(min = 102.dp)
-                    .glassCard(RoundedCornerShape(20.dp))
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .glassCard(RoundedCornerShape(18.dp))
+                    .padding(horizontal = 11.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1, softWrap = false)
@@ -1379,7 +1379,11 @@ private fun Description(description: String?) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp)
-            .clickable { expanded = !expanded },
+            .glassCard(RoundedCornerShape(20.dp))
+            .clickable(onClickLabel = if (expanded) "Collapse overview" else "Expand overview") {
+                expanded = !expanded
+            }
+            .padding(horizontal = 14.dp, vertical = 13.dp),
     ) {
         Text("Overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(
@@ -1391,7 +1395,7 @@ private fun Description(description: String?) {
             modifier = Modifier.padding(top = 7.dp),
         )
         Text(
-            text = if (expanded) "Show less" else "More",
+            text = if (expanded) "Show less" else "Read more",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(top = 5.dp),
@@ -1533,25 +1537,24 @@ private fun SeasonFilterRow(
                     .focusFill(fillFocus5, RoundedCornerShape(12.dp))
                     .clip(RoundedCornerShape(12.dp))
                     .background(
-                        fillFocus5.background(if (active) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surface),
+                        fillFocus5.background(if (active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
+                        else glassPanelColor()),
                     )
                     .border(
                         1.dp,
-                        if (active) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline,
+                        if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.48f)
+                        else glassRimColor(),
                         RoundedCornerShape(12.dp),
                     )
                     .clickable(enabled = choosable) { onSelect(season.id) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
                     text = labels[season.id] ?: "Season ${index + 1}",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
-                    color = fillFocus5.content(if (active) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurface),
+                    color = fillFocus5.content(MaterialTheme.colorScheme.onSurface),
                 )
                 (season.seasonYear ?: season.startDate?.year)?.let { year ->
                     Text(

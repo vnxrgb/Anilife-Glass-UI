@@ -3439,25 +3439,26 @@ private fun SettingsSectionCard(
     val fillFocus1 = rememberFocusFill()
     Surface(
         modifier = modifier
-            .focusFill(fillFocus1, RoundedCornerShape(26.dp))
-            .glassCard(RoundedCornerShape(26.dp))
-            .clickable(role = Role.Button, onClick = onClick),
-        shape = RoundedCornerShape(26.dp),
+            .focusFill(fillFocus1, RoundedCornerShape(22.dp))
+            .glassCard(RoundedCornerShape(22.dp))
+            .clickable(role = Role.Button, onClickLabel = "Open ${tile.title} settings", onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
         color = Color.Transparent,
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 7.dp, horizontal = 5.dp),
+            Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(3.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             // A softly tinted emblem separates the glyph from the glass tile.
             // Accent stays with the icon; the pane itself adapts neutrally to the theme.
             Box(
                 modifier = Modifier
-                    .size(30.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(LocalMidnightAccent.current.copy(alpha = 0.12f)),
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 SectionBadge(badged) {
