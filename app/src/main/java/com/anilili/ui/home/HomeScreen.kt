@@ -842,7 +842,7 @@ private fun HeroPager(
             .fillMaxWidth()
             .padding(horizontal = if (device.isTv) device.pagePadding else 0.dp)
             .height(heroHeight)
-            .clip(if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(0.dp)),
+            .clip(if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(24.dp)),
     ) {
         if (device.isTv) {
             val page = safeTvPage
@@ -1422,8 +1422,8 @@ private fun MediaRail(
                             colors = controlFocus7.buttonColors(ButtonDefaults.outlinedButtonColors()),
                             onClick = onLoadMore,
                             enabled = !isLoadingMore,
-                            shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.focusFill(controlFocus7, RoundedCornerShape(20.dp)),
+                            shape = RoundedCornerShape(50),
+                            modifier = Modifier.focusFill(controlFocus7, RoundedCornerShape(50)),
                         ) {
                             if (isLoadingMore) {
                                 CircularProgressIndicator(
@@ -1604,7 +1604,7 @@ private fun ContinueRail(
                             onLongClick = { managedEntry = entry },
                         ),
                 ) {
-                    Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                    Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
                         // Each card frosts its own thumbnail under its corner buttons: a source
                         // this small is cheap to record, and the buttons never need the feed.
                         val thumbnail = if (homeGlass) remember { HazeState() } else null

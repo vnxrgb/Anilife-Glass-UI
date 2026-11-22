@@ -464,20 +464,22 @@ fun DownloadsScreen(
             ) {
                 val controlFocus3 = rememberFocusFill()
                 FilterChip(
+                    shape = RoundedCornerShape(50),
                     colors = controlFocus3.chipColors(FilterChipDefaults.filterChipColors()),
                     selected = selectedCategory == null,
                     onClick = { selectedCategory = null },
                     label = { Text("All") },
-                    modifier = Modifier.focusFill(controlFocus3, RoundedCornerShape(8.dp)),
+                    modifier = Modifier.focusFill(controlFocus3, RoundedCornerShape(50)),
                 )
                 categories.forEach { category ->
                     val controlFocus4 = rememberFocusFill()
                     FilterChip(
+                    shape = RoundedCornerShape(50),
                         colors = controlFocus4.chipColors(FilterChipDefaults.filterChipColors()),
                         selected = selectedCategory == category,
                         onClick = { selectedCategory = category },
                         label = { Text(category.uppercase()) },
-                        modifier = Modifier.focusFill(controlFocus4, RoundedCornerShape(8.dp)),
+                        modifier = Modifier.focusFill(controlFocus4, RoundedCornerShape(50)),
                     )
                 }
             }
@@ -491,11 +493,12 @@ fun DownloadsScreen(
                 items(blocks.size) { index ->
                     val controlFocus5 = rememberFocusFill()
                     FilterChip(
+                    shape = RoundedCornerShape(50),
                         colors = controlFocus5.chipColors(FilterChipDefaults.filterChipColors()),
                         selected = blockIndex == index,
                         onClick = { selectedBlock = index },
                         label = { Text(blocks[index].label) },
-                        modifier = Modifier.focusFill(controlFocus5, RoundedCornerShape(8.dp)),
+                        modifier = Modifier.focusFill(controlFocus5, RoundedCornerShape(50)),
                     )
                 }
             }
@@ -687,7 +690,7 @@ private fun DownloadSeriesCard(
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
-                .clip(RoundedCornerShape(9.dp))
+                .clip(RoundedCornerShape(18.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             AsyncImage(
@@ -832,7 +835,7 @@ private fun EpisodeRow(
         resumeMs != null -> "Resume offline"
         else -> "Play offline"
     }
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(22.dp)
     // Only true when the card itself holds focus, never when one of its buttons does — see the
     // modifier chain below for why the distinction decides whether a remote can press them at all.
     var cardFocused by remember { mutableStateOf(false) }
@@ -842,7 +845,7 @@ private fun EpisodeRow(
             containerColor = if (selected) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
-                MaterialTheme.colorScheme.surfaceVariant
+                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.78f)
             },
         ),
         modifier = Modifier

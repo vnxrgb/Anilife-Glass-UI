@@ -42,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import com.anilili.ui.components.glassCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -642,10 +643,8 @@ private fun ScheduleCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = device.pagePadding + 28.dp, end = device.pagePadding, top = 5.dp, bottom = 7.dp)
-            .focusHighlight(RoundedCornerShape(14.dp))
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
+            .focusHighlight(RoundedCornerShape(22.dp))
+            .glassCard(RoundedCornerShape(22.dp))
             .clickable { onAnimeClick(media.id) }
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -655,7 +654,7 @@ private fun ScheduleCard(
             contentDescription = media.title.preferred,
             modifier = Modifier
                 .size(width = 62.dp, height = 82.dp)
-                .clip(RoundedCornerShape(9.dp)),
+                .clip(RoundedCornerShape(16.dp)),
             contentScale = ContentScale.Crop,
         )
         Column(

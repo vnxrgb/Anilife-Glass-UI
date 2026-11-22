@@ -574,7 +574,7 @@ private fun SearchTopBar(
                                         }
                                     }
                                 },
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(22.dp),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(onSearch = {
@@ -597,7 +597,7 @@ private fun SearchTopBar(
                                 .focusRequester(filterFocusRequester)
                                 .height(56.dp)
                                 .focusFill(controlFocus1, RoundedCornerShape(50)),
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(22.dp),
                         ) {
                             Icon(Icons.Default.FilterList, contentDescription = "Open filters")
                             if (vm.filters.activeCount > 0) {
@@ -648,6 +648,7 @@ private fun SearchTopBar(
                         item(key = "season") {
                             val extraFocusSeason = rememberFocusFill()
                             FilterChip(
+                shape = RoundedCornerShape(50),
                                 colors = extraFocusSeason.chipColors(FilterChipDefaults.filterChipColors()),
                                 selected = vm.filters.season != null,
                                 onClick = {
@@ -657,24 +658,26 @@ private fun SearchTopBar(
                                 leadingIcon = {
                                     Icon(Icons.Default.WbSunny, contentDescription = null, modifier = Modifier.size(16.dp))
                                 },
-                                modifier = Modifier.focusFill(extraFocusSeason, RoundedCornerShape(8.dp)),
+                                modifier = Modifier.focusFill(extraFocusSeason, RoundedCornerShape(50)),
                             )
                         }
                         item(key = "format-movie") {
                             val extraFocus3 = rememberFocusFill()
                             FilterChip(
+                shape = RoundedCornerShape(50),
                                 colors = extraFocus3.chipColors(FilterChipDefaults.filterChipColors()),
                                 selected = vm.filters.format == "MOVIE",
                                 onClick = { vm.setFormat(if (vm.filters.format == "MOVIE") null else "MOVIE") },
-                                label = { Text("Movies") }, modifier = Modifier.focusFill(extraFocus3, RoundedCornerShape(8.dp)),)
+                                label = { Text("Movies") }, modifier = Modifier.focusFill(extraFocus3, RoundedCornerShape(50)),)
                         }
                         items(options.genres.take(14), key = { it }) { genre ->
                             val extraFocus4 = rememberFocusFill()
                             FilterChip(
+                shape = RoundedCornerShape(50),
                                 colors = extraFocus4.chipColors(FilterChipDefaults.filterChipColors()),
                                 selected = genre in vm.filters.genres,
                                 onClick = { vm.toggleGenre(genre) },
-                                label = { Text(genre) }, modifier = Modifier.focusFill(extraFocus4, RoundedCornerShape(8.dp)),)
+                                label = { Text(genre) }, modifier = Modifier.focusFill(extraFocus4, RoundedCornerShape(50)),)
                         }
                     }
                     ActiveFilterRow(vm = vm)
@@ -960,6 +963,7 @@ private fun ActiveFilterRow(vm: SearchViewModel) {
         items(chips, key = { it.key }) { chip ->
             val activeFocus = rememberFocusFill()
             FilterChip(
+                shape = RoundedCornerShape(50),
                 colors = activeFocus.chipColors(FilterChipDefaults.filterChipColors()),
                 selected = true,
                 onClick = chip.onRemove,
@@ -971,7 +975,7 @@ private fun ActiveFilterRow(vm: SearchViewModel) {
                         modifier = Modifier.size(16.dp),
                     )
                 },
-                modifier = Modifier.focusFill(activeFocus, RoundedCornerShape(8.dp)),
+                modifier = Modifier.focusFill(activeFocus, RoundedCornerShape(50)),
             )
         }
     }
@@ -998,7 +1002,7 @@ private fun SearchSuggestions(
     AnimatedVisibility(visible = recent.isNotEmpty() || matches.isNotEmpty()) {
         Surface(
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(22.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f),
             tonalElevation = 2.dp,
         ) {
@@ -1743,7 +1747,7 @@ private fun FilterSheet(
             colors = extraFocus14.buttonColors(ButtonDefaults.buttonColors()),
             onClick = onDismiss,
             modifier = Modifier.fillMaxWidth().height(50.dp).focusFill(extraFocus14, RoundedCornerShape(50)),
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(22.dp),
         ) {
             Text("Show results", fontWeight = FontWeight.Bold)
         }
@@ -1865,7 +1869,7 @@ private fun FilterSheet(
                         placeholder = { Text("Search all ${options.tags.size} AniList tags") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(22.dp),
                     )
                 }
                 if (visibleTags.isEmpty()) {
@@ -1937,7 +1941,7 @@ private fun FilterSheet(
                             focusManager.moveFocus(FocusDirection.Down)
                         }),
                         singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(22.dp),
                     )
                 }
                 if (studioSuggestions.isNotEmpty()) {
@@ -1946,11 +1950,12 @@ private fun FilterSheet(
                             val name = studio.name ?: return@forEach
                             val controlFocus7 = rememberFocusFill()
                             FilterChip(
+                shape = RoundedCornerShape(50),
                                 colors = controlFocus7.chipColors(FilterChipDefaults.filterChipColors()),
                                 selected = filters.studioId == studio.id,
                                 onClick = { vm.selectStudio(studio) },
                                 label = { Text(name) },
-                                modifier = Modifier.focusFill(controlFocus7, RoundedCornerShape(8.dp)),
+                                modifier = Modifier.focusFill(controlFocus7, RoundedCornerShape(50)),
                             )
                         }
                     }
@@ -2239,6 +2244,7 @@ private fun TriStateFilterChip(
         chipFocus.chipColors(FilterChipDefaults.filterChipColors())
     }
     FilterChip(
+                shape = RoundedCornerShape(50),
         colors = colors,
         selected = included || excluded,
         onClick = onClick,
@@ -2246,6 +2252,6 @@ private fun TriStateFilterChip(
         leadingIcon = if (included) {
             { Text("✓", color = MaterialTheme.colorScheme.primary) }
         } else null,
-        modifier = Modifier.focusFill(chipFocus, RoundedCornerShape(8.dp)),
+        modifier = Modifier.focusFill(chipFocus, RoundedCornerShape(50)),
     )
 }

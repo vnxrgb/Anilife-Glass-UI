@@ -307,6 +307,7 @@ private fun NotificationList(
                     val count = items.count { it.unread && entry.matches(it) }
                     val controlFocus4 = rememberFocusFill()
                     FilterChip(
+                        shape = RoundedCornerShape(50),
                         colors = controlFocus4.chipColors(FilterChipDefaults.filterChipColors()),
                         selected = tab == entry,
                         onClick = { onTab(entry) },
@@ -395,6 +396,7 @@ private fun TvNotificationGrid(
                     val count = items.count { it.unread && entry.matches(it) }
                     val controlFocus5 = rememberFocusFill()
                     FilterChip(
+                        shape = RoundedCornerShape(50),
                         colors = controlFocus5.chipColors(FilterChipDefaults.filterChipColors()),
                         selected = tab == entry,
                         onClick = { onTab(entry) },
@@ -449,13 +451,13 @@ private fun NotificationCard(
     compactTv: Boolean = false,
 ) {
     val isTv = LocalAppDeviceProfile.current.isTv
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(22.dp)
     Box(
         Modifier
             .fillMaxWidth()
             .focusHighlight(shape)
             .clip(shape)
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.82f))
             .border(
                 width = if (item.unread) 1.5.dp else 1.dp,
                 color = when {
@@ -499,7 +501,7 @@ private fun NotificationCard(
                         width = if (compactTv) 64.dp else 58.dp,
                         height = if (compactTv) 86.dp else 76.dp,
                     )
-                    .clip(RoundedCornerShape(8.dp)),
+                    .clip(RoundedCornerShape(15.dp)),
             )
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(
