@@ -161,7 +161,7 @@ internal fun Modifier.videoAmbientWash(palette: VideoAmbientPalette): Modifier {
         )
         drawRect(
             brush = Brush.radialGradient(
-                colorStops = arrayOf(
+                *arrayOf(
                     0f to left.copy(alpha = 0.57f),
                     0.24f to left.copy(alpha = 0.36f),
                     0.52f to left.copy(alpha = 0.14f),
@@ -174,7 +174,7 @@ internal fun Modifier.videoAmbientWash(palette: VideoAmbientPalette): Modifier {
         )
         drawRect(
             brush = Brush.radialGradient(
-                colorStops = arrayOf(
+                *arrayOf(
                     0f to right.copy(alpha = 0.53f),
                     0.24f to right.copy(alpha = 0.33f),
                     0.52f to right.copy(alpha = 0.13f),
@@ -187,7 +187,7 @@ internal fun Modifier.videoAmbientWash(palette: VideoAmbientPalette): Modifier {
         )
         drawRect(
             brush = Brush.radialGradient(
-                colorStops = arrayOf(
+                *arrayOf(
                     0f to center.copy(alpha = 0.18f),
                     0.38f to center.copy(alpha = 0.09f),
                     0.80f to Color.Transparent,
