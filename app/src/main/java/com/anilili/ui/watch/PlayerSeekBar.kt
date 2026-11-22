@@ -112,6 +112,10 @@ internal fun PlayerSeekBar(
         label = "seekBarThumbRadius",
     )
 
+    // Keep finger-to-time mapping on the same inset geometry as the drawn thumb.
+    // Use the resting radius to avoid restarting an active drag during its animation.
+    val seekInsetPx = with(LocalDensity.current) { 6.dp.toPx() }
+
     // White unless the viewer asked for the accent in the player (Appearance): the seek bar sits on
     // the picture, where the player is monochrome by default (see PlayerPanelTheme).
     val played = LocalAppColors.current.playerAccent.let { if (enabled) it else it.copy(alpha = 0.38f) }
@@ -140,21 +144,21 @@ internal fun PlayerSeekBar(
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
                 detectTapGestures { offset ->
-                    commit(seekTargetMs(offset.x, size.width.toFloat(), currentDurationMs))
+                    commit(seekTargetOnInsetTrackMs(offset.x, size.width.toFloat(), seekInsetPx, currentDurationMs))
                 }
             }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
                 detectDragGestures(
                     onDragStart = { offset ->
-                        val next = if (size.width > 0) (offset.x / size.width.toFloat()).coerceIn(0f, 1f) else 0f
+                        val next = if (currentDurationMs > 0L) seekTargetOnInsetTrackMs(offset.x, size.width.toFloat(), seekInsetPx, currentDurationMs).toFloat() / currentDurationMs else 0f
                         scrubFraction = next
                         currentOnScrubChange((next * currentDurationMs).toLong())
                         currentOnInteract()
                     },
                     onDrag = { change, _ ->
                         change.consume()
-                        val next = if (size.width > 0) (change.position.x / size.width.toFloat()).coerceIn(0f, 1f) else 0f
+                        val next = if (currentDurationMs > 0L) seekTargetOnInsetTrackMs(change.position.x, size.width.toFloat(), seekInsetPx, currentDurationMs).toFloat() / currentDurationMs else 0f
                         scrubFraction = next
                         currentOnScrubChange((next * currentDurationMs).toLong())
                         currentOnInteract()
