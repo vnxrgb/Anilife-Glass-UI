@@ -56,7 +56,8 @@ internal suspend fun sampleVideoAmbientColor(view: PlayerView): Color? {
                     },
                     Handler(Looper.getMainLooper()),
                 )
-            } catch (_: IllegalArgumentException) {
+            } catch (_: RuntimeException) {
+                // No callback will arrive when the request was rejected synchronously.
                 synchronized(bitmap) { copyPending = false }
                 if (continuation.isActive) continuation.resume(PixelCopy.ERROR_SOURCE_INVALID)
             }

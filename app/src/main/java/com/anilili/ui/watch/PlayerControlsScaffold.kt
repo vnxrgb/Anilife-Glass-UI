@@ -470,7 +470,7 @@ internal fun PlayerControlsScaffold(
                     // centred: the skip/next-up chip lives at the far right, not under it.
                     // The old global collision rule pushed Play/Pause into the clock/title.
                     // Keep the measured collision protection on inline and narrow surfaces.
-                    bottom = if (!showBack || maxWidth >= 600.dp) 0.dp else
+                    bottom = if (!showBack && compactHeight) 16.dp else if (!showBack || maxWidth >= 600.dp) 0.dp else
                         transportRowBottomPadding(
                             frameHeight = maxHeight,
                             rowHeight = transportHeight,
@@ -488,7 +488,11 @@ internal fun PlayerControlsScaffold(
             if (showBack || !compactHeight) {
                 PlayerControlIconButton("Previous episode", Icons.Default.SkipPrevious, enabled = hasPrevious, onClick = onPrevious)
             }
-            PlayerControlIconButton("Rewind 10 seconds", Icons.Default.FastRewind, onClick = onRewind)
+            // Inline mini-player keeps the play target unobscured; seek gestures and the
+            // timeline remain available. Fullscreen retains explicit ten-second buttons.
+            if (showBack || !compactHeight) {
+                PlayerControlIconButton("Rewind 10 seconds", Icons.Default.FastRewind, onClick = onRewind)
+            }
             // Play/pause keeps the accent — it and the seek bar are the only things that carry it.
             val extraFocus1 = rememberFocusFill()
             IconButton(
@@ -509,7 +513,9 @@ internal fun PlayerControlsScaffold(
                     modifier = Modifier.size(metrics.playGlyphSize),
                 )
             }
-            PlayerControlIconButton("Forward 10 seconds", Icons.Default.FastForward, onClick = onForward)
+            if (showBack || !compactHeight) {
+                PlayerControlIconButton("Forward 10 seconds", Icons.Default.FastForward, onClick = onForward)
+            }
             if (showBack || !compactHeight) {
                 PlayerControlIconButton("Next episode", Icons.Default.SkipNext, enabled = hasNext, onClick = onNext)
             }
