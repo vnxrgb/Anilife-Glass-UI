@@ -296,7 +296,7 @@ fun CardCornerAction(
     Box(
         modifier
             // Keep the overlay compact without requiring a tiny 30dp tap target.
-            .size(40.dp)
+            .size(48.dp)
             .clip(CircleShape)
             // Frosted, the disc can be lighter and still hold the glyph: the blur already takes
             // the busy detail out from under it, which is what the heavier scrim was there for.

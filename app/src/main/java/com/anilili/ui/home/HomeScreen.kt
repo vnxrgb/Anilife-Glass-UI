@@ -603,6 +603,13 @@ private fun HomeContent(
                     HeroPager(
                         items = spotlight,
                         onAnimeClick = onAnimeClick,
+                        onWatch = { id ->
+                            // Resume immediately when this hero is already in Continue
+                            // Watching. A first-time title still opens Details to choose
+                            // its first available episode/source safely.
+                            val previous = history.firstOrNull { it.anilistId == id }
+                            if (previous != null) onResume(previous) else onAnimeClick(id)
+                        },
                         topInset = topOverlay,
                         onMoveDown = if (showContinue) {
                             { runCatching { continueFocusRequester.requestFocus() }.isSuccess }
@@ -792,6 +799,7 @@ private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, 
 private fun HeroPager(
     items: List<Media>,
     onAnimeClick: (Int) -> Unit,
+    onWatch: (Int) -> Unit,
     onMoveDown: (() -> Boolean)?,
     topInset: Dp = 0.dp,
 ) {
@@ -859,6 +867,7 @@ private fun HeroPager(
                 pageIndex = page,
                 pageCount = items.size,
                 onAnimeClick = onAnimeClick,
+                onWatch = onWatch,
                 canGoPrevious = page > 0,
                 canGoNext = page < items.lastIndex,
                 navigationInProgress = false,
@@ -883,6 +892,7 @@ private fun HeroPager(
                     pageIndex = page,
                     pageCount = items.size,
                     onAnimeClick = onAnimeClick,
+                    onWatch = onWatch,
                     canGoPrevious = page > 0,
                     canGoNext = page < items.lastIndex,
                     navigationInProgress = false,
@@ -929,6 +939,7 @@ private fun HeroCard(
     pageIndex: Int,
     pageCount: Int,
     onAnimeClick: (Int) -> Unit,
+    onWatch: (Int) -> Unit,
     canGoPrevious: Boolean,
     canGoNext: Boolean,
     navigationInProgress: Boolean,
@@ -1085,7 +1096,7 @@ private fun HeroCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Button(
-                        onClick = { onAnimeClick(media.id) },
+                        onClick = { onWatch(media.id) },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.Transparent,
                             contentColor = Color.White,
