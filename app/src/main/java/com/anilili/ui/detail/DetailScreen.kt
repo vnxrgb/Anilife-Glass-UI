@@ -925,7 +925,11 @@ private fun DetailHero(
     val device = LocalAppDeviceProfile.current
     val banner = info.bannerImage ?: info.coverImage.best
     val bannerHeight = topInset + if (device.isExpanded) 208.dp else 164.dp
-    Box(Modifier.fillMaxWidth().height(topInset + if (device.isExpanded) 295.dp else 248.dp)) {
+    Box(
+        Modifier.fillMaxWidth().height(
+            topInset + if (device.isExpanded) 280.dp else if (device.isTablet) 248.dp else 226.dp,
+        ),
+    ) {
         AsyncImage(
             model = banner,
             contentDescription = null,
@@ -951,8 +955,12 @@ private fun DetailHero(
                     .width(if (device.isExpanded) 118.dp else 94.dp)
                     .aspectRatio(2f / 3f)
                     .focusHighlight(RoundedCornerShape(20.dp))
-                    .clip(RoundedCornerShape(20.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
+                    .glassCard(RoundedCornerShape(20.dp))
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.42f),
+                        RoundedCornerShape(20.dp),
+                    )
                     .clickable(onClickLabel = "View larger cover", onClick = onCoverClick),
             ) {
                 AsyncImage(
@@ -1011,9 +1019,10 @@ private fun DetailHero(
                             info.episodes?.let { "$it episodes" }
                         },
                     ).joinToString(" · "),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 4.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    modifier = Modifier.padding(top = 5.dp),
                 )
             }
         }

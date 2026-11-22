@@ -127,3 +127,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - `BROWSE & PLAYER DETAIL PASS`: Browse empty search state is a compact neutral glass card on handheld devices, preserving all context-sensitive filter advice and adult-content controls; player's seek progress now has a soft accent/white underglow with existing chapter markers and buffer track retained. Code implemented; real-device acceptance pending.
 
 - `SETTINGS DENSITY PASS`: Phone category tiles now use tighter 7dp gutters, 32dp icon badges, more compact padding, and flexible 1-2 line labels to match the approved three-column Settings reference. Verify readable labels at enlarged font settings and TV grid behaviour.
+
+- `HERO COMPOSITION PASS`: Mobile Home featured area height, genre and CTA vertical spacing reduced to expose more feed; Anime Details poster/title composition tightened, outlined cover and secondary metadata neutralized so accent highlights remain for interactions. Visual/device acceptance remains unverified.

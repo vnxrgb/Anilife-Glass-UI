@@ -815,13 +815,9 @@ private fun HeroPager(
         device.isTv -> 420.dp
         device.isExpanded -> 360.dp
         device.isTablet -> 320.dp
-        // Fifteen per cent taller than the 270dp this used to be, counted across the hero as a
-        // whole — the chrome inset is part of what a viewer sees as the spotlight, so the extra
-        // goes on top of the pair. The height is what decides how much of the cover survives:
-        // a portrait cover fills this box by its width and is trimmed top and bottom, so every dp
-        // added here is artwork kept rather than cut. At 270dp it lost a fifth of its height; at
-        // this it loses about a ninth.
-        else -> 292.dp
+        // Give the feed enough visual room to show Continue Watching above the fold
+        // on a 360-393dp phone while keeping the main featured artwork readable.
+        else -> 284.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -1048,7 +1044,7 @@ private fun HeroCard(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth(if (device.isExpanded) 0.8f else 1f)
                 .padding(horizontal = device.pagePadding)
-                .padding(top = 26.dp, bottom = 28.dp),
+                .padding(top = 18.dp, bottom = 28.dp),
             horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
             HeroMetaRow(media)
@@ -1083,7 +1079,7 @@ private fun HeroCard(
             }
             val genreLabel = media.genres.take(3).joinToString("  ·  ")
             if (genreLabel.isNotBlank()) {
-                HeroPill(Modifier.padding(top = 10.dp), backdrop = heroArt) {
+                HeroPill(Modifier.padding(top = 7.dp), backdrop = heroArt) {
                     Text(genreLabel, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
                 }
             }
@@ -1091,8 +1087,8 @@ private fun HeroCard(
                 // The hero is a destination as well as artwork. Keep the actionable
                 // call-to-action visible instead of relying on an undocumented poster tap.
                 Row(
-                    modifier = Modifier.padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Button(
