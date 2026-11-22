@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.anilili.ui.adaptive.focusFill
@@ -78,7 +79,7 @@ fun PageFilterPill(
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .focusFill(fillFocus1, RoundedCornerShape(50))
-                .clickable(role = Role.Button) { expanded = true }
+                .clickable(role = Role.Button, onClickLabel = "Choose $label filter") { expanded = true }
                 .semantics { contentDescription = "Filter: $label" },
             shape = RoundedCornerShape(50),
             color = fillFocus1.background(glassPanelColor()),
@@ -115,6 +116,7 @@ fun PageFilterPill(
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option.label) },
+                    modifier = Modifier.semantics { selected = option.label == label },
                     trailingIcon = {
                         if (option.label == label) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -147,7 +149,7 @@ fun PageSortControl(
             modifier = Modifier
                 .heightIn(min = 48.dp)
                 .focusFill(fillFocus2, RoundedCornerShape(50))
-                .clickable(role = Role.Button) { expanded = true }
+                .clickable(role = Role.Button, onClickLabel = contentDescription) { expanded = true }
                 .semantics { this.contentDescription = contentDescription },
             shape = RoundedCornerShape(50),
             color = fillFocus2.background(glassPanelColor()),
@@ -195,6 +197,7 @@ fun PageMenuSectionLabel(text: String) {
 fun PageMenuChoice(label: String, selected: Boolean, onClick: () -> Unit) {
     DropdownMenuItem(
         text = { Text(label) },
+        modifier = Modifier.semantics { this.selected = selected },
         trailingIcon = {
             if (selected) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
