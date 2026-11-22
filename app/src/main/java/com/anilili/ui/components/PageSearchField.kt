@@ -140,11 +140,11 @@ fun PageSearchField(
         } else {
             null
         },
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(28.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = glassPanelColor(),
             unfocusedContainerColor = glassPanelColor(),
-            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.58f),
+            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.52f),
             unfocusedBorderColor = glassRimColor(),
         ),
         singleLine = true,

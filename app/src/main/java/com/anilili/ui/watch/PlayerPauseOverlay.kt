@@ -68,8 +68,8 @@ internal fun PlayerPauseOverlay(
                 // nothing is written over.
                 .background(
                     Brush.horizontalGradient(
-                        0f to Color.Black.copy(alpha = 0.82f),
-                        0.55f to Color.Black.copy(alpha = 0.40f),
+                        0f to Color.Black.copy(alpha = 0.74f),
+                        0.55f to Color.Black.copy(alpha = 0.27f),
                         1f to Color.Transparent,
                     ),
                 ),
@@ -78,8 +78,8 @@ internal fun PlayerPauseOverlay(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .statusBarsPadding()
-                    .padding(start = 28.dp, end = 24.dp)
-                    .widthIn(max = 460.dp)
+                    .padding(start = 24.dp, end = 20.dp)
+                    .widthIn(max = 420.dp)
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {

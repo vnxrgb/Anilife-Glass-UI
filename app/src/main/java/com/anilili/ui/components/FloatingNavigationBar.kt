@@ -71,13 +71,13 @@ data class FloatingNavItem(
 )
 
 /** The capsule's one height; scrolling no longer changes it. */
-val FloatingNavBarExpandedHeight = 58.dp
+val FloatingNavBarExpandedHeight = 56.dp
 val FloatingNavBarMargin = 12.dp
 
 /** An idle icon's slot: the 48dp touch minimum, so the rest is free for the open pill's label. */
 private val ItemSize = 48.dp
 private val IconSize = 22.dp
-private val BarPadding = 6.dp
+private val BarPadding = 4.dp
 private val BarShape = RoundedCornerShape(50)
 
 // A gentle top light keeps the glass character without a white sheen across the icons.
@@ -90,9 +90,9 @@ private fun barGlass(): Brush {
     val bottom = MaterialTheme.colorScheme.surfaceContainer
     return remember(top, middle, bottom) {
         Brush.verticalGradient(
-            0f to top.copy(alpha = 0.76f),
-            0.4f to middle.copy(alpha = 0.66f),
-            1f to bottom.copy(alpha = 0.75f),
+            0f to top.copy(alpha = 0.64f),
+            0.4f to middle.copy(alpha = 0.74f),
+            1f to bottom.copy(alpha = 0.80f),
         )
     }
 }
@@ -170,7 +170,7 @@ fun FloatingNavigationBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(FloatingNavBarExpandedHeight)
-                .shadow(10.dp, BarShape)
+                .shadow(8.dp, BarShape)
                 .clip(BarShape)
                 .then(
                     if (blurred) {
@@ -260,7 +260,7 @@ private fun FloatingNavIcon(
         modifier = Modifier
             .width(width)
             .fillMaxHeight()
-            .padding(vertical = 3.dp, horizontal = 2.dp)
+            .padding(vertical = 2.dp, horizontal = 2.dp)
             .clip(shape)
             .then(
                 if (selected) Modifier
