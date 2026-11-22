@@ -175,6 +175,17 @@ internal fun PlayerSeekBar(
                     cap = StrokeCap.Round,
                 )
             }
+            // A soft underglow follows only the played segment and never obscures
+            // buffered progress, chapter markers, or the thumb's precise position.
+            if (enabled && fraction > 0f && span > 0f) {
+                drawLine(
+                    color = played.copy(alpha = 0.18f),
+                    start = Offset(left, centreY),
+                    end = Offset(left + span * fraction.coerceIn(0f, 1f), centreY),
+                    strokeWidth = strokePx * 3.2f,
+                    cap = StrokeCap.Round,
+                )
+            }
             band(remaining, 1f)
             band(bufferedColor, maxOf(buffered, fraction))
             band(played, fraction)

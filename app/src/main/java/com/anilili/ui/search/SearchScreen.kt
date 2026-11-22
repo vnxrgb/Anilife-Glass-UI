@@ -2,6 +2,7 @@ package com.anilili.ui.search
 
 import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassAtmosphere
+import com.anilili.ui.components.glassCard
 import com.anilili.ui.theme.appCanvas
 import android.view.KeyEvent as AndroidKeyEvent
 import android.view.inputmethod.EditorInfo
@@ -1274,7 +1275,12 @@ private fun ResultsGrid(
             Modifier.fillMaxSize().padding(top = headerPadding).padding(24.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                modifier = if (device.isTv) Modifier else Modifier
+                    .glassCard(RoundedCornerShape(26.dp))
+                    .padding(horizontal = 24.dp, vertical = 26.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Text("Nothing matched", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
                     "Try removing a filter or searching another title.",
