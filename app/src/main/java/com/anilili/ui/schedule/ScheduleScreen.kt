@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,6 +44,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -109,7 +112,7 @@ private const val DAY_STRIP_LENGTH = 9
 private val CalendarStatusHeight = 220.dp
 
 /** Height of the phone's floating day stepper; both lists reserve it below their last row. */
-private val DayStepperHeight = 56.dp
+private val DayStepperHeight = 52.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -163,7 +166,7 @@ fun ScheduleScreen(
     // A television changes the day from the pickers at the top, a D-pad press away; the stepper is
     // for a thumb at the bottom of a phone that has scrolled the pickers out of reach.
     val showDayStepper = !device.isTv
-    val stepperClearance = if (showDayStepper) DayStepperHeight + 12.dp else 0.dp
+    val stepperClearance = if (showDayStepper) DayStepperHeight + 24.dp else 0.dp
     // Fresh for each visit to the month view, the way it was when the calendar owned it.
     val calendarListState = remember(calendarView) { LazyListState() }
     // The stepper changes the day from wherever the month view has been scrolled to, and left alone
@@ -462,10 +465,13 @@ private fun DayStepper(
     val onToday = selected == today
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(28.dp),
-        color = colors.primaryContainer,
-        contentColor = colors.onPrimaryContainer,
-        shadowElevation = 6.dp,
+        shape = RoundedCornerShape(26.dp),
+        // Neutral glass rather than a solid accent banner that overwhelms
+        // the schedule and looks like a second navigation bar.
+        color = glassPanelColor(),
+        contentColor = colors.onSurface,
+        border = BorderStroke(1.dp, glassRimColor()),
+        shadowElevation = 4.dp,
         tonalElevation = 0.dp,
     ) {
         Row(
@@ -503,7 +509,7 @@ private fun DayStepper(
                     Text(
                         text = "Back to today",
                         style = MaterialTheme.typography.labelSmall,
-                        color = colors.onPrimaryContainer.copy(alpha = 0.72f),
+                        color = colors.onSurfaceVariant.copy(alpha = 0.78f),
                         maxLines = 1,
                     )
                 }
