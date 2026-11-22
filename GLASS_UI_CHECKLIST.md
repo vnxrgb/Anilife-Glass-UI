@@ -56,7 +56,7 @@
 - [x] Sample native video frames and transition between subdued colours over watch page
 - [x] Video remains clear, ambient wash extends underneath synopsis and episode controls
 - [ ] Tune to YouTube mobile example: richer **blurred** frame-reactive blooms, no flat muddy fill or abrupt colour shifts
-- [ ] Provide user control to enable/disable/adjust ambient and honour existing player configuration
+- [x] Provide persistent on/off control for live ambient sampling and watch-page wash; intensity adjustment remains pending
 - [ ] Frost synopsis, source/category, action buttons and active episode without obscuring readability
 - [ ] Verify embedded players, protected surfaces, black frames and low-RAM fallback
 
@@ -117,3 +117,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - `TOP CHROME & TOUCH TARGET PASS`: Theme-adaptive hairline glass highlights now live in the shared mobile PageTitleBar without sacrificing its pinned opaque scroll backing, and Continue Watching artwork corner actions have larger 40dp hit targets and a legible rim. Code change; touch accessibility acceptance still requires 48dp minimum audit.
 
 - `HERO PLAY WIRING PASS`: Hero Watch now resumes the saved episode directly via existing Home callback when history exists, and safely opens Details for first-time titles (source/episode choice); Details still independently opens anime detail. Continue Watching artwork corner buttons use 48dp touch targets. Code; playback regression verification outstanding.
+
+- `AMBIENT CONTROL PASS`: Added a persistent "Ambient video glow" setting under Player on handheld devices, indexed in Settings search, disabled both PixelCopy callback and wash when off; stored in DataStore and profile backup. No intensity slider yet. Code complete; on-device verification pending.

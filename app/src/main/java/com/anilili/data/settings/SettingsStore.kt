@@ -935,6 +935,10 @@ object SettingsStore {
     private val _playerClock = MutableStateFlow(true)
     val playerClock = _playerClock.asStateFlow()
 
+    /** Ambient video-colour glow underneath the portrait player. Off also stops PixelCopy sampling. */
+    private val _playerAmbientGlow = MutableStateFlow(true)
+    val playerAmbientGlow = _playerAmbientGlow.asStateFlow()
+
     /**
      * Television only: a playing episode takes a second Back within a moment to leave.
      *
@@ -1847,6 +1851,11 @@ object SettingsStore {
         scope.launch { store.edit { it[PLAYER_CLOCK] = value } }
     }
 
+    fun setPlayerAmbientGlow(value: Boolean) {
+        _playerAmbientGlow.value = value
+        scope.launch { store.edit { it[PLAYER_AMBIENT_GLOW] = value } }
+    }
+
     fun setTvDoubleBackToExit(value: Boolean) {
         _tvDoubleBackToExit.value = value
         scope.launch { store.edit { it[TV_DOUBLE_BACK_TO_EXIT] = value } }
@@ -2155,6 +2164,7 @@ object SettingsStore {
             coercePlayerBrightness(prefs[PLAYER_BRIGHTNESS] ?: PLAYER_BRIGHTNESS_FOLLOW_SYSTEM)
         _playerStatusBar.value = prefs[PLAYER_STATUS_BAR] ?: true
         _playerClock.value = prefs[PLAYER_CLOCK] ?: true
+        _playerAmbientGlow.value = prefs[PLAYER_AMBIENT_GLOW] ?: true
         _tvDoubleBackToExit.value = prefs[TV_DOUBLE_BACK_TO_EXIT] ?: true
         _lastWorkingPipeOrigin.value = prefs[LAST_PIPE_ORIGIN].orEmpty()
         loaded.value = true
@@ -2316,6 +2326,7 @@ object SettingsStore {
     private val PLAYER_BRIGHTNESS = floatPreferencesKey("player_brightness")
     private val PLAYER_STATUS_BAR = booleanPreferencesKey("player_status_bar")
     private val PLAYER_CLOCK = booleanPreferencesKey("player_clock")
+    private val PLAYER_AMBIENT_GLOW = booleanPreferencesKey("player_ambient_glow")
     private val TV_DOUBLE_BACK_TO_EXIT = booleanPreferencesKey("tv_double_back_to_exit")
     private val MIGRATED = booleanPreferencesKey("migrated_from_shared_preferences")
 
@@ -2391,6 +2402,7 @@ object SettingsStore {
         PLAYER_SEEK_GESTURE,
         PLAYER_STATUS_BAR,
         PLAYER_CLOCK,
+        PLAYER_AMBIENT_GLOW,
         TV_DOUBLE_BACK_TO_EXIT,
     ) + GLASS_KEYS.values
 

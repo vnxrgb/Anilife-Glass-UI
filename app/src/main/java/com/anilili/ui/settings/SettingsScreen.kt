@@ -400,6 +400,7 @@ fun SettingsScreen(
     val playerSeekGesture by SettingsStore.playerSeekGesture.collectAsState()
     val playerStatusBar by SettingsStore.playerStatusBar.collectAsState()
     val playerClock by SettingsStore.playerClock.collectAsState()
+    val playerAmbientGlow by SettingsStore.playerAmbientGlow.collectAsState()
     val tvDoubleBackToExit by SettingsStore.tvDoubleBackToExit.collectAsState()
     val serverPriority by SettingsStore.serverPriority.collectAsState()
     val disabledProviders by SettingsStore.disabledProviders.collectAsState()
@@ -2295,6 +2296,14 @@ fun SettingsScreen(
                     }
                 }
                 if (!device.isTv) {
+                    item(key = "Ambient video glow") {
+                        MidnightSettingSwitchRow(
+                            title = "Ambient video glow",
+                            description = "Soft colours from the current video below the portrait player",
+                            checked = playerAmbientGlow,
+                            onCheckedChange = SettingsStore::setPlayerAmbientGlow,
+                        )
+                    }
                     item(key = "Hold to change speed") {
                         MidnightSettingSwitchRow(
                             title = "Hold to change speed",

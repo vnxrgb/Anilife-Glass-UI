@@ -712,6 +712,7 @@ private fun WatchContent(
     var ambientPalette by remember(data.anilistId, data.currentIndex, data.chosenStream?.url) {
         mutableStateOf(VideoAmbientPalette.Empty)
     }
+    val playerAmbientGlow by SettingsStore.playerAmbientGlow.collectAsState()
     val showLoadingOverlay by SettingsStore.showLoadingOverlay.collectAsState()
     // AniList ships its synopses with HTML in them, so the player gets the same cleaned text the
     // details pane below already shows rather than markup.
@@ -1466,7 +1467,9 @@ private fun WatchContent(
                         onAddToList = { listStatusDialogVisible = true },
                         onControlsVisibilityChanged = onControlsVisibilityChanged,
                         onPlaybackActiveChanged = { playerHasPicture = it },
-                        onAmbientPaletteChanged = { ambientPalette = it },
+                        onAmbientPaletteChanged = if (playerAmbientGlow) {
+                            { palette -> ambientPalette = palette }
+                        } else null,
                     )
                 }
             }
@@ -1562,7 +1565,9 @@ private fun WatchContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .videoAmbientWash(ambientPalette),
+                    .videoAmbientWash(
+                        if (playerAmbientGlow) ambientPalette else VideoAmbientPalette.Empty,
+                    ),
             )
             return@Column
         }
