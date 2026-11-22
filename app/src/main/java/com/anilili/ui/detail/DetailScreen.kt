@@ -940,7 +940,13 @@ private fun DetailHero(
             Modifier
                 .fillMaxWidth()
                 .height(bannerHeight)
-                .appCanvasFade { canvas -> Brush.verticalGradient(listOf(Color.Transparent, canvas)) },
+                .appCanvasFade { canvas ->
+                    Brush.verticalGradient(
+                        0f to Color.Black.copy(alpha = 0.14f),
+                        0.32f to Color.Black.copy(alpha = 0.28f),
+                        1f to canvas,
+                    )
+                },
         )
         Row(
             modifier = Modifier
@@ -978,7 +984,7 @@ private fun DetailHero(
                         .padding(6.dp)
                         .size(24.dp)
                         .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.72f))
+                        .background(Color.Black.copy(alpha = 0.64f))
                         .padding(4.dp),
                 )
             }

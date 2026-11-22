@@ -81,7 +81,7 @@ fun Modifier.chromeFade(overHero: Boolean, backdrop: HazeState? = null): Modifie
             backdrop!!,
             HazeStyle(
                 backgroundColor = backingColor,
-                tint = HazeTint(backingColor.copy(alpha = .55f)),
+                tint = HazeTint(backingColor.copy(alpha = .48f)),
                 blurRadius = 24.dp,
                 noiseFactor = 0f,
             ),

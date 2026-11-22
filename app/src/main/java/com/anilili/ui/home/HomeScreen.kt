@@ -998,9 +998,9 @@ private fun HeroCard(
             Box(
                 Modifier.fillMaxSize().appCanvasFade { canvas ->
                     Brush.verticalGradient(
-                        0.0f to Color.Black.copy(.30f),
-                        0.42f to Color.Black.copy(.12f),
-                        0.72f to Color.Black.copy(.45f),
+                        0.0f to Color.Black.copy(.40f),
+                        0.42f to Color.Black.copy(.16f),
+                        0.72f to Color.Black.copy(.53f),
                         1f to canvas,
                     )
                 },
@@ -1101,14 +1101,16 @@ private fun HeroCard(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .background(
-                                Brush.horizontalGradient(
+                                // Neutral glass keeps the spotlight CTA readable over colourful art.
+                                Brush.verticalGradient(
                                     listOf(
-                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.94f),
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.94f),
+                                        Color.White.copy(alpha = 0.28f),
+                                        Color.Black.copy(alpha = 0.55f),
                                     ),
                                 ),
                             ),
                         shape = RoundedCornerShape(50),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.45f)),
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(19.dp))
                         Spacer(Modifier.width(4.dp))
@@ -1282,7 +1284,8 @@ private fun HeroPill(
         modifier
             .clip(RoundedCornerShape(50))
             .backdropBlur(backdrop, tint = Color.Black.copy(alpha = .22f), radius = 12.dp)
-            .background(Color.Black.copy(if (frosted) 0f else .42f))
+            .background(Color.Black.copy(if (frosted) 0.05f else .42f))
+            .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50))
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         content = content,

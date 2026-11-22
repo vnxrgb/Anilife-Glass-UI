@@ -161,7 +161,7 @@ fun FloatingNavigationBar(
         // RenderEffect arrived in Android 12; below it Haze only lays a flat scrim, which is worse
         // than the painted glass, so older phones keep that.
         val blurred = backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-        val inner = maxWidth - BarPadding * 2
+        val inner = (maxWidth - BarPadding * 2).coerceAtLeast(0.dp)
         // Five stable, equal-width destinations. Selecting a tab must not displace
         // its neighbours or change the capsule width.
         val itemWidth = if (items.isEmpty()) ItemSize else inner / items.size
@@ -269,7 +269,8 @@ private fun FloatingNavIcon(
         animationSpec = tween(durationMillis = 320),
         label = "navSelectionGlow",
     )
-    val accent = MaterialTheme.colorScheme.primary
+    // Keep the selected halo neutral across artwork and themes.
+    val halo = MaterialTheme.colorScheme.onSurface
     Box(
         modifier = Modifier
             .width(width)
@@ -285,13 +286,13 @@ private fun FloatingNavIcon(
             .drawBehind {
                 if (glowAlpha > 0f) {
                     drawCircle(
-                        color = accent.copy(alpha = glowAlpha),
+                        color = halo.copy(alpha = glowAlpha * 0.45f),
                         radius = size.minDimension * 0.42f,
                         center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height * 0.82f),
                     )
                 }
             }
-            .border(1.dp, accent.copy(alpha = 0.38f * selectionAlpha), shape)
+            .border(1.dp, halo.copy(alpha = 0.34f * selectionAlpha), shape)
             .selectable(
                 selected = selected,
                 role = Role.Tab,

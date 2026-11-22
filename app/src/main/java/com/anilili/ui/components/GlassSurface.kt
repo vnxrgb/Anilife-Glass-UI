@@ -30,19 +30,19 @@ fun Modifier.glassCard(
     tint: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
 ): Modifier {
     val scheme = MaterialTheme.colorScheme
-    val rim = scheme.onSurface.copy(alpha = 0.19f)
-    val highlight = scheme.onSurface.copy(alpha = 0.08f)
+    val rim = scheme.onSurface.copy(alpha = 0.17f)
+    val highlight = scheme.onSurface.copy(alpha = 0.07f)
     val topRim = scheme.onSurface.copy(alpha = 0.10f)
     // Raised highlight across the top edge, deeper translucent glass toward the foot.
     // Each card is still a single paint operation: no per-poster RenderEffect allocations.
     return this
-        .shadow(4.dp, shape, clip = false)
+        .shadow(3.dp, shape, clip = false)
         .clip(shape)
         .background(
             Brush.verticalGradient(
                 0f to highlight,
-                0.18f to tint.copy(alpha = 0.72f),
-                0.76f to tint.copy(alpha = 0.53f),
+                0.18f to tint.copy(alpha = 0.68f),
+                0.76f to tint.copy(alpha = 0.49f),
                 1f to scheme.surface.copy(alpha = 0.46f),
             ),
         )

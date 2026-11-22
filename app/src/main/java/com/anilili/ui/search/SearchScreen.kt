@@ -103,6 +103,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.paneTitle
 import com.anilili.ui.components.glassPanelColor
 import com.anilili.ui.components.glassRimColor
+import com.anilili.ui.components.glassSelectionColor
 import com.anilili.ui.components.PageMenuChoice
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.material3.DropdownMenu
@@ -660,7 +661,7 @@ private fun SearchTopBar(
                 shape = RoundedCornerShape(50),
                                 colors = extraFocusSeason.chipColors(FilterChipDefaults.filterChipColors(
                     containerColor = glassPanelColor(),
-                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                    selectedContainerColor = glassSelectionColor(),
                     selectedLabelColor = MaterialTheme.colorScheme.onSurface,
                 )),
                                 selected = vm.filters.season != null,
@@ -680,7 +681,7 @@ private fun SearchTopBar(
                 shape = RoundedCornerShape(50),
                                 colors = extraFocus3.chipColors(FilterChipDefaults.filterChipColors(
                     containerColor = glassPanelColor(),
-                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    selectedContainerColor = glassSelectionColor(),
                     selectedLabelColor = MaterialTheme.colorScheme.onSurface,
                 )),
                                 selected = vm.filters.format == "MOVIE",
@@ -693,7 +694,7 @@ private fun SearchTopBar(
                 shape = RoundedCornerShape(50),
                                 colors = extraFocus4.chipColors(FilterChipDefaults.filterChipColors(
                     containerColor = glassPanelColor(),
-                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    selectedContainerColor = glassSelectionColor(),
                     selectedLabelColor = MaterialTheme.colorScheme.onSurface,
                 )),
                                 selected = genre in vm.filters.genres,
