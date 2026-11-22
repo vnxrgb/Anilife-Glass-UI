@@ -2108,8 +2108,8 @@ fun SettingsScreen(
                 val columns = if (device.isTv) 5 else 3
                 items(sectionTiles.chunked(columns), key = { it.first().id }) { row ->
                     Row(
-                        Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                        Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         row.forEach { tile ->
                             SettingsSectionCard(
@@ -3447,24 +3447,24 @@ private fun SettingsSectionCard(
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 5.dp),
+            Modifier.fillMaxWidth().padding(vertical = 7.dp, horizontal = 5.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             // A softly tinted emblem separates the glyph from the glass tile.
             // Accent stays with the icon; the pane itself adapts neutrally to the theme.
             Box(
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(30.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(LocalMidnightAccent.current.copy(alpha = 0.09f)),
+                    .background(LocalMidnightAccent.current.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center,
             ) {
                 SectionBadge(badged) {
                     Icon(
                         tile.icon,
                         contentDescription = null,
-                        modifier = Modifier.size(21.dp),
+                        modifier = Modifier.size(20.dp),
                         tint = fillFocus1.content(LocalMidnightAccent.current),
                     )
                 }
@@ -3771,8 +3771,8 @@ private fun OpenSubtitlesAccountDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(top = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             OutlinedTextField(
                 value = username,
@@ -4140,7 +4140,7 @@ private fun TvSettingsRailRow(
                 shape,
             )
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 13.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val ink = MaterialTheme.colorScheme.onSurface

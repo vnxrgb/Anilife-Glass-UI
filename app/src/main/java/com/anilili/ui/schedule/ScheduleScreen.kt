@@ -402,7 +402,7 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
             Column(
                 modifier = Modifier
                     .width(80.dp)
-                    .height(62.dp)
+                    .height(60.dp)
                     .focusFill(fillFocus1, RoundedCornerShape(14.dp))
                     .clip(RoundedCornerShape(14.dp))
                     .background(
@@ -416,7 +416,7 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
                         shape = RoundedCornerShape(14.dp),
                     )
                     .clickable { onSelect(date) }
-                    .padding(vertical = 10.dp),
+                    .padding(vertical = 9.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -650,11 +650,11 @@ private fun ScheduleCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = device.pagePadding + 28.dp, end = device.pagePadding, top = 5.dp, bottom = 7.dp)
+            .padding(start = device.pagePadding + 26.dp, end = device.pagePadding, top = 5.dp, bottom = 6.dp)
             .focusHighlight(RoundedCornerShape(22.dp))
             .glassCard(RoundedCornerShape(22.dp))
             .clickable { onAnimeClick(media.id) }
-            .padding(10.dp),
+            .padding(9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AsyncImage(
@@ -696,7 +696,7 @@ private fun ScheduleCard(
                 style = MaterialTheme.typography.labelSmall,
                 color = if (upcoming) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
+                modifier = Modifier.padding(top = 3.dp),
             )
             if (upcoming) {
                 val controlFocus4 = rememberFocusFill()
@@ -730,6 +730,6 @@ private fun ScheduleTag(label: String) {
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 7.dp, vertical = 3.dp),
+            .padding(horizontal = 8.dp, vertical = 3.dp),
     )
 }

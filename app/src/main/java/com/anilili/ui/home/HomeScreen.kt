@@ -847,12 +847,12 @@ private fun HeroPager(
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = if (device.isTv) device.pagePadding else 12.dp)
+            .padding(horizontal = if (device.isTv) device.pagePadding else 14.dp)
             .height(heroHeight)
             .clip(if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(26.dp))
             .border(
                 1.dp,
-                Color.White.copy(alpha = if (device.isTv) 0.10f else 0.20f),
+                Color.White.copy(alpha = if (device.isTv) 0.10f else 0.24f),
                 if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(26.dp),
             ),
     ) {
@@ -908,7 +908,7 @@ private fun HeroPager(
                 .background(Color.Black.copy(alpha = 0.32f))
                 .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50))
                 .padding(horizontal = 9.dp, vertical = 5.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             repeat(items.size) { i ->
                 Box(
@@ -1045,7 +1045,7 @@ private fun HeroCard(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth(if (device.isExpanded) 0.8f else 1f)
                 .padding(horizontal = device.pagePadding)
-                .padding(top = 18.dp, bottom = 28.dp),
+                .padding(top = 16.dp, bottom = 26.dp),
             horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
             HeroMetaRow(media)

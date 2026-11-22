@@ -569,7 +569,7 @@ internal fun PlayerControlsScaffold(
                         // frosted background here produced a huge empty strip across landscape
                         // video when the primary actions occupied only the right-hand end.
                         // PlayerActionRow supplies the actual rounded frosted action surface.
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                        .padding(horizontal = 5.dp, vertical = 3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -581,7 +581,7 @@ internal fun PlayerControlsScaffold(
                     // In fullscreen the core episode/audio actions get their own stable row.
                     // Secondary controls remain available without shrinking the primary dock.
                     if (showBack) {
-                        PlayerActionRow(horizontalSpacing = 6.dp) {
+                        PlayerActionRow(horizontalSpacing = 5.dp) {
                             CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
                                 bottomPrimaryIcons()
                             }
@@ -598,11 +598,11 @@ internal fun PlayerControlsScaffold(
                     // Dedicated utility strip keeps quality, speed, casting and display actions
                     // discoverable without forcing the four primary controls into tiny icons.
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        PlayerActionRow(horizontalSpacing = 4.dp) {
+                        PlayerActionRow(horizontalSpacing = 5.dp) {
                             CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
                                 bottomRightIcons()
                             }
@@ -632,9 +632,9 @@ private fun PlayerActionRow(
         content = content,
         modifier = Modifier
             .clip(RoundedCornerShape(28.dp))
-            .background(Color.Black.copy(alpha = 0.40f))
-            .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(28.dp))
-            .padding(horizontal = 6.dp, vertical = 4.dp),
+            .background(Color.Black.copy(alpha = 0.32f))
+            .border(1.dp, Color.White.copy(alpha = 0.26f), RoundedCornerShape(28.dp))
+            .padding(horizontal = 5.dp, vertical = 4.dp),
     ) { measurables, constraints ->
         val placeables = measurables.map { it.measure(Constraints()) }
         val gaps = spacingPx * (placeables.size - 1).coerceAtLeast(0)
@@ -766,7 +766,7 @@ internal fun PlayerTimePill(
             .clip(CircleShape)
             .background(Color.Black.copy(alpha = 0.48f))
             .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
-            .padding(horizontal = 9.dp, vertical = 3.dp),
+            .padding(horizontal = 8.dp, vertical = 3.dp),
     ) {
         Text(
             text = text,
