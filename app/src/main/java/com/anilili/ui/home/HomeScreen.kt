@@ -7,6 +7,9 @@ package com.anilili.ui.home
 import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassAtmosphere
 import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.cinematicPrimaryButtonColors
+import com.anilili.ui.components.cinematicSecondaryButtonColors
+import com.anilili.ui.components.cinematicSecondaryButtonBorder
 import com.anilili.ui.theme.appCanvasFade
 import com.anilili.ui.theme.appCanvas
 import androidx.compose.animation.core.animateFloatAsState
@@ -1143,46 +1146,27 @@ private fun HeroCard(
                 ) {
                     Button(
                         onClick = { onWatch(media.id) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Transparent,
-                            contentColor = Color.White,
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(50))
-                            .background(
-                                // Neutral glass keeps the spotlight CTA readable over colourful art.
-                                Brush.verticalGradient(
-                                    listOf(
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
-                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.42f),
-                                    ),
-                                ),
-                            ),
+                        // The primary action is warm and solid, never derived from a green theme.
+                        colors = cinematicPrimaryButtonColors(),
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                         shape = RoundedCornerShape(50),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.45f)),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(19.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Watch now", fontWeight = FontWeight.Bold)
+                        Text("Watch now", fontWeight = FontWeight.Bold, maxLines = 1)
                     }
                     OutlinedButton(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                         onClick = { onAnimeClick(media.id) },
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.Black.copy(alpha = 0.34f),
-                            contentColor = Color.White,
-                        ),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp, Color.White.copy(alpha = 0.43f),
-                        ),
+                        colors = cinematicSecondaryButtonColors(onArtwork = true),
+                        border = cinematicSecondaryButtonBorder(onArtwork = true),
                         shape = RoundedCornerShape(50),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
                     ) {
                         Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(5.dp))
-                        Text("Details")
+                        Text("Details", maxLines = 1)
                     }
                 }
             }

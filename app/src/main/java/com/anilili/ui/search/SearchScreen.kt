@@ -104,6 +104,7 @@ import androidx.compose.ui.semantics.paneTitle
 import com.anilili.ui.components.glassPanelColor
 import com.anilili.ui.components.glassRimColor
 import com.anilili.ui.components.glassSelectionColor
+import com.anilili.ui.components.cinematicFilterChipColors
 import com.anilili.ui.components.PageMenuChoice
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.material3.DropdownMenu
@@ -665,11 +666,7 @@ private fun SearchTopBar(
                             val extraFocusSeason = rememberFocusFill()
                             FilterChip(
                 shape = RoundedCornerShape(50),
-                                colors = extraFocusSeason.chipColors(FilterChipDefaults.filterChipColors(
-                    containerColor = glassPanelColor(),
-                    selectedContainerColor = glassSelectionColor(),
-                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                )),
+                                colors = extraFocusSeason.chipColors(cinematicFilterChipColors()),
                                 selected = vm.filters.season != null,
                                 onClick = {
                                     if (vm.filters.season != null) vm.clearSeason() else vm.startSeasonBrowsing()
@@ -685,11 +682,7 @@ private fun SearchTopBar(
                             val extraFocus3 = rememberFocusFill()
                             FilterChip(
                 shape = RoundedCornerShape(50),
-                                colors = extraFocus3.chipColors(FilterChipDefaults.filterChipColors(
-                    containerColor = glassPanelColor(),
-                    selectedContainerColor = glassSelectionColor(),
-                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                )),
+                                colors = extraFocus3.chipColors(cinematicFilterChipColors()),
                                 selected = vm.filters.format == "MOVIE",
                                 onClick = { vm.setFormat(if (vm.filters.format == "MOVIE") null else "MOVIE") },
                                 label = { Text("Movies") }, modifier = Modifier.focusFill(extraFocus3, RoundedCornerShape(50)),)
@@ -698,11 +691,7 @@ private fun SearchTopBar(
                             val extraFocus4 = rememberFocusFill()
                             FilterChip(
                 shape = RoundedCornerShape(50),
-                                colors = extraFocus4.chipColors(FilterChipDefaults.filterChipColors(
-                    containerColor = glassPanelColor(),
-                    selectedContainerColor = glassSelectionColor(),
-                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                )),
+                                colors = extraFocus4.chipColors(cinematicFilterChipColors()),
                                 selected = genre in vm.filters.genres,
                                 onClick = { vm.toggleGenre(genre) },
                                 label = { Text(genre) }, modifier = Modifier.focusFill(extraFocus4, RoundedCornerShape(50)),)
@@ -994,11 +983,7 @@ private fun ActiveFilterRow(vm: SearchViewModel) {
             val activeFocus = rememberFocusFill()
             FilterChip(
                 shape = RoundedCornerShape(50),
-                colors = activeFocus.chipColors(FilterChipDefaults.filterChipColors(
-                    containerColor = glassPanelColor(),
-                    selectedContainerColor = glassSelectionColor(),
-                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                )),
+                colors = activeFocus.chipColors(cinematicFilterChipColors()),
                 selected = true,
                 onClick = chip.onRemove,
                 label = { Text(chip.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -2010,11 +1995,7 @@ private fun FilterSheet(
                             val controlFocus7 = rememberFocusFill()
                             FilterChip(
                 shape = RoundedCornerShape(50),
-                                colors = controlFocus7.chipColors(FilterChipDefaults.filterChipColors(
-                    containerColor = glassPanelColor(),
-                    selectedContainerColor = glassSelectionColor(),
-                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                )),
+                                colors = controlFocus7.chipColors(cinematicFilterChipColors()),
                                 selected = filters.studioId == studio.id,
                                 onClick = { vm.selectStudio(studio) },
                                 label = { Text(name) },
@@ -2304,11 +2285,7 @@ private fun TriStateFilterChip(
             ),
         )
     } else {
-        chipFocus.chipColors(FilterChipDefaults.filterChipColors(
-                    containerColor = glassPanelColor(),
-                    selectedContainerColor = glassSelectionColor(),
-                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                ))
+        chipFocus.chipColors(cinematicFilterChipColors())
     }
     FilterChip(
                 shape = RoundedCornerShape(50),

@@ -8,6 +8,7 @@ import com.anilili.ui.components.glassCard
 import com.anilili.ui.components.glassPanelColor
 import com.anilili.ui.components.glassRimColor
 import com.anilili.ui.components.glassSelectionColor
+import com.anilili.ui.components.cinematicFilterChipColors
 import com.anilili.ui.components.glassAtmosphere
 import android.Manifest
 import android.net.Uri
@@ -1149,11 +1150,7 @@ private fun LibraryViewChips(
                         if (LocalAppDeviceProfile.current.isTv) {
                             FilterChipDefaults.filterChipColors()
                         } else {
-                            FilterChipDefaults.filterChipColors(
-                                containerColor = glassPanelColor(),
-                                selectedContainerColor = glassSelectionColor(),
-                                selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                            )
+                            cinematicFilterChipColors()
                         },
                     ),
                     selected = selected,
@@ -1182,11 +1179,7 @@ private fun LibraryViewChips(
                         if (LocalAppDeviceProfile.current.isTv) {
                             FilterChipDefaults.filterChipColors()
                         } else {
-                            FilterChipDefaults.filterChipColors(
-                                containerColor = glassPanelColor(),
-                                selectedContainerColor = glassSelectionColor(),
-                                selectedLabelColor = MaterialTheme.colorScheme.onSurface,
-                            )
+                            cinematicFilterChipColors()
                         },
                     ),
                     selected = chip.selected,

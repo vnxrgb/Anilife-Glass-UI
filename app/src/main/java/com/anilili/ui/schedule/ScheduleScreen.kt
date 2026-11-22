@@ -424,7 +424,7 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
                     )
                     .border(
                         width = 1.dp,
-                        color = fillFocus1.content(if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.48f)
+                        color = fillFocus1.content(if (active) glassRimColor()
                         else glassRimColor().copy(alpha = 0.75f)),
                         shape = RoundedCornerShape(14.dp),
                     )

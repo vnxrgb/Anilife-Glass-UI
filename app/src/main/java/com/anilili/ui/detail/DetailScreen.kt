@@ -143,6 +143,9 @@ import com.anilili.ui.components.glassCard
 import com.anilili.ui.components.glassPanelColor
 import com.anilili.ui.components.glassRimColor
 import com.anilili.ui.components.glassSelectionColor
+import com.anilili.ui.components.cinematicPrimaryButtonColors
+import com.anilili.ui.components.cinematicSecondaryButtonColors
+import com.anilili.ui.components.cinematicSecondaryButtonBorder
 import com.anilili.ui.components.compactMemberCount
 import com.anilili.ui.components.LocalAppChromeBottomInset
 import com.anilili.ui.components.AnimeListActionsDialog
@@ -1109,7 +1112,8 @@ private fun DetailActions(
     primaryActionFocusRequester: FocusRequester,
     onPrimaryFocusAcquired: () -> Unit,
 ) {
-    val pad = LocalAppDeviceProfile.current.pagePadding
+    val device = LocalAppDeviceProfile.current
+    val pad = device.pagePadding
     // This button used to be a plain save toggle, which meant the only route from the detail page to
     // "watching", "paused", "finished" or "dropped" was to start an episode and use the player's
     // list picker. It opens the shared list menu instead — the same one a poster's long press opens
@@ -1134,14 +1138,16 @@ private fun DetailActions(
         OutlinedButton(
             shape = RoundedCornerShape(50),
             // A neutral frosted secondary action, even when the anime's accent is vivid.
-            colors = controlFocus4.buttonColors(ButtonDefaults.outlinedButtonColors(
-                containerColor = glassPanelColor(),
-                contentColor = MaterialTheme.colorScheme.onSurface,
-            )),
-            border = androidx.compose.foundation.BorderStroke(1.dp, glassRimColor()),
+            colors = controlFocus4.buttonColors(
+                if (device.isTv) ButtonDefaults.outlinedButtonColors()
+                else cinematicSecondaryButtonColors(),
+            ),
+            border = if (device.isTv) androidx.compose.foundation.BorderStroke(1.dp, glassRimColor())
+                else cinematicSecondaryButtonBorder(),
             onClick = { listMenuVisible = true },
             modifier = Modifier
                 .weight(1f)
+                .heightIn(min = 48.dp)
                 .then(
                     if (!canWatch) Modifier.focusRequester(primaryActionFocusRequester)
                     else Modifier,
@@ -1179,11 +1185,14 @@ private fun DetailActions(
         val controlFocus6 = rememberFocusFill()
         Button(
             shape = RoundedCornerShape(50),
-            colors = controlFocus6.buttonColors(ButtonDefaults.buttonColors()),
+            colors = controlFocus6.buttonColors(
+                if (device.isTv) ButtonDefaults.buttonColors() else cinematicPrimaryButtonColors(),
+            ),
             onClick = onWatch,
             enabled = canWatch,
             modifier = Modifier
                 .weight(1f)
+                .heightIn(min = 48.dp)
                 .then(
                     if (canWatch) Modifier.focusRequester(primaryActionFocusRequester)
                     else Modifier,
@@ -1198,7 +1207,9 @@ private fun DetailActions(
                 CircularProgressIndicator(
                     modifier = Modifier.size(17.dp),
                     strokeWidth = 2.dp,
-                    color = controlFocus6.content(MaterialTheme.colorScheme.onPrimary),
+                    color = controlFocus6.content(
+                        if (device.isTv) MaterialTheme.colorScheme.onPrimary else Color(0xFF24180D),
+                    ),
                 )
             } else {
                 Icon(Icons.Default.PlayArrow, contentDescription = null, Modifier.size(19.dp))
@@ -1287,12 +1298,12 @@ private fun DetailTabs(
                         .focusFill(fillFocus4, RoundedCornerShape(50))
                         .clip(RoundedCornerShape(50))
                         .background(
-                            fillFocus4.background(if (active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f)
+                            fillFocus4.background(if (active) glassSelectionColor()
                             else glassPanelColor().copy(alpha = 0.52f)),
                         )
                         .border(
                             1.dp,
-                            if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.66f)
+                            if (active) glassRimColor()
                             else glassRimColor().copy(alpha = 0.45f),
                             RoundedCornerShape(50),
                         )
