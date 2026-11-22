@@ -1277,13 +1277,21 @@ private fun ResultsGrid(
         ) {
             Column(
                 modifier = if (device.isTv) Modifier else Modifier
+                    .widthIn(max = 420.dp)
+                    .fillMaxWidth()
                     .glassCard(RoundedCornerShape(26.dp))
                     .padding(horizontal = 24.dp, vertical = 26.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Nothing matched", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "Nothing matched",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
                 Text(
                     "Try removing a filter or searching another title.",
+                    textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
