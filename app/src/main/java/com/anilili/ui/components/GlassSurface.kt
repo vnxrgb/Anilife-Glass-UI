@@ -30,19 +30,19 @@ fun Modifier.glassCard(
     tint: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
 ): Modifier {
     val scheme = MaterialTheme.colorScheme
-    val rim = scheme.onSurface.copy(alpha = 0.22f)
-    val highlight = scheme.onSurface.copy(alpha = 0.10f)
+    val rim = scheme.onSurface.copy(alpha = 0.19f)
+    val highlight = scheme.onSurface.copy(alpha = 0.08f)
     // Raised highlight across the top edge, deeper translucent glass toward the foot.
     // Each card is still a single paint operation: no per-poster RenderEffect allocations.
     return this
-        .shadow(5.dp, shape, clip = false)
+        .shadow(4.dp, shape, clip = false)
         .clip(shape)
         .background(
             Brush.verticalGradient(
                 0f to highlight,
-                0.16f to tint.copy(alpha = 0.78f),
-                0.72f to tint.copy(alpha = 0.56f),
-                1f to scheme.surface.copy(alpha = 0.43f),
+                0.16f to tint.copy(alpha = 0.70f),
+                0.72f to tint.copy(alpha = 0.51f),
+                1f to scheme.surface.copy(alpha = 0.40f),
             ),
         )
         // One rim avoids a double hairline at nested corners and saves overdraw on poster grids.
@@ -51,7 +51,7 @@ fun Modifier.glassCard(
 
 @Composable
 fun glassPanelColor(): Color =
-    MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.67f)
+    MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.62f)
 
 /** Consistent selected glass pill, independent of the user's accent hue. */
 @Composable
