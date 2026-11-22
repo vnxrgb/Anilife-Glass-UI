@@ -822,12 +822,12 @@ private fun HeroPager(
     val pagerIsDragged by pagerState.interactionSource.collectIsDraggedAsState()
     val heroHeight = topInset + when {
         device.isTv -> 420.dp
-        device.isExpanded -> 310.dp
-        device.isTablet -> 274.dp
+        device.isExpanded -> 336.dp
+        device.isTablet -> 294.dp
         // A phone needs a distinct artwork zone above the title and actions. The old 244dp
         // forced long titles, metadata, genre chips, buttons and dots into one crowded block.
         // Keep the hero stable as slides change so page indicators never jump.
-        else -> 322.dp
+        else -> 338.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -1091,7 +1091,7 @@ private fun HeroCard(
                 .padding(horizontal = device.pagePadding)
                 .padding(
                     top = if (device.isTv) 16.dp else 8.dp,
-                    bottom = if (device.isTv) 26.dp else 43.dp,
+                    bottom = if (device.isTv) 26.dp else 41.dp,
                 ),
             horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
@@ -1107,7 +1107,7 @@ private fun HeroCard(
                 modifier = Modifier
                     .padding(top = if (device.isTv) 10.dp else 0.dp)
                     .fillMaxWidth(if (device.isExpanded) 0.6f else 1f)
-                    .height(if (device.isTv || device.isExpanded) 88.dp else 66.dp),
+                    .height(if (device.isTv) 88.dp else if (device.isExpanded) 76.dp else 58.dp),
             ) {
                 ShrinkingTitle(
                     text = media.title.preferred,
@@ -1140,8 +1140,8 @@ private fun HeroCard(
                 // The hero is a destination as well as artwork. Keep the actionable
                 // call-to-action visible instead of relying on an undocumented poster tap.
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Button(
@@ -1150,7 +1150,7 @@ private fun HeroCard(
                         colors = cinematicPrimaryButtonColors(),
                         modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                         shape = RoundedCornerShape(50),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 9.dp),
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(19.dp))
                         Spacer(Modifier.width(4.dp))
