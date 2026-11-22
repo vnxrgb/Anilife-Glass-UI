@@ -22,6 +22,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -102,6 +103,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -703,6 +705,14 @@ private fun WatchContent(
     val context = LocalContext.current
     val device = LocalAppDeviceProfile.current
     val isMovie = isMovieFormat(data.seriesFormat)
+    // Sampled hues stay below the player and labels, never cover the video.
+    // A muted dark fallback supports embedded and protected playback.
+    var ambientColor by remember(data.anilistId) { mutableStateOf(Color(0xFF202536)) }
+    val ambientTint by animateColorAsState(
+        targetValue = ambientColor,
+        animationSpec = tween(durationMillis = 1_300),
+        label = "watchAmbientTint",
+    )
     val showLoadingOverlay by SettingsStore.showLoadingOverlay.collectAsState()
     // AniList ships its synopses with HTML in them, so the player gets the same cleaned text the
     // details pane below already shows rather than markup.
@@ -1457,6 +1467,7 @@ private fun WatchContent(
                         onAddToList = { listStatusDialogVisible = true },
                         onControlsVisibilityChanged = onControlsVisibilityChanged,
                         onPlaybackActiveChanged = { playerHasPicture = it },
+                        onAmbientColor = { ambientColor = it },
                     )
                 }
             }
@@ -1549,7 +1560,16 @@ private fun WatchContent(
                 onRequestAllSources = onRequestAllSources,
                 onRetryMiruroSources = onRetryMiruroSources,
                 onSelectEpisode = onSelectEpisode,
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .background(
+                        Brush.verticalGradient(
+                            0f to ambientTint,
+                            0.40f to ambientTint.copy(alpha = 0.70f),
+                            1f to Color(0xFF08090F),
+                        ),
+                    ),
             )
             return@Column
         }
