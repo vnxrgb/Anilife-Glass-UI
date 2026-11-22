@@ -2319,6 +2319,7 @@ fun PlayerSurface(
                 },
             )
         }
+        }
 
         playbackGestureIsPlaying?.let { isPlaying ->
             PlaybackGestureIndicator(isPlaying, Modifier.align(Alignment.Center))
