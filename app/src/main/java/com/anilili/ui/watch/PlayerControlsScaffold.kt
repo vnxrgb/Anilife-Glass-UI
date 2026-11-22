@@ -471,7 +471,7 @@ internal fun PlayerControlsScaffold(
                 modifier = Modifier
                     .size(metrics.playButtonSize)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.24f), CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), CircleShape)
                     .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape).focusFill(extraFocus1, CircleShape),
             ) {
                 Icon(
@@ -672,14 +672,15 @@ internal fun PlayerActionPill(
         )
         return
     }
-    val shape = RoundedCornerShape(20.dp)
+    val shape = CircleShape
     val contentAlpha = if (enabled) 1f else 0.35f
     val fillFocus1 = rememberFocusFill()
     Row(
         modifier = modifier
             .focusFill(fillFocus1, shape)
             .clip(shape)
-            .background(fillFocus1.background(Color.Black.copy(alpha = 0.42f)), shape)
+            .background(fillFocus1.background(Color(0xFF242738).copy(alpha = 0.68f)), shape)
+            .border(1.dp, Color.White.copy(alpha = 0.16f), shape)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = if (showLabel) 12.dp else 10.dp, vertical = 8.dp)
             .semantics { contentDescription = label },
@@ -723,9 +724,9 @@ internal fun PlayerTimePill(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color.Black.copy(alpha = 0.46f))
-            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(10.dp))
+            .clip(CircleShape)
+            .background(Color(0xFF202333).copy(alpha = 0.72f))
+            .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
             .padding(horizontal = 9.dp, vertical = 3.dp),
     ) {
         Text(
@@ -857,7 +858,8 @@ internal fun PlayerControlIconButton(
             modifier = Modifier
                 .size(circle)
                 .clip(CircleShape)
-                .background(extraFocus2.background(Color.Black.copy(alpha = if (isTv) 0.58f else 0.42f)), CircleShape)
+                .background(extraFocus2.background(if (isTv) Color.Black.copy(alpha = 0.58f) else Color(0xFF242738).copy(alpha = 0.72f)), CircleShape)
+                .then(if (!isTv) Modifier.border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape) else Modifier)
                 .then(
                     if (isTv && !extraFocus2.focused) {
                         Modifier.border(

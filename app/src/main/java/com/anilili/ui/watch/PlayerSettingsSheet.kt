@@ -350,9 +350,9 @@ private fun PlayerModalSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Midnight.SheetSurface,
+        containerColor = Color(0xFF161823).copy(alpha = 0.96f),
         contentColor = Midnight.Text,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
         dragHandle = null,
         tonalElevation = 0.dp,
     ) {
@@ -951,7 +951,7 @@ private fun PlayerAdjustButton(
     }
 }
 
-private val PlayerAdjustShape = RoundedCornerShape(10.dp)
+private val PlayerAdjustShape = RoundedCornerShape(18.dp)
 
 /** Wide enough for the longest delay, "+30.00 s", so no value moves the + button. */
 private val PlayerAdjustValueWidth = 84.dp
@@ -978,7 +978,7 @@ private val PlayerAdjustValueWidth = 84.dp
 @Composable
 private fun PlayerSliderRow(content: @Composable RowScope.() -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(18.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
