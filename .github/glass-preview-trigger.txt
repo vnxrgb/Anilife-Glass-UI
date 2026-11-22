@@ -1,4 +1,4 @@
-Batch 5 screenshot repair consolidated universal Android APK preview
-Source commit: fcb896b5861da886b1378db2d3a671d671fe086f
-Changes: Home rail action clearance and more compact spotlight; My List top card/header and bottom nav scroll clearance; Browse short readable search and category end padding; Downloads balanced empty panel; Settings compact tiles while preserving TV dimensions.
-Run mobile unit tests, lint, assemble the ONE universal mobile debug APK; publish preview asset only on success. Do not publish signed stable, change the player or merge main.
+Home hero unclutter milestone preview
+Source commit: ffeb1decbf7fdd8adf189d4864ddf9ceb3782f9f
+Mobile Hero: 322dp artwork breathing room, fixed two-line title up to minimum 17sp, compact format/score metadata beneath title, removed the genre-chip row from phone hero, separate equal-width CTA row and clear pagination. TV hero/metadata unchanged. Player untouched, main untouched.
+Run mobile unit tests, lint, assemble the universal APK. Publish preview only on success, do not label it stable.
