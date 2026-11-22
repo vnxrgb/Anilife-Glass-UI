@@ -78,9 +78,9 @@ internal fun extractVideoAmbientTint(pixels: IntArray, width: Int, height: Int):
     for (y in 0 until sampledHeight) {
         for (x in 0 until width) {
             val pixel = pixels[y * width + x]
-            val red = android.graphics.Color.red(pixel)
-            val green = android.graphics.Color.green(pixel)
-            val blue = android.graphics.Color.blue(pixel)
+            val red = (pixel ushr 16) and 0xFF
+            val green = (pixel ushr 8) and 0xFF
+            val blue = pixel and 0xFF
             val brightness = (red + green + blue) / 3
             if (brightness < 20 || brightness > 242) continue
             val chroma = max(red, max(green, blue)) - min(red, min(green, blue))
