@@ -1,4 +1,5 @@
-Milestone preview requested after large Glass UI implementation batch.
-Source commit: 7572c193fbe3264c8f8f68913b657bdc22d71fc0
-Contents: Details, Downloads, Settings, My List, Browse, Schedule, Notifications, Popup glass and theme preview.
-Build contract: unit tests, lint, one universal APK. Device visual acceptance is separate.
+Milestone build retry after verified Kotlin import fixes.
+Source commit: 778dcb8ea001250ef9c0bbceb677b2c4d3b1b66e
+Fixes: DownloadsScreen and SettingsScreen border modifier imports.
+Verification: testMobileDebugUnitTest, lintMobileDebug, assembleMobileDebug, one universal APK.
+Do not claim visual acceptance from a successful build.
