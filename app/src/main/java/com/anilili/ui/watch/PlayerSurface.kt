@@ -2267,7 +2267,7 @@ fun PlayerSurface(
                         phoneControlsInteraction++
                     })
                 },
-            ) {
+                bottomRightIcons = {
                 // Labelled pills rather than bare glyphs: which of these opens subtitles and which
                 // opens audio was previously something you found out by pressing one. The label is
                 // dropped again on the narrow tiers, where the row really has no room for it.
