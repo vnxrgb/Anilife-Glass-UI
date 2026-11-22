@@ -441,11 +441,11 @@ fun DownloadsScreen(
                     if (series.isEmpty()) {
                         item {
                             Box(
-                                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp).glassCard(RoundedCornerShape(22.dp)).padding(horizontal = 18.dp, vertical = 20.dp),
+                                Modifier.fillMaxWidth().padding(horizontal = device.pagePadding, vertical = 12.dp).glassCard(RoundedCornerShape(22.dp)).padding(horizontal = 18.dp, vertical = 16.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    "No downloads match your current filters. Try clearing a filter.",
+                                    "No downloads match these filters. Clear a filter to see more.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
