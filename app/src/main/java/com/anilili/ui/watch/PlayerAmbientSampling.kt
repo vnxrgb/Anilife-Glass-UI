@@ -1,5 +1,7 @@
 package com.anilili.ui.watch
 
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.Handler
@@ -22,6 +24,7 @@ import kotlin.math.roundToInt
  * Failure is expected on secure video surfaces: keep the caller's dark fallback.
  * Sampling is opt-in from a playback-aware LaunchedEffect, not a frame listener.
  */
+@OptIn(UnstableApi::class)
 @RequiresApi(Build.VERSION_CODES.O)
 internal suspend fun sampleVideoAmbientColor(view: PlayerView): Color? {
     val surface = view.videoSurfaceView as? SurfaceView ?: return null
