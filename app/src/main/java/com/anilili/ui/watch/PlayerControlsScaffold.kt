@@ -565,21 +565,10 @@ internal fun PlayerControlsScaffold(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        // One lower glass dock frames the controls as a coherent action bar,
-                        // while the nested group can still independently scale at narrow widths.
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                0f to Color.White.copy(alpha = 0.17f),
-                                0.18f to Color(0xFF242831).copy(alpha = 0.76f),
-                                1f to Color(0xFF0B0D13).copy(alpha = 0.84f),
-                            ),
-                        )
-                        .border(
-                            1.dp,
-                            Color.White.copy(alpha = 0.28f),
-                            RoundedCornerShape(28.dp),
-                        )
+                        // Keep the lock separate from the compact primary dock. A full-width
+                        // frosted background here produced a huge empty strip across landscape
+                        // video when the primary actions occupied only the right-hand end.
+                        // PlayerActionRow supplies the actual rounded frosted action surface.
                         .padding(horizontal = 6.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
