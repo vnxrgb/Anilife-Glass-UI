@@ -51,6 +51,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
@@ -74,7 +77,7 @@ val FloatingNavBarMargin = 12.dp
 private val ItemSize = 48.dp
 private val IconSize = 22.dp
 private val BarPadding = 6.dp
-private val BarShape = RoundedCornerShape(32.dp)
+private val BarShape = RoundedCornerShape(50)
 
 // A gentle top light keeps the glass character without a white sheen across the icons.
 // The nearly opaque center preserves contrast when bright artwork scrolls behind the bar.
@@ -86,9 +89,9 @@ private fun barGlass(): Brush {
     val bottom = Midnight.Bg2
     return remember(top, middle, bottom) {
         Brush.verticalGradient(
-            0f to top.copy(alpha = 0.88f),
-            0.4f to middle.copy(alpha = 0.96f),
-            1f to bottom.copy(alpha = 0.98f),
+            0f to top.copy(alpha = 0.76f),
+            0.4f to middle.copy(alpha = 0.84f),
+            1f to bottom.copy(alpha = 0.90f),
         )
     }
 }
@@ -104,8 +107,8 @@ private fun barBlur(): HazeStyle {
     return remember(background, tint) {
         HazeStyle(
             backgroundColor = background,
-            tint = HazeTint(tint.copy(alpha = 0.62f)),
-            blurRadius = 22.dp,
+            tint = HazeTint(tint.copy(alpha = 0.50f)),
+            blurRadius = 24.dp,
             noiseFactor = 0.04f,
         )
     }
@@ -167,7 +170,7 @@ fun FloatingNavigationBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(FloatingNavBarExpandedHeight)
-                .shadow(6.dp, BarShape)
+                .shadow(10.dp, BarShape)
                 .clip(BarShape)
                 .then(
                     if (blurred) {
@@ -253,7 +256,7 @@ private fun FloatingNavIcon(
 ) {
     val accent = LocalMidnightAccent.current
     val idleTint = Midnight.Text2
-    val onAccent = Midnight.OnAccent
+    val selectedText = Color.White
     val progress = remember { Animatable(if (selected) 1f else 0f) }
     LaunchedEffect(selected) { progress.animateTo(if (selected) 1f else 0f, PillSpring) }
     val p = { progress.value.coerceIn(0f, 1f) }
@@ -273,7 +276,21 @@ private fun FloatingNavIcon(
             )
             .padding(vertical = PillInset)
             .clip(PillShape)
-            .drawBehind { drawRect(accent.copy(alpha = accent.alpha * p())) },
+            .drawBehind {
+                // A gently lit glass bubble follows the active tab, rather than an opaque
+                // accent block. Both fill and rim fade with the existing spring progress.
+                val fraction = p()
+                val radius = size.height / 2f
+                drawRoundRect(
+                    color = accent.copy(alpha = 0.34f * fraction),
+                    cornerRadius = CornerRadius(radius, radius),
+                )
+                drawRoundRect(
+                    color = Color.White.copy(alpha = 0.23f * fraction),
+                    cornerRadius = CornerRadius(radius, radius),
+                    style = Stroke(width = 1.dp.toPx()),
+                )
+            },
         content = {
             Icon(
                 imageVector = item.icon,
@@ -283,7 +300,7 @@ private fun FloatingNavIcon(
             )
             Text(
                 item.label,
-                color = onAccent,
+                color = selectedText,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
