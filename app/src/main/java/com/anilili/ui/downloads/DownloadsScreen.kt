@@ -1072,8 +1072,7 @@ private fun EpisodeRowArtwork(
         Modifier
             .width(104.dp)
             .aspectRatio(16f / 9f)
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surface),
+            .glassCard(RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center,
     ) {
         AsyncImage(

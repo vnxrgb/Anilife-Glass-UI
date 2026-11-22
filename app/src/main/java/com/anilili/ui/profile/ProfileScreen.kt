@@ -2309,7 +2309,7 @@ private fun SavedAnimeCard(
     }
     Column(cardModifier) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+            Modifier.fillMaxWidth().aspectRatio(2f / 3f).glassCard(RoundedCornerShape(20.dp)),
         ) {
             AsyncImage(entry.cover, entry.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             when {

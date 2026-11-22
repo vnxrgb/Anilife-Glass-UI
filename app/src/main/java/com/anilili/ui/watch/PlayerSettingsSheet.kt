@@ -3,6 +3,8 @@ package com.anilili.ui.watch
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -350,7 +352,7 @@ private fun PlayerModalSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color(0xFF161823).copy(alpha = 0.96f),
+        containerColor = Color(0xFF161823).copy(alpha = 0.91f),
         contentColor = Midnight.Text,
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
         dragHandle = null,
@@ -360,6 +362,13 @@ private fun PlayerModalSheet(
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                // A theme-accent rim keeps the video controls in the same
+                // cinematic glass language without reducing readability.
+                .border(
+                    1.dp,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+                )
                 .padding(start = 18.dp, end = 18.dp, bottom = 18.dp),
         ) {
             Box(
@@ -433,7 +442,12 @@ private fun PlayerSidePanel(
                 .width(panelWidth)
                 // The episode drawer's frame, shared by every picker the player opens.
                 .clip(PlayerPanelShape)
-                .background(PlayerPanelSurface)
+.background(PlayerPanelSurface.copy(alpha = 0.94f))
+                .border(
+                    1.dp,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.27f),
+                    PlayerPanelShape,
+                )
                 // Taps inside the panel are the panel's own; without this they would reach the
                 // scrim behind it and close what was just opened.
                 .pointerInput(Unit) { detectTapGestures { } }

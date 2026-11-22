@@ -96,3 +96,8 @@
 
 ## Release criteria
 An APK build is only **technical readiness**. A final release requires all core screens to match the approved mockup at realistic phone sizes AND player ambient mode to behave like the supplied YouTube reference, with all regression and accessibility gates checked. Leave this file honest: do not mark items done based solely on source changes or a successful GitHub Action.
+
+## Implementation log (2026-11-22)
+- `7efa3ae`: Shared frosted search/filter components, account card, offline empty state, and near-black live ambient frame suppression. Code only; build/device verification outstanding.
+- Follow-up: Cinematic outline and translucency in player settings/source modal and side panel, consistent glass treatment on library/download artwork. Code only; build/device verification outstanding.
+- Next priorities remain the unchecked mockup/real-device acceptance items above. Do not mark them complete on the basis of commits alone.
