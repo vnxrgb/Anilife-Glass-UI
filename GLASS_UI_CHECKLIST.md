@@ -101,3 +101,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - `7efa3ae`: Shared frosted search/filter components, account card, offline empty state, and near-black live ambient frame suppression. Code only; build/device verification outstanding.
 - Follow-up: Cinematic outline and translucency in player settings/source modal and side panel, consistent glass treatment on library/download artwork. Code only; build/device verification outstanding.
 - Next priorities remain the unchecked mockup/real-device acceptance items above. Do not mark them complete on the basis of commits alone.
+
+- `SECONDARY UI PASS`: Notifications screen and cards now use the mobile glass atmosphere; calendar day cells retain neutral theme-adaptive frosted backgrounds and accented selection; next-episode countdown uses a theme-responsive rim/gradient glass panel. Code implementation, not device-tested.

@@ -1,6 +1,8 @@
 package com.anilili.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.anilili.ui.theme.Midnight
+import com.anilili.ui.components.glassPanelColor
 import java.util.Locale
 import kotlinx.coroutines.delay
 
@@ -56,9 +59,18 @@ fun NextEpisodeCountdown(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Midnight.Panel2)
-            .padding(horizontal = 18.dp, vertical = 14.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(glassPanelColor())
+            .background(
+                Brush.horizontalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.17f),
+                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.08f),
+                    ),
+                ),
+            )
+            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.32f), RoundedCornerShape(22.dp))
+            .padding(horizontal = 18.dp, vertical = 16.dp)
             // One announcement rather than five, and phrased the way it would be said aloud: a
             // screen reader walking "EPISODE 20 WILL BE RELEASED IN" then "1 DAY 3 HRS…" reads the
             // abbreviations letter by letter.
@@ -72,7 +84,7 @@ fun NextEpisodeCountdown(
         Text(
             text = heading,
             style = MaterialTheme.typography.labelSmall,
-            color = Midnight.Text3,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 1.2.sp,
             textAlign = TextAlign.Center,
@@ -80,7 +92,7 @@ fun NextEpisodeCountdown(
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
-            color = Midnight.Text,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.6.sp,
             textAlign = TextAlign.Center,

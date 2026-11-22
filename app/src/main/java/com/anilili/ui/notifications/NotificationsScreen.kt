@@ -1,6 +1,8 @@
 package com.anilili.ui.notifications
 
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassAtmosphere
+import com.anilili.ui.components.glassCard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -158,8 +160,8 @@ fun NotificationsScreen(
     }
 
     Scaffold(
-        containerColor = canvasColor(),
-        modifier = modifier,
+        containerColor = if (device.isTv) canvasColor() else androidx.compose.ui.graphics.Color.Transparent,
+        modifier = modifier.then(if (device.isTv) Modifier else Modifier.glassAtmosphere()),
         topBar = {
             ScrollAwareTopBar { TopAppBar(
                 title = { Text("Notifications", fontWeight = FontWeight.Black) },
@@ -456,8 +458,7 @@ private fun NotificationCard(
         Modifier
             .fillMaxWidth()
             .focusHighlight(shape)
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.82f))
+            .glassCard(shape)
             .border(
                 width = if (item.unread) 1.5.dp else 1.dp,
                 color = when {
