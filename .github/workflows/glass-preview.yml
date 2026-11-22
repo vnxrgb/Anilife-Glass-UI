@@ -1,8 +1,14 @@
 name: Universal Glass UI APK preview
 
 on:
+  # Ordinary feature commits intentionally do NOT build an APK. After a major
+  # implementation batch, update .github/glass-preview-trigger.txt to request
+  # one preview build from that commit. This avoids cancelling costly Gradle runs
+  # and replacing the APK on every small visual adjustment.
   push:
     branches: [feature/unified-glass-ui]
+    paths:
+      - .github/glass-preview-trigger.txt
   workflow_dispatch:
 
 permissions:
