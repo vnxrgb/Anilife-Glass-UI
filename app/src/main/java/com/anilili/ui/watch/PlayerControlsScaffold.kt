@@ -654,13 +654,13 @@ private fun PlayerActionRow(
             .clip(RoundedCornerShape(28.dp))
             .background(
                 Brush.verticalGradient(
-                    0f to Color(0xFF444854).copy(alpha = 0.54f),
-                    0.35f to Color(0xFF222630).copy(alpha = 0.64f),
-                    1f to Color(0xFF0B0D13).copy(alpha = 0.74f),
+                    0f to Color(0xFF45464B).copy(alpha = 0.42f),
+                    0.35f to Color(0xFF24252A).copy(alpha = 0.56f),
+                    1f to Color(0xFF111216).copy(alpha = 0.68f),
                 ),
             )
-            .border(1.dp, Color.White.copy(alpha = 0.26f), RoundedCornerShape(28.dp))
-            .padding(horizontal = 5.dp, vertical = 4.dp),
+            .border(1.dp, Color.White.copy(alpha = 0.23f), RoundedCornerShape(28.dp))
+            .padding(horizontal = 6.dp, vertical = 5.dp),
     ) { measurables, constraints ->
         val placeables = measurables.map { it.measure(Constraints()) }
         val gaps = spacingPx * (placeables.size - 1).coerceAtLeast(0)
@@ -747,8 +747,8 @@ internal fun PlayerActionPill(
         modifier = modifier
             .focusFill(fillFocus1, shape)
             .clip(shape)
-            .background(fillFocus1.background(Color(0xFF222630).copy(alpha = 0.66f)), shape)
-            .border(1.dp, Color.White.copy(alpha = 0.24f), shape)
+            .background(fillFocus1.background(Color(0xFF24252A).copy(alpha = 0.54f)), shape)
+            .border(1.dp, Color.White.copy(alpha = 0.20f), shape)
             .clickable(enabled = enabled, onClick = onClick)
             .heightIn(min = 48.dp)
             .padding(horizontal = if (showLabel) 12.dp else 10.dp, vertical = 8.dp)
