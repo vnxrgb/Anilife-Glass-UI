@@ -1620,6 +1620,8 @@ internal fun adaptiveColumnCount(
     minimumTileWidth: androidx.compose.ui.unit.Dp,
     spacing: androidx.compose.ui.unit.Dp,
 ): Int {
+    // Bad/zero configuration widths should never generate hundreds of phantom grid columns.
+    if (minimumTileWidth <= 0.dp) return 1
     val contentWidth = (availableWidth - horizontalPadding * 2).coerceAtLeast(0.dp)
     val denominator = (minimumTileWidth + spacing).coerceAtLeast(1.dp)
     return ((contentWidth.value + spacing.value) / denominator.value)
