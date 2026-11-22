@@ -71,7 +71,7 @@
 ## 7. Floating navigation and safe areas
 - [x] Five fixed-width Home/My List/Browse/Downloads/Profile items
 - [x] Stable selected indicator with accent-colour light and neutral adaptive bar
-- [ ] Compact height/padding and animated soft indicator/glow to visually match reference
+- [x] Implement compact height/padding and animated soft indicator/glow in navigation code (visual match still unverified)
 - [ ] No page content hidden behind capsule or floating companions (scroll to final row)
 - [ ] Verify hidden states for login, player fullscreen, sheets, TV and keyboard
 
@@ -147,3 +147,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - `20-CHANGE COORDINATED PASS` (`e17b504` plus follow-up): Fifteen edits across Home (four), Details (three), Settings (two), Downloads (three), Schedule (three), plus navigation icon contrast and shadow, search focus rim, player pause overlay width and Browse empty-state recovery copy. These are layout/polish adjustments, not completion of the full redesign. APK build and device validation remain deferred.
 
 - `SHARED DIALOG READABILITY PASS`: Mobile full-synopsis overlay now uses a theme-neutral glass reading surface with compact phone insets, while TV retains its full-screen dark D-pad reading experience. Custom-list naming field uses the same neutral glass fill, responsive rim and accent focus border; account writes and input handling unchanged. Code only; real-device and accessibility acceptance pending.
+
+- `NAVIGATION ANIMATION SECTION`: Mobile selected-tab glass wash and theme-accent glow now animate independently across selection changes without changing five-tab widths or touch targets. The compact capsule and existing root safe-area contract are preserved. Visual/device acceptance and takeover/IME regression checks remain pending.

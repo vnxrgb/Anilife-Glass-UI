@@ -8,6 +8,8 @@ import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
@@ -54,6 +56,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawCircle
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -256,23 +259,40 @@ private fun FloatingNavIcon(
     val iconColor = if (selected) MaterialTheme.colorScheme.onSurface
         else MaterialTheme.colorScheme.onSurfaceVariant
     val shape = RoundedCornerShape(50)
+    // A persistent, animated neutral selection wash; accent is reserved for the soft rim.
+    val selectionAlpha by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = tween(durationMillis = 260),
+        label = "navSelectionWash",
+    )
+    val glowAlpha by animateFloatAsState(
+        targetValue = if (selected) 0.26f else 0f,
+        animationSpec = tween(durationMillis = 320),
+        label = "navSelectionGlow",
+    )
+    val accent = MaterialTheme.colorScheme.primary
     Box(
         modifier = Modifier
             .width(width)
             .fillMaxHeight()
             .padding(vertical = 2.dp, horizontal = 2.dp)
             .clip(shape)
-            .then(
-                if (selected) Modifier
-                    .background(
-                        Brush.verticalGradient(
-                            0f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.19f),
-                            1f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.45f),
-                        ),
-                    )
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.38f), shape)
-                else Modifier
+            .background(
+                Brush.verticalGradient(
+                    0f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.19f * selectionAlpha),
+                    1f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.45f * selectionAlpha),
+                ),
             )
+            .drawBehind {
+                if (glowAlpha > 0f) {
+                    drawCircle(
+                        color = accent.copy(alpha = glowAlpha),
+                        radius = size.minDimension * 0.42f,
+                        center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height * 0.82f),
+                    )
+                }
+            }
+            .border(1.dp, accent.copy(alpha = 0.38f * selectionAlpha), shape)
             .selectable(
                 selected = selected,
                 role = Role.Tab,
