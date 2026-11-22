@@ -16,6 +16,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import kotlin.math.roundToInt
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Samples a tiny copy of the actual video frame for the surrounding *phone*
@@ -49,32 +51,54 @@ internal suspend fun sampleVideoAmbientColor(view: PlayerView): Color? {
         withContext(Dispatchers.Default) {
             val pixels = IntArray(bitmap.width * bitmap.height)
             bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-            var r = 0L
-            var g = 0L
-            var b = 0L
-            var count = 0
-            // Exclude near-black letterboxing and bright subtitle glyphs.
-            for (pixel in pixels) {
-                val red = android.graphics.Color.red(pixel)
-                val green = android.graphics.Color.green(pixel)
-                val blue = android.graphics.Color.blue(pixel)
-                val lightness = (red + green + blue) / 3
-                if (lightness < 20 || lightness > 242) continue
-                r += red
-                g += green
-                b += blue
-                count++
-            }
-            if (count < 48) null else {
-                // Keep text legible even when the video frame is almost white.
-                fun shade(v: Long) = ((v.toFloat() / count) * 0.30f + 12f)
-                    .roundToInt().coerceIn(12, 87) / 255f
-                Color(shade(r), shade(g), shade(b))
-            }
+            extractVideoAmbientTint(pixels, bitmap.width, bitmap.height)
         }
     } catch (_: Exception) {
         null
     } finally {
         bitmap.recycle()
     }
+}
+
+/**
+ * Build a subtle but colourful glow from actual scene pixels. The bottom fifth is ignored
+ * because subtitle text and playback overlays are not part of the scene's lighting.
+ * Chroma-weighted accumulation favours the scene's colours over grey skies and letterboxing,
+ * without letting a single tiny bright pixel determine the entire wash.
+ */
+internal fun extractVideoAmbientTint(pixels: IntArray, width: Int, height: Int): Color? {
+    if (width <= 0 || height <= 0 || pixels.size < width.toLong() * height) return null
+    var weightedRed = 0L
+    var weightedGreen = 0L
+    var weightedBlue = 0L
+    var weightSum = 0L
+    var chromaSum = 0L
+    var valid = 0
+    val sampledHeight = (height * 4 / 5).coerceAtLeast(1)
+    for (y in 0 until sampledHeight) {
+        for (x in 0 until width) {
+            val pixel = pixels[y * width + x]
+            val red = android.graphics.Color.red(pixel)
+            val green = android.graphics.Color.green(pixel)
+            val blue = android.graphics.Color.blue(pixel)
+            val brightness = (red + green + blue) / 3
+            if (brightness < 20 || brightness > 242) continue
+            val chroma = max(red, max(green, blue)) - min(red, min(green, blue))
+            val weight = 16 + chroma.coerceAtMost(160)
+            weightedRed += red.toLong() * weight
+            weightedGreen += green.toLong() * weight
+            weightedBlue += blue.toLong() * weight
+            weightSum += weight
+            chromaSum += chroma
+            valid++
+        }
+    }
+    // Blank, grey and protected frames should not abruptly replace the last vibrant scene.
+    if (valid < max(12, width * sampledHeight / 20) || weightSum == 0L ||
+        chromaSum < valid.toLong() * 12
+    ) return null
+
+    fun shade(sum: Long): Float = ((sum.toFloat() / weightSum) * 0.34f + 11f)
+        .roundToInt().coerceIn(11, 100) / 255f
+    return Color(shade(weightedRed), shade(weightedGreen), shade(weightedBlue))
 }
