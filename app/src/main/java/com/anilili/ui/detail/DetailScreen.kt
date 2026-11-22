@@ -1353,7 +1353,7 @@ private fun GenreRow(genres: List<String>) {
             modifier = Modifier
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             genres.forEach { genre ->
                 Text(
@@ -1363,7 +1363,7 @@ private fun GenreRow(genres: List<String>) {
                         .clip(RoundedCornerShape(50))
                         .background(glassPanelColor())
                         .border(1.dp, glassRimColor(), RoundedCornerShape(50))
-                        .padding(horizontal = 11.dp, vertical = 6.dp),
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                 )
             }
         }
@@ -1494,11 +1494,11 @@ private fun MetadataCard(info: Media) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp)
-            .glassCard(RoundedCornerShape(22.dp))
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .glassCard(RoundedCornerShape(20.dp))
+            .padding(horizontal = 13.dp, vertical = 9.dp),
     ) {
         rows.forEach { (label, value) ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
                 Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                 Text(value, fontWeight = FontWeight.SemiBold)
             }

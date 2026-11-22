@@ -328,12 +328,12 @@ fun DownloadsScreen(
                         .fillMaxWidth()
                         .widthIn(max = 440.dp)
                         .glassCard(RoundedCornerShape(24.dp))
-                        .padding(horizontal = 24.dp, vertical = 28.dp),
+                        .padding(horizontal = 22.dp, vertical = 24.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(9.dp),
                     ) {
                         Box(
                             Modifier
@@ -780,7 +780,7 @@ private fun DownloadSeriesCard(
             series.title,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 5.dp),
         )

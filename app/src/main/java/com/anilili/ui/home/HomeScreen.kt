@@ -1045,7 +1045,7 @@ private fun HeroCard(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth(if (device.isExpanded) 0.8f else 1f)
                 .padding(horizontal = device.pagePadding)
-                .padding(top = 16.dp, bottom = 26.dp),
+                .padding(top = if (device.isTv) 16.dp else 12.dp, bottom = if (device.isTv) 26.dp else 23.dp),
             horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
             HeroMetaRow(media)
@@ -1056,9 +1056,9 @@ private fun HeroCard(
                 contentDescription = media.title.preferred,
                 alignment = if (device.isTv) Alignment.Center else Alignment.CenterStart,
                 modifier = Modifier
-                    .padding(top = 10.dp)
+                    .padding(top = if (device.isTv) 10.dp else 7.dp)
                     .fillMaxWidth(if (device.isExpanded) 0.6f else 0.90f)
-                    .height(if (device.isTv || device.isExpanded) 88.dp else 70.dp),
+                    .height(if (device.isTv || device.isExpanded) 88.dp else 66.dp),
             ) {
                 ShrinkingTitle(
                     text = media.title.preferred,
@@ -1080,7 +1080,7 @@ private fun HeroCard(
             }
             val genreLabel = media.genres.take(3).joinToString("  ·  ")
             if (genreLabel.isNotBlank()) {
-                HeroPill(Modifier.padding(top = 7.dp), backdrop = heroArt) {
+                HeroPill(Modifier.padding(top = 5.dp), backdrop = heroArt) {
                     Text(genreLabel, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
                 }
             }
@@ -1088,7 +1088,7 @@ private fun HeroCard(
                 // The hero is a destination as well as artwork. Keep the actionable
                 // call-to-action visible instead of relying on an undocumented poster tap.
                 Row(
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = 7.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -1699,10 +1699,8 @@ private fun ContinueRail(
                         ) {
                             Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
                         }
-                        // The two things anyone actually does to a Continue Watching card, on the
-                        // card. They were reachable only behind a long press, which is a gesture
-                        // nothing on this screen advertises and most viewers never tried; the
-                        // menu stays for moving a title between lists, which needs a list to pick.
+                        // Overflow exposes Details, Remove and list-management actions.
+                        // The rest of the thumbnail remains a direct Resume target.
                         // One reachable action menu instead of two large corner discs
                         // obscuring most of the artwork on a 124dp thumbnail. It still
                         // contains Details, Remove and account list-management actions.
@@ -1769,7 +1767,7 @@ private fun ContinueRail(
                             }
                         }
                     }
-                    Text(entry.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
+                    Text(entry.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
                     Text("Episode ${entry.episodeLabel}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

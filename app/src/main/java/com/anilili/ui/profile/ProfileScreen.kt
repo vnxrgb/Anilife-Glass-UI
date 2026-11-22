@@ -896,7 +896,7 @@ private fun ProfileHero(
             .fillMaxWidth()
             .glassCard(shape),
     ) {
-        Column(Modifier.fillMaxWidth().padding(20.dp)) {
+        Column(Modifier.fillMaxWidth().padding(if (device.isTv) 20.dp else 16.dp)) {
             Text("Your anime, in one place", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
             Text(
                 "Connect AniList or MyAnimeList to browse every list, score, and episode progress from Anilife.",
@@ -909,8 +909,8 @@ private fun ProfileHero(
             // a one-line AniList button and the TV link sat alone underneath — three shapes for
             // three equal choices, and nothing but the words to tell the services apart.
             Column(
-                Modifier.padding(top = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                Modifier.padding(top = if (device.isTv) 16.dp else 12.dp),
+                verticalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 8.dp),
             ) {
                 SignInOptionRow(
                     title = "Continue with AniList",
@@ -958,7 +958,7 @@ private fun SignInOptionRow(
     badge: @Composable () -> Unit,
     emphasized: Boolean = false,
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(18.dp)
     val focus = rememberFocusFill()
     val container = if (emphasized) {
         MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
@@ -976,21 +976,21 @@ private fun SignInOptionRow(
             .focusFill(focus, shape),
     ) {
         Row(
-            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             badge()
             Column(
                 Modifier
                     .weight(1f)
-                    .padding(horizontal = 14.dp),
+                    .padding(horizontal = 11.dp),
             ) {
                 Text(
                     title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = focus.content(MaterialTheme.colorScheme.onSurface),
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
@@ -2090,7 +2090,7 @@ private fun HistoryCard(
             }
         }
         if (poster.shows(PosterElement.TITLE)) {
-            Text(entry.title, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 5.dp))
+            Text(entry.title, style = MaterialTheme.typography.labelLarge, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 5.dp))
         }
         if (poster.shows(PosterElement.DETAILS)) {
             Text(

@@ -1434,12 +1434,12 @@ private fun ResultsGrid(
                         bottom = AppChromeListBottomGap + LocalAppChromeBottomInset.current + seasonBarClearance,
                     ),
                     horizontalArrangement = Arrangement.spacedBy(horizontalSpacing, Alignment.Start),
-                    verticalArrangement = Arrangement.spacedBy(if (device.isTv) 16.dp else if (device.isTablet) 13.dp else 11.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (device.isTv) 16.dp else if (device.isTablet) 12.dp else 10.dp),
                 ) {
                     if (!device.isTv) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             Row(
-                                Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                                Modifier.fillMaxWidth().padding(bottom = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
