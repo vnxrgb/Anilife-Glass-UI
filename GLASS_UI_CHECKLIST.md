@@ -161,3 +161,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - `SECONDARY UPDATE/PROGRESS PASS`: Expanded update notes on phone now use a theme-adaptive neutral frosted reading surface and selected focus rim, preserving TV focus/key scrolling. Account episode progress controls remain on the existing shared dialog primitives; no account or playback logic changed. Source implementation only, pending compile and real-device verification.
 
 - `HOME PERSONALIZATION TOUCH PASS`: Arrange Home drag handle on handhelds is now a 48dp neutral frosted touch surface with theme-adaptive icon contrast. Drag/reorder persistence and TV arrow navigation remain unchanged. Source implementation only; touch/TV/device verification pending.
+
+- `REORDER AND SEARCH ACCESSIBILITY PASS`: Home reorder handle now has a single accessible drag description and 48dp arrow targets; shared phone search clear button and TV dialog clear control have 48dp minimum targets, with an explicit TV search action label. Implementation only; no compilation, screen reader, remote or device acceptance claimed.
