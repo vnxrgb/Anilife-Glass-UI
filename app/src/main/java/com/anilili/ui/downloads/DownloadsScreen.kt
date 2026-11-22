@@ -288,9 +288,9 @@ fun DownloadsScreen(
                 selecting -> "${selectedEpisodes.size} selected"
                 else -> openSeries?.title ?: "Downloads"
             },
-            subtitle = if (allSeries.isEmpty()) "Offline anime for you" else null,
             subtitle = when {
                 selecting -> selectionSummary(selectedEpisodes)
+                allSeries.isEmpty() -> "Offline anime for you"
                 else -> downloadsSummary(openSeries, allSeries)
             },
             leading = when {
