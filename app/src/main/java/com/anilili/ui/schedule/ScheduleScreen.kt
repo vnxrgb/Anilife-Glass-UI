@@ -405,7 +405,7 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
     LazyRow(
         state = listState,
         modifier = Modifier.focusGroup(),
-        contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 5.dp),
+        contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 6.dp else 5.dp),
     ) {
         items(DAY_STRIP_LENGTH) { index ->
@@ -419,18 +419,18 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
                     .focusFill(fillFocus1, RoundedCornerShape(14.dp))
                     .clip(RoundedCornerShape(14.dp))
                     .background(
-                        fillFocus1.background(if (active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.17f)
+                        fillFocus1.background(if (active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                         else glassPanelColor()),
                     )
                     .border(
                         width = 1.dp,
                         color = fillFocus1.content(if (active) glassRimColor()
-                        else glassRimColor().copy(alpha = 0.75f)),
+                        else glassRimColor().copy(alpha = 0.66f)),
                         shape = RoundedCornerShape(14.dp),
                     )
                     .clickable(onClickLabel = "Show schedule for ${date.format(dateFmt)}") { onSelect(date) }
                     .semantics { this.selected = active }
-                    .padding(vertical = 7.dp),
+                    .padding(vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
