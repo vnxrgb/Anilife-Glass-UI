@@ -84,9 +84,9 @@ private val BarShape = RoundedCornerShape(50)
 // Built from the theme, so they are rebuilt only when the theme changes.
 @Composable
 private fun barGlass(): Brush {
-    val top = Midnight.Line2
-    val middle = Midnight.Panel2
-    val bottom = Midnight.Bg2
+    val top = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+    val middle = MaterialTheme.colorScheme.surfaceContainerHigh
+    val bottom = MaterialTheme.colorScheme.surfaceContainer
     return remember(top, middle, bottom) {
         Brush.verticalGradient(
             0f to top.copy(alpha = 0.76f),
@@ -102,8 +102,8 @@ private fun barGlass(): Brush {
  */
 @Composable
 private fun barBlur(): HazeStyle {
-    val background = Midnight.Bg
-    val tint = Midnight.Panel2
+    val background = MaterialTheme.colorScheme.surface
+    val tint = MaterialTheme.colorScheme.surfaceContainerHigh
     return remember(background, tint) {
         HazeStyle(
             backgroundColor = background,
@@ -116,9 +116,9 @@ private fun barBlur(): HazeStyle {
 
 @Composable
 private fun barRim(): Brush {
-    val top = Midnight.Text2
-    val middle = Midnight.Line2
-    val bottom = Midnight.Line
+    val top = MaterialTheme.colorScheme.onSurface
+    val middle = MaterialTheme.colorScheme.onSurface
+    val bottom = MaterialTheme.colorScheme.onSurface
     return remember(top, middle, bottom) {
         Brush.verticalGradient(
             0f to top.copy(alpha = 0.18f),
@@ -255,9 +255,9 @@ private fun FloatingNavIcon(
     onClick: () -> Unit,
 ) {
     // Selected navigation is frosted neutral glass; the theme accent remains on actions.
-    val accent = Color.White
-    val idleTint = Midnight.Text2
-    val selectedText = Color.White
+    val accent = MaterialTheme.colorScheme.onSurface
+    val idleTint = MaterialTheme.colorScheme.onSurfaceVariant
+    val selectedText = MaterialTheme.colorScheme.onSurface
     val progress = remember { Animatable(if (selected) 1f else 0f) }
     LaunchedEffect(selected) { progress.animateTo(if (selected) 1f else 0f, PillSpring) }
     val p = { progress.value.coerceIn(0f, 1f) }
@@ -287,7 +287,7 @@ private fun FloatingNavIcon(
                     cornerRadius = CornerRadius(radius, radius),
                 )
                 drawRoundRect(
-                    color = Color.White.copy(alpha = 0.30f * fraction),
+                    color = accent.copy(alpha = 0.30f * fraction),
                     cornerRadius = CornerRadius(radius, radius),
                     style = Stroke(width = 1.dp.toPx()),
                 )
