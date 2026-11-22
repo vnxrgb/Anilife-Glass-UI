@@ -324,7 +324,11 @@ private fun MidnightSettingRowScaffold(
     // copy and its control inverted, a faint card otherwise. No rule between rows — the gap and
     // the corner are what separate them now.
     val shape = RoundedCornerShape(MidnightRowRadius)
-    val fill = if (focused) MidnightFocusFill else MidnightRestFill
+    val fill = when {
+        focused -> MidnightFocusFill
+        device.isTv -> MidnightRestFill
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.43f)
+    }
     // A television's row does not fill under the cursor (see MidnightFocusFill), so a danger row
     // stays red there.
     val ink = when {
@@ -374,6 +378,14 @@ private fun MidnightSettingRowScaffold(
             .focusHalo(focused && device.isTv, shape, FocusRingGap)
             .clip(shape)
             .background(fill, shape)
+            .then(
+                if (device.isTv || focused) Modifier
+                else Modifier.border(
+                    1.dp,
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f),
+                    shape,
+                )
+            )
             .bringIntoViewRequester(bringIntoView)
             .onSizeChanged { rowSize = it }
             // Ahead of the clickable below, which is the focus target it names.

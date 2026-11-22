@@ -103,3 +103,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - Next priorities remain the unchecked mockup/real-device acceptance items above. Do not mark them complete on the basis of commits alone.
 
 - `SECONDARY UI PASS`: Notifications screen and cards now use the mobile glass atmosphere; calendar day cells retain neutral theme-adaptive frosted backgrounds and accented selection; next-episode countdown uses a theme-responsive rim/gradient glass panel. Code implementation, not device-tested.
+
+- `SHARED SETTINGS PASS`: Settings rows and selection rows now use neutral translucent theme-colour panels and subtle hairline borders on mobile. TV keeps the established D-pad focus rendering. Code only; functionality and visual verification pending.
