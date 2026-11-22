@@ -1713,6 +1713,26 @@ private fun ContinueRail(
                             modifier = Modifier.align(Alignment.TopEnd).padding(5.dp),
                             backdrop = thumbnail,
                         )
+                        // Keep the resume-time badge inside the artwork rather than adding a
+                        // third text line to every small card. Show it only for real playback
+                        // history; remote list sync alone does not establish a duration.
+                        val remainingMs = (entry.durationMs - entry.positionMs).coerceAtLeast(0L)
+                        if (!device.isTv && entry.durationMs > 0L && entry.positionMs > 0L && remainingMs > 0L) {
+                            val minutesLeft = (remainingMs + 59_999L) / 60_000L
+                            Text(
+                                text = "${minutesLeft}m left",
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(end = 6.dp, bottom = 10.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Color.Black.copy(alpha = 0.76f))
+                                    .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(50))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                maxLines = 1,
+                            )
+                        }
                         // A remote-synced entry may not yet have a real playback duration.
                         // Draw actual progress only, instead of fabricating a visible 3% strip.
                         if (entry.durationMs > 0L) {
@@ -1727,18 +1747,6 @@ private fun ContinueRail(
                     }
                     Text(entry.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
                     Text("Episode ${entry.episodeLabel}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    // The reference shows a remaining-time readout. Base it on recorded
-                    // playback duration rather than assuming every episode lasts 24 minutes.
-                    val timeLeftMs = (entry.durationMs - entry.positionMs).coerceAtLeast(0L)
-                    if (!device.isTv && entry.durationMs > 0L && entry.positionMs > 0L && timeLeftMs > 0L) {
-                        val minutesLeft = (timeLeftMs + 59_999L) / 60_000L
-                        Text(
-                            text = "${minutesLeft} min left",
-                            maxLines = 1,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
                 }
             }
         }
