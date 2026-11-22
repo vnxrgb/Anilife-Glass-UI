@@ -14,7 +14,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -22,6 +25,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
@@ -50,6 +55,8 @@ import com.anilili.ui.dialogs.MidnightHelper
 import com.anilili.ui.dialogs.MidnightMediaHeader
 import com.anilili.ui.dialogs.MidnightSelectionRow
 import com.anilili.ui.theme.Midnight
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
 
 /**
  * Arrange Home: drag a row by its handle (touch), or move it with the arrows (a remote has no
@@ -145,7 +152,10 @@ fun HomeLayoutDialog(onDismiss: () -> Unit) {
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(glassPanelColor())
+                                .border(1.dp, glassRimColor(), RoundedCornerShape(14.dp))
                                 .pointerInput(row) {
                                     detectDragGestures(
                                         onDragStart = {
@@ -185,7 +195,7 @@ fun HomeLayoutDialog(onDismiss: () -> Unit) {
                             Icon(
                                 Icons.Default.DragHandle,
                                 contentDescription = "Drag ${row.label(false)}",
-                                tint = Midnight.Text3,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
