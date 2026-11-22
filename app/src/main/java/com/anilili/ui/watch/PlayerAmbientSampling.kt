@@ -32,18 +32,32 @@ internal suspend fun sampleVideoAmbientColor(view: PlayerView): Color? {
     val surface = view.videoSurfaceView as? SurfaceView ?: return null
     if (!surface.holder.surface.isValid || !view.isShown) return null
     val bitmap = Bitmap.createBitmap(40, 24, Bitmap.Config.ARGB_8888)
+    // PixelCopy is asynchronous even if the collecting watch screen disappears. Never recycle
+    // the destination while Android can still be writing into it after cancellation.
+    var copyPending = false
+    var copyFinished = false
+    var recycleAfterCopy = false
+    fun copyComplete() {
+        synchronized(bitmap) {
+            copyFinished = true
+            if (recycleAfterCopy && !bitmap.isRecycled) bitmap.recycle()
+        }
+    }
     return try {
         val code = suspendCancellableCoroutine<Int> { continuation ->
             try {
+                synchronized(bitmap) { copyPending = true }
                 PixelCopy.request(
                     surface,
                     bitmap,
                     { result ->
+                        copyComplete()
                         if (continuation.isActive) continuation.resume(result)
                     },
                     Handler(Looper.getMainLooper()),
                 )
             } catch (_: IllegalArgumentException) {
+                synchronized(bitmap) { copyPending = false }
                 if (continuation.isActive) continuation.resume(PixelCopy.ERROR_SOURCE_INVALID)
             }
         }
@@ -56,7 +70,13 @@ internal suspend fun sampleVideoAmbientColor(view: PlayerView): Color? {
     } catch (_: Exception) {
         null
     } finally {
-        bitmap.recycle()
+        synchronized(bitmap) {
+            if (!copyPending || copyFinished) {
+                if (!bitmap.isRecycled) bitmap.recycle()
+            } else {
+                recycleAfterCopy = true
+            }
+        }
     }
 }
 
