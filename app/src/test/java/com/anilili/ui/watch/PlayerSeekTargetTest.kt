@@ -6,9 +6,9 @@ import org.junit.Test
 class PlayerSeekTargetTest {
     @Test
     fun insetTimelineMapsThumbCentersToExactEndpoints() {
-        assertEquals(0L, seekTargetOnInsetTrackMs(6f, 300f, 6f, 90_000L))
-        assertEquals(45_000L, seekTargetOnInsetTrackMs(150f, 300f, 6f, 90_000L))
-        assertEquals(90_000L, seekTargetOnInsetTrackMs(294f, 300f, 6f, 90_000L))
+        assertEquals(0L, seekTargetOnInsetTrackMs(9f, 300f, 9f, 90_000L))
+        assertEquals(45_000L, seekTargetOnInsetTrackMs(150f, 300f, 9f, 90_000L))
+        assertEquals(90_000L, seekTargetOnInsetTrackMs(291f, 300f, 9f, 90_000L))
     }
 
     @Test

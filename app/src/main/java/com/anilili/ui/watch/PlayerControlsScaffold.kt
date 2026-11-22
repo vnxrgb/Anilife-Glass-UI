@@ -4,6 +4,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -371,10 +373,10 @@ internal fun PlayerControlsScaffold(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .height(if (compactHeight) 84.dp else 132.dp)
+                .height(if (compactHeight) 68.dp else 120.dp)
                 .background(
                     Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.54f),
+                        0f to Color.Black.copy(alpha = 0.48f),
                         1f to Color.Transparent,
                     ),
                 ),
@@ -528,8 +530,8 @@ internal fun PlayerControlsScaffold(
                 .background(
                     Brush.verticalGradient(
                         0f to Color.Transparent,
-                        .32f to Color.Black.copy(alpha = 0.39f),
-                        1f to Color.Black.copy(alpha = 0.72f),
+                        .32f to Color.Black.copy(alpha = 0.30f),
+                        1f to Color.Black.copy(alpha = 0.68f),
                     ),
                 )
                 // The picture keeps the camera hole (see PlayerSystemBarsEffect); the seek bar and
@@ -568,7 +570,9 @@ internal fun PlayerControlsScaffold(
                         PlayerTimePill(formatPlayerTime(shownMs), fontSize = metrics.timeTextSize)
                     }
                     if (showBack) {
-                        PlayerActionRow {
+                        // Short landscape windows cannot safely scale action targets below 48dp.
+                        // Allow horizontal scrolling instead; all existing callbacks stay intact.
+                        PlayerActionRow(modifier = Modifier.horizontalScroll(rememberScrollState())) {
                             CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
                                 bottomPrimaryIcons()
                                 bottomRightIcons()
@@ -584,7 +588,7 @@ internal fun PlayerControlsScaffold(
                 ) {
                     PlayerTimePill(formatPlayerTime(shownMs), fontSize = metrics.timeTextSize)
                     PlayerTimePill(
-                        text = "-${formatPlayerTime((durationMs - shownMs).coerceAtLeast(0L))}",
+                        text = if (durationMs > 0L) "-${formatPlayerTime((durationMs - shownMs).coerceAtLeast(0L))}" else "LIVE",
                         fontSize = metrics.timeTextSize,
                         emphasis = 0.68f,
                     )
@@ -608,7 +612,10 @@ internal fun PlayerControlsScaffold(
                     // One compact dock, not two stacked toolbars across the subtitles.
                     // On landscape phones/tablets both action groups fit side by side,
                     // with the lock remaining isolated at the other edge of the picture.
-                    PlayerActionRow(horizontalSpacing = if (showBack) 3.dp else if (metrics.showPillLabels) 6.dp else 0.dp) {
+                    PlayerActionRow(
+                        modifier = if (showBack) Modifier.horizontalScroll(rememberScrollState()) else Modifier,
+                        horizontalSpacing = if (showBack) 3.dp else if (metrics.showPillLabels) 6.dp else 0.dp,
+                    ) {
                         CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
                             if (showBack) bottomPrimaryIcons()
                             bottomRightIcons()
@@ -630,13 +637,14 @@ internal fun PlayerControlsScaffold(
  */
 @Composable
 private fun PlayerActionRow(
+    modifier: Modifier = Modifier,
     horizontalSpacing: Dp = 0.dp,
     content: @Composable () -> Unit,
 ) {
     val spacingPx = with(LocalDensity.current) { horizontalSpacing.roundToPx() }
     Layout(
         content = content,
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(28.dp))
             .background(
                 Brush.verticalGradient(

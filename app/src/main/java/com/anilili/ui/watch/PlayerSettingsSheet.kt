@@ -416,7 +416,7 @@ private fun PlayerModalSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color(0xFF161823).copy(alpha = 0.83f),
+        containerColor = PlayerPanelSurface.copy(alpha = 0.92f),
         contentColor = Midnight.Text,
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
         dragHandle = null,
@@ -493,7 +493,7 @@ private fun PlayerSidePanel(
             // Only load-bearing on the television path, which reaches this composable directly
             // rather than through the wrapper that carries the same z.
             .zIndex(PLAYER_OPTIONS_Z)
-            .background(Color.Black.copy(alpha = 0.55f))
+            .background(Color.Black.copy(alpha = 0.43f))
             // The dimmed video is the sheet's scrim by another name, and it dismisses like one.
             // A tap gesture rather than `clickable` so the scrim never becomes a focus stop the
             // remote has to step over on its way out of the panel.
@@ -506,10 +506,10 @@ private fun PlayerSidePanel(
                 .width(panelWidth)
                 // The episode drawer's frame, shared by every picker the player opens.
                 .clip(PlayerPanelShape)
-.background(PlayerPanelSurface.copy(alpha = 0.94f))
+                .background(PlayerPanelSurface.copy(alpha = 0.94f))
                 .border(
                     1.dp,
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.27f),
+                    Color.White.copy(alpha = 0.24f),
                     PlayerPanelShape,
                 )
                 // Taps inside the panel are the panel's own; without this they would reach the

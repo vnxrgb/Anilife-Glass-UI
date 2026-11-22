@@ -114,7 +114,7 @@ internal fun PlayerSeekBar(
 
     // Keep finger-to-time mapping on the same inset geometry as the drawn thumb.
     // Use the resting radius to avoid restarting an active drag during its animation.
-    val seekInsetPx = with(LocalDensity.current) { 6.dp.toPx() }
+    val seekInsetPx = with(LocalDensity.current) { 9.dp.toPx() }
 
     // White unless the viewer asked for the accent in the player (Appearance): the seek bar sits on
     // the picture, where the player is monochrome by default (see PlayerPanelTheme).
@@ -123,7 +123,10 @@ internal fun PlayerSeekBar(
     val remaining = Color.White.copy(alpha = if (enabled) 0.30f else 0.16f)
 
     fun commit(target: Long) {
-        currentOnSeek(target.coerceIn(0L, currentDurationMs))
+        // A stream may switch to unknown duration while a drag is in progress.
+        val validDuration = currentDurationMs
+        if (validDuration <= 0L) return
+        currentOnSeek(target.coerceIn(0L, validDuration))
         currentOnInteract()
     }
 
@@ -186,8 +189,10 @@ internal fun PlayerSeekBar(
             val thumbPx = with(density) { thumbRadius.toPx() }
             // The thumb must not run off either end, so the track it rides is inset by its own
             // radius and every band is drawn in that same space.
-            val left = thumbPx
-            val right = (size.width - thumbPx).coerceAtLeast(left)
+            // Keep travel geometry fixed while the thumb animates from 6dp to 9dp.
+            // The finger, visible track and accessibility endpoints must agree.
+            val left = seekInsetPx.coerceAtMost(size.width / 2f)
+            val right = (size.width - left).coerceAtLeast(left)
             val span = right - left
 
             fun band(color: Color, bandFraction: Float) {
