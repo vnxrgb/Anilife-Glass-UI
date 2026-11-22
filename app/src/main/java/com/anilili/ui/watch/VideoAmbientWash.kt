@@ -145,12 +145,10 @@ internal fun Modifier.videoAmbientWash(palette: VideoAmbientPalette): Modifier {
         // The shared wash starts directly below the player and runs behind title/actions.
         drawRect(
             brush = Brush.verticalGradient(
-                colorStops = arrayOf(
-                    0f to center.copy(alpha = 0.53f),
-                    0.22f to center.copy(alpha = 0.35f),
-                    0.55f to center.copy(alpha = 0.14f),
-                    1f to Color.Transparent,
-                ),
+                0f to center.copy(alpha = 0.53f),
+                0.22f to center.copy(alpha = 0.35f),
+                0.55f to center.copy(alpha = 0.14f),
+                1f to Color.Transparent,
                 startY = 0f,
                 endY = maxOf(h * 0.92f, w),
             ),
