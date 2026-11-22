@@ -303,7 +303,8 @@ fun MidnightSheet(
                 )
                 .then(
                     if (backdrop != null) {
-                        Modifier.popupGlass(backdrop).background(Midnight.SheetSurface.copy(alpha = GLASS_PANEL_ALPHA))
+                        Modifier.popupGlass(backdrop)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = GLASS_PANEL_ALPHA))
                     } else {
                         Modifier
                     },
