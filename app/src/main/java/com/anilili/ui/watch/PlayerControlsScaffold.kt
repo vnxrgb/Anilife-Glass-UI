@@ -369,7 +369,7 @@ internal fun PlayerControlsScaffold(
                 .height(if (compactHeight) 84.dp else 132.dp)
                 .background(
                     Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.62f),
+                        0f to Color.Black.copy(alpha = 0.54f),
                         1f to Color.Transparent,
                     ),
                 ),
@@ -546,6 +546,10 @@ internal fun PlayerControlsScaffold(
                     }
                     PlayerActionRow {
                         CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
+                            // Very short landscape surfaces used to drop all four primary
+                            // actions because the compact branch rendered utilities only.
+                            // Keep every fullscreen action reachable even at ultrawide ratios.
+                            if (showBack) bottomPrimaryIcons()
                             bottomRightIcons()
                         }
                     }
@@ -633,7 +637,13 @@ private fun PlayerActionRow(
         content = content,
         modifier = Modifier
             .clip(RoundedCornerShape(28.dp))
-            .background(Color.Black.copy(alpha = 0.32f))
+            .background(
+                Brush.verticalGradient(
+                    0f to Color(0xFF444854).copy(alpha = 0.54f),
+                    0.35f to Color(0xFF222630).copy(alpha = 0.64f),
+                    1f to Color(0xFF0B0D13).copy(alpha = 0.74f),
+                ),
+            )
             .border(1.dp, Color.White.copy(alpha = 0.26f), RoundedCornerShape(28.dp))
             .padding(horizontal = 5.dp, vertical = 4.dp),
     ) { measurables, constraints ->

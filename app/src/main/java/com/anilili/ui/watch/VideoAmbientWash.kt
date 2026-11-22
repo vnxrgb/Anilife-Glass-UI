@@ -118,11 +118,12 @@ private fun extractAmbientPalette(bitmap: Bitmap): VideoAmbientPalette? {
         // Skip pure black frames so fades/cut-to-black do not flash a dull grey
         // backdrop. The last valid palette continues to transition smoothly.
         if (peak < 0.035f) return Color.Transparent
-        return Color(
-            red = (r * 0.93f + lift).coerceIn(0f, 1f),
-            green = (g * 0.93f + lift).coerceIn(0f, 1f),
-            blue = (b * 0.93f + lift).coerceIn(0f, 1f),
-        )
+        // Lift colour separation without injecting a fixed hue. Grey scenes remain
+        // neutral; saturated frames cast recognisable blooms instead of muddy brown.
+        val mean = (r + g + b) / 3f
+        fun vivid(channel: Float) = ((mean + (channel - mean) * 1.22f) * 0.93f + lift)
+            .coerceIn(0f, 1f)
+        return Color(red = vivid(r), green = vivid(g), blue = vivid(b))
     }
     val left = average(0, width / 2)
     val right = average(width / 2, width)
@@ -150,10 +151,11 @@ internal fun Modifier.videoAmbientWash(
 
         val w = size.width
         val h = size.height
+        if (w <= 0f || h <= 0f) return@drawBehind
         val strength = intensity.coerceIn(0.5f, 1f)
         // Layer three broad, feathered colour blooms instead of a solid tinted slab.
         // The video itself is never blurred; only the watch-page background is painted.
-        val reach = maxOf(w * 1.15f, h * 0.56f)
+        val reach = maxOf(w * 1.20f, h * 0.42f)
         val center = Color(
             red = (left.red + right.red) * 0.5f,
             green = (left.green + right.green) * 0.5f,
@@ -161,8 +163,8 @@ internal fun Modifier.videoAmbientWash(
         )
         drawRect(
             brush = Brush.verticalGradient(
-                0f to center.copy(alpha = 0.21f * strength),
-                0.32f to center.copy(alpha = 0.08f * strength),
+                0f to center.copy(alpha = 0.16f * strength),
+                0.32f to center.copy(alpha = 0.06f * strength),
                 0.75f to Color.Transparent,
                 1f to Color.Transparent,
                 startY = 0f,
@@ -172,7 +174,7 @@ internal fun Modifier.videoAmbientWash(
         drawRect(
             brush = Brush.radialGradient(
                 *arrayOf(
-                    0f to left.copy(alpha = 0.57f * strength),
+                    0f to left.copy(alpha = 0.64f * strength),
                     0.24f to left.copy(alpha = 0.36f * strength),
                     0.52f to left.copy(alpha = 0.14f * strength),
                     0.85f to Color.Transparent,
@@ -185,7 +187,7 @@ internal fun Modifier.videoAmbientWash(
         drawRect(
             brush = Brush.radialGradient(
                 *arrayOf(
-                    0f to right.copy(alpha = 0.53f * strength),
+                    0f to right.copy(alpha = 0.61f * strength),
                     0.24f to right.copy(alpha = 0.33f * strength),
                     0.52f to right.copy(alpha = 0.13f * strength),
                     0.85f to Color.Transparent,
