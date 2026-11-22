@@ -821,9 +821,10 @@ private fun HeroPager(
         device.isTv -> 420.dp
         device.isExpanded -> 310.dp
         device.isTablet -> 274.dp
-        // Give the feed enough visual room to show Continue Watching above the fold
-        // on a 360-393dp phone while keeping the main featured artwork readable.
-        else -> 244.dp
+        // A phone needs a distinct artwork zone above the title and actions. The old 244dp
+        // forced long titles, metadata, genre chips, buttons and dots into one crowded block.
+        // Keep the hero stable as slides change so page indicators never jump.
+        else -> 322.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -1085,20 +1086,25 @@ private fun HeroCard(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth(if (device.isExpanded) 0.8f else 1f)
                 .padding(horizontal = device.pagePadding)
-                .padding(top = if (device.isTv) 16.dp else 6.dp, bottom = if (device.isTv) 26.dp else 40.dp),
+                .padding(
+                    top = if (device.isTv) 16.dp else 8.dp,
+                    bottom = if (device.isTv) 26.dp else 43.dp,
+                ),
             horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
-            HeroMetaRow(media)
-            // A fixed box about the height of the two title lines it replaces, so the genre pill
-            // does not jump while the logo decodes; centred, like the title.
+            // Desktop/TV keeps the full metadata and genre hierarchy. On phones, let artwork
+            // breathe above the title and show only a short metadata line below it.
+            if (device.isTv) HeroMetaRow(media)
+            // Reserve a fixed two-line title slot so long names are shrunk rather than
+            // squeezing the buttons down into the pager or the top countdown chips.
             SeriesLogo(
                 url = logo,
                 contentDescription = media.title.preferred,
                 alignment = if (device.isTv) Alignment.Center else Alignment.CenterStart,
                 modifier = Modifier
-                    .padding(top = if (device.isTv) 10.dp else 7.dp)
-                    .fillMaxWidth(if (device.isExpanded) 0.6f else 0.90f)
-                    .height(if (device.isTv || device.isExpanded) 88.dp else 58.dp),
+                    .padding(top = if (device.isTv) 10.dp else 0.dp)
+                    .fillMaxWidth(if (device.isExpanded) 0.6f else 1f)
+                    .height(if (device.isTv || device.isExpanded) 88.dp else 66.dp),
             ) {
                 ShrinkingTitle(
                     text = media.title.preferred,
@@ -1106,29 +1112,32 @@ private fun HeroCard(
                         if (device.isTv || device.isExpanded) {
                             MaterialTheme.typography.displaySmall
                         } else {
-                            MaterialTheme.typography.headlineMedium
+                            MaterialTheme.typography.titleLarge
                         }
                     ).copy(
                         fontWeight = FontWeight.Black,
                         textAlign = if (device.isTv) TextAlign.Center else TextAlign.Start,
-                        lineHeight = if (device.isTv || device.isExpanded) 42.sp else 34.sp,
+                        lineHeight = if (device.isTv || device.isExpanded) 42.sp else 28.sp,
                     ),
                     color = Color.White,
                     maxLines = 2,
-                    modifier = Modifier.padding(top = 10.dp),
+                    minFontSize = 17.sp,
+                    modifier = Modifier.padding(top = if (device.isTv) 10.dp else 2.dp),
                 )
             }
             val genreLabel = media.genres.take(3).joinToString("  ·  ")
-            if (genreLabel.isNotBlank()) {
+            if (device.isTv && genreLabel.isNotBlank()) {
                 HeroPill(Modifier.padding(top = 5.dp), backdrop = heroArt) {
                     Text(genreLabel, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
                 }
             }
             if (!device.isTv) {
+                // Restrained single-line metadata takes the place of a third frosted genre row.
+                HeroMetaRow(media, compact = true)
                 // The hero is a destination as well as artwork. Keep the actionable
                 // call-to-action visible instead of relying on an undocumented poster tap.
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -1152,6 +1161,7 @@ private fun HeroCard(
                             ),
                         shape = RoundedCornerShape(50),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.45f)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(19.dp))
                         Spacer(Modifier.width(4.dp))
@@ -1168,6 +1178,7 @@ private fun HeroCard(
                             1.dp, Color.White.copy(alpha = 0.43f),
                         ),
                         shape = RoundedCornerShape(50),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
                     ) {
                         Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(5.dp))
@@ -1339,16 +1350,20 @@ private data class HeroMetaCell(val icon: ImageVector?, val text: String, val ic
 
 /** Centered format / episodes / score / runtime strip, each present only when known. */
 @Composable
-private fun HeroMetaRow(media: Media) {
+private fun HeroMetaRow(media: Media, compact: Boolean = false) {
     val cells = buildList {
         media.format?.let { add(HeroMetaCell(icon = null, text = heroFormatLabel(it))) }
         // For an airing show the CC count is what's actually out, not the season's planned total.
         val airedEpisodes = media.nextAiringEpisode?.episode?.minus(1) ?: media.episodes
-        airedEpisodes?.takeIf { it > 0 }?.let { add(HeroMetaCell(Icons.Default.ClosedCaption, "$it")) }
+        if (!compact) {
+            airedEpisodes?.takeIf { it > 0 }?.let { add(HeroMetaCell(Icons.Default.ClosedCaption, "$it")) }
+        }
         media.averageScore?.takeIf { it > 0 }?.let {
             add(HeroMetaCell(Icons.Default.Star, "$it", iconTint = HERO_STAR_COLOR))
         }
-        media.duration?.takeIf { it > 0 }?.let { add(HeroMetaCell(Icons.Default.Schedule, "$it mins")) }
+        if (!compact) {
+            media.duration?.takeIf { it > 0 }?.let { add(HeroMetaCell(Icons.Default.Schedule, "$it mins")) }
+        }
     }
     if (cells.isEmpty()) return
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1358,7 +1373,7 @@ private fun HeroMetaRow(media: Media) {
                     "•",
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.White.copy(.45f),
-                    modifier = Modifier.padding(horizontal = 8.dp),
+                    modifier = Modifier.padding(horizontal = if (compact) 6.dp else 8.dp),
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
