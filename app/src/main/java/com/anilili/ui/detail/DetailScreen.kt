@@ -1131,8 +1131,8 @@ private fun DetailActions(
         )
     }
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = pad, end = pad, bottom = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = pad, end = pad, bottom = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 7.dp),
     ) {
         val controlFocus4 = rememberFocusFill()
         OutlinedButton(
@@ -1208,7 +1208,7 @@ private fun DetailActions(
                     modifier = Modifier.size(17.dp),
                     strokeWidth = 2.dp,
                     color = controlFocus6.content(
-                        if (device.isTv) MaterialTheme.colorScheme.onPrimary else Color(0xFF24180D),
+                        if (device.isTv) MaterialTheme.colorScheme.onPrimary else Color(0xFF17181B),
                     ),
                 )
             } else {
