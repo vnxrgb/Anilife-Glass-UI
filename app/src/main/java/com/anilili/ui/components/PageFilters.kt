@@ -30,8 +30,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.anilili.ui.adaptive.focusFill
@@ -76,7 +78,8 @@ fun PageFilterPill(
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .focusFill(fillFocus1, RoundedCornerShape(50))
-                .clickable { expanded = true },
+                .clickable(role = Role.Button) { expanded = true }
+                .semantics { contentDescription = "Filter: $label" },
             shape = RoundedCornerShape(50),
             color = fillFocus1.background(glassPanelColor()),
             border = BorderStroke(1.dp, glassRimColor()),
@@ -103,7 +106,12 @@ fun PageFilterPill(
                 )
             }
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = RoundedCornerShape(18.dp),
+        ) {
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option.label) },
@@ -139,7 +147,7 @@ fun PageSortControl(
             modifier = Modifier
                 .heightIn(min = 48.dp)
                 .focusFill(fillFocus2, RoundedCornerShape(50))
-                .clickable { expanded = true }
+                .clickable(role = Role.Button) { expanded = true }
                 .semantics { this.contentDescription = contentDescription },
             shape = RoundedCornerShape(50),
             color = fillFocus2.background(glassPanelColor()),
@@ -160,7 +168,12 @@ fun PageSortControl(
                 )
             }
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = RoundedCornerShape(18.dp),
+        ) {
             menu { expanded = false }
         }
     }

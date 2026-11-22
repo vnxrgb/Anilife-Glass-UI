@@ -36,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.anilili.ui.adaptive.LocalAppDeviceProfile
@@ -126,7 +128,8 @@ fun PageSearchField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth().heightIn(min = 56.dp),
+        modifier = modifier.fillMaxWidth().heightIn(min = 56.dp)
+            .semantics { contentDescription = placeholder },
         placeholder = { Text(placeholder) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         trailingIcon = if (value.isNotEmpty()) {
