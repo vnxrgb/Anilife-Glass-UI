@@ -559,6 +559,8 @@ fun MidnightModalTitle(
     body: String?,
     modifier: Modifier = Modifier,
 ) {
+    val isTv = LocalAppDeviceProfile.current.isTv
+    val scheme = MaterialTheme.colorScheme
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = kicker.uppercase(),
@@ -570,14 +572,14 @@ fun MidnightModalTitle(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.W800,
-            color = Midnight.Text,
+            color = if (isTv) Midnight.Text else scheme.onSurface,
             modifier = Modifier.padding(top = 5.dp),
         )
         if (!body.isNullOrBlank()) {
             Text(
                 text = body,
                 style = MaterialTheme.typography.bodySmall,
-                color = Midnight.Text2,
+                color = if (isTv) Midnight.Text2 else scheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp),
             )
         }
