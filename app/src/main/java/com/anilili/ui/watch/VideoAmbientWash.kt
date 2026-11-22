@@ -75,12 +75,12 @@ internal fun NativeVideoAmbientSampler(
                 }
                 if (sampled != null) currentCallback(sampled)
             }
-            delay(1_300L)
+            delay(1_200L)
         }
     }
 }
 
-/** Dark and low-chroma scenes stay subtle; vivid frames lend only their hue. */
+/** Average the live picture, preserve brightness, and gently lift chroma for a recognizable wash. */
 private fun extractAmbientPalette(bitmap: Bitmap): VideoAmbientPalette? {
     val width = bitmap.width
     val height = bitmap.height
@@ -104,32 +104,79 @@ private fun extractAmbientPalette(bitmap: Bitmap): VideoAmbientPalette? {
         val r = (red.toFloat() / samples / 255f).coerceIn(0f, 1f)
         val g = (green.toFloat() / samples / 255f).coerceIn(0f, 1f)
         val b = (blue.toFloat() / samples / 255f).coerceIn(0f, 1f)
-        return Color(r * 0.72f, g * 0.72f, b * 0.72f)
+        // Never substitute a static poster colour: these hues follow actual video frames.
+        // A small brightness lift gives dark anime scenes some atmosphere without
+        // letting bright frames wash out the watch-page typography.
+        val peak = maxOf(r, g, b)
+        val lift = if (peak < 0.10f) 0.04f else 0.08f
+        return Color(
+            red = (r * 0.93f + lift).coerceIn(0f, 1f),
+            green = (g * 0.93f + lift).coerceIn(0f, 1f),
+            blue = (b * 0.93f + lift).coerceIn(0f, 1f),
+        )
     }
     return VideoAmbientPalette(average(0, width / 2), average(width / 2, width))
 }
 
-/** A pair of wide falloff glows matches the picture edges on both dark and AMOLED themes. */
+/**
+ * YouTube-style watch-page ambience. The artwork stays sharp in the native player above;
+ * only the area BELOW it receives a long, softly blended wash from the current video.
+ * The first screenful is visibly atmospheric, then falls off toward the episode list.
+ *
+ * No blur, capture, or translucency is applied to the video, controls, subtitles or DRM
+ * surface. This is a small set of GPU gradients on the existing watch-page background.
+ */
 @Composable
 internal fun Modifier.videoAmbientWash(palette: VideoAmbientPalette): Modifier {
-    val left by animateColorAsState(palette.left, tween(1_700), label = "ambientLeft")
-    val right by animateColorAsState(palette.right, tween(1_700), label = "ambientRight")
+    val left by animateColorAsState(palette.left, tween(1_450), label = "ambientLeft")
+    val right by animateColorAsState(palette.right, tween(1_450), label = "ambientRight")
     return this.drawBehind {
         if (left.alpha <= 0f && right.alpha <= 0f) return@drawBehind
-        // Confine the glow to the area beneath the video. Do not colour the episode list.
-        val spread = size.width * 0.82f
+
+        val w = size.width
+        val h = size.height
+        val reach = maxOf(w * 1.38f, h * 0.70f)
+        val center = Color(
+            red = (left.red + right.red) * 0.5f,
+            green = (left.green + right.green) * 0.5f,
+            blue = (left.blue + right.blue) * 0.5f,
+        )
+
+        // The shared wash starts directly below the player and runs behind title/actions.
         drawRect(
-            brush = Brush.radialGradient(
-                colors = listOf(left.copy(alpha = 0.27f), left.copy(alpha = 0.10f), Color.Transparent),
-                center = Offset(size.width * 0.13f, -size.width * 0.10f),
-                radius = spread,
+            brush = Brush.verticalGradient(
+                colorStops = arrayOf(
+                    0f to center.copy(alpha = 0.53f),
+                    0.22f to center.copy(alpha = 0.35f),
+                    0.55f to center.copy(alpha = 0.14f),
+                    1f to Color.Transparent,
+                ),
+                startY = 0f,
+                endY = maxOf(h * 0.92f, w),
             ),
         )
         drawRect(
             brush = Brush.radialGradient(
-                colors = listOf(right.copy(alpha = 0.24f), right.copy(alpha = 0.08f), Color.Transparent),
-                center = Offset(size.width * 0.87f, -size.width * 0.10f),
-                radius = spread,
+                colors = listOf(
+                    left.copy(alpha = 0.56f),
+                    left.copy(alpha = 0.30f),
+                    left.copy(alpha = 0.09f),
+                    Color.Transparent,
+                ),
+                center = Offset(w * 0.10f, 0f),
+                radius = reach,
+            ),
+        )
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    right.copy(alpha = 0.51f),
+                    right.copy(alpha = 0.27f),
+                    right.copy(alpha = 0.08f),
+                    Color.Transparent,
+                ),
+                center = Offset(w * 0.90f, 0f),
+                radius = reach,
             ),
         )
     }
