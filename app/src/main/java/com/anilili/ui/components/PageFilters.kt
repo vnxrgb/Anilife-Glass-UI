@@ -111,7 +111,7 @@ fun PageFilterPill(
             expanded = expanded,
             onDismissRequest = { expanded = false },
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(20.dp),
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
@@ -174,7 +174,7 @@ fun PageSortControl(
             expanded = expanded,
             onDismissRequest = { expanded = false },
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(20.dp),
         ) {
             menu { expanded = false }
         }

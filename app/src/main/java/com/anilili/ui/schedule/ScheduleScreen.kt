@@ -378,7 +378,7 @@ private fun EmptyDayNotice() {
                 .padding(horizontal = LocalAppDeviceProfile.current.pagePadding)
                 .fillMaxWidth()
                 .glassCard(RoundedCornerShape(20.dp))
-                .padding(horizontal = 16.dp, vertical = 22.dp),
+                .padding(horizontal = 16.dp, vertical = 18.dp),
         )
     }
 }
@@ -414,8 +414,8 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
             val fillFocus1 = rememberFocusFill()
             Column(
                 modifier = Modifier
-                    .width(if (device.isTv) 80.dp else 76.dp)
-                    .height(if (device.isTv) 60.dp else 58.dp)
+                    .width(if (device.isTv) 80.dp else 74.dp)
+                    .height(if (device.isTv) 60.dp else 56.dp)
                     .focusFill(fillFocus1, RoundedCornerShape(14.dp))
                     .clip(RoundedCornerShape(14.dp))
                     .background(
@@ -430,7 +430,7 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
                     )
                     .clickable(onClickLabel = "Show schedule for ${date.format(dateFmt)}") { onSelect(date) }
                     .semantics { this.selected = active }
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 7.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {

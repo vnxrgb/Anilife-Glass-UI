@@ -423,10 +423,10 @@ fun MidnightModal(
                     .border(
                         1.dp,
                         if (device.isTv) Midnight.Line2
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.20f),
                         shape,
                     )
-                    .padding(18.dp),
+                    .padding(if (device.isTv) 18.dp else 16.dp),
                 content = content,
             )
         }

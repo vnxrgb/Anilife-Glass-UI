@@ -88,10 +88,10 @@ fun ErrorBox(failure: AnililiFailure, onRetry: (() -> Unit)? = null, modifier: M
     if (detailsVisible) {
         ErrorDetailsDialog(failure = failure, onDismiss = { detailsVisible = false })
     }
-    Box(modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+    Box(modifier.fillMaxSize().padding(20.dp), contentAlignment = Alignment.Center) {
         Column(
             modifier = if (LocalAppDeviceProfile.current.isTv) Modifier
-                else Modifier.glassCard(RoundedCornerShape(26.dp))
+                else Modifier.fillMaxWidth().glassCard(RoundedCornerShape(26.dp))
                     .padding(horizontal = 24.dp, vertical = 26.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

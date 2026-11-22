@@ -479,16 +479,18 @@ private fun NotificationCard(
                     // theme, which is the focus ring's colour too, so a page of unread cards read as
                     // a page of focused ones. A lighter grey than a read card's still tells them apart.
                     item.unread && isTv -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    item.unread -> MaterialTheme.colorScheme.primary.copy(alpha = 0.42f)
-                    else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+                    item.unread -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.32f)
+                    else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
                 },
                 shape = shape,
             )
             .then(
                 when {
-                    item.mediaId != null -> Modifier.clickable(onClick = onClick)
+                    item.mediaId != null -> Modifier.clickable(
+                        onClickLabel = "Open ${item.title}", onClick = onClick,
+                    )
                     compactTv -> Modifier.focusable()
-                    else -> Modifier.clickable(enabled = false, onClick = onClick)
+                    else -> Modifier
                 },
             )
             .then(if (compactTv) Modifier.height(112.dp) else Modifier),
@@ -562,7 +564,8 @@ private fun NotificationBadge(badge: String, modifier: Modifier = Modifier) {
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
         modifier = modifier
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
+            .background(glassPanelColor(), RoundedCornerShape(12.dp))
+            .border(1.dp, glassRimColor().copy(alpha = 0.6f), RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }
@@ -574,7 +577,8 @@ private fun NotificationDate(epochSeconds: Long, modifier: Modifier = Modifier) 
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
         modifier = modifier
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
+            .background(glassPanelColor(), RoundedCornerShape(12.dp))
+            .border(1.dp, glassRimColor().copy(alpha = 0.6f), RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }
