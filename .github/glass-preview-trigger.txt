@@ -1,4 +1,5 @@
-Milestone preview: verified Settings accessibility and light-theme fix.
-Source commit: f740cde34ac6cc3689e849c3a10dea0cbfb80c54
-Includes coordinated Details, Browse, My List, Downloads, Settings, Schedule, Notifications, and player fixes.
-Run unit tests, lint, and one universal APK build. Treat device and TV visual acceptance as pending.
+Batch 1 coordinated cinematic and inline player preview.
+Source implementation head: f73e0797a4fc42c3f08616bfc1b1fc4210cbe6e6
+Verify mobile unit tests, lint and universal debug APK from this trigger commit.
+Changes include compact inline transport simplification, horizontally scrollable fullscreen action dock, stable seek geometry, chroma-weighted ambient sampling, PixelCopy cancellation safety, frosted player panels, and responsive layout tests.
+Compilation, real-device screenshots, subtitle and Android TV regression acceptance remain pending until independently verified.
