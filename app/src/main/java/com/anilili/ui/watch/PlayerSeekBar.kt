@@ -192,10 +192,10 @@ internal fun PlayerSeekBar(
             // buffered progress, chapter markers, or the thumb's precise position.
             if (enabled && fraction > 0f && span > 0f) {
                 drawLine(
-                    color = played.copy(alpha = 0.18f),
+                    color = played.copy(alpha = 0.15f),
                     start = Offset(left, centreY),
                     end = Offset(left + span * fraction.coerceIn(0f, 1f), centreY),
-                    strokeWidth = strokePx * 3.2f,
+                    strokeWidth = strokePx * 4.2f,
                     cap = StrokeCap.Round,
                 )
             }

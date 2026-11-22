@@ -352,7 +352,7 @@ private fun PlayerModalSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color(0xFF161823).copy(alpha = 0.91f),
+        containerColor = Color(0xFF161823).copy(alpha = 0.83f),
         contentColor = Midnight.Text,
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
         dragHandle = null,
@@ -366,7 +366,7 @@ private fun PlayerModalSheet(
                 // cinematic glass language without reducing readability.
                 .border(
                     1.dp,
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    Color.White.copy(alpha = 0.25f),
                     RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
                 )
                 .padding(start = 18.dp, end = 18.dp, bottom = 18.dp),

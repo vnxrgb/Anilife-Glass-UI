@@ -502,8 +502,8 @@ internal fun PlayerControlsScaffold(
                 .background(
                     Brush.verticalGradient(
                         0f to Color.Transparent,
-                        .32f to Color.Black.copy(alpha = 0.68f),
-                        1f to Color.Black.copy(alpha = 0.94f),
+                        .32f to Color.Black.copy(alpha = 0.48f),
+                        1f to Color.Black.copy(alpha = 0.82f),
                     ),
                 )
                 // The picture keeps the camera hole (see PlayerSystemBarsEffect); the seek bar and
@@ -566,13 +566,19 @@ internal fun PlayerControlsScaffold(
                         // One lower glass dock frames the controls as a coherent action bar,
                         // while the nested group can still independently scale at narrow widths.
                         .clip(RoundedCornerShape(28.dp))
-                        .background(Color.Black.copy(alpha = 0.25f))
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.White.copy(alpha = 0.17f),
+                                0.18f to Color(0xFF242831).copy(alpha = 0.76f),
+                                1f to Color(0xFF0B0D13).copy(alpha = 0.84f),
+                            ),
+                        )
                         .border(
                             1.dp,
-                            Color.White.copy(alpha = 0.14f),
+                            Color.White.copy(alpha = 0.28f),
                             RoundedCornerShape(28.dp),
                         )
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -697,8 +703,8 @@ internal fun PlayerActionPill(
         modifier = modifier
             .focusFill(fillFocus1, shape)
             .clip(shape)
-            .background(fillFocus1.background(Color.Black.copy(alpha = 0.44f)), shape)
-            .border(1.dp, Color.White.copy(alpha = 0.16f), shape)
+            .background(fillFocus1.background(Color(0xFF222630).copy(alpha = 0.72f)), shape)
+            .border(1.dp, Color.White.copy(alpha = 0.24f), shape)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = if (showLabel) 12.dp else 10.dp, vertical = 8.dp)
             .semantics { contentDescription = label },
