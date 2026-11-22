@@ -105,6 +105,7 @@ import com.anilili.ui.components.glassPanelColor
 import com.anilili.ui.components.glassRimColor
 import com.anilili.ui.components.glassSelectionColor
 import com.anilili.ui.components.cinematicFilterChipColors
+import com.anilili.ui.components.cinematicPrimaryButtonColors
 import com.anilili.ui.components.PageMenuChoice
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.material3.DropdownMenu
@@ -1788,7 +1789,10 @@ private fun FilterSheet(
     val showResults: @Composable () -> Unit = {
         val extraFocus14 = rememberFocusFill()
         Button(
-            colors = extraFocus14.buttonColors(ButtonDefaults.buttonColors()),
+            colors = extraFocus14.buttonColors(
+                if (LocalAppDeviceProfile.current.isTv) ButtonDefaults.buttonColors()
+                else cinematicPrimaryButtonColors(),
+            ),
             onClick = onDismiss,
             modifier = Modifier.fillMaxWidth().height(50.dp).focusFill(extraFocus14, RoundedCornerShape(50)),
             shape = RoundedCornerShape(22.dp),
