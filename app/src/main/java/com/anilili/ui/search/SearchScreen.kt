@@ -1276,11 +1276,12 @@ private fun ResultsGrid(
             contentAlignment = Alignment.Center,
         ) {
             Column(
-                modifier = if (device.isTv) Modifier else Modifier
-                    .widthIn(max = 420.dp)
+                modifier = (if (device.isTv) Modifier else Modifier
                     .fillMaxWidth()
+                    .widthIn(max = 420.dp)
                     .glassCard(RoundedCornerShape(26.dp))
-                    .padding(horizontal = 24.dp, vertical = 26.dp),
+                    .padding(horizontal = 24.dp, vertical = 26.dp))
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
