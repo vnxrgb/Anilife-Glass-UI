@@ -536,8 +536,8 @@ internal fun PlayerControlsScaffold(
                 .background(
                     Brush.verticalGradient(
                         0f to Color.Transparent,
-                        .32f to Color.Black.copy(alpha = 0.30f),
-                        1f to Color.Black.copy(alpha = 0.68f),
+                        .32f to Color.Black.copy(alpha = 0.22f),
+                        1f to Color.Black.copy(alpha = 0.60f),
                     ),
                 )
                 // The picture keeps the camera hole (see PlayerSystemBarsEffect); the seek bar and
@@ -654,9 +654,9 @@ private fun PlayerActionRow(
             .clip(RoundedCornerShape(28.dp))
             .background(
                 Brush.verticalGradient(
-                    0f to Color(0xFF45464B).copy(alpha = 0.42f),
-                    0.35f to Color(0xFF24252A).copy(alpha = 0.56f),
-                    1f to Color(0xFF111216).copy(alpha = 0.68f),
+                    0f to Color(0xFF55565B).copy(alpha = 0.34f),
+                    0.35f to Color(0xFF28292D).copy(alpha = 0.52f),
+                    1f to Color(0xFF111216).copy(alpha = 0.64f),
                 ),
             )
             .border(1.dp, Color.White.copy(alpha = 0.23f), RoundedCornerShape(28.dp))
