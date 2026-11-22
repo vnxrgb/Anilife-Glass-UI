@@ -144,7 +144,7 @@ fun PageSearchField(
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = glassPanelColor(),
             unfocusedContainerColor = glassPanelColor(),
-            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.52f),
+            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.62f),
             unfocusedBorderColor = glassRimColor(),
         ),
         singleLine = true,

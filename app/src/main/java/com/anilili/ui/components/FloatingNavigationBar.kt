@@ -76,7 +76,7 @@ val FloatingNavBarMargin = 10.dp
 
 /** An idle icon's slot: the 48dp touch minimum, so the rest is free for the open pill's label. */
 private val ItemSize = 48.dp
-private val IconSize = 22.dp
+private val IconSize = 23.dp
 private val BarPadding = 4.dp
 private val BarShape = RoundedCornerShape(50)
 
@@ -170,7 +170,7 @@ fun FloatingNavigationBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(FloatingNavBarExpandedHeight)
-                .shadow(8.dp, BarShape)
+                .shadow(9.dp, BarShape)
                 .clip(BarShape)
                 .then(
                     if (blurred) {

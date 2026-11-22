@@ -1291,7 +1291,7 @@ private fun ResultsGrid(
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    "Try removing a filter or searching another title.",
+                    "Try a different title or remove a filter to see more results.",
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

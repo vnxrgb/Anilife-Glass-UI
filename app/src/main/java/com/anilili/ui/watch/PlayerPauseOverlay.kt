@@ -79,7 +79,7 @@ internal fun PlayerPauseOverlay(
                     .align(Alignment.CenterStart)
                     .statusBarsPadding()
                     .padding(start = 24.dp, end = 20.dp)
-                    .widthIn(max = 420.dp)
+                    .widthIn(max = 400.dp)
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
