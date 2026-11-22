@@ -38,10 +38,33 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
-          cache-read-only: true
+          # This feature branch needs its own writable dependency cache. A read-only
+          # cache forces repeated Maven Central downloads and triggers HTTP 429.
+          cache-read-only: false
 
       - name: Unit tests, lint and universal mobile APK
-        run: ./gradlew :app:testMobileDebugUnitTest :app:lintMobileDebug :app:assembleMobileDebug --max-workers=2 --no-configuration-cache --console=plain
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Maven Central may rate-limit cold GitHub runners. Back off instead of
+          # retrying immediately; preserve a genuine compilation/test failure.
+          for attempt in 1 2 3; do
+            echo "Gradle build attempt ${attempt}/3"
+            if ./gradlew :app:testMobileDebugUnitTest :app:lintMobileDebug :app:assembleMobileDebug --max-workers=2 --no-configuration-cache --console=plain > gradle-build.log 2>&1; then
+              cat gradle-build.log
+              exit 0
+            fi
+            cat gradle-build.log
+            if ! grep -Eq 'Received status code 429|Too Many Requests|HTTP 429' gradle-build.log; then
+              echo "::error::Build failed for a reason other than Maven rate limiting."
+              exit 1
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Maven rate limiting persists after three attempts."
+              exit 1
+            fi
+            sleep $((attempt * 120))
+          done
 
       - name: Verify universal APK and stage one downloadable file
         shell: bash
