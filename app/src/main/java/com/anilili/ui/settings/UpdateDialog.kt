@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -134,10 +135,17 @@ fun UpdatePromptHost() {
                                                 true
                                             }
                                             .focusable()
+                                            .background(
+                                                if (LocalAppDeviceProfile.current.isTv) Color.Transparent
+                                                else MaterialTheme.colorScheme.surface.copy(alpha = 0.54f),
+                                                RoundedCornerShape(12.dp),
+                                            )
                                             .border(
                                                 1.dp,
-                                                if (notesFocused) Midnight.Line2 else Color.Transparent,
-                                                RoundedCornerShape(8.dp),
+                                                if (notesFocused) {
+                                                    if (LocalAppDeviceProfile.current.isTv) Midnight.Line2 else MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)
+                                                } else Color.Transparent,
+                                                RoundedCornerShape(12.dp),
                                             )
                                             .verticalScroll(notesScroll)
                                     } else {
