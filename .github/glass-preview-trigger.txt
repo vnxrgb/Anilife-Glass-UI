@@ -1,4 +1,4 @@
-Shared cinematic button system preview
-Source commit: bd4239af2e7b5e8809e629e6b9957f53c63dc560
-Home Watch now: solid warm premium CTA with dark content, no theme green gradient. Details Continue and Browse Show results: same phone primary color. Secondary outline buttons: dark translucent neutral over artwork / regular neutral panel elsewhere. Browse and My List filters: shared neutral selected chip colors. Details tabs and Schedule selected date: neutral rim. 48dp+ minimum primary/secondary targets. Preserve TV and player unchanged.
-Build mobile universal debug APK + unit tests + lint; publish one preview only if successful. Keep main untouched and do not label stable.
+AniLife Glass UI coordinated test preview
+Requested source baseline: 0be89986ea271c510f5592491fc06e12ab226c95
+Includes Home hero, fullscreen and portrait player visual refinement, neutral shared glass, Browse, Details, Settings, Downloads, Schedule and Profile adjustments.
+Build from the commit created by this trigger on feature/unified-glass-ui, not from the earlier glass-ui-preview asset. Run mobile unit tests, lint, assemble and APK signature verification. Replace exactly one anilife-glass-universal.apk preview release asset only after all checks pass. This is a debug test build, not stable. Preserve main and TV behavior.
