@@ -574,7 +574,7 @@ private fun SearchTopBar(
                                         if (fieldFocused && !it.isFocused) vm.commitTypedQuery()
                                         fieldFocused = it.isFocused
                                     },
-                                placeholder = { Text("Search anime…") },
+                                placeholder = { Text("Search anime, movies or series…", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                                 trailingIcon = {
                                     if (vm.query.isNotEmpty()) {
@@ -585,7 +585,7 @@ private fun SearchTopBar(
                                         }
                                     }
                                 },
-                                shape = RoundedCornerShape(28.dp),
+                                shape = RoundedCornerShape(24.dp),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(onSearch = {

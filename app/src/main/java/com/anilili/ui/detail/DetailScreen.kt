@@ -947,8 +947,8 @@ private fun DetailHero(
                 .height(bannerHeight)
                 .appCanvasFade { canvas ->
                     Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.14f),
-                        0.32f to Color.Black.copy(alpha = 0.28f),
+                        0f to Color.Black.copy(alpha = 0.20f),
+                        0.40f to Color.Black.copy(alpha = 0.38f),
                         1f to canvas,
                     )
                 },

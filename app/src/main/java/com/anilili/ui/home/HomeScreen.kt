@@ -1476,7 +1476,13 @@ private fun MediaRail(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = device.pagePadding),
+                // The floating companion shortcut overlaps the far right of this
+                // header near the fold. Reserve its footprint for expandable rails.
+                .padding(
+                    start = device.pagePadding,
+                    end = device.pagePadding +
+                        if (!device.isTv && onToggleExpand != null) 52.dp else 0.dp,
+                ),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
