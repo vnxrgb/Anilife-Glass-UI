@@ -73,7 +73,7 @@ fun NextEpisodeCountdown(
                 ),
             )
             .border(1.dp, glassRimColor(), RoundedCornerShape(22.dp))
-            .padding(horizontal = 18.dp, vertical = 16.dp)
+            .padding(horizontal = 14.dp, vertical = 14.dp)
             // One announcement rather than five, and phrased the way it would be said aloud: a
             // screen reader walking "EPISODE 20 WILL BE RELEASED IN" then "1 DAY 3 HRS…" reads the
             // abbreviations letter by letter.
@@ -89,7 +89,7 @@ fun NextEpisodeCountdown(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            letterSpacing = 1.2.sp,
+            letterSpacing = 0.8.sp,
             textAlign = TextAlign.Center,
         )
         Text(

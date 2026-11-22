@@ -1,5 +1,8 @@
 package com.anilili.ui.schedule
 
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+
 import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassAtmosphere
 import android.Manifest
@@ -370,6 +373,12 @@ private fun EmptyDayNotice() {
             "No episodes scheduled for this day",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier
+                .padding(horizontal = LocalAppDeviceProfile.current.pagePadding)
+                .fillMaxWidth()
+                .glassCard(RoundedCornerShape(20.dp))
+                .padding(horizontal = 16.dp, vertical = 22.dp),
         )
     }
 }
@@ -415,11 +424,12 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
                     )
                     .border(
                         width = 1.dp,
-                        color = fillFocus1.content(if (active) glassRimColor()
-                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+                        color = fillFocus1.content(if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.48f)
+                        else glassRimColor().copy(alpha = 0.75f)),
                         shape = RoundedCornerShape(14.dp),
                     )
                     .clickable(onClickLabel = "Show schedule for ${date.format(dateFmt)}") { onSelect(date) }
+                    .semantics { this.selected = active }
                     .padding(vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,

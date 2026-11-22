@@ -3,6 +3,8 @@ package com.anilili.ui.notifications
 import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassAtmosphere
 import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.LocalAppChromeBottomInset
+import com.anilili.ui.components.AppChromeListBottomGap
 import com.anilili.ui.components.glassPanelColor
 import com.anilili.ui.components.glassRimColor
 import androidx.compose.foundation.background
@@ -300,7 +302,8 @@ private fun NotificationList(
             start = pagePadding,
             end = pagePadding,
             top = contentPadding.calculateTopPadding(),
-            bottom = contentPadding.calculateBottomPadding() + 32.dp,
+            bottom = contentPadding.calculateBottomPadding()
+                .coerceAtLeast(LocalAppChromeBottomInset.current) + AppChromeListBottomGap,
         ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -314,7 +317,7 @@ private fun NotificationList(
                         shape = RoundedCornerShape(50),
                         colors = controlFocus4.chipColors(FilterChipDefaults.filterChipColors(
                             containerColor = glassPanelColor(),
-                            selectedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.17f),
+                            selectedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f),
                             selectedLabelColor = MaterialTheme.colorScheme.onSurface,
                         )),
                         selected = tab == entry,

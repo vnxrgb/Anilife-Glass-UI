@@ -222,7 +222,8 @@ private fun DayCell(
                 }),
                 shape = shape,
             )
-            .clickable { onSelect(date) }
+            .clickable(onClickLabel = "Show schedule for $date") { onSelect(date) }
+            .semantics { this.selected = selected }
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -242,7 +243,7 @@ private fun DayCell(
                 text = if (count?.atLeast == true) "$episodes+" else episodes.toString(),
                 style = MaterialTheme.typography.labelSmall,
                 color = fillFocus1.content((
-                    if (selected) MaterialTheme.colorScheme.onPrimary
+                    if (selected) MaterialTheme.colorScheme.onSurface
                     else MaterialTheme.colorScheme.onSurfaceVariant
                     ).let { it.copy(alpha = it.alpha * dimmed) }),
                 maxLines = 1,
