@@ -1,5 +1,4 @@
-Milestone build retry after verified Kotlin import fixes.
-Source commit: 778dcb8ea001250ef9c0bbceb677b2c4d3b1b66e
-Fixes: DownloadsScreen and SettingsScreen border modifier imports.
-Verification: testMobileDebugUnitTest, lintMobileDebug, assembleMobileDebug, one universal APK.
-Do not claim visual acceptance from a successful build.
+Milestone preview: verified Settings accessibility and light-theme fix.
+Source commit: f740cde34ac6cc3689e849c3a10dea0cbfb80c54
+Includes coordinated Details, Browse, My List, Downloads, Settings, Schedule, Notifications, and player fixes.
+Run unit tests, lint, and one universal APK build. Treat device and TV visual acceptance as pending.
