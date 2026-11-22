@@ -498,8 +498,13 @@ private fun SearchTopBar(
                 trailing = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val extraFocus1 = rememberFocusFill()
-                        TextButton(
-                            colors = extraFocus1.buttonColors(ButtonDefaults.textButtonColors()),onClick = vm::clearAll, modifier = Modifier.focusFill(extraFocus1, RoundedCornerShape(24.dp)),) { Text("Reset") }
+                        if (device.isTv || vm.query.isNotBlank() || vm.filters.activeCount > 0) {
+                            TextButton(
+                                colors = extraFocus1.buttonColors(ButtonDefaults.textButtonColors()),
+                                onClick = vm::clearAll,
+                                modifier = Modifier.focusFill(extraFocus1, RoundedCornerShape(24.dp)),
+                            ) { Text("Reset") }
+                        }
                         if (!device.isTv) {
                             IconButton(
                                 onClick = {
@@ -575,7 +580,7 @@ private fun SearchTopBar(
                                     if (vm.query.isNotEmpty()) {
                                         val extraFocus2 = rememberFocusFill()
                                         IconButton(
-                                            colors = extraFocus2.iconButtonColors(IconButtonDefaults.iconButtonColors()),onClick = { vm.onQueryChange("") }, modifier = Modifier.size(40.dp).focusFill(extraFocus2, CircleShape)) {
+                                            colors = extraFocus2.iconButtonColors(IconButtonDefaults.iconButtonColors()),onClick = { vm.onQueryChange("") }, modifier = Modifier.size(48.dp).focusFill(extraFocus2, CircleShape)) {
                                             Icon(Icons.Default.Close, contentDescription = "Clear search")
                                         }
                                     }

@@ -807,6 +807,7 @@ private fun HeroPager(
     if (items.isEmpty()) return
     val device = LocalAppDeviceProfile.current
     val pagerState = rememberPagerState(pageCount = { items.size })
+    val indicatorScope = rememberCoroutineScope()
     val heroIds = items.map(Media::id)
     var tvPage by remember(heroIds) { mutableIntStateOf(0) }
     var tvHeroHasFocus by remember(heroIds) { mutableStateOf(false) }
@@ -900,34 +901,51 @@ private fun HeroPager(
                 )
             }
         }
-        val visibleIndicators = heroVisibleIndicatorIndices(
-            page = if (device.isTv) safeTvPage else pagerState.currentPage,
-            pageCount = items.size,
-        )
-        Row(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 7.dp)
-                .clip(RoundedCornerShape(50))
-                .background(Color.Black.copy(alpha = 0.32f))
-                .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50))
-                .padding(horizontal = 9.dp, vertical = 5.dp),
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
-        ) {
-            visibleIndicators.forEach { i ->
-                Box(
-                    Modifier
-                        .height(5.dp)
-                        .width(if (i == if (device.isTv) safeTvPage else pagerState.currentPage) 18.dp else 5.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (i == if (device.isTv) safeTvPage else pagerState.currentPage) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                Color.White.copy(.4f)
-                            },
-                        ),
-                )
+        // Interactive on touch: the previous decorative 5dp dots were not usable to select a
+        // featured title or discover a page through accessibility services.
+        if (items.size > 1) {
+            val activePage = if (device.isTv) safeTvPage else pagerState.currentPage
+            val visibleIndicators = heroVisibleIndicatorIndices(
+                page = activePage,
+                pageCount = items.size,
+            )
+            Row(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 7.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.38f))
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
+                    .padding(horizontal = 6.dp, vertical = if (device.isTv) 5.dp else 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 5.dp else 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                visibleIndicators.forEach { i ->
+                    val selected = i == activePage
+                    Box(
+                        modifier = Modifier
+                            .then(
+                                if (device.isTv) Modifier else Modifier
+                                    .size(28.dp)
+                                    .clickable(
+                                        onClickLabel = "Show featured anime ${i + 1} of ${items.size}",
+                                        role = Role.Button,
+                                    ) { indicatorScope.launch { pagerState.animateScrollToPage(i) } },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            Modifier
+                                .height(5.dp)
+                                .width(if (selected) 18.dp else 5.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primary
+                                    else Color.White.copy(alpha = 0.50f),
+                                ),
+                        )
+                    }
+                }
             }
         }
     }
