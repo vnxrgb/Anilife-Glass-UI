@@ -41,6 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
@@ -156,6 +158,7 @@ fun HomeLayoutDialog(onDismiss: () -> Unit) {
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(glassPanelColor())
                                 .border(1.dp, glassRimColor(), RoundedCornerShape(14.dp))
+                                .semantics { contentDescription = "Drag ${row.label(false)} to reorder Home" }
                                 .pointerInput(row) {
                                     detectDragGestures(
                                         onDragStart = {
@@ -194,7 +197,7 @@ fun HomeLayoutDialog(onDismiss: () -> Unit) {
                         ) {
                             Icon(
                                 Icons.Default.DragHandle,
-                                contentDescription = "Drag ${row.label(false)}",
+                                contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -238,6 +241,7 @@ private fun MoveButton(up: Boolean, enabled: Boolean, label: String, onClick: ()
         onClick = { if (enabled) onClick() },
         colors = focus.iconButtonColors(IconButtonDefaults.iconButtonColors()),
         modifier = Modifier
+            .size(48.dp)
             .focusFill(focus, CircleShape)
             .alpha(if (enabled) 1f else 0.3f),
     ) {
