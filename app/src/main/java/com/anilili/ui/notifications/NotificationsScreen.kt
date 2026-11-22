@@ -3,6 +3,8 @@ package com.anilili.ui.notifications
 import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassAtmosphere
 import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -303,18 +305,22 @@ private fun NotificationList(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.padding(vertical = 6.dp)) {
                 items(Tab.entries.size) { index ->
                     val entry = Tab.entries[index]
                     val count = items.count { it.unread && entry.matches(it) }
                     val controlFocus4 = rememberFocusFill()
                     FilterChip(
                         shape = RoundedCornerShape(50),
-                        colors = controlFocus4.chipColors(FilterChipDefaults.filterChipColors()),
+                        colors = controlFocus4.chipColors(FilterChipDefaults.filterChipColors(
+                            containerColor = glassPanelColor(),
+                            selectedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.17f),
+                            selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                        )),
                         selected = tab == entry,
                         onClick = { onTab(entry) },
                         label = { Text(if (unreadTotal > 0) "${entry.label}  $count" else entry.label) },
-                        modifier = Modifier.focusFill(controlFocus4, RoundedCornerShape(8.dp)),
+                        modifier = Modifier.focusFill(controlFocus4, RoundedCornerShape(50.dp)),
                     )
                 }
             }
@@ -322,10 +328,14 @@ private fun NotificationList(
         if (filtered.isEmpty()) {
             item {
                 Text(
-                    "Nothing here yet.",
+                    "No notifications in this category yet.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 32.dp).fillMaxWidth(),
+                    modifier = Modifier
+                        .padding(top = 20.dp)
+                        .fillMaxWidth()
+                        .glassCard(RoundedCornerShape(20.dp))
+                        .padding(horizontal = 20.dp, vertical = 24.dp),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
             }
@@ -405,7 +415,7 @@ private fun TvNotificationGrid(
                         label = { Text(if (unreadTotal > 0) "${entry.label}  $count" else entry.label) },
                         modifier = Modifier
                             .focusProperties { up = backFocusRequester }
-                            .focusFill(controlFocus5, RoundedCornerShape(8.dp)),
+                            .focusFill(controlFocus5, RoundedCornerShape(50.dp)),
                     )
                 }
             }
@@ -466,7 +476,7 @@ private fun NotificationCard(
                     // theme, which is the focus ring's colour too, so a page of unread cards read as
                     // a page of focused ones. A lighter grey than a read card's still tells them apart.
                     item.unread && isTv -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    item.unread -> MaterialTheme.colorScheme.primary.copy(alpha = 0.62f)
+                    item.unread -> MaterialTheme.colorScheme.primary.copy(alpha = 0.42f)
                     else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
                 },
                 shape = shape,
@@ -490,7 +500,7 @@ private fun NotificationCard(
             )
         }
         Row(
-            Modifier.padding(if (isTv) 10.dp else 12.dp),
+            Modifier.padding(if (isTv) 10.dp else 11.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AsyncImage(

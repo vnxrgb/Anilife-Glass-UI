@@ -356,7 +356,7 @@ private fun SelectedDateLabel(date: LocalDate) {
         text = date.format(dateFmt),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = device.pagePadding, top = 6.dp, bottom = 3.dp),
+        modifier = Modifier.padding(start = device.pagePadding, top = 6.dp, bottom = 4.dp),
     )
 }
 
@@ -366,7 +366,11 @@ private fun EmptyDayNotice() {
         Modifier.fillMaxWidth().height(CalendarStatusHeight),
         contentAlignment = Alignment.Center,
     ) {
-        Text("Nothing scheduled", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            "No episodes scheduled for this day",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 
@@ -668,7 +672,7 @@ private fun ScheduleCard(
             contentScale = ContentScale.Crop,
         )
         Column(
-            modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
+            modifier = Modifier.weight(1f).padding(horizontal = if (device.isTv) 10.dp else 8.dp),
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             Text(
@@ -690,8 +694,9 @@ private fun ScheduleCard(
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = Instant.ofEpochSecond(item.airingAt).atZone(zone).format(LocalTimeOfDayFormatter.current),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
+                maxLines = 1,
             )
             Text(
                 text = if (upcoming) "UPCOMING" else "AIRED",
@@ -712,7 +717,7 @@ private fun ScheduleCard(
                 ) {
                     Icon(
                         imageVector = if (reminded) Icons.Filled.Notifications else Icons.Outlined.NotificationsNone,
-                        contentDescription = if (reminded) "Remove reminder" else "Remind me",
+                        contentDescription = if (reminded) "Remove episode reminder" else "Set episode reminder",
                         tint = controlFocus4.content(if (reminded) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant),
                         modifier = Modifier.size(19.dp),
