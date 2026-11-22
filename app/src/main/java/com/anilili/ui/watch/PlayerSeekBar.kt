@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -117,7 +118,7 @@ internal fun PlayerSeekBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(touchHeight)
+            .heightIn(min = 48.dp)
             .semantics {
                 contentDescription = "Playback position"
                 if (enabled) {
@@ -138,14 +139,14 @@ internal fun PlayerSeekBar(
                 if (!enabled) return@pointerInput
                 detectDragGestures(
                     onDragStart = { offset ->
-                        val next = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        val next = if (size.width > 0) (offset.x / size.width.toFloat()).coerceIn(0f, 1f) else 0f
                         scrubFraction = next
                         currentOnScrubChange((next * currentDurationMs).toLong())
                         currentOnInteract()
                     },
                     onDrag = { change, _ ->
                         change.consume()
-                        val next = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        val next = if (size.width > 0) (change.position.x / size.width.toFloat()).coerceIn(0f, 1f) else 0f
                         scrubFraction = next
                         currentOnScrubChange((next * currentDurationMs).toLong())
                         currentOnInteract()
@@ -166,7 +167,7 @@ internal fun PlayerSeekBar(
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(touchHeight),
+                .heightIn(min = 48.dp),
         ) {
             val centreY = size.height / 2f
             val strokePx = with(density) { drawnTrackHeight.toPx() }
