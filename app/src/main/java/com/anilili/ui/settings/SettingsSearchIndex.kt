@@ -64,6 +64,8 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
             "Drag to seek" to listOf("gesture", "seek", "scrub", "drag", "swipe"),
             ("Ambient video glow" to listOf("ambient", "glow", "light", "video", "colour",
                 "color", "blur", "youtube", "cinematic")).takeIf { !isTv },
+            ("Ambient glow strength" to listOf("ambient", "glow", "strength", "intensity", "subtle",
+                "balanced", "vivid", "brightness")).takeIf { !isTv },
             "Status bar over the player" to listOf("status", "bar", "fullscreen", "notch"),
             "Clock and finishing time" to listOf("clock", "time", "ends", "ending", "finish",
                 "bedtime", "night", "late", "watch"),

@@ -939,6 +939,10 @@ object SettingsStore {
     private val _playerAmbientGlow = MutableStateFlow(true)
     val playerAmbientGlow = _playerAmbientGlow.asStateFlow()
 
+    /** Three practical watch-page glow strengths, with the centre preset as the default. */
+    private val _playerAmbientIntensity = MutableStateFlow(0.75f)
+    val playerAmbientIntensity = _playerAmbientIntensity.asStateFlow()
+
     /**
      * Television only: a playing episode takes a second Back within a moment to leave.
      *
@@ -1856,6 +1860,12 @@ object SettingsStore {
         scope.launch { store.edit { it[PLAYER_AMBIENT_GLOW] = value } }
     }
 
+    fun setPlayerAmbientIntensity(value: Float) {
+        val clamped = value.coerceIn(0.5f, 1f)
+        _playerAmbientIntensity.value = clamped
+        scope.launch { store.edit { it[PLAYER_AMBIENT_INTENSITY] = clamped } }
+    }
+
     fun setTvDoubleBackToExit(value: Boolean) {
         _tvDoubleBackToExit.value = value
         scope.launch { store.edit { it[TV_DOUBLE_BACK_TO_EXIT] = value } }
@@ -2165,6 +2175,7 @@ object SettingsStore {
         _playerStatusBar.value = prefs[PLAYER_STATUS_BAR] ?: true
         _playerClock.value = prefs[PLAYER_CLOCK] ?: true
         _playerAmbientGlow.value = prefs[PLAYER_AMBIENT_GLOW] ?: true
+        _playerAmbientIntensity.value = (prefs[PLAYER_AMBIENT_INTENSITY] ?: 0.75f).coerceIn(0.5f, 1f)
         _tvDoubleBackToExit.value = prefs[TV_DOUBLE_BACK_TO_EXIT] ?: true
         _lastWorkingPipeOrigin.value = prefs[LAST_PIPE_ORIGIN].orEmpty()
         loaded.value = true
@@ -2327,6 +2338,7 @@ object SettingsStore {
     private val PLAYER_STATUS_BAR = booleanPreferencesKey("player_status_bar")
     private val PLAYER_CLOCK = booleanPreferencesKey("player_clock")
     private val PLAYER_AMBIENT_GLOW = booleanPreferencesKey("player_ambient_glow")
+    private val PLAYER_AMBIENT_INTENSITY = floatPreferencesKey("player_ambient_intensity")
     private val TV_DOUBLE_BACK_TO_EXIT = booleanPreferencesKey("tv_double_back_to_exit")
     private val MIGRATED = booleanPreferencesKey("migrated_from_shared_preferences")
 
@@ -2420,7 +2432,7 @@ object SettingsStore {
     // The brightness travels as a fraction of whatever range the screen has, so it means the same
     // thing on the device a backup lands on as it did on the one it left.
     private val BACKUP_FLOAT_KEYS =
-        listOf(DEFAULT_PLAYBACK_SPEED_KEY, HOLD_PLAYBACK_SPEED, PLAYER_BRIGHTNESS)
+        listOf(DEFAULT_PLAYBACK_SPEED_KEY, HOLD_PLAYBACK_SPEED, PLAYER_BRIGHTNESS, PLAYER_AMBIENT_INTENSITY)
 
     private val BACKUP_STRING_KEYS = listOf(
         APP_LAYOUT_MODE,

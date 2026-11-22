@@ -713,6 +713,7 @@ private fun WatchContent(
         mutableStateOf(VideoAmbientPalette.Empty)
     }
     val playerAmbientGlow by SettingsStore.playerAmbientGlow.collectAsState()
+    val playerAmbientIntensity by SettingsStore.playerAmbientIntensity.collectAsState()
     val showLoadingOverlay by SettingsStore.showLoadingOverlay.collectAsState()
     // AniList ships its synopses with HTML in them, so the player gets the same cleaned text the
     // details pane below already shows rather than markup.
@@ -1567,6 +1568,7 @@ private fun WatchContent(
                     .weight(1f)
                     .videoAmbientWash(
                         if (playerAmbientGlow) ambientPalette else VideoAmbientPalette.Empty,
+                        intensity = playerAmbientIntensity,
                     ),
             )
             return@Column

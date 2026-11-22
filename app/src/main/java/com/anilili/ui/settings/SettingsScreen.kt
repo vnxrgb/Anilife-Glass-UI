@@ -401,6 +401,7 @@ fun SettingsScreen(
     val playerStatusBar by SettingsStore.playerStatusBar.collectAsState()
     val playerClock by SettingsStore.playerClock.collectAsState()
     val playerAmbientGlow by SettingsStore.playerAmbientGlow.collectAsState()
+    val playerAmbientIntensity by SettingsStore.playerAmbientIntensity.collectAsState()
     val tvDoubleBackToExit by SettingsStore.tvDoubleBackToExit.collectAsState()
     val serverPriority by SettingsStore.serverPriority.collectAsState()
     val disabledProviders by SettingsStore.disabledProviders.collectAsState()
@@ -2303,6 +2304,26 @@ fun SettingsScreen(
                             checked = playerAmbientGlow,
                             onCheckedChange = SettingsStore::setPlayerAmbientGlow,
                         )
+                    }
+                    if (playerAmbientGlow) {
+                        item(key = "Ambient glow strength") {
+                            MidnightStepperRow(
+                                label = "Ambient glow strength",
+                                value = when {
+                                    playerAmbientIntensity <= 0.5f -> "Subtle"
+                                    playerAmbientIntensity <= 0.75f -> "Balanced"
+                                    else -> "Vivid"
+                                },
+                                onDecrease = {
+                                    SettingsStore.setPlayerAmbientIntensity(playerAmbientIntensity - 0.25f)
+                                },
+                                onIncrease = {
+                                    SettingsStore.setPlayerAmbientIntensity(playerAmbientIntensity + 0.25f)
+                                },
+                                decreaseEnabled = playerAmbientIntensity > 0.5f,
+                                increaseEnabled = playerAmbientIntensity < 1f,
+                            )
+                        }
                     }
                     item(key = "Hold to change speed") {
                         MidnightSettingSwitchRow(

@@ -133,7 +133,10 @@ private fun extractAmbientPalette(bitmap: Bitmap): VideoAmbientPalette? {
  * surface. This is a small set of GPU gradients on the existing watch-page background.
  */
 @Composable
-internal fun Modifier.videoAmbientWash(palette: VideoAmbientPalette): Modifier {
+internal fun Modifier.videoAmbientWash(
+    palette: VideoAmbientPalette,
+    intensity: Float = 0.75f,
+): Modifier {
     val left by animateColorAsState(palette.left, tween(1_450), label = "ambientLeft")
     val right by animateColorAsState(palette.right, tween(1_450), label = "ambientRight")
     return this.drawBehind {
@@ -141,6 +144,7 @@ internal fun Modifier.videoAmbientWash(palette: VideoAmbientPalette): Modifier {
 
         val w = size.width
         val h = size.height
+        val strength = intensity.coerceIn(0.5f, 1f)
         // Layer three broad, feathered colour blooms instead of a solid tinted slab.
         // The video itself is never blurred; only the watch-page background is painted.
         val reach = maxOf(w * 1.15f, h * 0.56f)
@@ -151,8 +155,8 @@ internal fun Modifier.videoAmbientWash(palette: VideoAmbientPalette): Modifier {
         )
         drawRect(
             brush = Brush.verticalGradient(
-                0f to center.copy(alpha = 0.21f),
-                0.32f to center.copy(alpha = 0.08f),
+                0f to center.copy(alpha = 0.21f * strength),
+                0.32f to center.copy(alpha = 0.08f * strength),
                 0.75f to Color.Transparent,
                 1f to Color.Transparent,
                 startY = 0f,
@@ -162,9 +166,9 @@ internal fun Modifier.videoAmbientWash(palette: VideoAmbientPalette): Modifier {
         drawRect(
             brush = Brush.radialGradient(
                 *arrayOf(
-                    0f to left.copy(alpha = 0.57f),
-                    0.24f to left.copy(alpha = 0.36f),
-                    0.52f to left.copy(alpha = 0.14f),
+                    0f to left.copy(alpha = 0.57f * strength),
+                    0.24f to left.copy(alpha = 0.36f * strength),
+                    0.52f to left.copy(alpha = 0.14f * strength),
                     0.85f to Color.Transparent,
                     1f to Color.Transparent,
                 ),
@@ -175,9 +179,9 @@ internal fun Modifier.videoAmbientWash(palette: VideoAmbientPalette): Modifier {
         drawRect(
             brush = Brush.radialGradient(
                 *arrayOf(
-                    0f to right.copy(alpha = 0.53f),
-                    0.24f to right.copy(alpha = 0.33f),
-                    0.52f to right.copy(alpha = 0.13f),
+                    0f to right.copy(alpha = 0.53f * strength),
+                    0.24f to right.copy(alpha = 0.33f * strength),
+                    0.52f to right.copy(alpha = 0.13f * strength),
                     0.85f to Color.Transparent,
                     1f to Color.Transparent,
                 ),
@@ -188,8 +192,8 @@ internal fun Modifier.videoAmbientWash(palette: VideoAmbientPalette): Modifier {
         drawRect(
             brush = Brush.radialGradient(
                 *arrayOf(
-                    0f to center.copy(alpha = 0.18f),
-                    0.38f to center.copy(alpha = 0.09f),
+                    0f to center.copy(alpha = 0.18f * strength),
+                    0.38f to center.copy(alpha = 0.09f * strength),
                     0.80f to Color.Transparent,
                     1f to Color.Transparent,
                 ),
