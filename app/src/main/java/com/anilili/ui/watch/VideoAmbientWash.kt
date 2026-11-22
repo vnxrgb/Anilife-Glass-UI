@@ -128,7 +128,12 @@ private fun extractAmbientPalette(bitmap: Bitmap): VideoAmbientPalette? {
     val left = average(0, width / 2)
     val right = average(width / 2, width)
     if (left.alpha == 0f && right.alpha == 0f) return null
-    return VideoAmbientPalette(left, right)
+    // A letterboxed or nearly black half should not pull the centre bloom toward
+    // black while the other half still contains a valid frame colour.
+    return VideoAmbientPalette(
+        left = if (left.alpha == 0f) right else left,
+        right = if (right.alpha == 0f) left else right,
+    )
 }
 
 /**
