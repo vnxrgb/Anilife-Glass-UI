@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -177,7 +178,8 @@ private fun PageSearchButton(
             .focusFill(fillFocus1, shape)
             .clickable(role = Role.Button, onClick = onClick),
         shape = shape,
-        color = fillFocus1.background(MaterialTheme.colorScheme.surface),
+        color = fillFocus1.background(glassPanelColor()),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)),
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Row(

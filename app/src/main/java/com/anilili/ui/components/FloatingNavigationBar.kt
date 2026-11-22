@@ -74,7 +74,7 @@ val FloatingNavBarMargin = 12.dp
 private val ItemSize = 48.dp
 private val IconSize = 22.dp
 private val BarPadding = 6.dp
-private val BarShape = RoundedCornerShape(20.dp)
+private val BarShape = RoundedCornerShape(32.dp)
 
 // A gentle top light keeps the glass character without a white sheen across the icons.
 // The nearly opaque center preserves contrast when bright artwork scrolls behind the bar.

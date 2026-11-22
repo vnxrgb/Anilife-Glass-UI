@@ -161,8 +161,8 @@ fun <T> MidnightUnderlineSelector(
     claimInitialFocus: Boolean = true,
 ) {
     val device = LocalAppDeviceProfile.current
-    val trackShape = RoundedCornerShape(MidnightRowRadius + 2.dp)
-    val pillShape = RoundedCornerShape(MidnightRowRadius)
+    val trackShape = RoundedCornerShape(50)
+    val pillShape = RoundedCornerShape(50)
     Row(
         modifier = modifier
             .fillMaxWidth()

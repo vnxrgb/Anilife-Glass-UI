@@ -271,7 +271,7 @@ fun MidnightSheet(
         containerColor = if (backdrop != null) Color.Transparent else Midnight.SheetSurface,
         contentWindowInsets = { if (backdrop != null) WindowInsets(0) else BottomSheetDefaults.windowInsets },
         contentColor = Midnight.Text,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
         dragHandle = null,
         tonalElevation = 0.dp,
     ) {
@@ -349,7 +349,7 @@ fun MidnightTvCard(
                 .padding(horizontal = 48.dp, vertical = 27.dp),
         ) {
             val cardWidth = (maxWidth * 0.62f).coerceIn(320.dp, 620.dp)
-            val shape = RoundedCornerShape(16.dp)
+            val shape = RoundedCornerShape(22.dp)
             val accent = LocalMidnightAccent.current
             Column(
                 modifier = modifier
@@ -404,7 +404,7 @@ fun MidnightModal(
             } else {
                 maxWidth
             }
-            val shape = RoundedCornerShape(12.dp)
+            val shape = RoundedCornerShape(24.dp)
             Column(
                 modifier = modifier
                     .align(Alignment.Center)
@@ -683,7 +683,7 @@ fun MidnightPrimaryButton(
     modifier: Modifier = Modifier,
 ) {
     val device = LocalAppDeviceProfile.current
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(50)
     val fillFocus1 = rememberFocusFill()
     Box(
         modifier = modifier
@@ -720,7 +720,7 @@ fun MidnightFilledAction(
     destructive: Boolean = false,
 ) {
     val device = LocalAppDeviceProfile.current
-    val shape = RoundedCornerShape(7.dp)
+    val shape = RoundedCornerShape(50)
     val fill = when {
         !enabled -> Midnight.DisabledFill
         destructive -> Midnight.Red
@@ -762,7 +762,7 @@ fun MidnightQuietAction(
     val device = LocalAppDeviceProfile.current
     // A pill on a television, where the focus ring is drawn round the button's own shape: a 6dp
     // corner made the ring round "Close" a box rather than a button.
-    val shape = if (device.isTv) RoundedCornerShape(50) else RoundedCornerShape(6.dp)
+    val shape = RoundedCornerShape(50)
     val fillFocus3 = rememberFocusFill()
     Box(
         modifier = modifier
