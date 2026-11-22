@@ -660,7 +660,7 @@ private fun SearchTopBar(
                 shape = RoundedCornerShape(50),
                                 colors = extraFocusSeason.chipColors(FilterChipDefaults.filterChipColors(
                     containerColor = glassPanelColor(),
-                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
                     selectedLabelColor = MaterialTheme.colorScheme.onSurface,
                 )),
                                 selected = vm.filters.season != null,
@@ -1002,7 +1002,9 @@ private fun ActiveFilterRow(vm: SearchViewModel) {
                         modifier = Modifier.size(16.dp),
                     )
                 },
-                modifier = Modifier.focusFill(activeFocus, RoundedCornerShape(50)),
+                modifier = Modifier
+                    .focusFill(activeFocus, RoundedCornerShape(50))
+                    .semantics { contentDescription = "Remove filter: ${chip.label}" },
             )
         }
     }
@@ -1030,8 +1032,9 @@ private fun SearchSuggestions(
         Surface(
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
             shape = RoundedCornerShape(22.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f),
-            tonalElevation = 2.dp,
+            color = glassPanelColor(),
+            border = BorderStroke(1.dp, glassRimColor()),
+            tonalElevation = 0.dp,
         ) {
             Column(Modifier.padding(vertical = 4.dp)) {
                 recent.forEach { term ->
@@ -1210,12 +1213,13 @@ private fun QuickSortPill(label: String, selected: String, onSelect: (String) ->
         Surface(
             onClick = { expanded = true },
             shape = RoundedCornerShape(50),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = glassPanelColor(),
+            border = BorderStroke(1.dp, glassRimColor()),
+            contentColor = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.semantics { contentDescription = "Sort by $label" },
         ) {
             Row(
-                Modifier.padding(start = 10.dp, end = 6.dp, top = 5.dp, bottom = 5.dp),
+                Modifier.padding(start = 10.dp, end = 7.dp, top = 7.dp, bottom = 7.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -1280,7 +1284,7 @@ private fun ResultsGrid(
                     .fillMaxWidth()
                     .widthIn(max = 420.dp)
                     .glassCard(RoundedCornerShape(26.dp))
-                    .padding(horizontal = 24.dp, vertical = 26.dp))
+                    .padding(horizontal = 22.dp, vertical = 22.dp))
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {

@@ -924,10 +924,10 @@ private fun DetailHero(
 ) {
     val device = LocalAppDeviceProfile.current
     val banner = info.bannerImage ?: info.coverImage.best
-    val bannerHeight = topInset + if (device.isExpanded) 208.dp else 164.dp
+    val bannerHeight = topInset + if (device.isExpanded) 204.dp else if (device.isTablet) 168.dp else 154.dp
     Box(
         Modifier.fillMaxWidth().height(
-            topInset + if (device.isExpanded) 280.dp else if (device.isTablet) 248.dp else 226.dp,
+            topInset + if (device.isExpanded) 270.dp else if (device.isTablet) 232.dp else 212.dp,
         ),
     ) {
         AsyncImage(
@@ -946,13 +946,13 @@ private fun DetailHero(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .padding(horizontal = device.pagePadding, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(horizontal = device.pagePadding, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
             Box(
                 modifier = Modifier
-                    .width(if (device.isExpanded) 108.dp else 88.dp)
+                    .width(if (device.isExpanded) 108.dp else if (device.isTablet) 94.dp else 84.dp)
                     .aspectRatio(2f / 3f)
                     .focusHighlight(RoundedCornerShape(18.dp))
                     .glassCard(RoundedCornerShape(18.dp))
@@ -992,7 +992,7 @@ private fun DetailHero(
                     alignment = Alignment.BottomStart,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(if (device.isExpanded) 76.dp else 60.dp)
+                        .height(if (device.isExpanded) 74.dp else if (device.isTablet) 62.dp else 56.dp)
                         .padding(bottom = 4.dp),
                 ) {
                     ShrinkingTitle(
@@ -1022,7 +1022,7 @@ private fun DetailHero(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
-                    modifier = Modifier.padding(top = 5.dp),
+                    modifier = Modifier.padding(top = 4.dp),
                 )
             }
         }
@@ -1049,8 +1049,8 @@ private fun StudioBadge(name: String, enabled: Boolean, onClick: () -> Unit) {
             .padding(top = 5.dp)
             .focusFill(fillFocus2, StudioBadgeShape)
             .clip(StudioBadgeShape)
-            .background(fillFocus2.background(tint.copy(alpha = 0.16f)))
-            .border(1.dp, tint.copy(alpha = 0.55f), StudioBadgeShape)
+            .background(fillFocus2.background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)))
+            .border(1.dp, tint.copy(alpha = if (enabled) 0.48f else 0.22f), StudioBadgeShape)
             .then(
                 if (enabled) {
                     Modifier.clickable(onClickLabel = "Browse $name titles", onClick = onClick)
@@ -1058,7 +1058,7 @@ private fun StudioBadge(name: String, enabled: Boolean, onClick: () -> Unit) {
                     Modifier
                 },
             )
-            .padding(start = 10.dp, end = if (enabled) 4.dp else 10.dp, top = 4.dp, bottom = 4.dp),
+            .padding(start = 9.dp, end = if (enabled) 5.dp else 9.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

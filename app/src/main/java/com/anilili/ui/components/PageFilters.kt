@@ -57,7 +57,7 @@ fun PageFilterRow(
 ) {
     Row(
         modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )
@@ -87,9 +87,9 @@ fun PageFilterPill(
             contentColor = fillFocus1.content(LocalContentColor.current),
         ) {
             Row(
-                Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
             ) {
                 Text(
                     label,
