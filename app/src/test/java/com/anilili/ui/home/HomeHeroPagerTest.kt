@@ -5,6 +5,16 @@ import org.junit.Test
 
 class HomeHeroPagerTest {
     @Test
+    fun spotlightDotsNeverOverflowOnLongCarousels() {
+        assertEquals(0..6, heroVisibleIndicatorIndices(0, 27))
+        assertEquals(7..13, heroVisibleIndicatorIndices(10, 27))
+        assertEquals(20..26, heroVisibleIndicatorIndices(26, 27))
+        assertEquals(0..2, heroVisibleIndicatorIndices(1, 3))
+        assertEquals(IntRange.EMPTY, heroVisibleIndicatorIndices(0, 0))
+        assertEquals(IntRange.EMPTY, heroVisibleIndicatorIndices(0, 7, 0))
+    }
+
+    @Test
     fun nextPageAdvancesAndWraps() {
         assertEquals(1, nextHeroPage(currentPage = 0, pageCount = 4))
         assertEquals(0, nextHeroPage(currentPage = 3, pageCount = 4))

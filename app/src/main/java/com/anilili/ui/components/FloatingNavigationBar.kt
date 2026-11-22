@@ -165,7 +165,7 @@ fun FloatingNavigationBar(
         // Five stable, equal-width destinations. Selecting a tab must not displace
         // its neighbours or change the capsule width.
         val itemWidth = if (items.isEmpty()) ItemSize else inner / items.size
-        val pillMax = itemWidth
+        val showLabels = itemWidth >= 58.dp
         Row(
             // Full width, so the bar's edges stay put while the pill changes length per label;
             // the spare room is shared between the icons instead.
@@ -195,7 +195,7 @@ fun FloatingNavigationBar(
                     item = item,
                     selected = item.route == selectedRoute,
                     width = itemWidth,
-                    maxWidth = pillMax,
+                    showLabel = showLabels,
                     onClick = { onSelect(item.route) },
                 )
             }
@@ -252,7 +252,7 @@ private fun FloatingNavIcon(
     item: FloatingNavItem,
     selected: Boolean,
     width: Dp,
-    maxWidth: Dp,
+    showLabel: Boolean,
     onClick: () -> Unit,
 ) {
     val iconColor = if (selected) MaterialTheme.colorScheme.onSurface
@@ -312,14 +312,16 @@ private fun FloatingNavIcon(
                 tint = iconColor,
                 modifier = Modifier.size(IconSize),
             )
-            Text(
-                text = item.label,
-                color = iconColor,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis,
-            )
+            if (showLabel) {
+                Text(
+                    text = item.label,
+                    color = iconColor,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

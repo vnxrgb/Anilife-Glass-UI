@@ -41,6 +41,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -92,6 +94,7 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
@@ -1270,6 +1273,7 @@ private fun DetailTabs(
         Row(
             modifier = Modifier
                 .horizontalScroll(rememberScrollState())
+                .selectableGroup()
                 .then(downFocus?.let { target -> Modifier.focusProperties { down = target } } ?: Modifier)
                 .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1295,7 +1299,7 @@ private fun DetailTabs(
                             else glassRimColor().copy(alpha = 0.45f),
                             RoundedCornerShape(50),
                         )
-                        .clickable { onSelect(tab) }
+                        .selectable(selected = active, role = Role.Tab, onClick = { onSelect(tab) })
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -1327,7 +1331,14 @@ private fun QuickFacts(info: Media) {
                     .padding(horizontal = 11.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1, softWrap = false)
+                Text(
+                    value,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 168.dp),
+                )
                 Text(
                     label,
                     style = MaterialTheme.typography.labelSmall,

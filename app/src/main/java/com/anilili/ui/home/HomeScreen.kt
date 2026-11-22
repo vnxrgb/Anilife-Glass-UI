@@ -900,6 +900,10 @@ private fun HeroPager(
                 )
             }
         }
+        val visibleIndicators = heroVisibleIndicatorIndices(
+            page = if (device.isTv) safeTvPage else pagerState.currentPage,
+            pageCount = items.size,
+        )
         Row(
             Modifier
                 .align(Alignment.BottomCenter)
@@ -910,7 +914,7 @@ private fun HeroPager(
                 .padding(horizontal = 9.dp, vertical = 5.dp),
             horizontalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            repeat(items.size) { i ->
+            visibleIndicators.forEach { i ->
                 Box(
                     Modifier
                         .height(5.dp)
@@ -927,6 +931,17 @@ private fun HeroPager(
             }
         }
     }
+}
+
+/**
+ * Keep the spotlight pager dots compact even when a provider supplies dozens of featured shows.
+ * The active page stays visible in a sliding, at-most-seven-dot window, with no broken count.
+ */
+internal fun heroVisibleIndicatorIndices(page: Int, pageCount: Int, maxDots: Int = 7): IntRange {
+    if (pageCount <= 0 || maxDots <= 0) return IntRange.EMPTY
+    val count = minOf(pageCount, maxDots)
+    val first = (page.coerceIn(0, pageCount - 1) - count / 2).coerceIn(0, pageCount - count)
+    return first until first + count
 }
 
 @Composable

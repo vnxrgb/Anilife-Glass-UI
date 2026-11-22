@@ -1407,7 +1407,10 @@ private fun ResultsGrid(
             derivedStateOf { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
         }
         LaunchedEffect(lastVisibleIndex, results.size, columnCount) {
-            if (lastVisibleIndex >= results.size - columnCount * 2) onLoadMore()
+            // Empty/error/loading results have no last poster: avoid prefetching off index zero.
+            if (results.isNotEmpty() && lastVisibleIndex >= results.size - columnCount * 2) {
+                onLoadMore()
+            }
         }
 
         // A TV result row comes to rest mid-screen, going up as well as down, as Home's rails do.
@@ -1617,8 +1620,9 @@ internal fun adaptiveColumnCount(
     minimumTileWidth: androidx.compose.ui.unit.Dp,
     spacing: androidx.compose.ui.unit.Dp,
 ): Int {
-    val contentWidth = availableWidth - horizontalPadding * 2
-    return ((contentWidth.value + spacing.value) / (minimumTileWidth.value + spacing.value))
+    val contentWidth = (availableWidth - horizontalPadding * 2).coerceAtLeast(0.dp)
+    val denominator = (minimumTileWidth + spacing).coerceAtLeast(1.dp)
+    return ((contentWidth.value + spacing.value) / denominator.value)
         .toInt()
         .coerceAtLeast(1)
 }
