@@ -1,5 +1,5 @@
-Batch 4 universal APK preview milestone
-Requested after user noticed Android CI was not publishing an APK.
-Source commit: baa8ce2cd915cfeff46ff1b72e3cf05e08fc1e05
-Build mobile universal debug APK with unit tests and lint, publish exactly one direct APK to glass-ui-preview.
-Do not modify player; branch feature/unified-glass-ui only. Preview is not device-verified stable release.
+Batch 4 completed-source milestone universal APK preview
+User screenshots reviewed: Home, Details, Browse, Settings, Schedule. Include last screenshot acceptance pass.
+Source commit: 85d13a7483ea1d376b12d4ba8f4e4cf68b6f16c3
+Run mobile unit tests + lint + assemble universal debug APK. Publish one direct release APK to tag glass-ui-preview only if all succeed.
+TV source paths remain untouched; portrait/full-screen player intentionally excluded. This is a preview, not a device-accepted stable build.
