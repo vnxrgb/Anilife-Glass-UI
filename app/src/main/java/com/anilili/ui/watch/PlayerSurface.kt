@@ -3,6 +3,7 @@ package com.anilili.ui.watch
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
@@ -56,6 +57,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -303,6 +306,8 @@ fun PlayerSurface(
      * until there is one. False again the moment a new stream is prepared.
      */
     onPlaybackActiveChanged: ((Boolean) -> Unit)? = null,
+    /** Dark frame hue for the phone's surrounding details; does not overlay the video. */
+    onAmbientColor: (Color) -> Unit = {},
     onPreviousEpisode: (() -> Unit)? = null,
     hasNextEpisode: Boolean = true,
     /** What "next" is when it is the next season rather than an episode of this one ("Season 2"). */
@@ -429,6 +434,7 @@ fun PlayerSurface(
     val currentOnStalled by rememberUpdatedState(onStalled)
     val currentOnProgress by rememberUpdatedState(onProgress)
     val currentOnFinalProgress by rememberUpdatedState(onFinalProgress)
+    val currentOnAmbientColor by rememberUpdatedState(onAmbientColor)
     val perStream = remember(stream.url) { PlayerStreamState(stream, startPositionMs) }
     var activeStream by perStream.activeStream
     var nextStartPositionMs by perStream.nextStartPositionMs
@@ -2040,6 +2046,19 @@ fun PlayerSurface(
             },
             modifier = Modifier.fillMaxSize(),
         )
+
+        // Low-rate background sampling only on an actively playing, inline phone player.
+        // No decoder changes, work in fullscreen/PiP/TV, or capturing secure surfaces.
+        LaunchedEffect(playerView, playbackIsPlaying, isFullscreen, inPictureInPicture, device.isTv) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+                device.isTv || isFullscreen || inPictureInPicture || !playbackIsPlaying
+            ) return@LaunchedEffect
+            val view = playerView ?: return@LaunchedEffect
+            while (isActive) {
+                sampleVideoAmbientColor(view)?.let { currentOnAmbientColor(it) }
+                delay(1_800)
+            }
+        }
 
         // Some TV input compositors keep a stopped app's SurfaceView above HDMI until Home forces
         // another composition. Detach only the TV surface; the service already pauses playback.
