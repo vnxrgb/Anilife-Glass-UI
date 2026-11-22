@@ -598,6 +598,8 @@ private fun SearchTopBar(
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedContainerColor = glassPanelColor(),
                                     unfocusedContainerColor = glassPanelColor(),
+                                    focusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f),
+                                    unfocusedBorderColor = glassRimColor(),
                                 ),
                             )
                         }
@@ -609,7 +611,7 @@ private fun SearchTopBar(
                             )),
                             border = androidx.compose.foundation.BorderStroke(1.dp, glassRimColor()),
                             onClick = onOpenFilters,
-                            contentPadding = PaddingValues(horizontal = 13.dp),
+                            contentPadding = PaddingValues(horizontal = 15.dp),
                             modifier = Modifier
                                 .focusRequester(filterFocusRequester)
                                 .height(56.dp)
