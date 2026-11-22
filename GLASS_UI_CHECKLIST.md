@@ -163,3 +163,6 @@ An APK build is only **technical readiness**. A final release requires all core 
 - `HOME PERSONALIZATION TOUCH PASS`: Arrange Home drag handle on handhelds is now a 48dp neutral frosted touch surface with theme-adaptive icon contrast. Drag/reorder persistence and TV arrow navigation remain unchanged. Source implementation only; touch/TV/device verification pending.
 
 - `REORDER AND SEARCH ACCESSIBILITY PASS`: Home reorder handle now has a single accessible drag description and 48dp arrow targets; shared phone search clear button and TV dialog clear control have 48dp minimum targets, with an explicit TV search action label. Implementation only; no compilation, screen reader, remote or device acceptance claimed.
+
+
+- `CALENDAR & ACCESSIBILITY COHESION PASS`: Monthly schedule grid now has a neutral glass panel on phones with preserved TV focus grouping; day cells announce dates, selection, today and episode counts. Shared filter/sort menus announce selected choices; next-episode countdown retains a second-accurate visible clock but throttles spoken announcements to minute-level changes. Source-only implementation; compile, device screen-reader and TV checks remain open.
