@@ -1,0 +1,4 @@
+Milestone preview requested after large Glass UI implementation batch.
+Source commit: 7572c193fbe3264c8f8f68913b657bdc22d71fc0
+Contents: Details, Downloads, Settings, My List, Browse, Schedule, Notifications, Popup glass and theme preview.
+Build contract: unit tests, lint, one universal APK. Device visual acceptance is separate.
