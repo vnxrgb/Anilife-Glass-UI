@@ -133,3 +133,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - `PLAYER DOCK & SETTINGS FINDABILITY PASS`: Noncompact/fullscreen player bottom icons now share one frosted rounded action dock, retaining control group scaling and every existing onClick handler. Ambient strength row stays indexed/visible even while ambient is off and disables its stepper buttons; stored strength is remembered. Real-device acceptance and accessibility tests pending.
 
 - `SHARED EMPTY/ERROR PASS`: Full-screen loading now retains the shared phone atmosphere while TV uses its original canvas; shared full-screen error content is frosted on mobile without changing retry, technical details or reporting. Code only; device verification outstanding.
+
+- `ACCESSIBLE PLAYER + BROWSE POLISH PASS`: Phone player timeline now exposes a progress value and accessibility seek action, uses a minimum 48dp touch target, and avoids division by zero on transient zero-width gestures. Browse no-results glass panel now caps its width on tablets and centers guidance. Implementation only; build, screen reader and device testing remain outstanding.
