@@ -43,8 +43,16 @@ internal fun playedFraction(positionMs: Long, durationMs: Long): Float {
 
 /** Where a press or drag at [xPx] across a bar [widthPx] wide lands, in milliseconds. */
 internal fun seekTargetMs(xPx: Float, widthPx: Float, durationMs: Long): Long {
-    if (widthPx <= 0f || durationMs <= 0L) return 0L
-    return ((xPx / widthPx).coerceIn(0f, 1f) * durationMs).toLong()
+    if (!xPx.isFinite() || !widthPx.isFinite() || widthPx <= 0f || durationMs <= 0L) return 0L
+    return ((xPx / widthPx).coerceIn(0f, 1f) * durationMs).toLong().coerceIn(0L, durationMs)
+}
+
+/** Match gestures to the inset track that the thumb actually travels along. */
+internal fun seekTargetOnInsetTrackMs(xPx: Float, widthPx: Float, insetPx: Float, durationMs: Long): Long {
+    if (!insetPx.isFinite() || insetPx < 0f || !widthPx.isFinite()) return 0L
+    val travelPx = (widthPx - insetPx * 2f).coerceAtLeast(0f)
+    if (travelPx <= 0f) return 0L
+    return seekTargetMs(xPx - insetPx, travelPx, durationMs)
 }
 
 /**
