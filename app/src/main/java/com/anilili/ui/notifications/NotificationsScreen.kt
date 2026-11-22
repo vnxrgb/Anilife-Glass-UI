@@ -466,7 +466,7 @@ private fun NotificationCard(
                     // theme, which is the focus ring's colour too, so a page of unread cards read as
                     // a page of focused ones. A lighter grey than a read card's still tells them apart.
                     item.unread && isTv -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    item.unread -> MaterialTheme.colorScheme.primary
+                    item.unread -> MaterialTheme.colorScheme.primary.copy(alpha = 0.62f)
                     else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
                 },
                 shape = shape,
@@ -490,7 +490,7 @@ private fun NotificationCard(
             )
         }
         Row(
-            Modifier.padding(10.dp),
+            Modifier.padding(if (isTv) 10.dp else 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AsyncImage(
@@ -499,12 +499,12 @@ private fun NotificationCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(
-                        width = if (compactTv) 64.dp else 58.dp,
+                        width = if (compactTv) 64.dp else 56.dp,
                         height = if (compactTv) 86.dp else 76.dp,
                     )
                     .clip(RoundedCornerShape(15.dp)),
             )
-            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Column(Modifier.weight(1f).padding(horizontal = if (isTv) 12.dp else 10.dp)) {
                 Text(
                     item.title,
                     style = MaterialTheme.typography.titleMedium,

@@ -393,7 +393,7 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
         state = listState,
         modifier = Modifier.focusGroup(),
         contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 5.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 6.dp else 5.dp),
     ) {
         items(DAY_STRIP_LENGTH) { index ->
             val date = today.plusDays(DAY_STRIP_FIRST + index)
@@ -401,8 +401,8 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
             val fillFocus1 = rememberFocusFill()
             Column(
                 modifier = Modifier
-                    .width(80.dp)
-                    .height(60.dp)
+                    .width(if (device.isTv) 80.dp else 76.dp)
+                    .height(if (device.isTv) 60.dp else 58.dp)
                     .focusFill(fillFocus1, RoundedCornerShape(14.dp))
                     .clip(RoundedCornerShape(14.dp))
                     .background(
@@ -415,8 +415,8 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
                         else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
                         shape = RoundedCornerShape(14.dp),
                     )
-                    .clickable { onSelect(date) }
-                    .padding(vertical = 9.dp),
+                    .clickable(onClickLabel = "Show schedule for ${date.format(dateFmt)}") { onSelect(date) }
+                    .padding(vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -651,18 +651,20 @@ private fun ScheduleCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = device.pagePadding + 26.dp, end = device.pagePadding, top = 5.dp, bottom = 6.dp)
-            .focusHighlight(RoundedCornerShape(22.dp))
-            .glassCard(RoundedCornerShape(22.dp))
-            .clickable { onAnimeClick(media.id) }
-            .padding(9.dp),
+            .focusHighlight(RoundedCornerShape(20.dp))
+            .glassCard(RoundedCornerShape(20.dp))
+            .clickable(onClickLabel = "Open ${media.title.preferred} episode ${item.episode}") {
+                onAnimeClick(media.id)
+            }
+            .padding(if (device.isTv) 9.dp else 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AsyncImage(
             model = media.coverImage.best,
             contentDescription = media.title.preferred,
             modifier = Modifier
-                .size(width = 60.dp, height = 78.dp)
-                .clip(RoundedCornerShape(16.dp)),
+                .size(width = if (device.isTv) 60.dp else 54.dp, height = if (device.isTv) 78.dp else 74.dp)
+                .clip(RoundedCornerShape(14.dp)),
             contentScale = ContentScale.Crop,
         )
         Column(
@@ -705,7 +707,7 @@ private fun ScheduleCard(
                     onClick = { onToggleReminder(item) },
                     modifier = Modifier
                         .padding(top = 2.dp)
-                        .size(36.dp)
+                        .size(48.dp)
                         .focusFill(controlFocus4, CircleShape),
                 ) {
                     Icon(
@@ -729,7 +731,8 @@ private fun ScheduleTag(label: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(glassPanelColor())
+            .border(1.dp, glassRimColor().copy(alpha = 0.75f), RoundedCornerShape(6.dp))
             .padding(horizontal = 8.dp, vertical = 3.dp),
     )
 }
