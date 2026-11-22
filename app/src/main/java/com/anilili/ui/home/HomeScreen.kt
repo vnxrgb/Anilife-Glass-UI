@@ -1713,12 +1713,32 @@ private fun ContinueRail(
                             modifier = Modifier.align(Alignment.TopEnd).padding(5.dp),
                             backdrop = thumbnail,
                         )
-                        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.White.copy(.25f))) {
-                            Box(Modifier.fillMaxWidth(entry.progressFraction.coerceAtLeast(.03f)).height(4.dp).background(MaterialTheme.colorScheme.primary))
+                        // A remote-synced entry may not yet have a real playback duration.
+                        // Draw actual progress only, instead of fabricating a visible 3% strip.
+                        if (entry.durationMs > 0L) {
+                            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.White.copy(.25f))) {
+                                Box(
+                                    Modifier.fillMaxWidth(entry.progressFraction.coerceIn(0f, 1f))
+                                        .height(4.dp)
+                                        .background(MaterialTheme.colorScheme.primary),
+                                )
+                            }
                         }
                     }
                     Text(entry.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
                     Text("Episode ${entry.episodeLabel}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // The reference shows a remaining-time readout. Base it on recorded
+                    // playback duration rather than assuming every episode lasts 24 minutes.
+                    val timeLeftMs = (entry.durationMs - entry.positionMs).coerceAtLeast(0L)
+                    if (!device.isTv && entry.durationMs > 0L && entry.positionMs > 0L && timeLeftMs > 0L) {
+                        val minutesLeft = (timeLeftMs + 59_999L) / 60_000L
+                        Text(
+                            text = "${minutesLeft} min left",
+                            maxLines = 1,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
