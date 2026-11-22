@@ -3406,9 +3406,9 @@ private fun SettingsSectionCard(
     val fillFocus1 = rememberFocusFill()
     Surface(
         modifier = modifier
-            .focusFill(fillFocus1, RoundedCornerShape(16.dp))
+            .focusFill(fillFocus1, RoundedCornerShape(23.dp))
             .clickable(role = Role.Button, onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(23.dp),
         color = fillFocus1.background(glassPanelColor()),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.13f)),
         contentColor = fillFocus1.content(LocalContentColor.current),

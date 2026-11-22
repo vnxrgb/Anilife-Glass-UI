@@ -432,13 +432,13 @@ private fun InPlayerEpisodeNumberTile(
                     true
                 }
             }
-            .focusFill(fillFocus1, RoundedCornerShape(10.dp), focusedScale = 1.06f)
-            .clip(RoundedCornerShape(10.dp))
-            .background(fillFocus1.background(if (isCurrent) Color(0xFF2B2B31) else Color(0xFF17171A)))
+            .focusFill(fillFocus1, RoundedCornerShape(19.dp), focusedScale = 1.06f)
+            .clip(RoundedCornerShape(19.dp))
+            .background(fillFocus1.background(if (isCurrent) Color(0xFF303445).copy(alpha = 0.88f) else Color(0xFF212533).copy(alpha = 0.77f)))
             .border(
                 1.5.dp,
                 if (isCurrent) Color.White.copy(alpha = 0.55f) else Color.Transparent,
-                RoundedCornerShape(10.dp),
+                RoundedCornerShape(19.dp),
             )
             .clickable(onClick = onClick)
             .semantics {
@@ -492,11 +492,11 @@ private fun SeasonHeaderRow(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .focusFill(fillFocus2, RoundedCornerShape(10.dp))
-            .clip(RoundedCornerShape(10.dp))
+            .focusFill(fillFocus2, RoundedCornerShape(19.dp))
+            .clip(RoundedCornerShape(19.dp))
             .clickable(onClick = onClick),
         color = fillFocus2.background(if (isExpanded) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.07f)),
-        shape = RoundedCornerShape(10.dp), contentColor = fillFocus2.content(LocalContentColor.current),) {
+        shape = RoundedCornerShape(19.dp), contentColor = fillFocus2.content(LocalContentColor.current),) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -560,10 +560,10 @@ private fun InPlayerEpisodeItemRow(
                     true
                 }
             }
-            .focusHighlight(RoundedCornerShape(10.dp), focusedScale = 1.03f)
-            .clip(RoundedCornerShape(10.dp))
+            .focusHighlight(RoundedCornerShape(19.dp), focusedScale = 1.03f)
+            .clip(RoundedCornerShape(19.dp))
             .background(backgroundColor)
-            .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
+            .border(1.5.dp, borderColor, RoundedCornerShape(19.dp))
             .clickable(onClick = onClick)
             .semantics {
                 if (watchedFraction >= 0.999f) {
@@ -588,7 +588,7 @@ private fun InPlayerEpisodeItemRow(
             modifier = Modifier
                 .width(80.dp)
                 .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(Color.Black.copy(alpha = 0.4f)),
             contentAlignment = Alignment.Center,
         ) {

@@ -886,7 +886,7 @@ private fun ProfileHero(
     modifier: Modifier = Modifier,
 ) {
     val device = LocalAppDeviceProfile.current
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(22.dp)
     Column(
         modifier
             .fillMaxWidth()
@@ -956,7 +956,7 @@ private fun SignInOptionRow(
     badge: @Composable () -> Unit,
     emphasized: Boolean = false,
 ) {
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(20.dp)
     val focus = rememberFocusFill()
     val container = if (emphasized) {
         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
@@ -1155,7 +1155,7 @@ private fun LibraryViewChips(
                     } else {
                         null
                     },
-                    modifier = Modifier.focusFill(controlFocus7, RoundedCornerShape(8.dp)),
+                    modifier = Modifier.focusFill(controlFocus7, RoundedCornerShape(50)),
                 )
             }
             // The viewer's own lists, after the account's statuses and toggled the same way.
@@ -1172,7 +1172,7 @@ private fun LibraryViewChips(
                     } else {
                         null
                     },
-                    modifier = Modifier.focusFill(chipFocus, RoundedCornerShape(8.dp)),
+                    modifier = Modifier.focusFill(chipFocus, RoundedCornerShape(50)),
                 )
             }
             item(key = "custom_new") {
@@ -1184,7 +1184,7 @@ private fun LibraryViewChips(
                     onClick = customChips.onNew,
                     label = { Text("New list") },
                     leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    modifier = Modifier.focusFill(chipFocus, RoundedCornerShape(8.dp)),
+                    modifier = Modifier.focusFill(chipFocus, RoundedCornerShape(50)),
                 )
             }
         }
@@ -1637,7 +1637,7 @@ private fun EpisodeDownloadCard(
         )[episode.id]?.takeIf { it.isBusy }
     }
     val device = LocalAppDeviceProfile.current
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(22.dp)
     val cardModifier = if (modifier != Modifier) {
         modifier.focusHighlight(shape)
     } else {
@@ -1652,8 +1652,8 @@ private fun EpisodeDownloadCard(
             onClick = onPlay,
         ),
         shape = shape,
-        color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.82f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f)),
     ) {
         Column {
             Box(
@@ -1887,7 +1887,7 @@ private fun SeriesDownloadCard(
         episode.metadata.episodeNumber.trim().toDoubleOrNull()
             ?.let { episodeWatchFraction(historyEntry, it) >= 0.999f } == true
     }
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(22.dp)
     val cardModifier = (if (modifier != Modifier) {
         modifier
     } else {
