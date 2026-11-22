@@ -2316,8 +2316,8 @@ fun PlayerSurface(
                         phoneControlsInteraction++
                     },
                 )
-            }
-        }
+                },
+            )
         }
 
         playbackGestureIsPlaying?.let { isPlaying ->
