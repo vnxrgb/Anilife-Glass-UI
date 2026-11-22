@@ -1272,7 +1272,7 @@ private fun ResultsGrid(
     if (results.isEmpty()) {
         val hideAdultContent by SettingsStore.hideAdultContent.collectAsState()
         Box(
-            Modifier.fillMaxSize().padding(top = headerPadding).padding(24.dp),
+            Modifier.fillMaxSize().padding(top = headerPadding).padding(16.dp),
             contentAlignment = Alignment.Center,
         ) {
             Column(

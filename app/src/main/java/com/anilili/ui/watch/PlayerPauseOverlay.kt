@@ -88,7 +88,7 @@ internal fun PlayerPauseOverlay(
                     // type wherever there is none.
                     PlayerSeriesName(
                         title = seriesTitle,
-                        maxHeight = 96.dp,
+                        maxHeight = 80.dp,
                         maxWidth = 360.dp,
                         modifier = Modifier.padding(bottom = 4.dp),
                     ) {

@@ -126,7 +126,7 @@ fun PageSearchField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().heightIn(min = 56.dp),
         placeholder = { Text(placeholder) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         trailingIcon = if (value.isNotEmpty()) {
