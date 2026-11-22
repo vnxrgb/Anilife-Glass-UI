@@ -840,9 +840,14 @@ private fun HeroPager(
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = if (device.isTv) device.pagePadding else 0.dp)
+            .padding(horizontal = if (device.isTv) device.pagePadding else 12.dp)
             .height(heroHeight)
-            .clip(if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(24.dp)),
+            .clip(if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(28.dp))
+            .border(
+                1.dp,
+                Color.White.copy(alpha = if (device.isTv) 0.10f else 0.20f),
+                if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(28.dp),
+            ),
     ) {
         if (device.isTv) {
             val page = safeTvPage
@@ -1024,8 +1029,8 @@ private fun HeroCard(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth(if (device.isExpanded) 0.8f else 1f)
                 .padding(horizontal = device.pagePadding)
-                .padding(top = 26.dp, bottom = 22.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(top = 26.dp, bottom = 28.dp),
+            horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
             HeroMetaRow(media)
             // A fixed box about the height of the two title lines it replaces, so the genre pill
@@ -1033,10 +1038,10 @@ private fun HeroCard(
             SeriesLogo(
                 url = logo,
                 contentDescription = media.title.preferred,
-                alignment = Alignment.Center,
+                alignment = if (device.isTv) Alignment.Center else Alignment.CenterStart,
                 modifier = Modifier
                     .padding(top = 10.dp)
-                    .fillMaxWidth(if (device.isExpanded) 0.6f else 0.82f)
+                    .fillMaxWidth(if (device.isExpanded) 0.6f else 0.90f)
                     .height(if (device.isTv || device.isExpanded) 88.dp else 72.dp),
             ) {
                 ShrinkingTitle(
@@ -1049,7 +1054,7 @@ private fun HeroCard(
                         }
                     ).copy(
                         fontWeight = FontWeight.Black,
-                        textAlign = TextAlign.Center,
+                        textAlign = if (device.isTv) TextAlign.Center else TextAlign.Start,
                         lineHeight = if (device.isTv || device.isExpanded) 42.sp else 34.sp,
                     ),
                     color = Color.White,
