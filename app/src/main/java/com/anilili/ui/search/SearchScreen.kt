@@ -574,7 +574,7 @@ private fun SearchTopBar(
                                         if (fieldFocused && !it.isFocused) vm.commitTypedQuery()
                                         fieldFocused = it.isFocused
                                     },
-                                placeholder = { Text("Search anime, movies or series…", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                placeholder = { Text("Search anime…", maxLines = 1) },
                                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                                 trailingIcon = {
                                     if (vm.query.isNotEmpty()) {
@@ -658,6 +658,7 @@ private fun SearchTopBar(
                     )
                     LazyRow(
                         modifier = Modifier.fillMaxWidth().focusGroup(),
+                        contentPadding = PaddingValues(end = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(7.dp),
                     ) {
                         item(key = "season") {

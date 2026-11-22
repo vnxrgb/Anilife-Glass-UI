@@ -624,8 +624,9 @@ fun ProfileScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             top = padding.calculateTopPadding(),
-                            bottom = padding.calculateBottomPadding() +
-                                LocalAppChromeBottomInset.current + AppChromeListBottomGap,
+                            bottom = padding.calculateBottomPadding()
+                                .coerceAtLeast(LocalAppChromeBottomInset.current) +
+                                AppChromeListBottomGap + if (device.isTv) 0.dp else 20.dp,
                         ),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
@@ -897,21 +898,21 @@ private fun ProfileHero(
             .fillMaxWidth()
             .glassCard(shape),
     ) {
-        Column(Modifier.fillMaxWidth().padding(if (device.isTv) 20.dp else 16.dp)) {
+        Column(Modifier.fillMaxWidth().padding(if (device.isTv) 20.dp else 12.dp)) {
             Text("Your anime, in one place", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
             Text(
                 "Connect AniList or MyAnimeList to browse every list, score, and episode progress from Anilife.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 5.dp),
+                modifier = Modifier.padding(top = if (device.isTv) 5.dp else 3.dp),
             )
             // One row per way in, each the full width of the card. The buttons these replace
             // sized themselves to their words, so "Login with MAL" wrapped onto two lines beside
             // a one-line AniList button and the TV link sat alone underneath — three shapes for
             // three equal choices, and nothing but the words to tell the services apart.
             Column(
-                Modifier.padding(top = if (device.isTv) 16.dp else 12.dp),
-                verticalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 8.dp),
+                Modifier.padding(top = if (device.isTv) 16.dp else 8.dp),
+                verticalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 6.dp),
             ) {
                 SignInOptionRow(
                     title = "Continue with AniList",
@@ -960,6 +961,7 @@ private fun SignInOptionRow(
     emphasized: Boolean = false,
 ) {
     val shape = RoundedCornerShape(18.dp)
+    val device = LocalAppDeviceProfile.current
     val focus = rememberFocusFill()
     val container = if (emphasized) {
         MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
@@ -977,7 +979,7 @@ private fun SignInOptionRow(
             .focusFill(focus, shape),
     ) {
         Row(
-            Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            Modifier.padding(horizontal = 12.dp, vertical = if (device.isTv) 10.dp else 7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             badge()
@@ -1064,7 +1066,7 @@ private fun LibraryHeader(
     customChips: CustomListChips,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(if (LocalAppDeviceProfile.current.isTv) 12.dp else 8.dp)) {
         PageSearch(
             value = titleFilter,
             onValueChange = onTitleFilterChange,

@@ -331,7 +331,7 @@ fun DownloadsScreen(
                     start = 20.dp,
                     end = 20.dp,
                     top = 16.dp,
-                    bottom = LocalAppChromeBottomInset.current + 12.dp,
+                    bottom = LocalAppChromeBottomInset.current + if (device.isTv) 12.dp else 64.dp,
                 ),
                 contentAlignment = Alignment.Center,
             ) {
@@ -340,7 +340,7 @@ fun DownloadsScreen(
                         .fillMaxWidth()
                         .widthIn(max = 440.dp)
                         .glassCard(RoundedCornerShape(24.dp))
-                        .padding(horizontal = 22.dp, vertical = 24.dp),
+                        .padding(horizontal = 20.dp, vertical = if (device.isTv) 24.dp else 20.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(

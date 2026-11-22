@@ -3450,7 +3450,7 @@ private fun SettingsSectionCard(
     val fillFocus1 = rememberFocusFill()
     Surface(
         modifier = modifier
-            .heightIn(min = 88.dp)
+            .heightIn(min = 82.dp)
             .focusFill(fillFocus1, RoundedCornerShape(22.dp))
             .glassCard(RoundedCornerShape(22.dp))
             .clickable(role = Role.Button, onClickLabel = "Open ${tile.title} settings", onClick = onClick),
@@ -3459,7 +3459,7 @@ private fun SettingsSectionCard(
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 7.dp, horizontal = 6.dp),
+            Modifier.fillMaxWidth().padding(vertical = 6.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
@@ -3467,7 +3467,7 @@ private fun SettingsSectionCard(
             // Accent stays with the icon; the pane itself adapts neutrally to the theme.
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(34.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.09f))
                     .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f), RoundedCornerShape(12.dp)),

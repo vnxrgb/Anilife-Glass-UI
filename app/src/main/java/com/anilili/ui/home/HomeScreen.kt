@@ -823,7 +823,7 @@ private fun HeroPager(
         device.isTablet -> 274.dp
         // Give the feed enough visual room to show Continue Watching above the fold
         // on a 360-393dp phone while keeping the main featured artwork readable.
-        else -> 252.dp
+        else -> 244.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -1085,7 +1085,7 @@ private fun HeroCard(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth(if (device.isExpanded) 0.8f else 1f)
                 .padding(horizontal = device.pagePadding)
-                .padding(top = if (device.isTv) 16.dp else 8.dp, bottom = if (device.isTv) 26.dp else 42.dp),
+                .padding(top = if (device.isTv) 16.dp else 6.dp, bottom = if (device.isTv) 26.dp else 40.dp),
             horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
             HeroMetaRow(media)
@@ -1128,7 +1128,7 @@ private fun HeroCard(
                 // The hero is a destination as well as artwork. Keep the actionable
                 // call-to-action visible instead of relying on an undocumented poster tap.
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 7.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -1141,7 +1141,6 @@ private fun HeroCard(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(50))
-                            .border(1.dp, Color.White.copy(alpha = 0.53f), RoundedCornerShape(50))
                             .background(
                                 // Neutral glass keeps the spotlight CTA readable over colourful art.
                                 Brush.verticalGradient(
@@ -1450,7 +1449,7 @@ private fun RailTitle(title: String, dragHandle: Modifier?, modifier: Modifier =
                 Icons.Default.DragHandle,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
-                modifier = Modifier.padding(horizontal = 8.dp).size(22.dp),
+                modifier = Modifier.padding(horizontal = if (LocalAppDeviceProfile.current.isTv) 8.dp else 4.dp).size(if (LocalAppDeviceProfile.current.isTv) 22.dp else 18.dp),
             )
         }
     }
@@ -1481,7 +1480,7 @@ private fun MediaRail(
                 .padding(
                     start = device.pagePadding,
                     end = device.pagePadding +
-                        if (!device.isTv && onToggleExpand != null) 52.dp else 0.dp,
+                        if (!device.isTv && onToggleExpand != null) 70.dp else 0.dp,
                 ),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
@@ -1500,7 +1499,7 @@ private fun MediaRail(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(4.dp))
-                    Text(if (isExpanded) "Rail" else "Grid")
+                    Text(if (isExpanded) "Rail" else "Grid", maxLines = 1)
                 }
             }
         }
