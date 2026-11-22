@@ -814,11 +814,11 @@ private fun HeroPager(
     val pagerIsDragged by pagerState.interactionSource.collectIsDraggedAsState()
     val heroHeight = topInset + when {
         device.isTv -> 420.dp
-        device.isExpanded -> 328.dp
-        device.isTablet -> 288.dp
+        device.isExpanded -> 310.dp
+        device.isTablet -> 274.dp
         // Give the feed enough visual room to show Continue Watching above the fold
         // on a 360-393dp phone while keeping the main featured artwork readable.
-        else -> 256.dp
+        else -> 246.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -849,11 +849,11 @@ private fun HeroPager(
             .fillMaxWidth()
             .padding(horizontal = if (device.isTv) device.pagePadding else 12.dp)
             .height(heroHeight)
-            .clip(if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(28.dp))
+            .clip(if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(26.dp))
             .border(
                 1.dp,
                 Color.White.copy(alpha = if (device.isTv) 0.10f else 0.20f),
-                if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(28.dp),
+                if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(26.dp),
             ),
     ) {
         if (device.isTv) {
@@ -903,11 +903,11 @@ private fun HeroPager(
         Row(
             Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 9.dp)
+                .padding(bottom = 7.dp)
                 .clip(RoundedCornerShape(50))
-                .background(Color.Black.copy(alpha = 0.26f))
-                .border(1.dp, Color.White.copy(alpha = 0.17f), RoundedCornerShape(50))
-                .padding(horizontal = 10.dp, vertical = 6.dp),
+                .background(Color.Black.copy(alpha = 0.32f))
+                .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50))
+                .padding(horizontal = 9.dp, vertical = 5.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             repeat(items.size) { i ->

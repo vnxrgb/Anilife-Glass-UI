@@ -327,7 +327,7 @@ fun DownloadsScreen(
                         .fillMaxWidth()
                         .widthIn(max = 440.dp)
                         .glassCard(RoundedCornerShape(28.dp))
-                        .padding(horizontal = 22.dp, vertical = 26.dp),
+                        .padding(horizontal = 20.dp, vertical = 22.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -360,7 +360,7 @@ fun DownloadsScreen(
                     item {
                         Column(
                             Modifier.padding(horizontal = device.pagePadding),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             PageSearch(
                                 value = titleFilter,
@@ -402,7 +402,7 @@ fun DownloadsScreen(
                     if (series.isEmpty()) {
                         item {
                             Box(
-                                Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp).glassCard(RoundedCornerShape(22.dp)).padding(horizontal = 18.dp, vertical = 24.dp),
+                                Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp).glassCard(RoundedCornerShape(22.dp)).padding(horizontal = 18.dp, vertical = 20.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(

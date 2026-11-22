@@ -73,13 +73,13 @@ data class FloatingNavItem(
 )
 
 /** The capsule's one height; scrolling no longer changes it. */
-val FloatingNavBarExpandedHeight = 56.dp
-val FloatingNavBarMargin = 10.dp
+val FloatingNavBarExpandedHeight = 54.dp
+val FloatingNavBarMargin = 9.dp
 
 /** An idle icon's slot: the 48dp touch minimum, so the rest is free for the open pill's label. */
 private val ItemSize = 48.dp
-private val IconSize = 23.dp
-private val BarPadding = 4.dp
+private val IconSize = 22.dp
+private val BarPadding = 3.dp
 private val BarShape = RoundedCornerShape(50)
 
 // A gentle top light keeps the glass character without a white sheen across the icons.

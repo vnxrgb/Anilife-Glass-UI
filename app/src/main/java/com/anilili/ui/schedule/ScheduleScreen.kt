@@ -110,10 +110,10 @@ private const val DAY_STRIP_FIRST = -2L
 private const val DAY_STRIP_LENGTH = 9
 
 /** How tall the loading and error panels stand when they are items in the calendar's own list. */
-private val CalendarStatusHeight = 196.dp
+private val CalendarStatusHeight = 176.dp
 
 /** Height of the phone's floating day stepper; both lists reserve it below their last row. */
-private val DayStepperHeight = 50.dp
+private val DayStepperHeight = 48.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -393,7 +393,7 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
         state = listState,
         modifier = Modifier.focusGroup(),
         contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 5.dp),
-        horizontalArrangement = Arrangement.spacedBy(7.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         items(DAY_STRIP_LENGTH) { index ->
             val date = today.plusDays(DAY_STRIP_FIRST + index)
@@ -661,13 +661,13 @@ private fun ScheduleCard(
             model = media.coverImage.best,
             contentDescription = media.title.preferred,
             modifier = Modifier
-                .size(width = 62.dp, height = 82.dp)
+                .size(width = 60.dp, height = 78.dp)
                 .clip(RoundedCornerShape(16.dp)),
             contentScale = ContentScale.Crop,
         )
         Column(
-            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             Text(
                 text = media.title.preferred,
