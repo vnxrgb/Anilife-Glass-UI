@@ -3455,8 +3455,8 @@ private fun SettingsSectionCard(
             // Accent stays with the icon; the pane itself adapts neutrally to the theme.
             Box(
                 modifier = Modifier
-                    .size(30.dp)
-                    .clip(RoundedCornerShape(11.dp))
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(LocalMidnightAccent.current.copy(alpha = 0.11f)),
                 contentAlignment = Alignment.Center,
             ) {

@@ -401,7 +401,7 @@ fun DownloadsScreen(
                     if (series.isEmpty()) {
                         item {
                             Box(
-                                Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 40.dp),
+                                Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp).glassCard(RoundedCornerShape(22.dp)).padding(horizontal = 18.dp, vertical = 24.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(

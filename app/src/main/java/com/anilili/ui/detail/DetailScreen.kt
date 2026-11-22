@@ -703,7 +703,7 @@ private fun DetailContent(
                                 onToggleOrder = { SettingsStore.setEpisodeOrder(episodeOrder.toggled()) },
                                 showFilter = episodeFilterVisible,
                                 focusRequester = browserFocus,
-                                modifier = Modifier.padding(horizontal = device.pagePadding, vertical = 6.dp),
+                                modifier = Modifier.padding(horizontal = device.pagePadding, vertical = 4.dp),
                             )
                         }
                     }

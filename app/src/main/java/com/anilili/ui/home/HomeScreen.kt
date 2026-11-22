@@ -815,10 +815,10 @@ private fun HeroPager(
     val heroHeight = topInset + when {
         device.isTv -> 420.dp
         device.isExpanded -> 340.dp
-        device.isTablet -> 304.dp
+        device.isTablet -> 296.dp
         // Give the feed enough visual room to show Continue Watching above the fold
         // on a 360-393dp phone while keeping the main featured artwork readable.
-        else -> 268.dp
+        else -> 260.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {

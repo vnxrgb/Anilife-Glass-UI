@@ -356,7 +356,7 @@ private fun SelectedDateLabel(date: LocalDate) {
         text = date.format(dateFmt),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = device.pagePadding, top = 8.dp, bottom = 4.dp),
+        modifier = Modifier.padding(start = device.pagePadding, top = 6.dp, bottom = 3.dp),
     )
 }
 
