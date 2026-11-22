@@ -1041,10 +1041,10 @@ private fun HeroCard(
                     Brush.verticalGradient(
                         // The centre of a light poster is often white: retain the artwork
                         // while giving the logo, genre pill and CTA rows a stable contrast bed.
-                        0.0f to Color.Black.copy(.36f),
-                        0.34f to Color.Black.copy(.20f),
-                        0.62f to Color.Black.copy(.46f),
-                        0.83f to Color.Black.copy(.72f),
+                        0.0f to Color.Black.copy(.25f),
+                        0.34f to Color.Black.copy(.08f),
+                        0.58f to Color.Black.copy(.27f),
+                        0.83f to Color.Black.copy(.67f),
                         1f to canvas,
                     )
                 },
@@ -1068,7 +1068,7 @@ private fun HeroCard(
                     Text(label, Modifier.padding(start = 5.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                 }
             } ?: Spacer(Modifier)
-            if (pageCount > 1) {
+            if (pageCount > 1 && device.isTv) {
                 HeroPill(backdrop = heroArt) {
                     Text("${pageIndex + 1}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                     Text(
@@ -1091,7 +1091,7 @@ private fun HeroCard(
                 .padding(horizontal = device.pagePadding)
                 .padding(
                     top = if (device.isTv) 16.dp else 8.dp,
-                    bottom = if (device.isTv) 26.dp else 41.dp,
+                    bottom = if (device.isTv) 26.dp else if (pageCount > 1) 42.dp else 18.dp,
                 ),
             horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
@@ -1107,7 +1107,7 @@ private fun HeroCard(
                 modifier = Modifier
                     .padding(top = if (device.isTv) 10.dp else 0.dp)
                     .fillMaxWidth(if (device.isExpanded) 0.6f else 1f)
-                    .height(if (device.isTv) 88.dp else if (device.isExpanded) 76.dp else 58.dp),
+                    .height(if (device.isTv) 88.dp else if (device.isExpanded) 76.dp else 64.dp),
             ) {
                 ShrinkingTitle(
                     text = media.title.preferred,
@@ -1146,7 +1146,7 @@ private fun HeroCard(
                 ) {
                     Button(
                         onClick = { onWatch(media.id) },
-                        // The primary action is warm and solid, never derived from a green theme.
+                        // Neutral high-contrast action; keep the artwork free of theme-accent tint.
                         colors = cinematicPrimaryButtonColors(),
                         modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                         shape = RoundedCornerShape(50),
