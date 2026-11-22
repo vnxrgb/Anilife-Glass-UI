@@ -1058,7 +1058,7 @@ private fun HeroCard(
                 modifier = Modifier
                     .padding(top = 10.dp)
                     .fillMaxWidth(if (device.isExpanded) 0.6f else 0.90f)
-                    .height(if (device.isTv || device.isExpanded) 88.dp else 72.dp),
+                    .height(if (device.isTv || device.isExpanded) 88.dp else 70.dp),
             ) {
                 ShrinkingTitle(
                     text = media.title.preferred,
