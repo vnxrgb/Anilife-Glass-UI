@@ -295,12 +295,14 @@ fun CardCornerAction(
     val frosted = backdrop != null && backdropBlurAvailable
     Box(
         modifier
-            .size(30.dp)
+            // Keep the overlay compact without requiring a tiny 30dp tap target.
+            .size(40.dp)
             .clip(CircleShape)
             // Frosted, the disc can be lighter and still hold the glyph: the blur already takes
             // the busy detail out from under it, which is what the heavier scrim was there for.
             .backdropBlur(backdrop, tint = Color.Black.copy(alpha = .30f), radius = 10.dp)
-            .background(Color.Black.copy(alpha = if (frosted) 0f else .55f))
+            .background(Color.Black.copy(alpha = if (frosted) 0.08f else .57f))
+            .border(1.dp, Color.White.copy(alpha = 0.23f), CircleShape)
             .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

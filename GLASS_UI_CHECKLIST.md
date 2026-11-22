@@ -113,3 +113,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - NAVIGATION REFINEMENT: Selected destination now uses a neutral glass gradient with a restrained theme-accent outline instead of a permanently accent-filled background. Explicit accessibility labels retained for all five tabs. Code only; device screenshot comparison remains pending.
 
 - `GLASS VISUAL COHESION PASS`: Shared glassCard gradient now has top highlight and better depth without allocating live blur; Home hero page dots sit in a frosted capsule and both hero CTAs include icons; Details tabs use a theme-responsive translucent sticky bar and selected pill. Implemented in code, not yet device-verified.
+
+- `TOP CHROME & TOUCH TARGET PASS`: Theme-adaptive hairline glass highlights now live in the shared mobile PageTitleBar without sacrificing its pinned opaque scroll backing, and Continue Watching artwork corner actions have larger 40dp hit targets and a legible rim. Code change; touch accessibility acceptance still requires 48dp minimum audit.

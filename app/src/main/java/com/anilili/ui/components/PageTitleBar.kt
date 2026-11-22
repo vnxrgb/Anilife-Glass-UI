@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,7 +51,22 @@ fun PageTitleBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (background == null) Modifier.appCanvas() else Modifier.background(background))
+            .then(
+                when {
+                    background != null -> Modifier.background(background)
+                    device.isTv -> Modifier.appCanvas()
+                    else -> Modifier
+                        // The pinned title must hide scrolling content, while the
+                        // translucent highlight gives all top-level pages a common glass rim.
+                        .appCanvas()
+                        .background(
+                            Brush.verticalGradient(
+                                0f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
+                                1f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.16f),
+                            ),
+                        )
+                },
+            )
             .statusBarsPadding()
             .padding(
                 // A back arrow carries its own touch padding, so the page inset would set it in
