@@ -346,6 +346,8 @@ internal fun PlayerControlsScaffold(
     topRightIcons: @Composable RowScope.() -> Unit = {},
     bottomLeftIcons: @Composable RowScope.() -> Unit = {},
     bottomRightIcons: @Composable RowScope.() -> Unit = {},
+    /** Fullscreen-only primary dock actions; inline players keep the existing compact row. */
+    bottomPrimaryIcons: @Composable RowScope.() -> Unit = {},
 ) {
     // The position under the finger while a scrub is in progress, so the time readout follows the
     // drag; PlayerSeekBar owns the drag itself and commits the seek when the finger lifts.
@@ -587,10 +589,34 @@ internal fun PlayerControlsScaffold(
                             bottomLeftIcons()
                         }
                     }
-                    // Icon-only controls carry their own spacing in the 48dp slot round each circle.
-                    PlayerActionRow(horizontalSpacing = if (metrics.showPillLabels) 6.dp else 0.dp) {
-                        CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
-                            bottomRightIcons()
+                    // In fullscreen the core episode/audio actions get their own stable row.
+                    // Secondary controls remain available without shrinking the primary dock.
+                    if (showBack) {
+                        PlayerActionRow(horizontalSpacing = 6.dp) {
+                            CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
+                                bottomPrimaryIcons()
+                            }
+                        }
+                    } else {
+                        PlayerActionRow(horizontalSpacing = if (metrics.showPillLabels) 6.dp else 0.dp) {
+                            CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
+                                bottomRightIcons()
+                            }
+                        }
+                    }
+                }
+                if (showBack) {
+                    // Dedicated utility strip keeps quality, speed, casting and display actions
+                    // discoverable without forcing the four primary controls into tiny icons.
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 5.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        PlayerActionRow(horizontalSpacing = 4.dp) {
+                            CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
+                                bottomRightIcons()
+                            }
                         }
                     }
                 }

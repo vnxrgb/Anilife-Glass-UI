@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -2245,11 +2247,31 @@ fun PlayerSurface(
                     }
                 },
                 bottomLeftIcons = { PlayerLockButton(onLock = { screenLocked = true }) },
+                bottomPrimaryIcons = {
+                    if (episodes.isNotEmpty() && onSelectEpisode != null) {
+                        PlayerActionPill("Episodes", Icons.AutoMirrored.Filled.ViewList, onClick = {
+                            episodeDrawerExpanded = true
+                            phoneControlsInteraction++
+                        })
+                    }
+                    PlayerActionPill("Audio & Subtitles", Icons.Default.ClosedCaption, onClick = {
+                        captionsExpanded = true
+                        phoneControlsInteraction++
+                    })
+                    PlayerActionPill("Speed", Icons.Default.Speed, onClick = {
+                        settingsExpanded = true
+                        phoneControlsInteraction++
+                    })
+                    PlayerActionPill("Quality", Icons.Default.HighQuality, onClick = {
+                        settingsExpanded = true
+                        phoneControlsInteraction++
+                    })
+                },
             ) {
                 // Labelled pills rather than bare glyphs: which of these opens subtitles and which
                 // opens audio was previously something you found out by pressing one. The label is
                 // dropped again on the narrow tiers, where the row really has no room for it.
-                if (episodes.isNotEmpty() && onSelectEpisode != null) {
+                if (!isFullscreen && episodes.isNotEmpty() && onSelectEpisode != null) {
                     PlayerActionPill(
                         label = "Episodes",
                         icon = Icons.AutoMirrored.Filled.ViewList,
@@ -2269,7 +2291,7 @@ fun PlayerSurface(
                         },
                     )
                 }
-                PlayerActionPill(
+                if (!isFullscreen) PlayerActionPill(
                     label = "Subtitles",
                     icon = Icons.Default.ClosedCaption,
                     onClick = {
