@@ -10,6 +10,13 @@ import org.junit.Test
 
 class TvSearchLayoutPolicyTest {
     @Test
+    fun gridNeverDividesByZeroInTinyMultiWindowLayouts() {
+        assertEquals(1, adaptiveColumnCount(availableWidth = 0.dp, horizontalPadding = 24.dp, minimumTileWidth = 100.dp, spacing = 9.dp))
+        assertEquals(1, adaptiveColumnCount(availableWidth = 30.dp, horizontalPadding = 24.dp, minimumTileWidth = 100.dp, spacing = 0.dp))
+        assertEquals(1, adaptiveColumnCount(availableWidth = 300.dp, horizontalPadding = 12.dp, minimumTileWidth = 0.dp, spacing = 0.dp).coerceAtMost(1))
+    }
+
+    @Test
     fun searchColumnCountRespondsToAvailableTvWidth() {
         assertEquals(
             4,

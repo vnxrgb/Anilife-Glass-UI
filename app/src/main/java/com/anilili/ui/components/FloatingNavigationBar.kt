@@ -165,7 +165,7 @@ fun FloatingNavigationBar(
         // Five stable, equal-width destinations. Selecting a tab must not displace
         // its neighbours or change the capsule width.
         val itemWidth = if (items.isEmpty()) ItemSize else inner / items.size
-        val showLabels = itemWidth >= 58.dp
+        val showLabels = floatingNavShowsCaption(itemWidth)
         Row(
             // Full width, so the bar's edges stay put while the pill changes length per label;
             // the spare room is shared between the icons instead.
@@ -238,6 +238,12 @@ fun FloatingNavDisc(
         icon()
     }
 }
+
+/**
+ * On extremely narrow split-screen windows labels lose their slot before icons do.
+ * Accessibility semantics still contain the full destination name.
+ */
+internal fun floatingNavShowsCaption(itemWidth: Dp): Boolean = itemWidth >= 58.dp
 
 /** A touch under the capsule's 58dp, so the disc reads as its companion rather than its rival. */
 val FloatingNavDiscSize = 52.dp

@@ -990,7 +990,7 @@ private fun ActiveFilterRow(vm: SearchViewModel) {
                 shape = RoundedCornerShape(50),
                 colors = activeFocus.chipColors(FilterChipDefaults.filterChipColors(
                     containerColor = glassPanelColor(),
-                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    selectedContainerColor = glassSelectionColor(),
                     selectedLabelColor = MaterialTheme.colorScheme.onSurface,
                 )),
                 selected = true,
@@ -2004,7 +2004,7 @@ private fun FilterSheet(
                 shape = RoundedCornerShape(50),
                                 colors = controlFocus7.chipColors(FilterChipDefaults.filterChipColors(
                     containerColor = glassPanelColor(),
-                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    selectedContainerColor = glassSelectionColor(),
                     selectedLabelColor = MaterialTheme.colorScheme.onSurface,
                 )),
                                 selected = filters.studioId == studio.id,
@@ -2298,7 +2298,7 @@ private fun TriStateFilterChip(
     } else {
         chipFocus.chipColors(FilterChipDefaults.filterChipColors(
                     containerColor = glassPanelColor(),
-                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    selectedContainerColor = glassSelectionColor(),
                     selectedLabelColor = MaterialTheme.colorScheme.onSurface,
                 ))
     }
