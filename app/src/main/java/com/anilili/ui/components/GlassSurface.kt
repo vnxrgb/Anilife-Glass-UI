@@ -74,11 +74,13 @@ fun glassRimColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.
 fun Modifier.glassAtmosphere(): Modifier {
     val scheme = MaterialTheme.colorScheme
     val customWallpaper = hasAppBackdrop()
-    val strength = if (customWallpaper) 0.24f else 0.72f
+    val strength = if (customWallpaper) 0.20f else 0.65f
     val cool = scheme.primary
     val warm = scheme.tertiary
     return this.appCanvas().drawBehind {
         val dimension = maxOf(size.width, size.height)
+        // A zero-size first layout pass must not construct a zero-radius radial shader.
+        if (dimension <= 0f) return@drawBehind
         drawRect(
             Brush.radialGradient(
                 colors = listOf(cool.copy(alpha = 0.16f * strength), Color.Transparent),
