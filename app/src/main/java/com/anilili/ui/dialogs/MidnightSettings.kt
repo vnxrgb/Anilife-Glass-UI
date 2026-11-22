@@ -336,11 +336,20 @@ private fun MidnightSettingRowScaffold(
     // stays red there.
     val ink = when {
         focused && !device.isTv -> MidnightFocusCopy
+        !enabled && !device.isTv -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.42f)
         !enabled -> Midnight.Text3
         danger -> Midnight.Red
-        else -> Midnight.Text
+        device.isTv -> Midnight.Text
+        // Settings on a light theme can draw translucent, near-white cards.
+        // Use the actual theme foreground, not the always-light TV text colour.
+        else -> MaterialTheme.colorScheme.onSurface
     }
-    val support = if (focused) MidnightFocusCopy.copy(alpha = 0.66f) else Midnight.Text3
+    val support = when {
+        focused && !device.isTv -> MidnightFocusCopy.copy(alpha = 0.66f)
+        focused -> MidnightFocusCopy.copy(alpha = 0.66f)
+        device.isTv -> Midnight.Text3
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
     // Matched by title because that is the only name a row and the search index share; a row the
     // index has since had renamed out from under it simply goes unmarked, which is why
     // `SettingsSearchIndexTest` reads both back out of the source and pins them together.
