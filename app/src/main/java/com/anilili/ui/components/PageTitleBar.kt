@@ -87,8 +87,8 @@ fun PageTitleBar(
         ) {
             Text(
                 title,
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Black,
+                style = if (device.isTv) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
