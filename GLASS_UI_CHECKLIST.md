@@ -131,3 +131,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - `HERO COMPOSITION PASS`: Mobile Home featured area height, genre and CTA vertical spacing reduced to expose more feed; Anime Details poster/title composition tightened, outlined cover and secondary metadata neutralized so accent highlights remain for interactions. Visual/device acceptance remains unverified.
 
 - `PLAYER DOCK & SETTINGS FINDABILITY PASS`: Noncompact/fullscreen player bottom icons now share one frosted rounded action dock, retaining control group scaling and every existing onClick handler. Ambient strength row stays indexed/visible even while ambient is off and disables its stepper buttons; stored strength is remembered. Real-device acceptance and accessibility tests pending.
+
+- `SHARED EMPTY/ERROR PASS`: Full-screen loading now retains the shared phone atmosphere while TV uses its original canvas; shared full-screen error content is frosted on mobile without changing retry, technical details or reporting. Code only; device verification outstanding.
