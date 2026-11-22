@@ -1,11 +1,13 @@
 package com.anilili.ui.components
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +18,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.anilili.playback.BulkDownloadOutcome
 import com.anilili.playback.BulkEpisodeDownloads
@@ -38,7 +43,12 @@ fun BulkDownloadStatus(modifier: Modifier = Modifier) {
     val state = progress ?: return
 
     Row(
-        modifier = modifier.fillMaxWidth().padding(vertical = 6.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .glassCard(RoundedCornerShape(18.dp))
+            .semantics { liveRegion = LiveRegionMode.Polite }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -74,7 +84,9 @@ fun BulkDownloadStatus(modifier: Modifier = Modifier) {
         TextButton(
             colors = controlFocus1.buttonColors(ButtonDefaults.textButtonColors()),
             onClick = { if (state.isRunning) BulkEpisodeDownloads.cancel() else BulkEpisodeDownloads.dismiss() },
-            modifier = Modifier.focusFill(controlFocus1, RoundedCornerShape(20.dp)),
+            modifier = Modifier
+                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f), RoundedCornerShape(20.dp))
+                .focusFill(controlFocus1, RoundedCornerShape(20.dp)),
         ) {
             Text(if (state.isRunning) "Stop" else "Dismiss")
         }
