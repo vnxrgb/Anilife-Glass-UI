@@ -57,6 +57,7 @@ import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
@@ -1636,9 +1637,9 @@ private fun ContinueRail(
         device.isTv -> 240.dp
         device.isExpanded -> 220.dp
         device.isTablet -> 200.dp
-        // A cinematic thumbnail is wider than the square poster tiles in Library.
-        // Keep two videos partly visible so the row reads as a horizontal shelf.
-        else -> 176.dp
+        // Keep three thumb-sized cards nearly visible on a normal phone, matching
+        // the supplied mockup and leaving room for the title beneath each thumbnail.
+        else -> 124.dp
     }
     Column {
         RailTitle(
@@ -1677,7 +1678,7 @@ private fun ContinueRail(
                 ) {
                     Box(
                         Modifier.fillMaxWidth()
-                            .aspectRatio(16f / 9f)
+                            .aspectRatio(if (device.isTv) 16f / 9f else 1.15f)
                             .glassCard(RoundedCornerShape(20.dp)),
                     ) {
                         // Each card frosts its own thumbnail under its corner buttons: a source
@@ -1702,23 +1703,16 @@ private fun ContinueRail(
                         // card. They were reachable only behind a long press, which is a gesture
                         // nothing on this screen advertises and most viewers never tried; the
                         // menu stays for moving a title between lists, which needs a list to pick.
-                        Row(
-                            Modifier.align(Alignment.TopStart).fillMaxWidth().padding(5.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            CardCornerAction(
-                                icon = Icons.Default.Info,
-                                contentDescription = "Details for ${entry.title}",
-                                onClick = { onOpenDetails(entry) },
-                                backdrop = thumbnail,
-                            )
-                            CardCornerAction(
-                                icon = Icons.Default.Close,
-                                contentDescription = "Remove ${entry.title} from Continue Watching",
-                                onClick = { removingEntry = entry },
-                                backdrop = thumbnail,
-                            )
-                        }
+                        // One reachable action menu instead of two large corner discs
+                        // obscuring most of the artwork on a 124dp thumbnail. It still
+                        // contains Details, Remove and account list-management actions.
+                        CardCornerAction(
+                            icon = Icons.Default.MoreVert,
+                            contentDescription = "More options for ${entry.title}",
+                            onClick = { managedEntry = entry },
+                            modifier = Modifier.align(Alignment.TopEnd).padding(5.dp),
+                            backdrop = thumbnail,
+                        )
                         Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.White.copy(.25f))) {
                             Box(Modifier.fillMaxWidth(entry.progressFraction.coerceAtLeast(.03f)).height(4.dp).background(MaterialTheme.colorScheme.primary))
                         }
