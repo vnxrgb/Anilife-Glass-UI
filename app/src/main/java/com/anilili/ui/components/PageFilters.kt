@@ -77,7 +77,7 @@ fun PageFilterPill(
                 .clickable { expanded = true },
             shape = RoundedCornerShape(50),
             color = fillFocus1.background(glassPanelColor()),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
+            border = BorderStroke(1.dp, glassRimColor()),
             contentColor = fillFocus1.content(LocalContentColor.current),
         ) {
             Row(
@@ -135,7 +135,7 @@ fun PageSortControl(
                 .semantics { this.contentDescription = contentDescription },
             shape = RoundedCornerShape(50),
             color = fillFocus2.background(glassPanelColor()),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
+            border = BorderStroke(1.dp, glassRimColor()),
             contentColor = fillFocus2.content(LocalContentColor.current),
         ) {
             Row(

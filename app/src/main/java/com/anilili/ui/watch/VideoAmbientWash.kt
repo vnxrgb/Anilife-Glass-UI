@@ -109,13 +109,19 @@ private fun extractAmbientPalette(bitmap: Bitmap): VideoAmbientPalette? {
         // letting bright frames wash out the watch-page typography.
         val peak = maxOf(r, g, b)
         val lift = if (peak < 0.10f) 0.04f else 0.08f
+        // Skip pure black frames so fades/cut-to-black do not flash a dull grey
+        // backdrop. The last valid palette continues to transition smoothly.
+        if (peak < 0.035f) return Color.Transparent
         return Color(
             red = (r * 0.93f + lift).coerceIn(0f, 1f),
             green = (g * 0.93f + lift).coerceIn(0f, 1f),
             blue = (b * 0.93f + lift).coerceIn(0f, 1f),
         )
     }
-    return VideoAmbientPalette(average(0, width / 2), average(width / 2, width))
+    val left = average(0, width / 2)
+    val right = average(width / 2, width)
+    if (left.alpha == 0f && right.alpha == 0f) return null
+    return VideoAmbientPalette(left, right)
 }
 
 /**

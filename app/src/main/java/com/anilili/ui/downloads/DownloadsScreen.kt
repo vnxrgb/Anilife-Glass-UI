@@ -320,13 +320,21 @@ fun DownloadsScreen(
         )
 
         if (allSeries.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    "Nothing downloaded yet. Save an episode from its watch page to keep it here.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 32.dp),
-                )
+            Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .glassCard(RoundedCornerShape(28.dp))
+                        .padding(horizontal = 24.dp, vertical = 34.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "Nothing downloaded yet. Save an episode from its watch page to keep it here.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
             }
             return@Column
         }

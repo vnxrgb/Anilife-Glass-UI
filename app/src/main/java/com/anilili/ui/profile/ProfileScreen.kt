@@ -892,9 +892,7 @@ private fun ProfileHero(
     Column(
         modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, shape),
+            .glassCard(shape),
     ) {
         Column(Modifier.fillMaxWidth().padding(20.dp)) {
             Text("Your anime, in one place", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
@@ -1343,7 +1341,8 @@ private fun LibraryProfilePill(
             .focusFill(fillFocus1, RoundedCornerShape(50))
             .clickable(onClickLabel = "Open account", onClick = onClick),
         shape = RoundedCornerShape(50),
-        color = fillFocus1.background(MaterialTheme.colorScheme.surface),
+        color = fillFocus1.background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.47f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.21f)),
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Row(
