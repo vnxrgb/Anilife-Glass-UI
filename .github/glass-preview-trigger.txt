@@ -1,5 +1,4 @@
-Batch 4 completed-source milestone universal APK preview
-User screenshots reviewed: Home, Details, Browse, Settings, Schedule. Include last screenshot acceptance pass.
-Source commit: 85d13a7483ea1d376b12d4ba8f4e4cf68b6f16c3
-Run mobile unit tests + lint + assemble universal debug APK. Publish one direct release APK to tag glass-ui-preview only if all succeed.
-TV source paths remain untouched; portrait/full-screen player intentionally excluded. This is a preview, not a device-accepted stable build.
+Reference-aligned Glass UI non-player milestone preview
+Source commit: ef987832e5b02f21e4da17b74f65350c5da2aa4f
+Changes: theme-responsive lightweight glass depth; richer nav accent rim and selection; compact Home hero and tinted Watch CTA; safe Home Grid/Rail action clearance; tighter Settings category tiles, improved Browse hint and clearer Details backdrop.
+Run mobile tests, lint and assemble one universal debug preview APK. NOT a signed stable release or device acceptance. Player unchanged. Keep main untouched.
