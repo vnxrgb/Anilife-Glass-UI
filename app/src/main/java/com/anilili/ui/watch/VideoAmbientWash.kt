@@ -141,46 +141,60 @@ internal fun Modifier.videoAmbientWash(palette: VideoAmbientPalette): Modifier {
 
         val w = size.width
         val h = size.height
-        val reach = maxOf(w * 1.38f, h * 0.70f)
+        // Layer three broad, feathered colour blooms instead of a solid tinted slab.
+        // The video itself is never blurred; only the watch-page background is painted.
+        val reach = maxOf(w * 1.15f, h * 0.56f)
         val center = Color(
             red = (left.red + right.red) * 0.5f,
             green = (left.green + right.green) * 0.5f,
             blue = (left.blue + right.blue) * 0.5f,
         )
-
-        // The shared wash starts directly below the player and runs behind title/actions.
         drawRect(
             brush = Brush.verticalGradient(
-                0f to center.copy(alpha = 0.53f),
-                0.22f to center.copy(alpha = 0.35f),
-                0.55f to center.copy(alpha = 0.14f),
+                0f to center.copy(alpha = 0.21f),
+                0.32f to center.copy(alpha = 0.08f),
+                0.75f to Color.Transparent,
                 1f to Color.Transparent,
                 startY = 0f,
-                endY = maxOf(h * 0.92f, w),
+                endY = maxOf(w * 1.8f, h * 0.70f),
             ),
         )
         drawRect(
             brush = Brush.radialGradient(
-                colors = listOf(
-                    left.copy(alpha = 0.56f),
-                    left.copy(alpha = 0.30f),
-                    left.copy(alpha = 0.09f),
-                    Color.Transparent,
+                colorStops = arrayOf(
+                    0f to left.copy(alpha = 0.57f),
+                    0.24f to left.copy(alpha = 0.36f),
+                    0.52f to left.copy(alpha = 0.14f),
+                    0.85f to Color.Transparent,
+                    1f to Color.Transparent,
                 ),
-                center = Offset(w * 0.10f, 0f),
+                center = Offset(-w * 0.03f, h * 0.04f),
                 radius = reach,
             ),
         )
         drawRect(
             brush = Brush.radialGradient(
-                colors = listOf(
-                    right.copy(alpha = 0.51f),
-                    right.copy(alpha = 0.27f),
-                    right.copy(alpha = 0.08f),
-                    Color.Transparent,
+                colorStops = arrayOf(
+                    0f to right.copy(alpha = 0.53f),
+                    0.24f to right.copy(alpha = 0.33f),
+                    0.52f to right.copy(alpha = 0.13f),
+                    0.85f to Color.Transparent,
+                    1f to Color.Transparent,
                 ),
-                center = Offset(w * 0.90f, 0f),
+                center = Offset(w * 1.03f, h * 0.04f),
                 radius = reach,
+            ),
+        )
+        drawRect(
+            brush = Brush.radialGradient(
+                colorStops = arrayOf(
+                    0f to center.copy(alpha = 0.18f),
+                    0.38f to center.copy(alpha = 0.09f),
+                    0.80f to Color.Transparent,
+                    1f to Color.Transparent,
+                ),
+                center = Offset(w * 0.5f, h * 0.31f),
+                radius = maxOf(w * 0.72f, h * 0.36f),
             ),
         )
     }
