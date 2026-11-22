@@ -1,5 +1,7 @@
 package com.anilili.ui.watch
 
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.Handler
@@ -37,6 +39,7 @@ internal data class VideoAmbientPalette(val left: Color, val right: Color) {
  * video, subtitles and controls are never blurred, reparented or screenshotted.
  * DRM/secure surfaces, unsupported decoders and older Android versions fail closed.
  */
+@OptIn(UnstableApi::class)
 @Composable
 internal fun NativeVideoAmbientSampler(
     playerView: PlayerView?,
