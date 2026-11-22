@@ -823,7 +823,7 @@ private fun HeroPager(
         device.isTablet -> 274.dp
         // Give the feed enough visual room to show Continue Watching above the fold
         // on a 360-393dp phone while keeping the main featured artwork readable.
-        else -> 270.dp
+        else -> 252.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -945,7 +945,7 @@ private fun HeroPager(
                                 .clip(CircleShape)
                                 .background(
                                     if (selected) MaterialTheme.colorScheme.primary
-                                    else Color.White.copy(alpha = 0.50f),
+                                    else Color.White.copy(alpha = 0.57f),
                                 ),
                         )
                     }
@@ -1141,12 +1141,13 @@ private fun HeroCard(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(50))
+                            .border(1.dp, Color.White.copy(alpha = 0.53f), RoundedCornerShape(50))
                             .background(
                                 // Neutral glass keeps the spotlight CTA readable over colourful art.
                                 Brush.verticalGradient(
                                     listOf(
-                                        Color.White.copy(alpha = 0.28f),
-                                        Color.Black.copy(alpha = 0.55f),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.42f),
                                     ),
                                 ),
                             ),

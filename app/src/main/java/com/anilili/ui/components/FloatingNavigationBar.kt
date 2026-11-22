@@ -92,9 +92,9 @@ private fun barGlass(): Brush {
     val bottom = MaterialTheme.colorScheme.surfaceContainer
     return remember(top, middle, bottom) {
         Brush.verticalGradient(
-            0f to top.copy(alpha = 0.64f),
-            0.4f to middle.copy(alpha = 0.74f),
-            1f to bottom.copy(alpha = 0.80f),
+            0f to top.copy(alpha = 0.72f),
+            0.42f to middle.copy(alpha = 0.76f),
+            1f to bottom.copy(alpha = 0.85f),
         )
     }
 }
@@ -120,13 +120,12 @@ private fun barBlur(): HazeStyle {
 @Composable
 private fun barRim(): Brush {
     val top = MaterialTheme.colorScheme.onSurface
-    val middle = MaterialTheme.colorScheme.onSurface
-    val bottom = MaterialTheme.colorScheme.onSurface
-    return remember(top, middle, bottom) {
+    val accent = MaterialTheme.colorScheme.primary
+    return remember(top, accent) {
         Brush.verticalGradient(
-            0f to top.copy(alpha = 0.18f),
-            0.5f to middle.copy(alpha = 0.45f),
-            1f to bottom.copy(alpha = 0.35f),
+            0f to top.copy(alpha = 0.32f),
+            0.48f to top.copy(alpha = 0.24f),
+            1f to accent.copy(alpha = 0.34f),
         )
     }
 }
@@ -173,7 +172,7 @@ fun FloatingNavigationBar(
                 .fillMaxWidth()
                 .height(FloatingNavBarExpandedHeight)
                 // Reduce the dark halo on OLED; the rim carries the depth.
-                .shadow(4.dp, BarShape)
+                .shadow(7.dp, BarShape)
                 .clip(BarShape)
                 .then(
                     if (blurred) {
@@ -278,6 +277,7 @@ private fun FloatingNavIcon(
     )
     // Keep the selected halo neutral across artwork and themes.
     val halo = MaterialTheme.colorScheme.onSurface
+    val accent = MaterialTheme.colorScheme.primary
     Box(
         modifier = Modifier
             .width(width)
@@ -299,7 +299,14 @@ private fun FloatingNavIcon(
                     )
                 }
             }
-            .border(1.dp, halo.copy(alpha = 0.34f * selectionAlpha), shape)
+            .border(
+                1.dp,
+                Brush.verticalGradient(
+                    0f to halo.copy(alpha = 0.40f * selectionAlpha),
+                    1f to accent.copy(alpha = 0.60f * selectionAlpha),
+                ),
+                shape,
+            )
             .selectable(
                 selected = selected,
                 role = Role.Tab,

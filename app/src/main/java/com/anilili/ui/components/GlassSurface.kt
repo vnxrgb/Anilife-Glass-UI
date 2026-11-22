@@ -30,19 +30,19 @@ fun Modifier.glassCard(
     tint: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
 ): Modifier {
     val scheme = MaterialTheme.colorScheme
-    val rim = scheme.onSurface.copy(alpha = 0.18f)
-    val highlight = scheme.onSurface.copy(alpha = 0.07f)
+    val rim = scheme.onSurface.copy(alpha = 0.22f)
+    val highlight = scheme.onSurface.copy(alpha = 0.10f)
     // Raised highlight across the top edge, deeper translucent glass toward the foot.
     // Each card is still a single paint operation: no per-poster RenderEffect allocations.
     return this
-        .shadow(3.dp, shape, clip = false)
+        .shadow(5.dp, shape, clip = false)
         .clip(shape)
         .background(
             Brush.verticalGradient(
                 0f to highlight,
-                0.18f to tint.copy(alpha = 0.68f),
-                0.76f to tint.copy(alpha = 0.49f),
-                1f to scheme.surface.copy(alpha = 0.46f),
+                0.16f to tint.copy(alpha = 0.78f),
+                0.72f to tint.copy(alpha = 0.56f),
+                1f to scheme.surface.copy(alpha = 0.43f),
             ),
         )
         // One rim avoids a double hairline at nested corners and saves overdraw on poster grids.
@@ -73,7 +73,8 @@ fun glassRimColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.
 fun Modifier.glassAtmosphere(): Modifier {
     val scheme = MaterialTheme.colorScheme
     val customWallpaper = hasAppBackdrop()
-    val strength = if (customWallpaper) 0.18f else 0.56f
+    // Keep custom wallpapers visible while allowing extra cinematic depth on the default canvas.
+    val strength = if (customWallpaper) 0.18f else 0.80f
     val cool = scheme.primary
     val warm = scheme.tertiary
     return this.appCanvas().drawBehind {
@@ -83,15 +84,15 @@ fun Modifier.glassAtmosphere(): Modifier {
         drawRect(
             Brush.radialGradient(
                 colors = listOf(cool.copy(alpha = 0.16f * strength), Color.Transparent),
-                center = Offset(size.width * 0.82f, size.height * 0.24f),
-                radius = dimension * 0.78f,
+                center = Offset(size.width * 0.88f, size.height * 0.21f),
+                radius = dimension * 0.64f,
             ),
         )
         drawRect(
             Brush.radialGradient(
                 colors = listOf(warm.copy(alpha = 0.13f * strength), Color.Transparent),
-                center = Offset(size.width * 0.12f, size.height * 0.89f),
-                radius = dimension * 0.72f,
+                center = Offset(size.width * 0.10f, size.height * 0.95f),
+                radius = dimension * 0.66f,
             ),
         )
     }

@@ -3450,7 +3450,7 @@ private fun SettingsSectionCard(
     val fillFocus1 = rememberFocusFill()
     Surface(
         modifier = modifier
-            .heightIn(min = 92.dp)
+            .heightIn(min = 88.dp)
             .focusFill(fillFocus1, RoundedCornerShape(22.dp))
             .glassCard(RoundedCornerShape(22.dp))
             .clickable(role = Role.Button, onClickLabel = "Open ${tile.title} settings", onClick = onClick),
@@ -3459,7 +3459,7 @@ private fun SettingsSectionCard(
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 6.dp),
+            Modifier.fillMaxWidth().padding(vertical = 7.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
@@ -3469,8 +3469,8 @@ private fun SettingsSectionCard(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f), RoundedCornerShape(12.dp)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.09f))
+                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 SectionBadge(badged) {
