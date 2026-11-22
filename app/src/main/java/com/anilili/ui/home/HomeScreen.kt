@@ -1640,7 +1640,9 @@ private fun ContinueRail(
         device.isTv -> 240.dp
         device.isExpanded -> 220.dp
         device.isTablet -> 200.dp
-        else -> 132.dp
+        // A cinematic thumbnail is wider than the square poster tiles in Library.
+        // Keep two videos partly visible so the row reads as a horizontal shelf.
+        else -> 176.dp
     }
     Column {
         RailTitle(
@@ -1679,7 +1681,7 @@ private fun ContinueRail(
                 ) {
                     Box(
                         Modifier.fillMaxWidth()
-                            .aspectRatio(if (device.isTv) 16f / 9f else 1f)
+                            .aspectRatio(16f / 9f)
                             .glassCard(RoundedCornerShape(20.dp)),
                     ) {
                         // Each card frosts its own thumbnail under its corner buttons: a source

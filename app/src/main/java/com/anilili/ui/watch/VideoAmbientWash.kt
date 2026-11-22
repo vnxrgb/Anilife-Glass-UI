@@ -2,6 +2,8 @@ package com.anilili.ui.watch
 
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
+import android.app.ActivityManager
+import android.content.Context
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.Handler
@@ -15,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -46,8 +49,11 @@ internal fun NativeVideoAmbientSampler(
     onPalette: (VideoAmbientPalette) -> Unit,
 ) {
     val currentCallback by rememberUpdatedState(onPalette)
-    LaunchedEffect(playerView, active) {
-        if (!active || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@LaunchedEffect
+    val context = LocalContext.current
+    val lowMemoryDevice = (context.getSystemService(Context.ACTIVITY_SERVICE)
+        as? ActivityManager)?.isLowRamDevice == true
+    LaunchedEffect(playerView, active, lowMemoryDevice) {
+        if (!active || lowMemoryDevice || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@LaunchedEffect
         val surface = playerView?.videoSurfaceView as? SurfaceView ?: return@LaunchedEffect
         val handler = Handler(Looper.getMainLooper())
         while (isActive) {
