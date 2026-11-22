@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -73,6 +74,7 @@ fun PageFilterPill(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(min = 48.dp)
                 .focusFill(fillFocus1, RoundedCornerShape(50))
                 .clickable { expanded = true },
             shape = RoundedCornerShape(50),
@@ -105,6 +107,11 @@ fun PageFilterPill(
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option.label) },
+                    trailingIcon = {
+                        if (option.label == label) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                        }
+                    },
                     onClick = { expanded = false; onSelect(option.value) },
                 )
             }
@@ -130,6 +137,7 @@ fun PageSortControl(
         val fillFocus2 = rememberFocusFill()
         Surface(
             modifier = Modifier
+                .heightIn(min = 48.dp)
                 .focusFill(fillFocus2, RoundedCornerShape(50))
                 .clickable { expanded = true }
                 .semantics { this.contentDescription = contentDescription },

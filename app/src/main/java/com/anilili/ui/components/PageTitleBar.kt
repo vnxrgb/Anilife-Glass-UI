@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.border
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,6 +68,7 @@ fun PageTitleBar(
                         )
                 },
             )
+            .then(if (device.isTv || background != null) Modifier else Modifier.border(1.dp, glassRimColor()))
             .statusBarsPadding()
             .padding(
                 // A back arrow carries its own touch padding, so the page inset would set it in

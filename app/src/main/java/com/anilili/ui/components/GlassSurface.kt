@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import com.anilili.ui.theme.appCanvas
 import com.anilili.ui.theme.hasAppBackdrop
@@ -33,6 +34,7 @@ fun Modifier.glassCard(
     // Raised highlight across the top edge, deeper translucent glass toward the foot.
     // Each card is still a single paint operation: no per-poster RenderEffect allocations.
     return this
+        .shadow(3.dp, shape, clip = false)
         .clip(shape)
         .background(
             Brush.verticalGradient(

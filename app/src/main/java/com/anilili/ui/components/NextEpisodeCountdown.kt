@@ -64,8 +64,8 @@ fun NextEpisodeCountdown(
             .background(
                 Brush.horizontalGradient(
                     listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.17f),
-                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.08f),
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f),
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.04f),
                     ),
                 ),
             )
