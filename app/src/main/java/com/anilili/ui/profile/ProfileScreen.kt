@@ -5,6 +5,8 @@ package com.anilili.ui.profile
 
 import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
 import com.anilili.ui.components.glassAtmosphere
 import android.Manifest
 import android.net.Uri
@@ -1140,7 +1142,17 @@ private fun LibraryViewChips(
                 val controlFocus7 = rememberFocusFill()
                 FilterChip(
                     shape = RoundedCornerShape(50),
-                    colors = controlFocus7.chipColors(FilterChipDefaults.filterChipColors()),
+                    colors = controlFocus7.chipColors(
+                        if (LocalAppDeviceProfile.current.isTv) {
+                            FilterChipDefaults.filterChipColors()
+                        } else {
+                            FilterChipDefaults.filterChipColors(
+                                containerColor = glassPanelColor(),
+                                selectedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
+                                selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                            )
+                        },
+                    ),
                     selected = selected,
                     onClick = { onToggle(view) },
                     label = { Text("${view.chipLabel}  ${viewCounts[view] ?: 0}") },
@@ -1163,7 +1175,17 @@ private fun LibraryViewChips(
                 val chipFocus = rememberFocusFill()
                 FilterChip(
                     shape = RoundedCornerShape(50),
-                    colors = chipFocus.chipColors(FilterChipDefaults.filterChipColors()),
+                    colors = chipFocus.chipColors(
+                        if (LocalAppDeviceProfile.current.isTv) {
+                            FilterChipDefaults.filterChipColors()
+                        } else {
+                            FilterChipDefaults.filterChipColors(
+                                containerColor = glassPanelColor(),
+                                selectedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
+                                selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                            )
+                        },
+                    ),
                     selected = chip.selected,
                     onClick = { customChips.onToggle(chip.name) },
                     label = { Text("${chip.name}  ${chip.count}") },
@@ -1179,7 +1201,10 @@ private fun LibraryViewChips(
                 val chipFocus = rememberFocusFill()
                 FilterChip(
                     shape = RoundedCornerShape(50),
-                    colors = chipFocus.chipColors(FilterChipDefaults.filterChipColors()),
+                    colors = chipFocus.chipColors(
+                        if (LocalAppDeviceProfile.current.isTv) FilterChipDefaults.filterChipColors()
+                        else FilterChipDefaults.filterChipColors(containerColor = glassPanelColor()),
+                    ),
                     selected = false,
                     onClick = customChips.onNew,
                     label = { Text("New list") },
@@ -2012,8 +2037,10 @@ private fun HistoryCard(
             if (poster.shows(PosterElement.DUB) && DubIndex.hasDub(entry.anilistId)) {
                 DubBadge(Modifier.align(Alignment.BottomStart).padding(start = 7.dp, bottom = 11.dp))
             }
-            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.Black.copy(alpha = .4f))) {
-                Box(Modifier.fillMaxWidth(entry.progressFraction.coerceAtLeast(.02f)).height(4.dp).background(MaterialTheme.colorScheme.primary))
+            if (entry.durationMs > 0L) {
+                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.Black.copy(alpha = .4f))) {
+                    Box(Modifier.fillMaxWidth(entry.progressFraction.coerceIn(0f, 1f)).height(4.dp).background(MaterialTheme.colorScheme.primary))
+                }
             }
         }
         return
@@ -2056,8 +2083,10 @@ private fun HistoryCard(
                 // the last four pixels of this one.
                 DubBadge(Modifier.align(Alignment.BottomStart).padding(start = 5.dp, bottom = 9.dp))
             }
-            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.Black.copy(alpha = .4f))) {
-                Box(Modifier.fillMaxWidth(entry.progressFraction.coerceAtLeast(.02f)).height(4.dp).background(MaterialTheme.colorScheme.primary))
+            if (entry.durationMs > 0L) {
+                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.Black.copy(alpha = .4f))) {
+                    Box(Modifier.fillMaxWidth(entry.progressFraction.coerceIn(0f, 1f)).height(4.dp).background(MaterialTheme.colorScheme.primary))
+                }
             }
         }
         if (poster.shows(PosterElement.TITLE)) {
@@ -2441,18 +2470,29 @@ private fun SavedAnimeCardData.progressLabel(): String? = when {
 private fun EmptyPanel(text: String) {
     val device = LocalAppDeviceProfile.current
     Panel(Modifier.padding(horizontal = device.pagePadding)) {
-        Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
+        Text(
+            text,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
+        )
     }
 }
 
 @Composable
 private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val shape = RoundedCornerShape(10.dp)
+    val device = LocalAppDeviceProfile.current
+    val shape = RoundedCornerShape(if (device.isTv) 10.dp else 22.dp)
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth()
+            .then(if (device.isTv) Modifier else Modifier.glassCard(shape)),
         shape = shape,
-        color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        color = if (device.isTv) MaterialTheme.colorScheme.surface else Color.Transparent,
+        border = if (device.isTv) {
+            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        } else {
+            null // glassCard draws its own neutral rim and soft elevation
+        },
         content = content,
     )
 }

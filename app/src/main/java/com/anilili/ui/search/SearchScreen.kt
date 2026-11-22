@@ -1388,7 +1388,7 @@ private fun ResultsGrid(
         }
         return
     }
-    val horizontalSpacing = if (device.isTv) 18.dp else 9.dp
+    val horizontalSpacing = if (device.isTv) 18.dp else if (device.isTablet) 12.dp else 10.dp
     // On TV the spelling notice is the grid's only item ahead of the results, and Up from the first
     // row stops on it before the header, so the remote can reach "Search instead".
     val tvLeadingItems = if (device.isTv && correction != null) 1 else 0
@@ -1428,13 +1428,13 @@ private fun ResultsGrid(
                         end = device.pagePadding,
                         // The search bar floats over this grid the way the capsule does below it, so
                         // the first row buys its clearance here rather than being laid out beneath it.
-                        top = 14.dp + headerPadding,
+                        top = 10.dp + headerPadding,
                         // The floating season bar is the second such overlay on a phone; when it is
                         // out, the last row reserves its height the same way.
                         bottom = AppChromeListBottomGap + LocalAppChromeBottomInset.current + seasonBarClearance,
                     ),
                     horizontalArrangement = Arrangement.spacedBy(horizontalSpacing, Alignment.Start),
-                    verticalArrangement = Arrangement.spacedBy(if (device.isTv) 16.dp else 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (device.isTv) 16.dp else if (device.isTablet) 13.dp else 11.dp),
                 ) {
                     if (!device.isTv) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -1467,7 +1467,7 @@ private fun ResultsGrid(
                                             "$total results",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(end = 6.dp),
+                                            modifier = Modifier.padding(end = 5.dp),
                                         )
                                     }
                                     QuickSortPill(label = sortLabel, selected = filters.sort, onSelect = onSortChange)
