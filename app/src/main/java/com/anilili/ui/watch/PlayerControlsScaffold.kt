@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -504,8 +505,8 @@ internal fun PlayerControlsScaffold(
                 .background(
                     Brush.verticalGradient(
                         0f to Color.Transparent,
-                        .32f to Color.Black.copy(alpha = 0.48f),
-                        1f to Color.Black.copy(alpha = 0.82f),
+                        .32f to Color.Black.copy(alpha = 0.39f),
+                        1f to Color.Black.copy(alpha = 0.72f),
                     ),
                 )
                 // The picture keeps the camera hole (see PlayerSystemBarsEffect); the seek bar and
@@ -718,9 +719,10 @@ internal fun PlayerActionPill(
         modifier = modifier
             .focusFill(fillFocus1, shape)
             .clip(shape)
-            .background(fillFocus1.background(Color(0xFF222630).copy(alpha = 0.72f)), shape)
+            .background(fillFocus1.background(Color(0xFF222630).copy(alpha = 0.66f)), shape)
             .border(1.dp, Color.White.copy(alpha = 0.24f), shape)
             .clickable(enabled = enabled, onClick = onClick)
+            .heightIn(min = 48.dp)
             .padding(horizontal = if (showLabel) 12.dp else 10.dp, vertical = 8.dp)
             .semantics { contentDescription = label },
         horizontalArrangement = Arrangement.spacedBy(7.dp),

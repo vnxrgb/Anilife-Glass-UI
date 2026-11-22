@@ -1241,6 +1241,9 @@ fun PlayerSurface(
     val inputModeManager = LocalInputModeManager.current
     var settingsExpanded by perSurface.settingsExpanded
     var captionsExpanded by perSurface.captionsExpanded
+    // Fullscreen Speed and Quality shortcuts open focused panels instead of the entire Settings menu.
+    var quickPlaybackPanel by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(isFullscreen) { if (!isFullscreen) quickPlaybackPanel = null }
     var captionAppearanceVisible by perSurface.captionAppearanceVisible
     // TalkBack users can't discover the hidden control row through a key press, so present it
     // as soon as the fullscreen player opens instead of waiting for the semantic reveal action.
@@ -2259,11 +2262,11 @@ fun PlayerSurface(
                         phoneControlsInteraction++
                     })
                     PlayerActionPill("Speed", Icons.Default.Speed, onClick = {
-                        settingsExpanded = true
+                        quickPlaybackPanel = "speed"
                         phoneControlsInteraction++
                     })
                     PlayerActionPill("Quality", Icons.Default.HighQuality, onClick = {
-                        settingsExpanded = true
+                        quickPlaybackPanel = "quality"
                         phoneControlsInteraction++
                     })
                 },
@@ -2336,6 +2339,48 @@ fun PlayerSurface(
                     phoneControlsInteraction++
                 },
             )
+        }
+
+        if (quickPlaybackPanel != null && controller != null && !device.isTv) {
+            val activeController = controller!!
+            val closeQuickPanel = {
+                quickPlaybackPanel = null
+                restoreTvControlsFocus()
+            }
+            when (quickPlaybackPanel) {
+                "speed" -> PlayerQuickSpeedSheet(
+                    speed = playbackSpeed,
+                    onSpeedChange = { value ->
+                        playbackSpeed = value
+                        activeController.setPlaybackSpeed(value)
+                        SettingsStore.setDefaultPlaybackSpeed(value)
+                    },
+                    onDismiss = closeQuickPanel,
+                    fullscreen = isFullscreen,
+                )
+                "quality" -> {
+                    val heights = availableVideoHeights(activeController, nativeQualityStreams)
+                    val options = buildList {
+                        add(PlayerQualityOption("Auto", pinnedVideoHeight == null) {
+                            changeVideoHeight(activeController, null)
+                        })
+                        heights.forEach { height ->
+                            add(PlayerQualityOption(
+                                label = "${height}p",
+                                selected = pinnedVideoHeight == height,
+                                onSelect = { changeVideoHeight(activeController, height) },
+                                height = height,
+                            ))
+                        }
+                    }
+                    PlayerQuickQualitySheet(
+                        options = options,
+                        message = dataSaverFallbackMessage(defaultQuality, heights),
+                        onDismiss = closeQuickPanel,
+                        fullscreen = isFullscreen,
+                    )
+                }
+            }
         }
 
         if (settingsExpanded && controller != null) {

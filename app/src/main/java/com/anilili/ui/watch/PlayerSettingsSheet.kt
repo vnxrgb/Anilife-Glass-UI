@@ -120,6 +120,70 @@ internal data class PlayerQualityOption(
 )
 
 /**
+ * Dedicated fullscreen shortcuts. These reuse the same selection sliders, persistence callbacks,
+ * focus handling and responsive side-panel/bottom-sheet container as the full settings page.
+ * Keep the options wired to the existing playback controller; never create a second player.
+ */
+@Composable
+internal fun PlayerQuickSpeedSheet(
+    speed: Float,
+    onSpeedChange: (Float) -> Unit,
+    onDismiss: () -> Unit,
+    fullscreen: Boolean,
+) {
+    PlayerOptionsSheet(
+        title = "Playback speed",
+        paneTitle = "Playback speed",
+        closeDescription = "Close playback speed",
+        onDismiss = onDismiss,
+        fullscreen = fullscreen,
+    ) {
+        Text(
+            text = "Choose how fast this episode plays",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Midnight.Text.copy(alpha = 0.76f),
+            modifier = Modifier.padding(bottom = 12.dp),
+        )
+        SpeedSlider(speed = speed, onSpeedChange = onSpeedChange)
+    }
+}
+
+@Composable
+internal fun PlayerQuickQualitySheet(
+    options: List<PlayerQualityOption>,
+    message: String?,
+    onDismiss: () -> Unit,
+    fullscreen: Boolean,
+) {
+    PlayerOptionsSheet(
+        title = "Video quality",
+        paneTitle = "Video quality",
+        closeDescription = "Close video quality",
+        onDismiss = onDismiss,
+        fullscreen = fullscreen,
+    ) {
+        if (options.size > 1) {
+            QualitySlider(options)
+        } else {
+            Text(
+                text = "The current source does not offer additional video resolutions.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Midnight.Text,
+                modifier = Modifier.padding(vertical = 10.dp),
+            )
+        }
+        if (!message.isNullOrBlank()) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = Midnight.Text.copy(alpha = 0.76f),
+                modifier = Modifier.padding(top = 10.dp),
+            )
+        }
+    }
+}
+
+/**
  * The player's general playback settings. Subtitle controls deliberately live in
  * [PlayerCaptionsSheet] so the CC button is their single, predictable entry point.
  */
