@@ -1,4 +1,4 @@
-Reference-aligned Glass UI non-player milestone preview
-Source commit: ef987832e5b02f21e4da17b74f65350c5da2aa4f
-Changes: theme-responsive lightweight glass depth; richer nav accent rim and selection; compact Home hero and tinted Watch CTA; safe Home Grid/Rail action clearance; tighter Settings category tiles, improved Browse hint and clearer Details backdrop.
-Run mobile tests, lint and assemble one universal debug preview APK. NOT a signed stable release or device acceptance. Player unchanged. Keep main untouched.
+Batch 5 screenshot repair consolidated universal Android APK preview
+Source commit: fcb896b5861da886b1378db2d3a671d671fe086f
+Changes: Home rail action clearance and more compact spotlight; My List top card/header and bottom nav scroll clearance; Browse short readable search and category end padding; Downloads balanced empty panel; Settings compact tiles while preserving TV dimensions.
+Run mobile unit tests, lint, assemble the ONE universal mobile debug APK; publish preview asset only on success. Do not publish signed stable, change the player or merge main.
