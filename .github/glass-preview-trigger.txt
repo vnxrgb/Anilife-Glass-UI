@@ -1,4 +1,4 @@
-Home hero unclutter milestone preview
-Source commit: ffeb1decbf7fdd8adf189d4864ddf9ceb3782f9f
-Mobile Hero: 322dp artwork breathing room, fixed two-line title up to minimum 17sp, compact format/score metadata beneath title, removed the genre-chip row from phone hero, separate equal-width CTA row and clear pagination. TV hero/metadata unchanged. Player untouched, main untouched.
-Run mobile unit tests, lint, assemble the universal APK. Publish preview only on success, do not label it stable.
+Shared cinematic button system preview
+Source commit: bd4239af2e7b5e8809e629e6b9957f53c63dc560
+Home Watch now: solid warm premium CTA with dark content, no theme green gradient. Details Continue and Browse Show results: same phone primary color. Secondary outline buttons: dark translucent neutral over artwork / regular neutral panel elsewhere. Browse and My List filters: shared neutral selected chip colors. Details tabs and Schedule selected date: neutral rim. 48dp+ minimum primary/secondary targets. Preserve TV and player unchanged.
+Build mobile universal debug APK + unit tests + lint; publish one preview only if successful. Keep main untouched and do not label stable.
