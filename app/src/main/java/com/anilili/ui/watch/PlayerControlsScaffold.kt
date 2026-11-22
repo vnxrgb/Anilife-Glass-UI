@@ -430,7 +430,9 @@ internal fun PlayerControlsScaffold(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            if (showPlayerClock) {
+            // The inline 16:9 player has only a few rows of video: the full wall-clock
+            // chip overlapped the central playback controls. It remains in fullscreen.
+            if (showPlayerClock && (showBack || !compactHeight)) {
                 PlayerClockReadout(
                     positionMs = scrubPositionMs ?: positionMs,
                     durationMs = durationMs,
@@ -438,7 +440,12 @@ internal fun PlayerControlsScaffold(
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) { topRightIcons() }
+                CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
+                    topRightIcons()
+                    // Inline mode keeps utility buttons at the top edge, out of the
+                    // subtitle and seekbar area. Fullscreen retains its bottom dock.
+                    if (!showBack && compactHeight) bottomRightIcons()
+                }
             }
         }
         val density = LocalDensity.current
@@ -456,7 +463,7 @@ internal fun PlayerControlsScaffold(
                     // centred: the skip/next-up chip lives at the far right, not under it.
                     // The old global collision rule pushed Play/Pause into the clock/title.
                     // Keep the measured collision protection on inline and narrow surfaces.
-                    bottom = if (showBack && maxWidth >= 600.dp) 0.dp else
+                    bottom = if (!showBack || maxWidth >= 600.dp) 0.dp else
                         transportRowBottomPadding(
                             frameHeight = maxHeight,
                             rowHeight = transportHeight,
@@ -469,7 +476,11 @@ internal fun PlayerControlsScaffold(
             horizontalArrangement = Arrangement.spacedBy(metrics.centerGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            PlayerControlIconButton("Previous episode", Icons.Default.SkipPrevious, enabled = hasPrevious, onClick = onPrevious)
+            // Preserve episode navigation in fullscreen, but don't crowd the 16:9
+            // inline frame with five centre buttons. Episodes remain in the page list.
+            if (showBack || !compactHeight) {
+                PlayerControlIconButton("Previous episode", Icons.Default.SkipPrevious, enabled = hasPrevious, onClick = onPrevious)
+            }
             PlayerControlIconButton("Rewind 10 seconds", Icons.Default.FastRewind, onClick = onRewind)
             // Play/pause keeps the accent — it and the seek bar are the only things that carry it.
             val extraFocus1 = rememberFocusFill()
@@ -492,7 +503,9 @@ internal fun PlayerControlsScaffold(
                 )
             }
             PlayerControlIconButton("Forward 10 seconds", Icons.Default.FastForward, onClick = onForward)
-            PlayerControlIconButton("Next episode", Icons.Default.SkipNext, enabled = hasNext, onClick = onNext)
+            if (showBack || !compactHeight) {
+                PlayerControlIconButton("Next episode", Icons.Default.SkipNext, enabled = hasNext, onClick = onNext)
+            }
         }
         // Everything the bar can show — the time row and both icon rows, including the icons that
         // only some sources contribute — hangs below the seek slider, so the reported anchor drops
@@ -549,13 +562,12 @@ internal fun PlayerControlsScaffold(
                         }
                         PlayerTimePill(formatPlayerTime(shownMs), fontSize = metrics.timeTextSize)
                     }
-                    PlayerActionRow {
-                        CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
-                            // Very short landscape surfaces used to drop all four primary
-                            // actions because the compact branch rendered utilities only.
-                            // Keep every fullscreen action reachable even at ultrawide ratios.
-                            if (showBack) bottomPrimaryIcons()
-                            bottomRightIcons()
+                    if (showBack) {
+                        PlayerActionRow {
+                            CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
+                                bottomPrimaryIcons()
+                                bottomRightIcons()
+                            }
                         }
                     }
                 }

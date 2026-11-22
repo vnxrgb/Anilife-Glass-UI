@@ -2284,7 +2284,7 @@ fun PlayerSurface(
                         },
                     )
                 }
-                if (sourceOptions.size > 1) {
+                if (isFullscreen && sourceOptions.size > 1) {
                     PlayerActionPill(
                         label = "Sources",
                         icon = Icons.Default.SwapHoriz,
