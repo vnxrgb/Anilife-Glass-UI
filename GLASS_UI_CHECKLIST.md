@@ -125,3 +125,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - `HOME & LOW-RAM PASS`: Home's Continue Watching shelf now uses wide 16:9 glass media thumbnails instead of square cards, retaining resume/progress and detail/remove controls; ambient PixelCopy sampling is disabled on Android low-RAM devices to avoid unnecessary per-frame bitmap allocations. Functional/visual validation pending.
 
 - `BROWSE & PLAYER DETAIL PASS`: Browse empty search state is a compact neutral glass card on handheld devices, preserving all context-sensitive filter advice and adult-content controls; player's seek progress now has a soft accent/white underglow with existing chapter markers and buffer track retained. Code implemented; real-device acceptance pending.
+
+- `SETTINGS DENSITY PASS`: Phone category tiles now use tighter 7dp gutters, 32dp icon badges, more compact padding, and flexible 1-2 line labels to match the approved three-column Settings reference. Verify readable labels at enlarged font settings and TV grid behaviour.
