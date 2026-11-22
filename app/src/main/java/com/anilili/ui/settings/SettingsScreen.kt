@@ -3447,7 +3447,7 @@ private fun SettingsSectionCard(
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 7.dp, horizontal = 4.dp),
+            Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 5.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -3457,7 +3457,7 @@ private fun SettingsSectionCard(
                 modifier = Modifier
                     .size(28.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(LocalMidnightAccent.current.copy(alpha = 0.11f)),
+                    .background(LocalMidnightAccent.current.copy(alpha = 0.09f)),
                 contentAlignment = Alignment.Center,
             ) {
                 SectionBadge(badged) {

@@ -405,7 +405,7 @@ private fun HomeTopChrome(
         TopAppBar(
             title = {
                 if (showWordmark) {
-                    AnililiWordmark(modifier = Modifier.height(38.dp))
+                    AnililiWordmark(modifier = Modifier.height(36.dp))
                 }
             },
             actions = {
@@ -814,11 +814,11 @@ private fun HeroPager(
     val pagerIsDragged by pagerState.interactionSource.collectIsDraggedAsState()
     val heroHeight = topInset + when {
         device.isTv -> 420.dp
-        device.isExpanded -> 340.dp
-        device.isTablet -> 296.dp
+        device.isExpanded -> 328.dp
+        device.isTablet -> 288.dp
         // Give the feed enough visual room to show Continue Watching above the fold
         // on a 360-393dp phone while keeping the main featured artwork readable.
-        else -> 260.dp
+        else -> 256.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {

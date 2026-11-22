@@ -110,10 +110,10 @@ private const val DAY_STRIP_FIRST = -2L
 private const val DAY_STRIP_LENGTH = 9
 
 /** How tall the loading and error panels stand when they are items in the calendar's own list. */
-private val CalendarStatusHeight = 220.dp
+private val CalendarStatusHeight = 196.dp
 
 /** Height of the phone's floating day stepper; both lists reserve it below their last row. */
-private val DayStepperHeight = 52.dp
+private val DayStepperHeight = 50.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -401,8 +401,8 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
             val fillFocus1 = rememberFocusFill()
             Column(
                 modifier = Modifier
-                    .width(82.dp)
-                    .height(64.dp)
+                    .width(80.dp)
+                    .height(62.dp)
                     .focusFill(fillFocus1, RoundedCornerShape(14.dp))
                     .clip(RoundedCornerShape(14.dp))
                     .background(

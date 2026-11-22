@@ -952,14 +952,14 @@ private fun DetailHero(
         ) {
             Box(
                 modifier = Modifier
-                    .width(if (device.isExpanded) 112.dp else 90.dp)
+                    .width(if (device.isExpanded) 108.dp else 88.dp)
                     .aspectRatio(2f / 3f)
-                    .focusHighlight(RoundedCornerShape(20.dp))
-                    .glassCard(RoundedCornerShape(20.dp))
+                    .focusHighlight(RoundedCornerShape(18.dp))
+                    .glassCard(RoundedCornerShape(18.dp))
                     .border(
                         1.dp,
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.42f),
-                        RoundedCornerShape(20.dp),
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f),
+                        RoundedCornerShape(18.dp),
                     )
                     .clickable(onClickLabel = "View larger cover", onClick = onCoverClick),
             ) {

@@ -326,11 +326,11 @@ fun DownloadsScreen(
                         .fillMaxWidth()
                         .widthIn(max = 440.dp)
                         .glassCard(RoundedCornerShape(28.dp))
-                        .padding(horizontal = 24.dp, vertical = 28.dp),
+                        .padding(horizontal = 22.dp, vertical = 26.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        "Nothing downloaded yet. Save an episode from its watch page to keep it here.",
+                        "Your offline library is empty. Download an episode from its watch page to start watching offline.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -405,7 +405,7 @@ fun DownloadsScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    "No downloaded anime matches these filters.",
+                                    "No downloads match your current filters. Try clearing a filter.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
