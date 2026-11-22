@@ -1,5 +1,7 @@
 package com.anilili.ui.downloads
 
+import com.anilili.ui.components.glassCard
+
 import com.anilili.ui.theme.appCanvas
 import android.content.Context
 import android.net.Uri
