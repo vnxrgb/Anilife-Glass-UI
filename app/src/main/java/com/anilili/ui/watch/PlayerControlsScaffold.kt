@@ -561,7 +561,18 @@ internal fun PlayerControlsScaffold(
                     )
                 }
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // One lower glass dock frames the controls as a coherent action bar,
+                        // while the nested group can still independently scale at narrow widths.
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(Color.Black.copy(alpha = 0.25f))
+                        .border(
+                            1.dp,
+                            Color.White.copy(alpha = 0.14f),
+                            RoundedCornerShape(28.dp),
+                        )
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

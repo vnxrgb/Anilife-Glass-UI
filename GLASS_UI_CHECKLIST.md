@@ -129,3 +129,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - `SETTINGS DENSITY PASS`: Phone category tiles now use tighter 7dp gutters, 32dp icon badges, more compact padding, and flexible 1-2 line labels to match the approved three-column Settings reference. Verify readable labels at enlarged font settings and TV grid behaviour.
 
 - `HERO COMPOSITION PASS`: Mobile Home featured area height, genre and CTA vertical spacing reduced to expose more feed; Anime Details poster/title composition tightened, outlined cover and secondary metadata neutralized so accent highlights remain for interactions. Visual/device acceptance remains unverified.
+
+- `PLAYER DOCK & SETTINGS FINDABILITY PASS`: Noncompact/fullscreen player bottom icons now share one frosted rounded action dock, retaining control group scaling and every existing onClick handler. Ambient strength row stays indexed/visible even while ambient is off and disables its stepper buttons; stored strength is remembered. Real-device acceptance and accessibility tests pending.

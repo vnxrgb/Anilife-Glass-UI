@@ -2305,11 +2305,13 @@ fun SettingsScreen(
                             onCheckedChange = SettingsStore::setPlayerAmbientGlow,
                         )
                     }
-                    if (playerAmbientGlow) {
-                        item(key = "Ambient glow strength") {
+                    // Keep this searchable and discoverable even when the glow is off.
+                    // Disabling the glow suspends sampling; strength is saved for re-enabling.
+                    item(key = "Ambient glow strength") {
                             MidnightStepperRow(
                                 label = "Ambient glow strength",
                                 value = when {
+                                    !playerAmbientGlow -> "Off"
                                     playerAmbientIntensity <= 0.5f -> "Subtle"
                                     playerAmbientIntensity <= 0.75f -> "Balanced"
                                     else -> "Vivid"
@@ -2320,10 +2322,9 @@ fun SettingsScreen(
                                 onIncrease = {
                                     SettingsStore.setPlayerAmbientIntensity(playerAmbientIntensity + 0.25f)
                                 },
-                                decreaseEnabled = playerAmbientIntensity > 0.5f,
-                                increaseEnabled = playerAmbientIntensity < 1f,
+                                decreaseEnabled = playerAmbientGlow && playerAmbientIntensity > 0.5f,
+                                increaseEnabled = playerAmbientGlow && playerAmbientIntensity < 1f,
                             )
-                        }
                     }
                     item(key = "Hold to change speed") {
                         MidnightSettingSwitchRow(
