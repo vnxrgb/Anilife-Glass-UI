@@ -452,13 +452,18 @@ internal fun PlayerControlsScaffold(
             modifier = Modifier
                 .align(Alignment.Center)
                 .padding(
-                    bottom = transportRowBottomPadding(
-                        frameHeight = maxHeight,
-                        rowHeight = transportHeight,
-                        seekAnchor = seekAnchor,
-                        compactHeight = compactHeight,
-                        actionHeight = skipActionHeight(compactHeight),
-                    ),
+                    // On a wide fullscreen surface the transport group can remain genuinely
+                    // centred: the skip/next-up chip lives at the far right, not under it.
+                    // The old global collision rule pushed Play/Pause into the clock/title.
+                    // Keep the measured collision protection on inline and narrow surfaces.
+                    bottom = if (showBack && maxWidth >= 600.dp) 0.dp else
+                        transportRowBottomPadding(
+                            frameHeight = maxHeight,
+                            rowHeight = transportHeight,
+                            seekAnchor = seekAnchor,
+                            compactHeight = compactHeight,
+                            actionHeight = skipActionHeight(compactHeight),
+                        ),
                 )
                 .onSizeChanged { transportHeight = with(density) { it.height.toDp() } },
             horizontalArrangement = Arrangement.spacedBy(metrics.centerGap),
@@ -583,34 +588,13 @@ internal fun PlayerControlsScaffold(
                             bottomLeftIcons()
                         }
                     }
-                    // In fullscreen the core episode/audio actions get their own stable row.
-                    // Secondary controls remain available without shrinking the primary dock.
-                    if (showBack) {
-                        PlayerActionRow(horizontalSpacing = 5.dp) {
-                            CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
-                                bottomPrimaryIcons()
-                            }
-                        }
-                    } else {
-                        PlayerActionRow(horizontalSpacing = if (metrics.showPillLabels) 6.dp else 0.dp) {
-                            CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
-                                bottomRightIcons()
-                            }
-                        }
-                    }
-                }
-                if (showBack) {
-                    // Dedicated utility strip keeps quality, speed, casting and display actions
-                    // discoverable without forcing the four primary controls into tiny icons.
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        PlayerActionRow(horizontalSpacing = 5.dp) {
-                            CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
-                                bottomRightIcons()
-                            }
+                    // One compact dock, not two stacked toolbars across the subtitles.
+                    // On landscape phones/tablets both action groups fit side by side,
+                    // with the lock remaining isolated at the other edge of the picture.
+                    PlayerActionRow(horizontalSpacing = if (showBack) 3.dp else if (metrics.showPillLabels) 6.dp else 0.dp) {
+                        CompositionLocalProvider(LocalPlayerLayoutMetrics provides metrics) {
+                            if (showBack) bottomPrimaryIcons()
+                            bottomRightIcons()
                         }
                     }
                 }
