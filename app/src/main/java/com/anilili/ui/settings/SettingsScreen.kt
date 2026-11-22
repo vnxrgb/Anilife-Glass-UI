@@ -3447,16 +3447,16 @@ private fun SettingsSectionCard(
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 9.dp, horizontal = 4.dp),
+            Modifier.fillMaxWidth().padding(vertical = 7.dp, horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             // A softly tinted emblem separates the glyph from the glass tile.
             // Accent stays with the icon; the pane itself adapts neutrally to the theme.
             Box(
                 modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(30.dp)
+                    .clip(RoundedCornerShape(11.dp))
                     .background(LocalMidnightAccent.current.copy(alpha = 0.11f)),
                 contentAlignment = Alignment.Center,
             ) {

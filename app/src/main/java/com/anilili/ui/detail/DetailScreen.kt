@@ -952,7 +952,7 @@ private fun DetailHero(
         ) {
             Box(
                 modifier = Modifier
-                    .width(if (device.isExpanded) 118.dp else 94.dp)
+                    .width(if (device.isExpanded) 112.dp else 90.dp)
                     .aspectRatio(2f / 3f)
                     .focusHighlight(RoundedCornerShape(20.dp))
                     .glassCard(RoundedCornerShape(20.dp))

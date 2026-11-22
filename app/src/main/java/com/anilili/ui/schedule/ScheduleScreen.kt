@@ -392,8 +392,8 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
     LazyRow(
         state = listState,
         modifier = Modifier.focusGroup(),
-        contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         items(DAY_STRIP_LENGTH) { index ->
             val date = today.plusDays(DAY_STRIP_FIRST + index)
@@ -401,8 +401,8 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
             val fillFocus1 = rememberFocusFill()
             Column(
                 modifier = Modifier
-                    .width(88.dp)
-                    .height(68.dp)
+                    .width(82.dp)
+                    .height(64.dp)
                     .focusFill(fillFocus1, RoundedCornerShape(14.dp))
                     .clip(RoundedCornerShape(14.dp))
                     .background(
