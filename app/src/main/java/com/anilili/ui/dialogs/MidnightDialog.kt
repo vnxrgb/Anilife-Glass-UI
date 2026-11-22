@@ -268,7 +268,8 @@ fun MidnightSheet(
         // Frosted, the column below paints the panel — glass, then a translucent wash — and so
         // has to reach the bottom edge itself: the sheet's own inset padding would leave a strip
         // there with nothing in it but the app showing through sharp.
-        containerColor = if (backdrop != null) Color.Transparent else Midnight.SheetSurface,
+        containerColor = if (backdrop != null) Color.Transparent
+            else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
         contentWindowInsets = { if (backdrop != null) WindowInsets(0) else BottomSheetDefaults.windowInsets },
         contentColor = Midnight.Text,
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
@@ -411,8 +412,19 @@ fun MidnightModal(
                     .width(width)
                     .clip(shape)
                     .popupGlass(backdrop)
-                    .background(if (backdrop != null) Midnight.ModalSurface.copy(alpha = GLASS_PANEL_ALPHA) else Midnight.ModalSurface)
-                    .border(1.dp, Midnight.Line2, shape)
+                    .background(
+                        when {
+                            device.isTv -> Midnight.ModalSurface
+                            backdrop != null -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = GLASS_PANEL_ALPHA)
+                            else -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f)
+                        },
+                    )
+                    .border(
+                        1.dp,
+                        if (device.isTv) Midnight.Line2
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+                        shape,
+                    )
                     .padding(18.dp),
                 content = content,
             )
