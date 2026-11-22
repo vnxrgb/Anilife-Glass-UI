@@ -705,14 +705,10 @@ private fun WatchContent(
     val context = LocalContext.current
     val device = LocalAppDeviceProfile.current
     val isMovie = isMovieFormat(data.seriesFormat)
-    // Sampled hues stay below the player and labels, never cover the video.
-    // A muted dark fallback supports embedded and protected playback.
-    var ambientColor by remember(data.anilistId) { mutableStateOf(Color(0xFF202536)) }
-    val ambientTint by animateColorAsState(
-        targetValue = ambientColor,
-        animationSpec = tween(durationMillis = 1_300),
-        label = "watchAmbientTint",
-    )
+    // Keep ambient colours local to each episode and stream, never behind the entire page.
+    var ambientPalette by remember(data.anilistId, data.currentIndex, data.chosenStream?.url) {
+        mutableStateOf(VideoAmbientPalette.Empty)
+    }
     val showLoadingOverlay by SettingsStore.showLoadingOverlay.collectAsState()
     // AniList ships its synopses with HTML in them, so the player gets the same cleaned text the
     // details pane below already shows rather than markup.
@@ -1467,7 +1463,7 @@ private fun WatchContent(
                         onAddToList = { listStatusDialogVisible = true },
                         onControlsVisibilityChanged = onControlsVisibilityChanged,
                         onPlaybackActiveChanged = { playerHasPicture = it },
-                        onAmbientColor = { ambientColor = it },
+                        onAmbientPaletteChanged = { ambientPalette = it },
                     )
                 }
             }
@@ -1563,13 +1559,7 @@ private fun WatchContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .background(
-                        Brush.verticalGradient(
-                            0f to ambientTint,
-                            0.40f to ambientTint.copy(alpha = 0.70f),
-                            1f to Color(0xFF08090F),
-                        ),
-                    ),
+                    .videoAmbientWash(ambientPalette),
             )
             return@Column
         }

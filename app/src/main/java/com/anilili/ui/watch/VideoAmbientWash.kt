@@ -24,7 +24,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
-import kotlin.math.max
 
 /** Colours are sampled from the live picture, not guessed from the episode poster. */
 internal data class VideoAmbientPalette(val left: Color, val right: Color) {
@@ -102,11 +101,10 @@ private fun extractAmbientPalette(bitmap: Bitmap): VideoAmbientPalette? {
             }
         }
         if (samples == 0L) return Color.Transparent
-        return Color(
-            red = (red / samples).toInt().coerceIn(0, 255),
-            green = (green / samples).toInt().coerceIn(0, 255),
-            blue = (blue / samples).toInt().coerceIn(0, 255),
-        )
+        val r = (red.toFloat() / samples / 255f).coerceIn(0f, 1f)
+        val g = (green.toFloat() / samples / 255f).coerceIn(0f, 1f)
+        val b = (blue.toFloat() / samples / 255f).coerceIn(0f, 1f)
+        return Color(r * 0.72f, g * 0.72f, b * 0.72f)
     }
     return VideoAmbientPalette(average(0, width / 2), average(width / 2, width))
 }
@@ -114,22 +112,23 @@ private fun extractAmbientPalette(bitmap: Bitmap): VideoAmbientPalette? {
 /** A pair of wide falloff glows matches the picture edges on both dark and AMOLED themes. */
 @Composable
 internal fun Modifier.videoAmbientWash(palette: VideoAmbientPalette): Modifier {
-    val left by animateColorAsState(palette.left, tween(1_050), label = "ambientLeft")
-    val right by animateColorAsState(palette.right, tween(1_050), label = "ambientRight")
+    val left by animateColorAsState(palette.left, tween(1_700), label = "ambientLeft")
+    val right by animateColorAsState(palette.right, tween(1_700), label = "ambientRight")
     return this.drawBehind {
         if (left.alpha <= 0f && right.alpha <= 0f) return@drawBehind
-        val spread = max(size.width, size.height) * 0.92f
+        // Confine the glow to the area beneath the video. Do not colour the episode list.
+        val spread = size.width * 0.82f
         drawRect(
             brush = Brush.radialGradient(
-                colors = listOf(left.copy(alpha = 0.38f), Color.Transparent),
-                center = Offset(0f, 0f),
+                colors = listOf(left.copy(alpha = 0.27f), left.copy(alpha = 0.10f), Color.Transparent),
+                center = Offset(size.width * 0.13f, -size.width * 0.10f),
                 radius = spread,
             ),
         )
         drawRect(
             brush = Brush.radialGradient(
-                colors = listOf(right.copy(alpha = 0.34f), Color.Transparent),
-                center = Offset(size.width, 0f),
+                colors = listOf(right.copy(alpha = 0.24f), right.copy(alpha = 0.08f), Color.Transparent),
+                center = Offset(size.width * 0.87f, -size.width * 0.10f),
                 radius = spread,
             ),
         )
