@@ -109,3 +109,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - `DIALOG GLASS PASS`: Shared phone modal/sheet backgrounds now use the current Material theme's translucent surface instead of a fixed dark panel. TV dialogs retain their existing colours; device build/visual verification pending.
 
 - `AMBIENT COMPOSITION PASS` (`764a282`): Replaced the watch-page solid video-colour slab with three feathered radial colour blooms and a subtle shared gradient. The video remains unchanged; colours continue to come from sampled frames. Code implementation; live visual result still requires testing.
+
+- NAVIGATION REFINEMENT: Selected destination now uses a neutral glass gradient with a restrained theme-accent outline instead of a permanently accent-filled background. Explicit accessibility labels retained for all five tabs. Code only; device screenshot comparison remains pending.

@@ -237,7 +237,7 @@ fun FloatingNavDisc(
     }
 }
 
-/** A touch under the capsule's 56dp, so the disc reads as its companion rather than its rival. */
+/** A touch under the capsule's 58dp, so the disc reads as its companion rather than its rival. */
 val FloatingNavDiscSize = 52.dp
 
 /**
@@ -266,18 +266,19 @@ private fun FloatingNavIcon(
                 if (selected) Modifier
                     .background(
                         Brush.verticalGradient(
-                            0f to MaterialTheme.colorScheme.primary.copy(alpha = 0.42f),
-                            1f to MaterialTheme.colorScheme.primary.copy(alpha = 0.19f),
+                            0f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.19f),
+                            1f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.45f),
                         ),
                     )
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.52f), shape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.38f), shape)
                 else Modifier
             )
             .selectable(
                 selected = selected,
                 role = Role.Tab,
                 onClick = onClick,
-            ),
+            )
+            .semantics { contentDescription = item.label },
         contentAlignment = Alignment.Center,
     ) {
         androidx.compose.foundation.layout.Column(
