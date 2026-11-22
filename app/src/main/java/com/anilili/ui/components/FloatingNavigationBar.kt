@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.Constraints
 import kotlin.math.roundToInt
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
