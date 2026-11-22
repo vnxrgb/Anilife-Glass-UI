@@ -1139,6 +1139,7 @@ private fun LibraryViewChips(
                 val selected = view in selectedViews
                 val controlFocus7 = rememberFocusFill()
                 FilterChip(
+                    shape = RoundedCornerShape(50),
                     colors = controlFocus7.chipColors(FilterChipDefaults.filterChipColors()),
                     selected = selected,
                     onClick = { onToggle(view) },
@@ -1161,6 +1162,7 @@ private fun LibraryViewChips(
             items(customChips.chips, key = { "custom_${listKey(it.name)}" }) { chip ->
                 val chipFocus = rememberFocusFill()
                 FilterChip(
+                    shape = RoundedCornerShape(50),
                     colors = chipFocus.chipColors(FilterChipDefaults.filterChipColors()),
                     selected = chip.selected,
                     onClick = { customChips.onToggle(chip.name) },
@@ -1176,6 +1178,7 @@ private fun LibraryViewChips(
             item(key = "custom_new") {
                 val chipFocus = rememberFocusFill()
                 FilterChip(
+                    shape = RoundedCornerShape(50),
                     colors = chipFocus.chipColors(FilterChipDefaults.filterChipColors()),
                     selected = false,
                     onClick = customChips.onNew,
@@ -2034,7 +2037,7 @@ private fun HistoryCard(
     }
     Column(cardModifier) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(9.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+            Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             AsyncImage(entry.cover, entry.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Icon(Icons.Default.PlayArrow, contentDescription = "Resume", tint = Color.White, modifier = Modifier.align(Alignment.Center))
@@ -2296,7 +2299,7 @@ private fun SavedAnimeCard(
     }
     Column(cardModifier) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(9.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+            Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             AsyncImage(entry.cover, entry.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             when {

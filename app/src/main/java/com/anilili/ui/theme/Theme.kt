@@ -2,6 +2,9 @@ package com.anilili.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
@@ -44,6 +47,13 @@ fun MiruroTheme(
     ) {
         MaterialTheme(
             colorScheme = colors.scheme,
+            shapes = Shapes(
+                extraSmall = RoundedCornerShape(10.dp),
+                small = RoundedCornerShape(14.dp),
+                medium = RoundedCornerShape(18.dp),
+                large = RoundedCornerShape(24.dp),
+                extraLarge = RoundedCornerShape(30.dp),
+            ),
             typography = if (isTv) MiruroTvTypography else MiruroTypography,
             content = { ProvideAppBackdrop(content) },
         )

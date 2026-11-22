@@ -128,8 +128,7 @@ fun AnimeCard(
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .glassCard(RoundedCornerShape(16.dp)),
         ) {
             // Decorative: the title text below is part of the same merged semantics node.
             AsyncImage(
@@ -210,7 +209,7 @@ fun PosterTag(
 ) {
     val style = MaterialTheme.typography.labelSmall
     val accent = MaterialTheme.colorScheme.primary
-    val shape = RoundedCornerShape(5.dp)
+    val shape = RoundedCornerShape(50)
     Row(
         modifier
             .then(if (description != null) Modifier.clearAndSetSemantics { contentDescription = description } else Modifier)

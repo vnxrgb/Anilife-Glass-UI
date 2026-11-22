@@ -920,7 +920,7 @@ private fun DetailHero(
     val device = LocalAppDeviceProfile.current
     val banner = info.bannerImage ?: info.coverImage.best
     val bannerHeight = topInset + if (device.isExpanded) 230.dp else 190.dp
-    Box(Modifier.fillMaxWidth().height(topInset + if (device.isExpanded) 330.dp else 286.dp)) {
+    Box(Modifier.fillMaxWidth().height(topInset + if (device.isExpanded) 330.dp else 292.dp)) {
         AsyncImage(
             model = banner,
             contentDescription = null,
@@ -945,9 +945,9 @@ private fun DetailHero(
                 modifier = Modifier
                     .width(if (device.isExpanded) 126.dp else 98.dp)
                     .aspectRatio(2f / 3f)
-                    .focusHighlight(RoundedCornerShape(12.dp))
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                    .focusHighlight(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(20.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
                     .clickable(onClickLabel = "View larger cover", onClick = onCoverClick),
             ) {
                 AsyncImage(
@@ -1112,6 +1112,7 @@ private fun DetailActions(
     ) {
         val controlFocus4 = rememberFocusFill()
         OutlinedButton(
+            shape = RoundedCornerShape(50),
             colors = controlFocus4.buttonColors(ButtonDefaults.outlinedButtonColors()),
             onClick = { listMenuVisible = true },
             modifier = Modifier
@@ -1152,6 +1153,7 @@ private fun DetailActions(
         )
         val controlFocus6 = rememberFocusFill()
         Button(
+            shape = RoundedCornerShape(50),
             colors = controlFocus6.buttonColors(ButtonDefaults.buttonColors()),
             onClick = onWatch,
             enabled = canWatch,

@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -75,7 +76,8 @@ fun PageFilterPill(
                 .focusFill(fillFocus1, RoundedCornerShape(50))
                 .clickable { expanded = true },
             shape = RoundedCornerShape(50),
-            color = fillFocus1.background(MaterialTheme.colorScheme.surface),
+            color = fillFocus1.background(glassPanelColor()),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
             contentColor = fillFocus1.content(LocalContentColor.current),
         ) {
             Row(
@@ -132,7 +134,8 @@ fun PageSortControl(
                 .clickable { expanded = true }
                 .semantics { this.contentDescription = contentDescription },
             shape = RoundedCornerShape(50),
-            color = fillFocus2.background(MaterialTheme.colorScheme.surface),
+            color = fillFocus2.background(glassPanelColor()),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
             contentColor = fillFocus2.content(LocalContentColor.current),
         ) {
             Row(
