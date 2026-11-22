@@ -166,7 +166,8 @@ fun ScheduleScreen(
     // A television changes the day from the pickers at the top, a D-pad press away; the stepper is
     // for a thumb at the bottom of a phone that has scrolled the pickers out of reach.
     val showDayStepper = !device.isTv
-    val stepperClearance = if (showDayStepper) DayStepperHeight + 24.dp else 0.dp
+    // Stepper occupies its own footer rather than drawing over episode rows.
+    val stepperClearance = 0.dp
     // Fresh for each visit to the month view, the way it was when the calendar owned it.
     val calendarListState = remember(calendarView) { LazyListState() }
     // The stepper changes the day from wherever the month view has been scrolled to, and left alone
@@ -210,8 +211,8 @@ fun ScheduleScreen(
             }
         },
     ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
-            Column(Modifier.fillMaxSize()) {
+        Column(Modifier.padding(padding).fillMaxSize()) {
+            Column(Modifier.fillMaxWidth().weight(1f)) {
                 if (calendarView) {
                     CalendarSchedule(
                         vm = vm,
@@ -258,7 +259,7 @@ fun ScheduleScreen(
                         vm.selectDate(date)
                     },
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
                         .padding(horizontal = device.pagePadding)
                         .padding(bottom = LocalAppChromeBottomInset.current + 12.dp)
                         .widthIn(max = 520.dp),
