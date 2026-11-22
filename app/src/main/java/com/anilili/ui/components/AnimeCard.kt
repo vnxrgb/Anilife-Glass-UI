@@ -128,7 +128,7 @@ fun AnimeCard(
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
-                .glassCard(RoundedCornerShape(22.dp)),
+                .glassCard(RoundedCornerShape(18.dp)),
         ) {
             // Decorative: the title text below is part of the same merged semantics node.
             AsyncImage(

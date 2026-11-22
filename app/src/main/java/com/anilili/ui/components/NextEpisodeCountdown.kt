@@ -28,7 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.anilili.ui.theme.Midnight
-import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
 import java.util.Locale
 import kotlinx.coroutines.delay
 
@@ -60,7 +60,7 @@ fun NextEpisodeCountdown(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(glassPanelColor())
+            .glassCard(RoundedCornerShape(22.dp))
             .background(
                 Brush.horizontalGradient(
                     listOf(
@@ -69,7 +69,7 @@ fun NextEpisodeCountdown(
                     ),
                 ),
             )
-            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.32f), RoundedCornerShape(22.dp))
+            .border(1.dp, glassRimColor(), RoundedCornerShape(22.dp))
             .padding(horizontal = 18.dp, vertical = 16.dp)
             // One announcement rather than five, and phrased the way it would be said aloud: a
             // screen reader walking "EPISODE 20 WILL BE RELEASED IN" then "1 DAY 3 HRS…" reads the

@@ -61,8 +61,8 @@ fun PageTitleBar(
                         .appCanvas()
                         .background(
                             Brush.verticalGradient(
-                                0f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
-                                1f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.16f),
+                                0f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.045f),
+                                1f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.24f),
                             ),
                         )
                 },

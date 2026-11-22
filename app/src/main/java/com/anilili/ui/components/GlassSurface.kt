@@ -29,17 +29,17 @@ fun Modifier.glassCard(
     tint: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
 ): Modifier {
     val scheme = MaterialTheme.colorScheme
-    val rim = scheme.onSurface.copy(alpha = 0.23f)
+    val rim = scheme.onSurface.copy(alpha = 0.19f)
     // Raised highlight across the top edge, deeper translucent glass toward the foot.
     // Each card is still a single paint operation: no per-poster RenderEffect allocations.
     return this
         .clip(shape)
         .background(
             Brush.verticalGradient(
-                0f to scheme.onSurface.copy(alpha = 0.13f),
-                0.18f to tint.copy(alpha = 0.61f),
-                0.76f to tint.copy(alpha = 0.43f),
-                1f to scheme.surface.copy(alpha = 0.36f),
+                0f to scheme.onSurface.copy(alpha = 0.10f),
+                0.18f to tint.copy(alpha = 0.72f),
+                0.76f to tint.copy(alpha = 0.53f),
+                1f to scheme.surface.copy(alpha = 0.46f),
             ),
         )
         .border(1.dp, rim, shape)
@@ -47,7 +47,7 @@ fun Modifier.glassCard(
 
 @Composable
 fun glassPanelColor(): Color =
-    MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.57f)
+    MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.67f)
 
 /** Consistent selected glass pill, independent of the user's accent hue. */
 @Composable
@@ -55,7 +55,7 @@ fun glassSelectionColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alph
 
 /** A neutral hairline for translucent panels on light artwork and OLED black. */
 @Composable
-fun glassRimColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
+fun glassRimColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.20f)
 
 /**
  * Shared wallpaper-safe cinematic backdrop for handheld glass destinations.
@@ -69,21 +69,21 @@ fun glassRimColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.
 fun Modifier.glassAtmosphere(): Modifier {
     val scheme = MaterialTheme.colorScheme
     val customWallpaper = hasAppBackdrop()
-    val strength = if (customWallpaper) 0.35f else 1f
+    val strength = if (customWallpaper) 0.24f else 0.72f
     val cool = scheme.primary
     val warm = scheme.tertiary
     return this.appCanvas().drawBehind {
         val dimension = maxOf(size.width, size.height)
         drawRect(
             Brush.radialGradient(
-                colors = listOf(cool.copy(alpha = 0.19f * strength), Color.Transparent),
+                colors = listOf(cool.copy(alpha = 0.16f * strength), Color.Transparent),
                 center = Offset(size.width * 0.82f, size.height * 0.24f),
                 radius = dimension * 0.78f,
             ),
         )
         drawRect(
             Brush.radialGradient(
-                colors = listOf(warm.copy(alpha = 0.15f * strength), Color.Transparent),
+                colors = listOf(warm.copy(alpha = 0.13f * strength), Color.Transparent),
                 center = Offset(size.width * 0.12f, size.height * 0.89f),
                 radius = dimension * 0.72f,
             ),
