@@ -1,5 +1,4 @@
-Batch 2 coordinated Home / Details / Browse / floating navigation glass milestone.
-Source implementation commit: 302c16f6664387b3293357284a0d47ff18d09065
-Check: mobile unit tests, lint and one universal mobile APK; Android CI also checks TV.
-Includes consistent neutral glass across search filters and nav, hero artwork/CTA contrast, bounded feature-page dots, accessible Details tabs and overflow-safe facts, narrow navigation, resilient Browse grid columns and pagination guards.
-Pending separate physical-device screenshot comparison and real playback / casting / login smoke test; passing CI is not a claim of visual acceptance.
+Batch 2 completed implementation milestone preview.
+Source commit: ae4bec5c8102ed9f1e1fb679382d831d230ca9e2
+Scope: Home hero pagination/spotlight, Details layout and expandable overview, Browse category and clear-search controls, floating navigation adaptive glass, shared theme-neutral glass surfaces, accessibility labels and regression tests.
+This is a milestone build, NOT a device-verified release. Compile/test/lint required; physical-device screenshots and playback acceptance still pending.
