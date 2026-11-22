@@ -3415,17 +3415,27 @@ private fun SettingsSectionCard(
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = 6.dp),
+            Modifier.fillMaxWidth().padding(vertical = 20.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionBadge(badged) {
-                Icon(
-                    tile.icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(26.dp),
-                    tint = fillFocus1.content(LocalMidnightAccent.current),
-                )
+            // A softly tinted emblem separates the glyph from the glass tile.
+            // Accent stays with the icon; the pane itself adapts neutrally to the theme.
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(LocalMidnightAccent.current.copy(alpha = 0.11f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                SectionBadge(badged) {
+                    Icon(
+                        tile.icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(25.dp),
+                        tint = fillFocus1.content(LocalMidnightAccent.current),
+                    )
+                }
             }
             Text(
                 tile.title,
@@ -3433,6 +3443,7 @@ private fun SettingsSectionCard(
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
+                minLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 color = fillFocus1.content(LocalContentColor.current),
             )
