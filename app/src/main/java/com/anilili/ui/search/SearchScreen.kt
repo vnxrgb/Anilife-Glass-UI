@@ -1328,6 +1328,7 @@ private fun ResultsGrid(
                         "Explicit titles are hidden by your settings.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 18.dp),
                     )
                     val controlFocus4 = rememberFocusFill()
