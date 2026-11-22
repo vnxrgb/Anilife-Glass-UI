@@ -899,21 +899,21 @@ private fun ProfileHero(
             .fillMaxWidth()
             .glassCard(shape),
     ) {
-        Column(Modifier.fillMaxWidth().padding(if (device.isTv) 20.dp else 12.dp)) {
+        Column(Modifier.fillMaxWidth().padding(if (device.isTv) 20.dp else 16.dp)) {
             Text("Your anime, in one place", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
             Text(
                 "Connect AniList or MyAnimeList to browse every list, score, and episode progress from Anilife.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = if (device.isTv) 5.dp else 3.dp),
+                modifier = Modifier.padding(top = if (device.isTv) 5.dp else 6.dp),
             )
             // One row per way in, each the full width of the card. The buttons these replace
             // sized themselves to their words, so "Login with MAL" wrapped onto two lines beside
             // a one-line AniList button and the TV link sat alone underneath — three shapes for
             // three equal choices, and nothing but the words to tell the services apart.
             Column(
-                Modifier.padding(top = if (device.isTv) 16.dp else 8.dp),
-                verticalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 6.dp),
+                Modifier.padding(top = if (device.isTv) 16.dp else 12.dp),
+                verticalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 8.dp),
             ) {
                 SignInOptionRow(
                     title = "Continue with AniList",
