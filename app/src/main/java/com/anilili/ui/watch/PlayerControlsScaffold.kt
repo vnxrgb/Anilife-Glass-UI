@@ -241,6 +241,11 @@ internal fun playerActionRowScale(naturalWidthPx: Int, availableWidthPx: Int): F
     return (availableWidthPx.toFloat() / naturalWidthPx).coerceIn(0f, 1f)
 }
 
+/** Width physically occupied by the action dock after fitting it into the available space. */
+internal fun playerActionRowDrawnWidth(naturalWidthPx: Int, availableWidthPx: Int): Int =
+    (naturalWidthPx.coerceAtLeast(0) * playerActionRowScale(naturalWidthPx, availableWidthPx))
+        .roundToInt().coerceIn(0, availableWidthPx.coerceAtLeast(0))
+
 /**
  * How much of the episode has been fetched, as a fraction of its length.
  *
@@ -651,7 +656,10 @@ private fun PlayerActionRow(
         // The row's own box follows what is drawn, so the bar measures the height it can see and the
         // seek anchor above it stays true.
         val height = (naturalHeight * scale).roundToInt().coerceIn(0, constraints.maxHeight)
-        layout(width = naturalWidth.coerceAtMost(constraints.maxWidth), height = height) {
+        // Keep the glass rim and hit region matched to the scaled actions.
+        // Narrow portrait players must not draw an empty dock beyond the last icon.
+        val drawnWidth = playerActionRowDrawnWidth(naturalWidth, constraints.maxWidth)
+        layout(width = drawnWidth, height = height) {
             var x = 0f
             placeables.forEach { placeable ->
                 placeable.placeWithLayer(
