@@ -11,6 +11,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -298,6 +299,7 @@ fun MidnightSettingSwitchRow(
         enabled = enabled,
         onClick = { onCheckedChange(!checked) },
         role = Role.Switch,
+        checked = checked,
         title = title,
         description = description,
         danger = false,
@@ -312,6 +314,7 @@ private fun MidnightSettingRowScaffold(
     enabled: Boolean,
     onClick: (() -> Unit)?,
     role: Role,
+    checked: Boolean? = null,
     title: String,
     description: String?,
     danger: Boolean,
@@ -395,13 +398,23 @@ private fun MidnightSettingRowScaffold(
                 if (focused) spotlight?.onReached?.invoke()
             }
             .then(
-                if (onClick != null) {
-                    Modifier.clickable(enabled = enabled, role = role) {
+                when {
+                    // Toggleable makes the checked state available to TalkBack, while
+                    // retaining the same row action for touch and D-pad interaction.
+                    onClick != null && checked != null -> Modifier.toggleable(
+                        value = checked,
+                        enabled = enabled,
+                        role = Role.Switch,
+                        onValueChange = {
+                            spotlight?.onReached?.invoke()
+                            onClick()
+                        },
+                    )
+                    onClick != null -> Modifier.clickable(enabled = enabled, role = role) {
                         spotlight?.onReached?.invoke()
                         onClick()
                     }
-                } else {
-                    Modifier
+                    else -> Modifier
                 },
             ),
     ) {
