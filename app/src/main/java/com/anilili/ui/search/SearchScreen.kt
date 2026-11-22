@@ -1004,7 +1004,7 @@ private fun ActiveFilterRow(vm: SearchViewModel) {
                 trailingIcon = {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = "Remove ${chip.label}",
+                        contentDescription = null,
                         modifier = Modifier.size(16.dp),
                     )
                 },

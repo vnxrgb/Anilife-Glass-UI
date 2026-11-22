@@ -98,6 +98,7 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -1403,6 +1404,7 @@ private fun Description(description: String?) {
             .clickable(onClickLabel = if (expanded) "Collapse overview" else "Expand overview") {
                 expanded = !expanded
             }
+            .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" }
             .padding(horizontal = 14.dp, vertical = 13.dp),
     ) {
         Text("Overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)

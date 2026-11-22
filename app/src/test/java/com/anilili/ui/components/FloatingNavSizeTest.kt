@@ -13,5 +13,7 @@ class FloatingNavSizeTest {
         assertFalse(floatingNavShowsCaption(57.dp))
         assertTrue(floatingNavShowsCaption(58.dp))
         assertTrue(floatingNavShowsCaption(64.dp))
+        assertFalse(floatingNavShowsCaption((-1).dp))
+        assertTrue(floatingNavShowsCaption(88.dp))
     }
 }
