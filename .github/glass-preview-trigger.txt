@@ -1,4 +1,5 @@
-Batch 2 completed implementation milestone preview.
-Source commit: ae4bec5c8102ed9f1e1fb679382d831d230ca9e2
-Scope: Home hero pagination/spotlight, Details layout and expandable overview, Browse category and clear-search controls, floating navigation adaptive glass, shared theme-neutral glass surfaces, accessibility labels and regression tests.
-This is a milestone build, NOT a device-verified release. Compile/test/lint required; physical-device screenshots and playback acceptance still pending.
+Batch 4 universal APK preview milestone
+Requested after user noticed Android CI was not publishing an APK.
+Source commit: baa8ce2cd915cfeff46ff1b72e3cf05e08fc1e05
+Build mobile universal debug APK with unit tests and lint, publish exactly one direct APK to glass-ui-preview.
+Do not modify player; branch feature/unified-glass-ui only. Preview is not device-verified stable release.
