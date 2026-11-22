@@ -5,6 +5,7 @@ package com.anilili.ui.home
 
 
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassAtmosphere
 import com.anilili.ui.theme.appCanvasFade
 import com.anilili.ui.theme.appCanvas
 import androidx.compose.animation.core.animateFloatAsState
@@ -297,8 +298,8 @@ fun HomeScreen(
     }
 
     Scaffold(
-        modifier = modifier.appCanvas(),
-        containerColor = canvasColor(),
+        modifier = modifier.then(if (device.isTv) Modifier.appCanvas() else Modifier.glassAtmosphere()),
+        containerColor = if (device.isTv) canvasColor() else Color.Transparent,
         topBar = {
             ScrollAwareTopBar {
                 HomeTopChrome(

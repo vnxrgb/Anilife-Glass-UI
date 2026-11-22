@@ -1,6 +1,7 @@
 package com.anilili.ui.search
 
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassAtmosphere
 import com.anilili.ui.theme.appCanvas
 import android.view.KeyEvent as AndroidKeyEvent
 import android.view.inputmethod.EditorInfo
@@ -333,7 +334,7 @@ fun SearchScreen(
             // The floating bar holds this itself, and the grid scrolls the whole window the way
             // Home's does — rows pass under the status bar as the bar retreats.
             .then(if (headerFloats) Modifier else Modifier.statusBarsPadding())
-            .appCanvas(),
+            .then(if (device.isTv) Modifier.appCanvas() else Modifier.glassAtmosphere()),
     ) {
         Column(Modifier.fillMaxSize()) {
             if (!headerFloats) {

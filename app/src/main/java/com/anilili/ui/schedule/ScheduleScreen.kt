@@ -1,6 +1,7 @@
 package com.anilili.ui.schedule
 
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassAtmosphere
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -186,8 +187,8 @@ fun ScheduleScreen(
     }
 
     Scaffold(
-        containerColor = canvasColor(),
-        modifier = modifier,
+        containerColor = if (device.isTv) canvasColor() else Color.Transparent,
+        modifier = modifier.then(if (device.isTv) Modifier else Modifier.glassAtmosphere()),
         topBar = {
             ScrollAwareTopBar {
                 PageTitleBar(

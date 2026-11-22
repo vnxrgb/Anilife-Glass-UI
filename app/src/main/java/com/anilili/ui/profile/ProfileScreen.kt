@@ -4,6 +4,7 @@ package com.anilili.ui.profile
 
 
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassAtmosphere
 import android.Manifest
 import android.net.Uri
 import android.widget.Toast
@@ -578,8 +579,8 @@ fun ProfileScreen(
     }
 
     Scaffold(
-        containerColor = canvasColor(),
-        modifier = modifier,
+        containerColor = if (device.isTv) canvasColor() else Color.Transparent,
+        modifier = modifier.then(if (device.isTv) Modifier else Modifier.glassAtmosphere()),
         topBar = {
             // A signed-in television names the page in its hero instead, over the account's art.
             if (!(device.isTv && loggedIn)) ScrollAwareTopBar {

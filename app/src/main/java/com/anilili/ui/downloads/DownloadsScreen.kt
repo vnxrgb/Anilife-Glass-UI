@@ -6,6 +6,7 @@ import com.anilili.ui.theme.appCanvas
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import com.anilili.ui.components.glassAtmosphere
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -272,7 +273,7 @@ fun DownloadsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .appCanvas(),
+            .then(if (device.isTv) Modifier.appCanvas() else Modifier.glassAtmosphere()),
         // No statusBarsPadding here: PageTitleBar applies its own, and this page has no Scaffold to
         // arbitrate between them, so both would be honoured and the title would sit a status bar
         // lower than every other page's.

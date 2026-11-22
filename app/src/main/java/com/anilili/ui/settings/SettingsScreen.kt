@@ -1,6 +1,7 @@
 package com.anilili.ui.settings
 
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassAtmosphere
 import com.anilili.ui.theme.drawAppCanvas
 import com.anilili.ui.theme.LocalAppBackdrop
 import android.Manifest
@@ -2014,8 +2015,8 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        containerColor = canvasColor(),
-        modifier = modifier,
+        containerColor = if (device.isTv) canvasColor() else Color.Transparent,
+        modifier = modifier.then(if (device.isTv) Modifier else Modifier.glassAtmosphere()),
         topBar = {
             if (device.isTv) return@Scaffold
             ScrollAwareTopBar {

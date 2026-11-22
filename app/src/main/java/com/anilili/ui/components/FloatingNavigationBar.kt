@@ -71,7 +71,7 @@ data class FloatingNavItem(
 )
 
 /** The capsule's one height; scrolling no longer changes it. */
-val FloatingNavBarExpandedHeight = 56.dp
+val FloatingNavBarExpandedHeight = 58.dp
 val FloatingNavBarMargin = 12.dp
 
 /** An idle icon's slot: the 48dp touch minimum, so the rest is free for the open pill's label. */
@@ -264,8 +264,13 @@ private fun FloatingNavIcon(
             .clip(shape)
             .then(
                 if (selected) Modifier
-                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f))
-                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.23f), shape)
+                    .background(
+                        Brush.verticalGradient(
+                            0f to MaterialTheme.colorScheme.primary.copy(alpha = 0.42f),
+                            1f to MaterialTheme.colorScheme.primary.copy(alpha = 0.19f),
+                        ),
+                    )
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.52f), shape)
                 else Modifier
             )
             .selectable(

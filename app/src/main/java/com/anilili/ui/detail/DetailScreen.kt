@@ -2,6 +2,7 @@ package com.anilili.ui.detail
 
 import com.anilili.ui.nav.AnililiLink
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassAtmosphere
 import com.anilili.ui.theme.appCanvasFade
 import com.anilili.ui.theme.appCanvas
 import android.content.Context
@@ -350,8 +351,8 @@ private fun DetailScreenBody(
     }
 
     Scaffold(
-        modifier = Modifier.appCanvas(),
-        containerColor = canvasColor(),
+        modifier = if (device.isTv) Modifier.appCanvas() else Modifier.glassAtmosphere(),
+        containerColor = if (device.isTv) canvasColor() else Color.Transparent,
         topBar = {
             ScrollAwareTopBar {
                 TopAppBar(

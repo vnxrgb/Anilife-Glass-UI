@@ -1,0 +1,98 @@
+# AniLife Glass UI — Implementation and acceptance checklist
+
+**Source of truth:** The six-panel user-approved Glass UI mockup (Home, Details, Browse, cinematic player, Settings, brand/system card) and the separate YouTube-style mobile ambient-player reference. **Target:** mobile Android. Preserve Android TV behaviour.
+
+**Status terminology:** [x] implemented in repository code; [ ] not yet verified or incomplete. Passing Gradle/CI does not imply a visual match. Do not check a design acceptance item until screenshots from a real device verify it.
+
+## 0. Guardrails and release gates
+- [x] Develop on `feature/unified-glass-ui`, keep stable/main unchanged during implementation
+- [x] Maintain one universal mobile APK preview workflow and direct release asset
+- [ ] Verify all of the below visually against reference at phone sizes 360dp, 393dp and tablet
+- [ ] Confirm light, dark and every user-selected theme/accent; glass panes remain neutral and translucent, accent glow adapts
+- [ ] Preserve user-configured backgrounds, disabled blur setting, and low-end/low-RAM performance
+- [ ] Verify accessibility contrast, dynamic text scale, touch targets, focus/keyboard/remote and screen reader labels
+- [ ] Verify Android CI, unit tests, lint and APK build for final commit
+- [ ] Verify playback, source changing/fallback, casting, subtitles, downloaded/offline episodes, resume, notifications, list/account sync
+- [ ] Verify TV/Fire TV layouts and remote navigation were not modified/regressed
+- [ ] Verify release SHA = successful latest commit; asset post-dates build; publish **one** `anilife-glass-universal.apk`, no ZIP
+- [ ] Record real-device screenshots of Home, Details, Browse, Settings, My List, Downloads, Schedule, portrait Watch, fullscreen landscape Player
+
+## 1. Universal Glass foundation
+- [x] Reuse theme-driven Material colour scheme, not hard-coded purple glass
+- [x] Reusable `glassCard`, `glassPanelColor`, `glassRimColor`
+- [x] Theme-coloured soft atmospheric wash behind primary phone destinations (`glassAtmosphere`)
+- [x] Shared rounded poster cards, selected navigation accents and transparent panel primitives
+- [ ] Transparent/blurred/frosted treatment consistently applied to **all** dialog/sheet/popover and settings subpages
+- [ ] Add consistent luminous inner rims, shadow depth, optional Haze blur fallback for Android below 12
+- [ ] Standardize paddings, icon sizes, heading/body text, small compact chips, button height, loading/empty/error states
+- [ ] Verify gradient effects do not add flicker, high overdraw, frame drops, or wash out text
+
+## 2. Home
+- [x] Inset rounded hero and reactive backdrop with logo or text fallback
+- [x] Hero Watch now and Details actions
+- [ ] Match screenshot: compact hero, crisp title/meta, integrated inner gradient, tinted glass CTAs and progress dots
+- [ ] Continue Watching **horizontal thumbnails** with resume overlay, actual progress strip and remaining time
+- [ ] Trending Now and New Episodes rails with small poster cards and consistent section actions
+- [ ] Ensure meaningful content visible above fold on average phones (avoid giant hero)
+- [ ] Ensure all home personalization, reordering, long-press, loading and TV navigation work
+
+## 3. Anime Details
+- [x] Existing cover + logo header, studio and series stats, watch/list actions
+- [ ] Compact two-column poster/title composition with legible blurred backdrop
+- [ ] Purple/accent only for CTAs/selected Overview/Episodes/Related pill, not glass base
+- [ ] Small equidistant status/format/year cards and frosted countdown with icon
+- [ ] Compact genre pills, description, episodic progress and expandable Overview
+- [ ] Episode browser/cards and season selection; long-running title virtualization
+- [ ] Verify source/studio links, list actions, Watched toggle and Watch/Continue logic
+
+## 4. Browse
+- [x] Search/filter/category chips, 3-column media grid, shared rounded posters
+- [ ] Real frosted compact search and filter buttons with consistent background
+- [ ] One unified selected-chip treatment and clean scrolling/collapsing header
+- [ ] Condense poster title/meta typography to match screenshot without ellipsis overload
+- [ ] Verify filtering, categories, pagination, query keyboard, TV focus and season browsing
+
+## 5. Portrait Watch and ambient mode
+- [x] Sample native video frames and transition between subdued colours over watch page
+- [x] Video remains clear, ambient wash extends underneath synopsis and episode controls
+- [ ] Tune to YouTube mobile example: richer **blurred** frame-reactive blooms, no flat muddy fill or abrupt colour shifts
+- [ ] Provide user control to enable/disable/adjust ambient and honour existing player configuration
+- [ ] Frost synopsis, source/category, action buttons and active episode without obscuring readability
+- [ ] Verify embedded players, protected surfaces, black frames and low-RAM fallback
+
+## 6. Fullscreen cinematic player
+- [x] Existing playback, subtitles, seek, skip, cast, source, fullscreen and settings interactions
+- [x] Neutral translucent time/transport buttons
+- [ ] Match reference: artwork unobscured, slim glowing seekbar, compact transport and glass bottom toolbar
+- [ ] Group Episodes, Audio & Subtitles, Speed, Quality in a rounded frosted dock (existing features must remain)
+- [ ] Style overlays for settings/source selection/quality and handle small & ultrawide layouts
+- [ ] Verify subtitle readability, gesture seek/lock and fullscreen rotation, accessibility and low-end FPS
+
+## 7. Floating navigation and safe areas
+- [x] Five fixed-width Home/My List/Browse/Downloads/Profile items
+- [x] Stable selected indicator with accent-colour light and neutral adaptive bar
+- [ ] Compact height/padding and animated soft indicator/glow to visually match reference
+- [ ] No page content hidden behind capsule or floating companions (scroll to final row)
+- [ ] Verify hidden states for login, player fullscreen, sheets, TV and keyboard
+
+## 8. Settings
+- [x] Category grid with rounded frosted tiles, icon emphasis and caption spacing
+- [ ] Reduce tile size/spacing toward the screenshot and add shared background atmosphere
+- [ ] Style every subpage: Player, Subtitles, Downloads, Servers, Accounts, Notifications, Content, Appearance, Data, App, About
+- [ ] Validate all toggles, pickers, focus, settings search, theme preview, back navigation
+
+## 9. My List, Profile, Downloads
+- [x] My List filters, watchlist, Continue Watching, account/sync and sign-in paths exist
+- [x] Neutral glass account and download cards
+- [ ] Match reference spacing and compact progress thumbnails for Continue Watching
+- [ ] Frost search, filter, lists, account sheet and empty/error states consistently
+- [ ] Verify list creation, edit/move/remove, sync and downloads deletion/playback/export
+
+## 10. Schedule and secondary screens
+- [x] Neutral date selection chips + day stepper fixed in a reserved footer (no overlay)
+- [ ] Match spacing, timeline, card styles and ensure footer never covers items
+- [ ] Apply glass system to notifications, calendar dialogs, list dialogs, update/splash/other entry points
+- [ ] Verify reminders, timezone updates, accessibility and navigation
+
+## Release criteria
+An APK build is only **technical readiness**. A final release requires all core screens to match the approved mockup at realistic phone sizes AND player ambient mode to behave like the supplied YouTube reference, with all regression and accessibility gates checked. Leave this file honest: do not mark items done based solely on source changes or a successful GitHub Action.
