@@ -2470,12 +2470,34 @@ private fun SavedAnimeCardData.progressLabel(): String? = when {
 private fun EmptyPanel(text: String) {
     val device = LocalAppDeviceProfile.current
     Panel(Modifier.padding(horizontal = device.pagePadding)) {
-        Text(
-            text,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
-        )
+        if (text == "Tap the heart on any anime to save it" && !device.isTv) {
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                Icon(
+                    Icons.Default.SaveAlt,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp),
+                )
+                Text("Your watchlist is empty", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Tap the heart on any anime to save it for later.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
+        } else {
+            Text(
+                text,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
+            )
+        }
     }
 }
 

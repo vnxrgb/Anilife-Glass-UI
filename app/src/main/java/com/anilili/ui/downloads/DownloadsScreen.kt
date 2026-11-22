@@ -288,6 +288,7 @@ fun DownloadsScreen(
                 selecting -> "${selectedEpisodes.size} selected"
                 else -> openSeries?.title ?: "Downloads"
             },
+            subtitle = if (allSeries.isEmpty()) "Offline anime for you" else null,
             subtitle = when {
                 selecting -> selectionSummary(selectedEpisodes)
                 else -> downloadsSummary(openSeries, allSeries)
@@ -322,7 +323,16 @@ fun DownloadsScreen(
         )
 
         if (allSeries.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 24.dp), contentAlignment = Alignment.Center) {
+            // Center within the actual usable content, not underneath the floating capsule.
+            Box(
+                Modifier.fillMaxSize().padding(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = 16.dp,
+                    bottom = LocalAppChromeBottomInset.current + 12.dp,
+                ),
+                contentAlignment = Alignment.Center,
+            ) {
                 Box(
                     Modifier
                         .fillMaxWidth()

@@ -295,8 +295,10 @@ fun HomeScreen(
     // glass switched off, which takes the recording away along with the blur.
     val homeGlass = glassEnabled(GlassSection.HOME)
     val homeBackdrop = if (homeGlass) remember { HazeState() } else null
-    val chromeOverHero by remember(hasSpotlight) {
-        derivedStateOf { hasSpotlight && homeListState.firstVisibleItemIndex == 0 }
+    val chromeOverHero by remember(hasSpotlight, device.isTv) {
+        // On phone the hero now starts BELOW the wordmark and genre chips; no artwork
+        // passes underneath the header. Keep the old edge-to-edge treatment on TV.
+        derivedStateOf { device.isTv && hasSpotlight && homeListState.firstVisibleItemIndex == 0 }
     }
 
     Scaffold(
@@ -594,7 +596,7 @@ private fun HomeContent(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = if (spotlight.isEmpty()) topOverlay else 0.dp,
+                    top = if (device.isTv && spotlight.isNotEmpty()) 0.dp else topOverlay,
                     bottom = contentPadding.calculateBottomPadding() + chromeBottomInset +
                         AppChromeListBottomGap,
                 ),
@@ -611,7 +613,9 @@ private fun HomeContent(
                             val previous = history.firstOrNull { it.anilistId == id }
                             if (previous != null) onResume(previous) else onAnimeClick(id)
                         },
-                        topInset = topOverlay,
+                        // Header clearance is owned by the scrolling list on phones.
+                        // Adding it to the hero inflated the artwork and misaligned its CTAs.
+                        topInset = if (device.isTv) topOverlay else 0.dp,
                         onMoveDown = if (showContinue) {
                             { runCatching { continueFocusRequester.requestFocus() }.isSuccess }
                         } else {
@@ -819,7 +823,7 @@ private fun HeroPager(
         device.isTablet -> 274.dp
         // Give the feed enough visual room to show Continue Watching above the fold
         // on a 360-393dp phone while keeping the main featured artwork readable.
-        else -> 246.dp
+        else -> 270.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -1078,7 +1082,7 @@ private fun HeroCard(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth(if (device.isExpanded) 0.8f else 1f)
                 .padding(horizontal = device.pagePadding)
-                .padding(top = if (device.isTv) 16.dp else 12.dp, bottom = if (device.isTv) 26.dp else 23.dp),
+                .padding(top = if (device.isTv) 16.dp else 8.dp, bottom = if (device.isTv) 26.dp else 42.dp),
             horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
             HeroMetaRow(media)
@@ -1091,7 +1095,7 @@ private fun HeroCard(
                 modifier = Modifier
                     .padding(top = if (device.isTv) 10.dp else 7.dp)
                     .fillMaxWidth(if (device.isExpanded) 0.6f else 0.90f)
-                    .height(if (device.isTv || device.isExpanded) 88.dp else 66.dp),
+                    .height(if (device.isTv || device.isExpanded) 88.dp else 58.dp),
             ) {
                 ShrinkingTitle(
                     text = media.title.preferred,
@@ -1121,7 +1125,7 @@ private fun HeroCard(
                 // The hero is a destination as well as artwork. Keep the actionable
                 // call-to-action visible instead of relying on an undocumented poster tap.
                 Row(
-                    modifier = Modifier.padding(top = 7.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 7.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -1132,6 +1136,7 @@ private fun HeroCard(
                             contentColor = Color.White,
                         ),
                         modifier = Modifier
+                            .weight(1f)
                             .clip(RoundedCornerShape(50))
                             .background(
                                 // Neutral glass keeps the spotlight CTA readable over colourful art.
@@ -1150,6 +1155,7 @@ private fun HeroCard(
                         Text("Watch now", fontWeight = FontWeight.Bold)
                     }
                     OutlinedButton(
+                        modifier = Modifier.weight(1f),
                         onClick = { onAnimeClick(media.id) },
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = Color.Black.copy(alpha = 0.34f),

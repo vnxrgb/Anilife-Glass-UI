@@ -38,6 +38,7 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -3440,6 +3441,7 @@ private fun SettingsSectionCard(
     val fillFocus1 = rememberFocusFill()
     Surface(
         modifier = modifier
+            .heightIn(min = 92.dp)
             .focusFill(fillFocus1, RoundedCornerShape(22.dp))
             .glassCard(RoundedCornerShape(22.dp))
             .clickable(role = Role.Button, onClickLabel = "Open ${tile.title} settings", onClick = onClick),
