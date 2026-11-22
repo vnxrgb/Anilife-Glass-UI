@@ -1035,9 +1035,12 @@ private fun HeroCard(
             Box(
                 Modifier.fillMaxSize().appCanvasFade { canvas ->
                     Brush.verticalGradient(
-                        0.0f to Color.Black.copy(.40f),
-                        0.42f to Color.Black.copy(.16f),
-                        0.72f to Color.Black.copy(.53f),
+                        // The centre of a light poster is often white: retain the artwork
+                        // while giving the logo, genre pill and CTA rows a stable contrast bed.
+                        0.0f to Color.Black.copy(.36f),
+                        0.34f to Color.Black.copy(.20f),
+                        0.62f to Color.Black.copy(.46f),
+                        0.83f to Color.Black.copy(.72f),
                         1f to canvas,
                     )
                 },
@@ -1436,9 +1439,10 @@ private fun RailTitle(title: String, dragHandle: Modifier?, modifier: Modifier =
             title,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            // All the width the handle leaves, so the title keeps one line and the space after a
-            // short one is still something to hold.
+            // Keep long row names from stealing space from Grid/Rail controls on small phones.
             modifier = if (dragHandle != null) Modifier.weight(1f) else Modifier,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         if (dragHandle != null) {
             Icon(
@@ -1489,7 +1493,7 @@ private fun MediaRail(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(4.dp))
-                    Text(if (isExpanded) "Carousel" else "Expand")
+                    Text(if (isExpanded) "Rail" else "Grid")
                 }
             }
         }

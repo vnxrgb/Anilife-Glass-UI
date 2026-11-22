@@ -73,7 +73,7 @@ fun glassRimColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.
 fun Modifier.glassAtmosphere(): Modifier {
     val scheme = MaterialTheme.colorScheme
     val customWallpaper = hasAppBackdrop()
-    val strength = if (customWallpaper) 0.20f else 0.65f
+    val strength = if (customWallpaper) 0.18f else 0.56f
     val cool = scheme.primary
     val warm = scheme.tertiary
     return this.appCanvas().drawBehind {

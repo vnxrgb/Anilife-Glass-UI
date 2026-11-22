@@ -172,7 +172,8 @@ fun FloatingNavigationBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(FloatingNavBarExpandedHeight)
-                .shadow(6.dp, BarShape)
+                // Reduce the dark halo on OLED; the rim carries the depth.
+                .shadow(4.dp, BarShape)
                 .clip(BarShape)
                 .then(
                     if (blurred) {

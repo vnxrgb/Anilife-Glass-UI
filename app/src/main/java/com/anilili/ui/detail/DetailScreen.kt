@@ -967,11 +967,6 @@ private fun DetailHero(
                     .aspectRatio(2f / 3f)
                     .focusHighlight(RoundedCornerShape(18.dp))
                     .glassCard(RoundedCornerShape(18.dp))
-                    .border(
-                        1.dp,
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f),
-                        RoundedCornerShape(18.dp),
-                    )
                     .clickable(onClickLabel = "View larger cover", onClick = onCoverClick),
             ) {
                 AsyncImage(
@@ -1829,8 +1824,8 @@ private fun DetailSectionHeader(
             .padding(
                 start = LocalAppDeviceProfile.current.pagePadding,
                 end = LocalAppDeviceProfile.current.pagePadding,
-                top = 14.dp,
-                bottom = 2.dp,
+                top = 12.dp,
+                bottom = 4.dp,
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1839,6 +1834,8 @@ private fun DetailSectionHeader(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         if (trailing != null) {
             Text(
