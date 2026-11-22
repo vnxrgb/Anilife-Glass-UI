@@ -657,7 +657,11 @@ private fun SearchTopBar(
                             val extraFocusSeason = rememberFocusFill()
                             FilterChip(
                 shape = RoundedCornerShape(50),
-                                colors = extraFocusSeason.chipColors(FilterChipDefaults.filterChipColors()),
+                                colors = extraFocusSeason.chipColors(FilterChipDefaults.filterChipColors(
+                    containerColor = glassPanelColor(),
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                )),
                                 selected = vm.filters.season != null,
                                 onClick = {
                                     if (vm.filters.season != null) vm.clearSeason() else vm.startSeasonBrowsing()
@@ -673,7 +677,11 @@ private fun SearchTopBar(
                             val extraFocus3 = rememberFocusFill()
                             FilterChip(
                 shape = RoundedCornerShape(50),
-                                colors = extraFocus3.chipColors(FilterChipDefaults.filterChipColors()),
+                                colors = extraFocus3.chipColors(FilterChipDefaults.filterChipColors(
+                    containerColor = glassPanelColor(),
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                )),
                                 selected = vm.filters.format == "MOVIE",
                                 onClick = { vm.setFormat(if (vm.filters.format == "MOVIE") null else "MOVIE") },
                                 label = { Text("Movies") }, modifier = Modifier.focusFill(extraFocus3, RoundedCornerShape(50)),)
@@ -682,7 +690,11 @@ private fun SearchTopBar(
                             val extraFocus4 = rememberFocusFill()
                             FilterChip(
                 shape = RoundedCornerShape(50),
-                                colors = extraFocus4.chipColors(FilterChipDefaults.filterChipColors()),
+                                colors = extraFocus4.chipColors(FilterChipDefaults.filterChipColors(
+                    containerColor = glassPanelColor(),
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                )),
                                 selected = genre in vm.filters.genres,
                                 onClick = { vm.toggleGenre(genre) },
                                 label = { Text(genre) }, modifier = Modifier.focusFill(extraFocus4, RoundedCornerShape(50)),)
@@ -974,7 +986,11 @@ private fun ActiveFilterRow(vm: SearchViewModel) {
             val activeFocus = rememberFocusFill()
             FilterChip(
                 shape = RoundedCornerShape(50),
-                colors = activeFocus.chipColors(FilterChipDefaults.filterChipColors()),
+                colors = activeFocus.chipColors(FilterChipDefaults.filterChipColors(
+                    containerColor = glassPanelColor(),
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                )),
                 selected = true,
                 onClick = chip.onRemove,
                 label = { Text(chip.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -1961,7 +1977,11 @@ private fun FilterSheet(
                             val controlFocus7 = rememberFocusFill()
                             FilterChip(
                 shape = RoundedCornerShape(50),
-                                colors = controlFocus7.chipColors(FilterChipDefaults.filterChipColors()),
+                                colors = controlFocus7.chipColors(FilterChipDefaults.filterChipColors(
+                    containerColor = glassPanelColor(),
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                )),
                                 selected = filters.studioId == studio.id,
                                 onClick = { vm.selectStudio(studio) },
                                 label = { Text(name) },
@@ -2251,7 +2271,11 @@ private fun TriStateFilterChip(
             ),
         )
     } else {
-        chipFocus.chipColors(FilterChipDefaults.filterChipColors())
+        chipFocus.chipColors(FilterChipDefaults.filterChipColors(
+                    containerColor = glassPanelColor(),
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.26f),
+                    selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                ))
     }
     FilterChip(
                 shape = RoundedCornerShape(50),

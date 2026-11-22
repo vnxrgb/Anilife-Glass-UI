@@ -596,7 +596,14 @@ private fun PlayerActionRow(
     content: @Composable () -> Unit,
 ) {
     val spacingPx = with(LocalDensity.current) { horizontalSpacing.roundToPx() }
-    Layout(content = content) { measurables, constraints ->
+    Layout(
+        content = content,
+        modifier = Modifier
+            .clip(RoundedCornerShape(28.dp))
+            .background(Color.Black.copy(alpha = 0.40f))
+            .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(28.dp))
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+    ) { measurables, constraints ->
         val placeables = measurables.map { it.measure(Constraints()) }
         val gaps = spacingPx * (placeables.size - 1).coerceAtLeast(0)
         val naturalWidth = placeables.sumOf { it.width } + gaps

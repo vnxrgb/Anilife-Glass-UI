@@ -924,8 +924,8 @@ private fun DetailHero(
 ) {
     val device = LocalAppDeviceProfile.current
     val banner = info.bannerImage ?: info.coverImage.best
-    val bannerHeight = topInset + if (device.isExpanded) 230.dp else 190.dp
-    Box(Modifier.fillMaxWidth().height(topInset + if (device.isExpanded) 330.dp else 292.dp)) {
+    val bannerHeight = topInset + if (device.isExpanded) 208.dp else 164.dp
+    Box(Modifier.fillMaxWidth().height(topInset + if (device.isExpanded) 295.dp else 248.dp)) {
         AsyncImage(
             model = banner,
             contentDescription = null,
@@ -948,7 +948,7 @@ private fun DetailHero(
         ) {
             Box(
                 modifier = Modifier
-                    .width(if (device.isExpanded) 126.dp else 98.dp)
+                    .width(if (device.isExpanded) 118.dp else 94.dp)
                     .aspectRatio(2f / 3f)
                     .focusHighlight(RoundedCornerShape(20.dp))
                     .clip(RoundedCornerShape(20.dp))
@@ -1298,9 +1298,9 @@ private fun QuickFacts(info: Media) {
             // wrapped, lost its second line to maxLines, and left "Not yet" at the card's left edge.
             Column(
                 modifier = Modifier
-                    .widthIn(min = 112.dp)
-                    .glassCard(RoundedCornerShape(22.dp))
-                    .padding(12.dp),
+                    .widthIn(min = 102.dp)
+                    .glassCard(RoundedCornerShape(20.dp))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1, softWrap = false)

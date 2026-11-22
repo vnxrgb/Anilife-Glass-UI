@@ -2106,8 +2106,8 @@ fun SettingsScreen(
                 val columns = if (device.isTv) 5 else 3
                 items(sectionTiles.chunked(columns), key = { it.first().id }) { row ->
                     Row(
-                        Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         row.forEach { tile ->
                             SettingsSectionCard(
@@ -3416,16 +3416,16 @@ private fun SettingsSectionCard(
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 20.dp, horizontal = 6.dp),
+            Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 5.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             // A softly tinted emblem separates the glyph from the glass tile.
             // Accent stays with the icon; the pane itself adapts neutrally to the theme.
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(13.dp))
                     .background(LocalMidnightAccent.current.copy(alpha = 0.11f)),
                 contentAlignment = Alignment.Center,
             ) {
@@ -3433,7 +3433,7 @@ private fun SettingsSectionCard(
                     Icon(
                         tile.icon,
                         contentDescription = null,
-                        modifier = Modifier.size(25.dp),
+                        modifier = Modifier.size(23.dp),
                         tint = fillFocus1.content(LocalMidnightAccent.current),
                     )
                 }

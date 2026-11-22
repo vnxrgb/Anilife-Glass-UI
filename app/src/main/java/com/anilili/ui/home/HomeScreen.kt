@@ -6,6 +6,7 @@ package com.anilili.ui.home
 
 import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassAtmosphere
+import com.anilili.ui.components.glassCard
 import com.anilili.ui.theme.appCanvasFade
 import com.anilili.ui.theme.appCanvas
 import androidx.compose.animation.core.animateFloatAsState
@@ -812,7 +813,7 @@ private fun HeroPager(
         // a portrait cover fills this box by its width and is trimmed top and bottom, so every dp
         // added here is artwork kept rather than cut. At 270dp it lost a fifth of its height; at
         // this it loses about a ninth.
-        else -> 382.dp
+        else -> 292.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -1605,7 +1606,7 @@ private fun ContinueRail(
         device.isTv -> 240.dp
         device.isExpanded -> 220.dp
         device.isTablet -> 200.dp
-        else -> 174.dp
+        else -> 132.dp
     }
     Column {
         RailTitle(
@@ -1613,12 +1614,14 @@ private fun ContinueRail(
             dragHandle,
             Modifier.fillMaxWidth().padding(horizontal = device.pagePadding),
         )
-        Text(
-            "Long-press a title to move it on your anime list",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = device.pagePadding, vertical = 2.dp),
-        )
+        if (device.isTv) {
+            Text(
+                "Long-press a title to move it on your anime list",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = device.pagePadding, vertical = 2.dp),
+            )
+        }
         LazyRow(
             state = rememberContinueRailState(history.firstOrNull()?.anilistId),
             modifier = Modifier.focusGroup(),
@@ -1640,7 +1643,11 @@ private fun ContinueRail(
                             onLongClick = { managedEntry = entry },
                         ),
                 ) {
-                    Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                    Box(
+                        Modifier.fillMaxWidth()
+                            .aspectRatio(if (device.isTv) 16f / 9f else 1f)
+                            .glassCard(RoundedCornerShape(20.dp)),
+                    ) {
                         // Each card frosts its own thumbnail under its corner buttons: a source
                         // this small is cheap to record, and the buttons never need the feed.
                         val thumbnail = if (homeGlass) remember { HazeState() } else null
@@ -1648,7 +1655,17 @@ private fun ContinueRail(
                             AsyncImage(model = entry.cover, contentDescription = "Resume ${entry.title}", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             Box(Modifier.fillMaxSize().background(Color.Black.copy(.3f)))
                         }
-                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.align(Alignment.Center))
+                        Box(
+                            Modifier
+                                .align(Alignment.Center)
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.50f))
+                                .border(1.dp, Color.White.copy(alpha = 0.45f), CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
+                        }
                         // The two things anyone actually does to a Continue Watching card, on the
                         // card. They were reachable only behind a long press, which is a gesture
                         // nothing on this screen advertises and most viewers never tried; the
