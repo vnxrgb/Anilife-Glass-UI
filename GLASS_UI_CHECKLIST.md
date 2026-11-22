@@ -107,3 +107,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 - `SHARED SETTINGS PASS`: Settings rows and selection rows now use neutral translucent theme-colour panels and subtle hairline borders on mobile. TV keeps the established D-pad focus rendering. Code only; functionality and visual verification pending.
 
 - `DIALOG GLASS PASS`: Shared phone modal/sheet backgrounds now use the current Material theme's translucent surface instead of a fixed dark panel. TV dialogs retain their existing colours; device build/visual verification pending.
+
+- `AMBIENT COMPOSITION PASS` (`764a282`): Replaced the watch-page solid video-colour slab with three feathered radial colour blooms and a subtle shared gradient. The video remains unchanged; colours continue to come from sampled frames. Code implementation; live visual result still requires testing.
