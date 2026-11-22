@@ -161,7 +161,7 @@ fun AnimeCard(
                 maxLines = titleMaxLines,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .padding(top = 8.dp)
+                    .padding(top = if (device.isTv) 8.dp else 5.dp)
                     .heightIn(min = titleBlockMinHeight),
             )
         }
@@ -178,7 +178,7 @@ fun AnimeCard(
                 overflow = TextOverflow.Ellipsis,
                 // Without a title above it this line is the caption, and it would otherwise sit
                 // flush against the artwork it belongs under.
-                modifier = if (poster.shows(PosterElement.TITLE)) Modifier else Modifier.padding(top = 5.dp),
+                modifier = if (poster.shows(PosterElement.TITLE)) Modifier.padding(top = 2.dp) else Modifier.padding(top = 5.dp),
             )
         }
     }
