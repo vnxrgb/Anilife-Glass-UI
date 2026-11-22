@@ -166,3 +166,5 @@ An APK build is only **technical readiness**. A final release requires all core 
 
 
 - `CALENDAR & ACCESSIBILITY COHESION PASS`: Monthly schedule grid now has a neutral glass panel on phones with preserved TV focus grouping; day cells announce dates, selection, today and episode counts. Shared filter/sort menus announce selected choices; next-episode countdown retains a second-accurate visible clock but throttles spoken announcements to minute-level changes. Source-only implementation; compile, device screen-reader and TV checks remain open.
+
+- `SHARED MOBILE DENSITY & RENDER SAFETY PASS`: Reduced phone poster caption gaps while retaining TV spacing and title baseline consistency; compacted mobile top-level title typography without changing TV headlines; guarded zero-size radial atmosphere shaders and softened background wash over custom wallpapers. Source implementation only; no build or device screenshot acceptance.
