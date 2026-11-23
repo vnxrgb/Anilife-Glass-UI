@@ -1,0 +1,116 @@
+name: Review upstream streaming-provider updates
+
+on:
+  # GitHub only schedules workflows from the repository's default branch.
+  schedule:
+    - cron: "17 10 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: anilumos-provider-review
+  cancel-in-progress: false
+
+jobs:
+  prepare-review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      BASE_BRANCH: feature/unified-glass-ui
+      SYNC_BRANCH: automation/upstream-provider-sync
+      UPSTREAM_REPO: anilifecommunity/android-and-tv
+    steps:
+      - name: Check out Anilumos source with history
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASE_BRANCH }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Identify upstream provider changes
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream "https://github.com/$UPSTREAM_REPO.git"
+          git fetch --no-tags upstream main
+          git fetch --no-tags origin "$BASE_BRANCH"
+          git checkout -B "$SYNC_BRANCH" "origin/$BASE_BRANCH"
+          base="$(git merge-base "origin/$BASE_BRANCH" upstream/main)"
+          if [ -z "$base" ]; then
+            echo "::error::No common history with upstream. Manual review is required."
+            exit 1
+          fi
+          echo "Upstream comparison base: $base"
+          # Watch provider sites, domain/extraction/parsing code, shared provider
+          # registration and related tests. Exclude unrelated branding, app IDs,
+          # player UI, permissions, licenses and build configuration.
+          mapfile -d '' paths < <(git diff --name-only -z "$base" upstream/main --             'app/src/main/java/com/anilili/data/ProviderCatalog.kt'             'app/src/main/java/com/anilili/data/remote/*Provider.kt'             'app/src/main/java/com/anilili/data/remote/*Extractor.kt'             'app/src/main/java/com/anilili/data/remote/*Resolver.kt'             'app/src/main/java/com/anilili/data/remote/*Parsers.kt'             'app/src/main/java/com/anilili/data/remote/*Client.kt'             'app/src/main/java/com/anilili/data/remote/*TokenPool.kt'             'app/src/main/java/com/anilili/ui/*ResolverWebView.kt'             'app/src/test/java/com/anilili/data/*Provider*Test.kt'             'app/src/test/java/com/anilili/data/remote/*Provider*Test.kt'             'app/src/test/java/com/anilili/data/remote/*Extractor*Test.kt'             'app/src/test/java/com/anilili/data/remote/*Parser*Test.kt')
+          if [ "${#paths[@]}" -eq 0 ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No upstream provider changes since shared history." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          : > provider-review.txt
+          for path in "${paths[@]}"; do
+            # A source removed upstream is proposed for removal, not silently kept.
+            if git cat-file -e "upstream/main:$path" 2>/dev/null; then
+              git restore --source=upstream/main --staged --worktree -- "$path"
+            else
+              git rm --ignore-unmatch -- "$path"
+            fi
+            printf '%s\n' "$path" >> provider-review.txt
+          done
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Changed upstream files already match Anilumos." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git diff --cached --stat
+          # Keep the summary outside the commit to avoid unnecessary application files.
+          git commit -m "chore(providers): propose upstream streaming-provider changes"
+          git push --force-with-lease origin "$SYNC_BRANCH"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Proposed streaming-provider changes"
+            echo "Source: https://github.com/$UPSTREAM_REPO"
+            echo "Target branch: $BASE_BRANCH"
+            echo "Files compared against upstream main since shared Git history:"
+            sed 's/^/- `/; s/$/`/' provider-review.txt
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create or update draft PR (never auto-merge)
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          number="$(gh pr list --state open --base "$BASE_BRANCH" --head "$SYNC_BRANCH" --json number --jq '.[0].number // empty')"
+          cat > /tmp/provider-pr.md <<'EOF'
+          ## Upstream streaming-provider review
+
+          This **draft** PR proposes the latest source-provider, extractor, resolver and related test files changed in [AniLife](https://github.com/anilifecommunity/android-and-tv).
+
+          **Do not merge automatically.** Verify each provider's site/domain, permissions and legal status; understand upstream removals; and review all diffs. Some files may depend on other upstream changes not selected by this workflow.
+
+          - Preserve Anilumos app ID `com.anilumos.app`, its branding, splash, player and Liquid Glass UI.
+          - Check provider catalog registration, site availability and parser behavior.
+          - Run Android tests/lint and manually test relevant streaming flows before approving.
+          - Do not replace customized Anilumos logic without a deliberate review.
+
+          A new APK is **not** published by this workflow. A reviewer must approve integration.
+          EOF
+          if [ -n "$number" ]; then
+            gh pr edit "$number" --body-file /tmp/provider-pr.md
+            echo "Updated existing draft PR #$number" >> "$GITHUB_STEP_SUMMARY"
+          else
+            gh pr create --draft --base "$BASE_BRANCH" --head "$SYNC_BRANCH"               --title "Review AniLife streaming-provider updates for Anilumos"               --body-file /tmp/provider-pr.md
+          fi
