@@ -826,7 +826,8 @@ private fun HeroPager(
     val device = LocalAppDeviceProfile.current
     val pagerState = rememberPagerState(pageCount = { items.size })
     val indicatorScope = rememberCoroutineScope()
-    val heroIds = items.map(Media::id)
+    // Keep the page identity stable during drag/animation recompositions.
+    val heroIds = remember(items) { items.map(Media::id) }
     var tvPage by remember(heroIds) { mutableIntStateOf(0) }
     var tvHeroHasFocus by remember(heroIds) { mutableStateOf(false) }
     val safeTvPage = tvPage.coerceIn(0, items.lastIndex)
