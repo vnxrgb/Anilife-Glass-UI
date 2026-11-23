@@ -46,6 +46,9 @@ import com.anilili.data.pairing.PAIRING_SERVICE_MAL
 import com.anilili.ui.adaptive.focusFill
 import com.anilili.ui.adaptive.rememberFocusFill
 import com.anilili.ui.profile.LoginWebView
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 
 /**
  * "Link a TV" on the phone: pick the account, pick the television, compare six digits, sign in.
@@ -188,6 +191,15 @@ private fun BrowsingContent(
     val context = LocalContext.current
     val televisions by vm.televisions.collectAsStateWithLifecycle()
     var manualAddress by remember { mutableStateOf("") }
+    var scanError by remember { mutableStateOf<String?>(null) }
+    val scanner = remember(context) {
+        GmsBarcodeScanning.getClient(
+            context,
+            GmsBarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                .build(),
+        )
+    }
 
     Text("Link a TV", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
     Text(
@@ -246,6 +258,41 @@ private fun BrowsingContent(
                 }
             }
         }
+    }
+
+    Text(
+        "Scan the QR code on your TV to connect without typing its address.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
+    )
+    val scanFocus = rememberFocusFill()
+    Button(
+        onClick = {
+            scanError = null
+            scanner.startScan()
+                .addOnSuccessListener { barcode ->
+                    val address = barcode.rawValue?.let(::parseManualAddress)
+                    if (address == null) {
+                        scanError = "That QR code doesn't contain a valid TV address."
+                    } else {
+                        manualAddress = barcode.rawValue.orEmpty()
+                        vm.connect(address, service)
+                    }
+                }
+                .addOnFailureListener { failure ->
+                    scanError = "Scanner unavailable. Enter the TV address below instead."
+                }
+        },
+        modifier = Modifier.focusFill(scanFocus, RoundedCornerShape(24.dp)),
+    ) { Text("Scan TV QR code") }
+    scanError?.let { error ->
+        Text(
+            text = error,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(top = 8.dp),
+        )
     }
 
     // Some routers isolate clients or drop multicast between wired and wireless, and then the list
