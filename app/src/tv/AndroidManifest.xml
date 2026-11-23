@@ -10,7 +10,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- TV launchers and remotes must not require touch input. Declare it in this flavor\n         as well as the shared manifest so lint recognizes it on the TV variant. -->\n    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />\n\n    <!-- Only the television flavor advertises Leanback hardware. -->
+    <!-- TV launchers and remotes must not require touch input. Declare it in this flavor
+         as well as the shared manifest so lint recognizes it on the TV variant. -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <!-- Only the television flavor advertises Leanback hardware. -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
     <application
