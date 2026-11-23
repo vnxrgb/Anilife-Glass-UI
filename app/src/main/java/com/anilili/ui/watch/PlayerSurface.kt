@@ -3107,7 +3107,7 @@ fun PlayerSurface(
             AutoSkipButtonBounds {
             OutlinedButton(
                 onClick = onClick,
-                shape = RoundedCornerShape(10.dp),
+                shape = CircleShape,
                 border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.86f)),
                 colors = controlFocus1.buttonColors(
                     ButtonDefaults.outlinedButtonColors(
@@ -3125,11 +3125,11 @@ fun PlayerSurface(
                 modifier = actionModifier
                     .focusRequester(tvSkipActionFocus)
                     .onFocusChanged { tvSkipActionFocused = it.hasFocus }
-                    .focusFill(controlFocus1, RoundedCornerShape(10.dp))
+                    .focusFill(controlFocus1, CircleShape)
                     .autoSkipSweep(
                         secondsLeft = countdownSeconds,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = CircleShape,
                     ),
             ) {
                 Text(
