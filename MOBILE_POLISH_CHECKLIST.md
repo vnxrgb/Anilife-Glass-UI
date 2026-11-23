@@ -8,16 +8,16 @@ Last audited 2026-11-23: `main` at `36d3254327659ec821e0b0a61d8b7d5b9c7dc3a6`; b
 - [x] Adaptive layout: phone rail poster sizing and Browse minimum card width; tablet Home poster columns account for available width. Dedicated adaptive-layout unit tests added on this branch. Preserve approved visuals and TV behavior pending device review.
 
 ## Verification still required
-- [x] At `564643b`, mobile unit tests and mobile lint/assemble passed; TV unit tests passed. Android CI run: https://github.com/vnxrgb/Anilumos/actions/runs/45184322308 . TV lint/assemble failed on `ImpliedTouchscreenHardware`; corrected in `3a5eb6e` by marking touchscreen optional in the existing TV manifest (no TV feature added). **Post-fix CI not yet verified.**
-- [ ] Confirm CI on `3a5eb6e` or later, including TV lint/assemble; do not assume a fix passes until the workflow completes.
-- [ ] Dependency review remains blocked because repository dependency graph is disabled (https://github.com/vnxrgb/Anilumos/actions/runs/45184322285); not a demonstrated vulnerable dependency. CodeQL passed: https://github.com/vnxrgb/Anilumos/actions/runs/45184322276 .
+- [x] Post-fix Android CI on `acb85c8` passed on 2026-11-23: mobile unit tests, mobile lint/assemble, TV unit tests, and TV lint/assemble all successful. https://github.com/vnxrgb/Anilumos/actions/runs/45200411693 . The `ImpliedTouchscreenHardware` fix in `3a5eb6e` is build-verified; physical-device behavior is not.
+- [x] Confirmed all four Android CI jobs passed on `acb85c8`; CodeQL also passed: https://github.com/vnxrgb/Anilumos/actions/runs/45200411833 .
+- [ ] Dependency review still failed on `acb85c8` (https://github.com/vnxrgb/Anilumos/actions/runs/45200411735); prior failure attributed to disabled repository dependency graph, not a demonstrated vulnerable dependency. Recheck configuration separately.
 - [ ] Profile Home/Browse/My List scroll frame times, allocations and recomposition counts before/after on a physical phone.
 - [ ] Check Home hero auto-advance, navigation, banner clicks, tablet split-screen, reduced motion and accessibility.
 - [ ] Confirm phone rail/card sizing across common display-size settings and small screens.
 - [ ] Verify streaming, downloads, history, accounts, mini-player and ambient video lighting unchanged.
 
 ## Next safe priorities
-- [ ] Establish a fully passing post-fix compile/test/lint milestone before further performance claims; mobile checks passed at `564643b`.
+- [x] Establish passing post-fix compile/test/lint milestone (`acb85c8`); no performance claim follows from CI alone.
 - [ ] Identify a measured scroll-jank hotspot in Home/Browse/My List; avoid speculative rewrites or extra blur.
 - [ ] Audit user-visible legacy branding separately from required AniLife/Morphe author, copyright and license credits; preserve internal identifiers and migration keys.
 - [ ] Review lifecycle, loading/error states, image caching and touch targets with concrete evidence.
