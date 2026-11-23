@@ -86,11 +86,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.layout.ContentScale
@@ -610,10 +614,10 @@ private fun DetailContent(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Ambient artwork spill beneath the hero: an unfocused, very low-opacity
-        // second rendering of the banner gives the surrounding content a gentle,
-        // title-specific glow. It stays behind scrolling controls and text and does
-        // not affect TV focus or the player's independent video ambient setting.
+        // Continue the hero's artwork well below its visible boundary. The sharp
+        // banner is alpha-masked at the bottom (see DetailHero) while this blurred
+        // backdrop remains behind the action buttons and the first detail sections.
+        // Both layers fade into the same page canvas, with no rectangular edge.
         if (!device.isTv) {
             AsyncImage(
                 model = info.bannerImage ?: info.coverImage.best,
@@ -622,10 +626,24 @@ private fun DetailContent(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .padding(top = contentPadding.calculateTopPadding() + 125.dp)
-                    .height(510.dp)
-                    .blur(76.dp)
-                    .alpha(0.17f),
+                    .padding(top = contentPadding.calculateTopPadding() + 90.dp)
+                    .height(610.dp)
+                    .blur(82.dp)
+                    .alpha(0.24f)
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                0f to Color.White.copy(alpha = 0.75f),
+                                0.40f to Color.White,
+                                0.66f to Color.White.copy(alpha = 0.70f),
+                                1f to Color.Transparent,
+                                endY = size.height,
+                            ),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    },
             )
         }
         LazyColumn(
@@ -970,7 +988,27 @@ private fun DetailHero(
         AsyncImage(
             model = banner,
             contentDescription = null,
-            modifier = Modifier.fillMaxWidth().height(bannerHeight),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(bannerHeight)
+                .then(
+                    if (device.isTv) Modifier else Modifier
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    0f to Color.White,
+                                    0.54f to Color.White,
+                                    0.75f to Color.White.copy(alpha = 0.78f),
+                                    0.92f to Color.White.copy(alpha = 0.22f),
+                                    1f to Color.Transparent,
+                                    endY = size.height,
+                                ),
+                                blendMode = BlendMode.DstIn,
+                            )
+                        }
+                ),
             contentScale = ContentScale.Crop,
         )
         Box(
@@ -978,11 +1016,22 @@ private fun DetailHero(
                 .fillMaxWidth()
                 .height(bannerHeight)
                 .appCanvasFade { canvas ->
-                    Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.16f),
-                        0.42f to Color.Black.copy(alpha = 0.29f),
-                        1f to canvas.copy(alpha = 0.88f),
-                    )
+                    if (device.isTv) {
+                        Brush.verticalGradient(
+                            0f to Color.Black.copy(alpha = 0.16f),
+                            0.42f to Color.Black.copy(alpha = 0.29f),
+                            1f to canvas.copy(alpha = 0.88f),
+                        )
+                    } else {
+                        // Use a gentle text scrim, not an opaque canvas block:
+                        // the soft banner spill can continue under the buttons.
+                        Brush.verticalGradient(
+                            0f to Color.Black.copy(alpha = 0.18f),
+                            0.42f to Color.Black.copy(alpha = 0.30f),
+                            0.73f to canvas.copy(alpha = 0.26f),
+                            1f to canvas.copy(alpha = 0.08f),
+                        )
+                    }
                 },
         )
         Row(
