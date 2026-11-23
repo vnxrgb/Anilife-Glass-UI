@@ -1,6 +1,4 @@
-AniLife mobile performance polish — corrected Kotlin type mismatch and all existing features preserved
-Source feature revision: e844a631ad2fc08f9cccdbafd0430a3498d23c5a
-The previous preview build exposed a Kotlin compile error in the new memoized Home drag row map: it inferred Map<String,HomeRow>, while rememberHomeRowDragState expects Map<Any,HomeRow>. The map is now explicitly constructed as buildMap<Any,HomeRow>; keys and values are unchanged.
-Performance only: PixelCopy bitmap creation and getPixels off main, cancellation-safe cleanup; precomputed unchanged Morphe row alpha; Home item and hero caching; Watch episode filter and grid caching.
-Leave Media3 playback engine and video surface, Morphe frame sampling rate/color render, gestures, seek, subtitle/audio tracks, downloads, watchlist, profiles, app id, settings and all finished UI untouched.
-Run :app:testMobileDebugUnitTest, :app:lintMobileDebug, :app:assembleMobileDebug, verify signature and publish glass-ui-preview only on full success. Previous published release remains intact until success.
+AniLife rounded Liquid Glass UI mobile preview build request
+Source revision: ed9019aa560b1e7b7f27325e5cbe13a1d82eba3a
+Changes: shared mobile settings and server selection cards rounded to 22dp; Anikoto/SUB/dropdown and server filter actions pill-shaped; +85s/Skip Intro/Outro rounded; optional fullscreen side-letterbox video ambient glow in FIT mode.
+Preserve existing playback behavior and stable release. Run mobile unit tests, lint, assemble, APK signature verification. Publish one direct anilife-glass-universal.apk preview asset only if all pass.
