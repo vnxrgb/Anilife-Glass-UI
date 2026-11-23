@@ -2049,15 +2049,30 @@ fun PlayerSurface(
             modifier = Modifier.fillMaxSize(),
         )
 
-        // Low-rate background sampling only on an actively playing, inline phone player.
-        // No decoder changes, work in fullscreen/PiP/TV, or capturing secure surfaces.
+        // Share the existing native frame sampler between the portrait watch wash and
+        // landscape sidebars. Keep TV, PiP, protected surfaces, and low-RAM fallbacks unchanged.
+        var fullscreenAmbientPalette by remember(stream.url) {
+            mutableStateOf(VideoAmbientPalette.Empty)
+        }
+        val ambientStrength by SettingsStore.playerAmbientIntensity.collectAsState()
         if (onAmbientPaletteChanged != null) {
             NativeVideoAmbientSampler(
                 playerView = playerView,
-                active = !device.isTv && !isFullscreen && !inPictureInPicture && playbackIsPlaying,
-                onPalette = onAmbientPaletteChanged,
+                active = !device.isTv && !inPictureInPicture && playbackIsPlaying,
+                onPalette = { palette ->
+                    fullscreenAmbientPalette = palette
+                    onAmbientPaletteChanged(palette)
+                },
             )
         }
+        FullscreenSideAmbient(
+            palette = fullscreenAmbientPalette,
+            videoAspectRatio = contentAspectRatio,
+            enabled = isFullscreen && !device.isTv && !inPictureInPicture &&
+                contentScale == PlayerContentScale.FIT && onAmbientPaletteChanged != null,
+            intensity = ambientStrength,
+            modifier = Modifier.fillMaxSize(),
+        )
 
         // Some TV input compositors keep a stopped app's SurfaceView above HDMI until Home forces
         // another composition. Detach only the TV surface; the service already pauses playback.
