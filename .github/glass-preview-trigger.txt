@@ -1,4 +1,5 @@
-Anilumos full rebrand — final mobile preview verification
-Source revision: aabb7bcc14b3bf8037d31b58fae6f8ac845e7c04
-Brand: new A-and-candle themed launcher variants, pure black candle-flame Compose launch animation, new loading logo and header wordmark, app label, settings/About/release/profile text; original AniLife foundation and mandatory Morphe attribution retained. Keep internal app ID and deep links for compatibility. Existing playback and Liquid Glass settings unchanged.
-Run tests, lint, assemble and signature verification. Publish only on green to anilumos-preview as one direct anilumos-universal.apk.
+Anilumos independent app ID integration preview
+Source revision: efd9d6d330dc16efb8f0a0b85946187eeb203e70
+Android application ID: com.anilumos.app (debug: com.anilumos.app.debug)
+App display name Anilumos, pure black candle-flame splash, independent A-and-flame brand and explicit AniLife/Morphe credits.
+Verify unit tests, lint, Android package and signature; publish one direct anilumos-universal.apk only after success.
