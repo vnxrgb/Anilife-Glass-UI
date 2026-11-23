@@ -59,6 +59,18 @@ Anilumos includes a **streaming-provider update workflow** to help keep supporte
 
 Provider updates are not delivered directly to installed APKs; a new app release may be needed. [Provider update details](docs/UPSTREAM_PROVIDER_SYNC.md).
 
+## Screenshots
+
+<p align="center">
+  <a href="docs/store/screenshots/01-home.jpg"><img src="docs/store/screenshots/01-home.jpg" width="18%" alt="Home and Continue Watching"></a>
+  <a href="docs/store/screenshots/02-my-list.jpg"><img src="docs/store/screenshots/02-my-list.jpg" width="18%" alt="My List and account connections"></a>
+  <a href="docs/store/screenshots/03-browse.jpg"><img src="docs/store/screenshots/03-browse.jpg" width="18%" alt="Browse and discover anime"></a>
+  <a href="docs/store/screenshots/04-anime-details.jpg"><img src="docs/store/screenshots/04-anime-details.jpg" width="18%" alt="Anime details and episode countdown"></a>
+  <a href="docs/store/screenshots/05-episode-playback.jpg"><img src="docs/store/screenshots/05-episode-playback.jpg" width="18%" alt="Episode playback and ambient lighting"></a>
+</p>
+
+[Original screenshots and direct store-submission links](docs/store/screenshots/README.md)
+
 ## Download
 
 The current stable release is **[Anilumos v1.0.0](https://github.com/vnxrgb/Anilumos/releases/tag/v1.0.0)**, distributed as a signed universal Android APK.
