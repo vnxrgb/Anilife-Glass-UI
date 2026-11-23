@@ -3095,7 +3095,7 @@ private fun MobileServerPickerContent(
                 // check itself instead of a button that will fail again.
                 val extraFocus3 = rememberFocusFill()
                 TextButton(
-                    colors = extraFocus3.buttonColors(ButtonDefaults.textButtonColors()),onClick = onUnlockServers, modifier = Modifier.focusFill(extraFocus3, RoundedCornerShape(24.dp)),) {
+                    colors = extraFocus3.buttonColors(ButtonDefaults.textButtonColors()),onClick = onUnlockServers, shape = CircleShape, modifier = Modifier.focusFill(extraFocus3, CircleShape).background(glassPanelColor(), CircleShape),) {
                     Text("Unlock more servers")
                 }
             } else if (!data.hasMiruroSources) {
@@ -3103,7 +3103,7 @@ private fun MobileServerPickerContent(
                 TextButton(
                     colors = extraFocus4.buttonColors(ButtonDefaults.textButtonColors()),
                     onClick = onRetryMiruroSources,
-                    enabled = !data.isRetryingMiruro, modifier = Modifier.focusFill(extraFocus4, RoundedCornerShape(24.dp)),) {
+                    enabled = !data.isRetryingMiruro, shape = CircleShape, modifier = Modifier.focusFill(extraFocus4, CircleShape).background(glassPanelColor(), CircleShape),) {
                     Text(
                         if (data.isRetryingMiruro) "Retrying Miruro…"
                         else "Retry Miruro servers",
@@ -3112,7 +3112,7 @@ private fun MobileServerPickerContent(
             }
             val extraFocus5 = rememberFocusFill()
             TextButton(
-                colors = extraFocus5.buttonColors(ButtonDefaults.textButtonColors()),onClick = onClose, modifier = Modifier.focusFill(extraFocus5, RoundedCornerShape(24.dp)),) {
+                colors = extraFocus5.buttonColors(ButtonDefaults.textButtonColors()),onClick = onClose, shape = CircleShape, modifier = Modifier.focusFill(extraFocus5, CircleShape).background(glassPanelColor(), CircleShape),) {
                 Text("Close")
             }
         }
