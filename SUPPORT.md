@@ -1,18 +1,15 @@
 # Support
 
-Public Anilife builds, when available, are distributed only through this repository's GitHub
-Releases page. Builds from other sources are not supported by this project.
+Anilumos builds are distributed through the [Anilumos GitHub Releases](https://github.com/vnxrgb/Anilumos/releases) page. Builds downloaded from other sources are not supported by this project.
 
 Before opening an issue:
 
-1. Confirm the problem occurs on the latest available build or current `main` branch.
-2. Search existing issues for the same device, provider, or error code.
-3. Remove tokens, cookies, private URLs, account identifiers, and personal data from attachments.
+1. Check whether the problem still occurs in the latest Anilumos release or on the current `main` branch.
+2. Search [existing issues](https://github.com/vnxrgb/Anilumos/issues) for the same device, streaming provider, or error.
+3. Remove tokens, cookies, private URLs, account details, and other personal information from screenshots or logs.
 
-Use the [bug report template](https://github.com/anilifecommunity/android-and-tv/issues/new?template=bug_report.yml)
-for reproducible problems and the feature template for proposals. Include the Anilife version,
-Android or Fire OS version, device/form factor, exact steps, and any redacted diagnostics you chose
-to generate.
+Use the [bug report template](https://github.com/vnxrgb/Anilumos/issues/new?template=bug_report.yml) for bugs or the [feature request template](https://github.com/vnxrgb/Anilumos/issues/new?template=feature_request.yml) for suggestions.
 
-Do not report vulnerabilities or leaked credentials in a public issue. Follow
-[SECURITY.md](SECURITY.md) instead.
+For bugs, include the Anilumos version, Android version, device model, steps to reproduce, and any relevant redacted diagnostics. Mention whether you are using the stable or preview build.
+
+Please do not share security vulnerabilities or exposed credentials in public issues. Follow the [security policy](SECURITY.md) instead.
