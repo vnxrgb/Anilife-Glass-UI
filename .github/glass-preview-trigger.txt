@@ -1,4 +1,3 @@
-AniLife Glass UI coordinated test preview
-Requested source baseline: 0be89986ea271c510f5592491fc06e12ab226c95
-Includes Home hero, fullscreen and portrait player visual refinement, neutral shared glass, Browse, Details, Settings, Downloads, Schedule and Profile adjustments.
-Build from the commit created by this trigger on feature/unified-glass-ui, not from the earlier glass-ui-preview asset. Run mobile unit tests, lint, assemble and APK signature verification. Replace exactly one anilife-glass-universal.apk preview release asset only after all checks pass. This is a debug test build, not stable. Preserve main and TV behavior.
+Screenshot-driven Home density and navigation preview
+Baseline change set: 1509864, 855abb2, f3f88c7, 6ec94a2; recorded in GLASS_UI_CHECKLIST.md at 7fdb542.
+Rebuild universal Android mobile debug APK only after unit tests and lint pass. Ensure source SHA is this trigger commit. Publish one direct anilife-glass-universal.apk to glass-ui-preview only after successful build, replacing older preview. Preserve stable/main and TV behavior; real-device visual acceptance remains pending.
