@@ -1,6 +1,15 @@
 package com.anilili.ui.pairing
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import io.nayuki.qrcodegen.QrCode
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -103,6 +112,13 @@ fun TvPairingScreen(
                         "Open Anilife on your phone, go to your profile and choose " +
                             "\"Link a TV\". This television will appear in the list.",
                     )
+                    // QR contains only a LAN address; credentials still require the
+                    // existing two-device six-digit confirmation.
+                    current.addresses.firstOrNull()?.let { formatted ->
+                        val address = formatted.substringBefore("  (").trim()
+                        TvPairingAddressQr(address)
+                        Body("Scan to copy the TV address, then paste it into Link a TV on your phone.")
+                    }
                     if (current.addresses.isEmpty()) {
                         Body("This television has no network address — check its connection.")
                     } else {
@@ -252,5 +268,33 @@ private fun Actions(
     LaunchedEffect(primaryLabel, secondaryLabel) {
         awaitFrame()
         runCatching { focus.requestFocus() }
+    }
+}
+
+/** A high-contrast QR for the manual pairing address when multicast discovery fails. */
+@Composable
+private fun TvPairingAddressQr(address: String) {
+    val qr = remember(address) {
+        runCatching { QrCode.encodeText(address, QrCode.Ecc.MEDIUM) }.getOrNull()
+    } ?: return
+    Canvas(
+        modifier = Modifier
+            .padding(top = 16.dp)
+            .size(196.dp)
+            .background(Color.White)
+            .semantics { contentDescription = "TV pairing address: $address" },
+    ) {
+        val cell = size.minDimension / (qr.size + 8)
+        for (y in 0 until qr.size) {
+            for (x in 0 until qr.size) {
+                if (qr.getModule(x, y)) {
+                    drawRect(
+                        color = Color.Black,
+                        topLeft = Offset((x + 4) * cell, (y + 4) * cell),
+                        size = Size(cell, cell),
+                    )
+                }
+            }
+        }
     }
 }
