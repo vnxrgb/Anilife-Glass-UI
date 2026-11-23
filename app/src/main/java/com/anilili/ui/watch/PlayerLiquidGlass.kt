@@ -5,7 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -42,26 +42,25 @@ internal fun Modifier.playerLiquidGlass(
         .clip(shape)
         .background(
             Brush.verticalGradient(
-                0f to Color(0xFFB9C5D2).copy(alpha = glint),
-                0.25f to Color(0xFF3E4754).copy(alpha = dark * 0.72f),
-                0.72f to Color(0xFF131820).copy(alpha = dark),
-                1f to Color(0xFF090D13).copy(alpha = (dark + 0.12f).coerceAtMost(0.90f)),
+                0f to Color(0xFFD1D2D6).copy(alpha = glint),
+                0.25f to Color(0xFF414248).copy(alpha = dark * 0.72f),
+                0.72f to Color(0xFF17181C).copy(alpha = dark),
+                1f to Color(0xFF0A0B0F).copy(alpha = (dark + 0.12f).coerceAtMost(0.90f)),
             ),
             shape,
         )
-        .drawBehind {
-            // The upper-left reflection creates the curved-liquid impression.
-            // Its radius is size-dependent but static until the button is resized.
+        .drawWithCache {
+            // Cache the reflection shader until size changes; avoid recreating
+            // a gradient on each Media3 control redraw or time update.
             val radius = maxOf(size.width * 0.95f, size.height * 1.55f, 1f)
-            drawRect(
-                brush = Brush.radialGradient(
-                    0f to Color.White.copy(alpha = glint * 0.52f),
-                    0.42f to Color.White.copy(alpha = glint * 0.10f),
-                    1f to Color.Transparent,
-                    center = Offset(size.width * 0.12f, 0f),
-                    radius = radius,
-                ),
+            val reflection = Brush.radialGradient(
+                0f to Color.White.copy(alpha = glint * 0.52f),
+                0.42f to Color.White.copy(alpha = glint * 0.10f),
+                1f to Color.Transparent,
+                center = Offset(size.width * 0.12f, 0f),
+                radius = radius,
             )
+            onDrawBehind { drawRect(brush = reflection) }
         }
         .border(
             BorderStroke(
