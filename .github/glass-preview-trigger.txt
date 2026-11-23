@@ -1,4 +1,6 @@
-AniLife mobile-only preview lint fix — remove legacy site shortcuts and all Android TV launcher signals from mobile APK
-Source revision: d868d291f8f80eac8486d9001a2198d561cea622
-The previous workflow failed Android lint MissingLeanbackLauncher because the common manifest still advertised android.software.leanback. Move the Leanback uses-feature declaration to app/src/tv/AndroidManifest.xml along with its TV-specific launcher. Mobile manifest now has neither Leanback feature nor launcher, preserving phone/tablet launch compatibility. Settings About and update failure messages no longer link to anilife.cc; required Morphe GPLv3 notice remains.
-Do one final :app:testMobileDebugUnitTest :app:lintMobileDebug :app:assembleMobileDebug; validate APK signature. Publish only if all checks pass. Never alter stable release, main, mobile package ID or user data.
+AniLife native liquid-glass mobile player preview — static neutral frosted controls over existing Media3 + Morphe
+Source feature commit 7afd7e85e76b13a9212cd9dc4269ddefe967c36e
+Reference: b4-behroz/Liquid-Glass-UI-Video-Player design inspiration, with independent native Kotlin/Compose implementation (no third-party code copied; reference repository does not declare a license).
+Changes: lightweight PlayerLiquidGlass modifier with cached neutral reflection shader; glass play/pause, transport buttons, action dock, timeline timestamp pills, back button, action labels. Seek thumb gains high-contrast glass rim while pointer-to-seek mapping, audio/video player, subtitle rendering and skip markers are untouched. Settings bottom sheet and side panel get neutral static reflections with no video blur or decoder impact.
+CRITICAL: Do not change Media3 PlayerView/SurfaceView, NativeVideoAmbientSampler, videoAmbientWash, MorpheAmbientRenderer, sampling interval or temporal rendering. Keep all mobile features and original Morphe GPLv3 attribution.
+Verify mobile unit tests, lint, assembleMobileDebug, apk signature. Publish exactly one universal APK only after success; stable release untouched; real-device testing still needed.
