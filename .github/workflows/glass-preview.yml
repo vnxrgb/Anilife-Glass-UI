@@ -76,7 +76,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          apk="app/build/outputs/apk/mobile/debug/Anilife-debug.apk"
+          apk="app/build/outputs/apk/mobile/debug/Anilumos-debug.apk"
           test -s "$apk"
           "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify --verbose "$apk"
           mkdir -p dist
