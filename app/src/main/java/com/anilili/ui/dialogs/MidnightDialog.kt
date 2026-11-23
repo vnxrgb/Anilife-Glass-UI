@@ -268,10 +268,11 @@ fun MidnightSheet(
         // Frosted, the column below paints the panel — glass, then a translucent wash — and so
         // has to reach the bottom edge itself: the sheet's own inset padding would leave a strip
         // there with nothing in it but the app showing through sharp.
-        containerColor = if (backdrop != null) Color.Transparent else Midnight.SheetSurface,
+        containerColor = if (backdrop != null) Color.Transparent
+            else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
         contentWindowInsets = { if (backdrop != null) WindowInsets(0) else BottomSheetDefaults.windowInsets },
         contentColor = Midnight.Text,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
         dragHandle = null,
         tonalElevation = 0.dp,
     ) {
@@ -302,7 +303,8 @@ fun MidnightSheet(
                 )
                 .then(
                     if (backdrop != null) {
-                        Modifier.popupGlass(backdrop).background(Midnight.SheetSurface.copy(alpha = GLASS_PANEL_ALPHA))
+                        Modifier.popupGlass(backdrop)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = GLASS_PANEL_ALPHA))
                     } else {
                         Modifier
                     },
@@ -349,7 +351,7 @@ fun MidnightTvCard(
                 .padding(horizontal = 48.dp, vertical = 27.dp),
         ) {
             val cardWidth = (maxWidth * 0.62f).coerceIn(320.dp, 620.dp)
-            val shape = RoundedCornerShape(16.dp)
+            val shape = RoundedCornerShape(22.dp)
             val accent = LocalMidnightAccent.current
             Column(
                 modifier = modifier
@@ -404,16 +406,27 @@ fun MidnightModal(
             } else {
                 maxWidth
             }
-            val shape = RoundedCornerShape(12.dp)
+            val shape = RoundedCornerShape(24.dp)
             Column(
                 modifier = modifier
                     .align(Alignment.Center)
                     .width(width)
                     .clip(shape)
                     .popupGlass(backdrop)
-                    .background(if (backdrop != null) Midnight.ModalSurface.copy(alpha = GLASS_PANEL_ALPHA) else Midnight.ModalSurface)
-                    .border(1.dp, Midnight.Line2, shape)
-                    .padding(18.dp),
+                    .background(
+                        when {
+                            device.isTv -> Midnight.ModalSurface
+                            backdrop != null -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = GLASS_PANEL_ALPHA)
+                            else -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f)
+                        },
+                    )
+                    .border(
+                        1.dp,
+                        if (device.isTv) Midnight.Line2
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.20f),
+                        shape,
+                    )
+                    .padding(if (device.isTv) 18.dp else 16.dp),
                 content = content,
             )
         }
@@ -547,6 +560,8 @@ fun MidnightModalTitle(
     body: String?,
     modifier: Modifier = Modifier,
 ) {
+    val isTv = LocalAppDeviceProfile.current.isTv
+    val scheme = MaterialTheme.colorScheme
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = kicker.uppercase(),
@@ -558,14 +573,14 @@ fun MidnightModalTitle(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.W800,
-            color = Midnight.Text,
+            color = if (isTv) Midnight.Text else scheme.onSurface,
             modifier = Modifier.padding(top = 5.dp),
         )
         if (!body.isNullOrBlank()) {
             Text(
                 text = body,
                 style = MaterialTheme.typography.bodySmall,
-                color = Midnight.Text2,
+                color = if (isTv) Midnight.Text2 else scheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp),
             )
         }
@@ -683,7 +698,7 @@ fun MidnightPrimaryButton(
     modifier: Modifier = Modifier,
 ) {
     val device = LocalAppDeviceProfile.current
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(50)
     val fillFocus1 = rememberFocusFill()
     Box(
         modifier = modifier
@@ -720,7 +735,7 @@ fun MidnightFilledAction(
     destructive: Boolean = false,
 ) {
     val device = LocalAppDeviceProfile.current
-    val shape = RoundedCornerShape(7.dp)
+    val shape = RoundedCornerShape(50)
     val fill = when {
         !enabled -> Midnight.DisabledFill
         destructive -> Midnight.Red
@@ -762,7 +777,7 @@ fun MidnightQuietAction(
     val device = LocalAppDeviceProfile.current
     // A pill on a television, where the focus ring is drawn round the button's own shape: a 6dp
     // corner made the ring round "Close" a box rather than a button.
-    val shape = if (device.isTv) RoundedCornerShape(50) else RoundedCornerShape(6.dp)
+    val shape = RoundedCornerShape(50)
     val fillFocus3 = rememberFocusFill()
     Box(
         modifier = modifier

@@ -1,6 +1,7 @@
 package com.anilili.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -74,20 +77,23 @@ fun ErrorCodeChip(
     modifier: Modifier = Modifier,
 ) {
     val clipboard = LocalClipboardManager.current
-    val shape = RoundedCornerShape(4.dp)
+    val shape = RoundedCornerShape(12.dp)
+    val scheme = MaterialTheme.colorScheme
     Box(
         modifier = modifier
             .clip(shape)
-            .background(Midnight.RedSoft)
+            .background(scheme.errorContainer.copy(alpha = 0.45f))
+            .border(1.dp, scheme.error.copy(alpha = 0.28f), shape)
+            .semantics { contentDescription = "Copy error code ${failure.code}" }
             .clickable(role = Role.Button) { clipboard.setText(AnnotatedString(failure.code)) }
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+            .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
         Text(
             text = failure.code,
             style = MaterialTheme.typography.labelSmall,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.W600,
-            color = Midnight.ErrorBody,
+            color = scheme.onErrorContainer,
             maxLines = 1,
         )
     }
@@ -166,7 +172,7 @@ fun ErrorDetailsDialog(
                 text = "CODE",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.W700,
-                color = Midnight.Text3,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             // A chip rather than a line, because this is the one value someone has to reproduce
             // exactly, and tapping it beats transcribing `PLAY-02/h403` by hand.
@@ -193,13 +199,13 @@ private fun ColumnScope.DetailLine(label: String, value: String, monospace: Bool
             text = label.uppercase(),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.W700,
-            color = Midnight.Text3,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
             text = value,
             style = MaterialTheme.typography.labelMedium,
             fontFamily = if (monospace) FontFamily.Monospace else null,
-            color = Midnight.Text2,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(top = 3.dp),
         )
     }

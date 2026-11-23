@@ -8,6 +8,8 @@ import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
@@ -17,6 +19,7 @@ import androidx.compose.ui.unit.Constraints
 import kotlin.math.roundToInt
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -51,6 +54,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
@@ -67,28 +73,28 @@ data class FloatingNavItem(
 )
 
 /** The capsule's one height; scrolling no longer changes it. */
-val FloatingNavBarExpandedHeight = 56.dp
-val FloatingNavBarMargin = 12.dp
+val FloatingNavBarExpandedHeight = 52.dp
+val FloatingNavBarMargin = 9.dp
 
 /** An idle icon's slot: the 48dp touch minimum, so the rest is free for the open pill's label. */
 private val ItemSize = 48.dp
 private val IconSize = 22.dp
-private val BarPadding = 6.dp
-private val BarShape = RoundedCornerShape(20.dp)
+private val BarPadding = 3.dp
+private val BarShape = RoundedCornerShape(50)
 
 // A gentle top light keeps the glass character without a white sheen across the icons.
 // The nearly opaque center preserves contrast when bright artwork scrolls behind the bar.
 // Built from the theme, so they are rebuilt only when the theme changes.
 @Composable
 private fun barGlass(): Brush {
-    val top = Midnight.Line2
-    val middle = Midnight.Panel2
-    val bottom = Midnight.Bg2
+    val top = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.09f)
+    val middle = MaterialTheme.colorScheme.surfaceContainerHigh
+    val bottom = MaterialTheme.colorScheme.surfaceContainer
     return remember(top, middle, bottom) {
         Brush.verticalGradient(
-            0f to top.copy(alpha = 0.88f),
-            0.4f to middle.copy(alpha = 0.96f),
-            1f to bottom.copy(alpha = 0.98f),
+            0f to top.copy(alpha = 0.72f),
+            0.42f to middle.copy(alpha = 0.72f),
+            1f to bottom.copy(alpha = 0.79f),
         )
     }
 }
@@ -99,13 +105,13 @@ private fun barGlass(): Brush {
  */
 @Composable
 private fun barBlur(): HazeStyle {
-    val background = Midnight.Bg
-    val tint = Midnight.Panel2
+    val background = MaterialTheme.colorScheme.surface
+    val tint = MaterialTheme.colorScheme.surfaceContainerHigh
     return remember(background, tint) {
         HazeStyle(
             backgroundColor = background,
-            tint = HazeTint(tint.copy(alpha = 0.62f)),
-            blurRadius = 22.dp,
+            tint = HazeTint(tint.copy(alpha = 0.50f)),
+            blurRadius = 24.dp,
             noiseFactor = 0.04f,
         )
     }
@@ -113,14 +119,13 @@ private fun barBlur(): HazeStyle {
 
 @Composable
 private fun barRim(): Brush {
-    val top = Midnight.Text2
-    val middle = Midnight.Line2
-    val bottom = Midnight.Line
-    return remember(top, middle, bottom) {
+    val top = MaterialTheme.colorScheme.onSurface
+    val accent = MaterialTheme.colorScheme.primary
+    return remember(top, accent) {
         Brush.verticalGradient(
-            0f to top.copy(alpha = 0.18f),
-            0.5f to middle.copy(alpha = 0.45f),
-            1f to bottom.copy(alpha = 0.35f),
+            0f to top.copy(alpha = 0.32f),
+            0.48f to top.copy(alpha = 0.24f),
+            1f to accent.copy(alpha = 0.34f),
         )
     }
 }
@@ -149,25 +154,25 @@ fun FloatingNavigationBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
-            .padding(bottom = bottomInset + FloatingNavBarMargin),
+            .padding(bottom = bottomInset.coerceAtLeast(0.dp) + FloatingNavBarMargin),
         contentAlignment = Alignment.BottomCenter,
     ) {
         // RenderEffect arrived in Android 12; below it Haze only lays a flat scrim, which is worse
         // than the painted glass, so older phones keep that.
         val blurred = backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-        val inner = maxWidth - BarPadding * 2
-        // Idle icons keep a thumb-sized target; whatever they leave is the ceiling on the pill, so
-        // a long label ("Calendario") ellipsizes on a narrow phone instead of pushing icons off.
-        val itemWidth = if (items.isEmpty()) ItemSize
-        else minOf(ItemSize, inner / (items.size + 1))
-        val pillMax = inner - itemWidth * (items.size - 1).coerceAtLeast(0)
+        val inner = (maxWidth - BarPadding * 2).coerceAtLeast(0.dp)
+        // Five stable, equal-width destinations. Selecting a tab must not displace
+        // its neighbours or change the capsule width.
+        val itemWidth = if (items.isEmpty()) ItemSize else inner / items.size
+        val showLabels = floatingNavShowsCaption(itemWidth)
         Row(
             // Full width, so the bar's edges stay put while the pill changes length per label;
             // the spare room is shared between the icons instead.
             modifier = Modifier
                 .fillMaxWidth()
                 .height(FloatingNavBarExpandedHeight)
-                .shadow(6.dp, BarShape)
+                // Reduce the dark halo on OLED; the rim carries the depth.
+                .shadow(5.dp, BarShape)
                 .clip(BarShape)
                 .then(
                     if (blurred) {
@@ -190,7 +195,7 @@ fun FloatingNavigationBar(
                     item = item,
                     selected = item.route == selectedRoute,
                     width = itemWidth,
-                    maxWidth = pillMax,
+                    showLabel = showLabels,
                     onClick = { onSelect(item.route) },
                 )
             }
@@ -216,7 +221,7 @@ fun FloatingNavDisc(
     Box(
         modifier = modifier
             .size(FloatingNavDiscSize)
-            .shadow(6.dp, CircleShape)
+            .shadow(5.dp, CircleShape)
             .clip(CircleShape)
             .then(
                 if (blurred) {
@@ -234,82 +239,103 @@ fun FloatingNavDisc(
     }
 }
 
-/** A touch under the capsule's 56dp, so the disc reads as its companion rather than its rival. */
-val FloatingNavDiscSize = 52.dp
+/**
+ * On extremely narrow split-screen windows labels lose their slot before icons do.
+ * Accessibility semantics still contain the full destination name.
+ */
+internal fun floatingNavShowsCaption(itemWidth: Dp): Boolean = itemWidth >= 58.dp
+
+/** A touch under the capsule's 58dp, so the disc reads as its companion rather than its rival. */
+val FloatingNavDiscSize = 48.dp
 
 /**
- * One tab. Everything about the pill — its width, its fill, the glyph giving way to the name
- * — hangs off a single [progress] value read only in the layout and draw phases. Composition
- * never reruns during the animation, and nothing snaps: the earlier version let two size
- * animations fight over one box and toggled its padding in a single frame, which read as a stutter.
+ * Fixed-width navigation destination. Icons remain visible in every state, with a
+ * small caption below; a translucent capsule highlights the selected tab without
+ * forcing neighbouring items to shift as they did in the expanding-label version.
  */
 @Composable
 private fun FloatingNavIcon(
     item: FloatingNavItem,
     selected: Boolean,
     width: Dp,
-    maxWidth: Dp,
+    showLabel: Boolean,
     onClick: () -> Unit,
 ) {
-    val accent = LocalMidnightAccent.current
-    val idleTint = Midnight.Text2
-    val onAccent = Midnight.OnAccent
-    val progress = remember { Animatable(if (selected) 1f else 0f) }
-    LaunchedEffect(selected) { progress.animateTo(if (selected) 1f else 0f, PillSpring) }
-    val p = { progress.value.coerceIn(0f, 1f) }
-    val density = LocalDensity.current
-    val padPx = with(density) { PillPadding.roundToPx() }
-    Layout(
+    val iconColor = if (selected) MaterialTheme.colorScheme.onSurface
+        else MaterialTheme.colorScheme.onSurfaceVariant
+    val shape = RoundedCornerShape(50)
+    // A persistent, animated neutral selection wash; accent is reserved for the soft rim.
+    val selectionAlpha by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = tween(durationMillis = 260),
+        label = "navSelectionWash",
+    )
+    val glowAlpha by animateFloatAsState(
+        targetValue = if (selected) 0.26f else 0f,
+        animationSpec = tween(durationMillis = 320),
+        label = "navSelectionGlow",
+    )
+    // Keep the selected halo neutral across artwork and themes.
+    val halo = MaterialTheme.colorScheme.onSurface
+    val accent = MaterialTheme.colorScheme.primary
+    Box(
         modifier = Modifier
+            .width(width)
             .fillMaxHeight()
-            // The whole bar height stays the touch target; only the drawn pill is inset. No ripple:
-            // the pill opening under the finger is the press feedback.
+            .padding(vertical = 2.dp, horizontal = 2.dp)
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    0f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.19f * selectionAlpha),
+                    1f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.45f * selectionAlpha),
+                ),
+            )
+            .drawBehind {
+                if (glowAlpha > 0f) {
+                    drawCircle(
+                        color = halo.copy(alpha = glowAlpha * 0.45f),
+                        radius = size.minDimension * 0.42f,
+                        center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height * 0.82f),
+                    )
+                }
+            }
+            .border(
+                1.dp,
+                Brush.verticalGradient(
+                    0f to halo.copy(alpha = 0.40f * selectionAlpha),
+                    1f to accent.copy(alpha = 0.60f * selectionAlpha),
+                ),
+                shape,
+            )
             .selectable(
                 selected = selected,
                 role = Role.Tab,
-                interactionSource = null,
-                indication = null,
                 onClick = onClick,
             )
-            .padding(vertical = PillInset)
-            .clip(PillShape)
-            .drawBehind { drawRect(accent.copy(alpha = accent.alpha * p())) },
-        content = {
+            .semantics { contentDescription = item.label },
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.foundation.layout.Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             Icon(
                 imageVector = item.icon,
-                contentDescription = item.label,
-                tint = idleTint,
-                modifier = Modifier.size(IconSize).graphicsLayer { alpha = 1f - p() },
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(IconSize),
             )
-            Text(
-                item.label,
-                color = onAccent,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis,
-                // The icon already names the tab to accessibility; reading it twice is noise.
-                modifier = Modifier
-                    .widthIn(max = maxWidth - PillPadding * 2)
-                    // The name trails the pill open, so it never shows before there is room for it.
-                    .graphicsLayer { alpha = ((p() - 0.35f) / 0.65f).coerceIn(0f, 1f) }
-                    .clearAndSetSemantics {},
-            )
-        },
-    ) { measurables, constraints ->
-        val idle = width.roundToPx()
-        val loose = Constraints(maxHeight = constraints.maxHeight)
-        val icon = measurables[0].measure(loose)
-        val label = measurables[1].measure(loose)
-        val open = (label.width + padPx * 2).coerceIn(idle, maxWidth.roundToPx())
-        val w = (idle + (open - idle) * p()).roundToInt().coerceAtLeast(idle)
-        val h = constraints.maxHeight
-        // The open pill is the name alone; the glyph fades out where it stood, centred on the
-        // pill, so the eye follows one shape growing rather than two things swapping places.
-        layout(w, h) {
-            icon.place((w - icon.width) / 2, (h - icon.height) / 2)
-            label.place((w - label.width) / 2, (h - label.height) / 2)
+            if (showLabel) {
+                Text(
+                    text = item.label,
+                    color = iconColor,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

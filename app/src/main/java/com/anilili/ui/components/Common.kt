@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.anilili.data.library.resumeFor
 import com.anilili.errors.AnililiFailure
 import com.anilili.ui.adaptive.focusFill
+import com.anilili.ui.adaptive.LocalAppDeviceProfile
 import com.anilili.ui.adaptive.rememberFocusFill
 
 @Composable
@@ -40,7 +41,10 @@ fun LoadingBox(modifier: Modifier = Modifier, message: String? = null) {
     Box(
         modifier
             .fillMaxSize()
-            .appCanvas(),
+            .then(
+                if (LocalAppDeviceProfile.current.isTv) Modifier.appCanvas()
+                else Modifier.glassAtmosphere()
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -84,8 +88,13 @@ fun ErrorBox(failure: AnililiFailure, onRetry: (() -> Unit)? = null, modifier: M
     if (detailsVisible) {
         ErrorDetailsDialog(failure = failure, onDismiss = { detailsVisible = false })
     }
-    Box(modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Box(modifier.fillMaxSize().padding(20.dp), contentAlignment = Alignment.Center) {
+        Column(
+            modifier = if (LocalAppDeviceProfile.current.isTv) Modifier
+                else Modifier.fillMaxWidth().glassCard(RoundedCornerShape(26.dp))
+                    .padding(horizontal = 24.dp, vertical = 26.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Text(
                 text = failure.message,
                 style = MaterialTheme.typography.bodyMedium,

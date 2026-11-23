@@ -35,6 +35,15 @@ class PlayerActionRowFitTest {
     }
 
     @Test
+    fun `frosted dock measures its actually rendered width`() {
+        assertEquals(458, playerActionRowDrawnWidth(476, 458))
+        assertEquals(476, playerActionRowDrawnWidth(476, 900))
+        assertEquals(0, playerActionRowDrawnWidth(476, 0))
+        assertEquals(0, playerActionRowDrawnWidth(476, -5))
+        assertEquals(0, playerActionRowDrawnWidth(0, 458))
+    }
+
+    @Test
     fun `degenerate widths do not produce a nonsense scale`() {
         // An empty row is not a row that has to shrink, and a width that has gone negative cannot
         // produce a negative scale — which would draw the row mirrored.

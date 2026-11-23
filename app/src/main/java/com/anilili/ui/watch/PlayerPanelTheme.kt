@@ -65,10 +65,10 @@ val PlayerPanelSurface = Color(0xFF0C0C0C)
  * had grown four looks between them — a navy drawer, a panel with a white strip down its edge, and
  * a card floating in the middle of the screen — for what is one kind of thing.
  */
-val PlayerPanelShape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+val PlayerPanelShape = RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)
 
 /** A row or card inside a panel, one step up from it. */
-val PlayerPanelRaised = Color(0xFF17171A)
+val PlayerPanelRaised = Color(0xFF252835)
 
 /** Chosen, but not where the cursor is — the fifth of white the anime page's tabs use. */
 val PlayerPanelSelected = Color.White.copy(alpha = 0.2f)
@@ -76,7 +76,7 @@ val PlayerPanelSelected = Color.White.copy(alpha = 0.2f)
 /** Labels, captions and the second line of a row. */
 val PlayerPanelMutedText = Color.White.copy(alpha = 0.64f)
 
-val PlayerPanelOutline = Color.White.copy(alpha = 0.18f)
+val PlayerPanelOutline = Color.White.copy(alpha = 0.22f)
 
 /**
  * The player pane's accent: white, unless the viewer turned on Appearance ▸ "Accent in the player".

@@ -3,6 +3,7 @@ package com.anilili.ui.watch
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
@@ -35,6 +37,8 @@ import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -56,6 +60,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -159,8 +165,6 @@ import com.anilili.ui.components.typeface
 import com.anilili.ui.nav.Routes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.anilili.util.cached
@@ -303,6 +307,8 @@ fun PlayerSurface(
      * until there is one. False again the moment a new stream is prepared.
      */
     onPlaybackActiveChanged: ((Boolean) -> Unit)? = null,
+    /** Visual-only colours for a feathered wash immediately beneath the inline player. */
+    onAmbientPaletteChanged: ((VideoAmbientPalette) -> Unit)? = null,
     onPreviousEpisode: (() -> Unit)? = null,
     hasNextEpisode: Boolean = true,
     /** What "next" is when it is the next season rather than an episode of this one ("Season 2"). */
@@ -1236,6 +1242,9 @@ fun PlayerSurface(
     val inputModeManager = LocalInputModeManager.current
     var settingsExpanded by perSurface.settingsExpanded
     var captionsExpanded by perSurface.captionsExpanded
+    // Fullscreen Speed and Quality shortcuts open focused panels instead of the entire Settings menu.
+    var quickPlaybackPanel by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(isFullscreen) { if (!isFullscreen) quickPlaybackPanel = null }
     var captionAppearanceVisible by perSurface.captionAppearanceVisible
     // TalkBack users can't discover the hidden control row through a key press, so present it
     // as soon as the fullscreen player opens instead of waiting for the semantic reveal action.
@@ -2041,6 +2050,31 @@ fun PlayerSurface(
             modifier = Modifier.fillMaxSize(),
         )
 
+        // Share the existing native frame sampler between the portrait watch wash and
+        // landscape sidebars. Keep TV, PiP, protected surfaces, and low-RAM fallbacks unchanged.
+        var fullscreenAmbientPalette by remember(stream.url) {
+            mutableStateOf(VideoAmbientPalette.Empty)
+        }
+        val ambientStrength by SettingsStore.playerAmbientIntensity.collectAsState()
+        if (onAmbientPaletteChanged != null) {
+            NativeVideoAmbientSampler(
+                playerView = playerView,
+                active = !device.isTv && !inPictureInPicture && playbackIsPlaying,
+                onPalette = { palette ->
+                    fullscreenAmbientPalette = palette
+                    onAmbientPaletteChanged(palette)
+                },
+            )
+        }
+        FullscreenSideAmbient(
+            palette = fullscreenAmbientPalette,
+            videoAspectRatio = contentAspectRatio,
+            enabled = isFullscreen && !device.isTv && !inPictureInPicture &&
+                contentScale == PlayerContentScale.FIT && onAmbientPaletteChanged != null,
+            intensity = ambientStrength,
+            modifier = Modifier.fillMaxSize(),
+        )
+
         // Some TV input compositors keep a stopped app's SurfaceView above HDMI until Home forces
         // another composition. Detach only the TV surface; the service already pauses playback.
         DisposableEffect(device.isTv, lifecycleOwner, playerView, playerControls) {
@@ -2232,21 +2266,31 @@ fun PlayerSurface(
                     }
                 },
                 bottomLeftIcons = { PlayerLockButton(onLock = { screenLocked = true }) },
-            ) {
-                // Labelled pills rather than bare glyphs: which of these opens subtitles and which
-                // opens audio was previously something you found out by pressing one. The label is
-                // dropped again on the narrow tiers, where the row really has no room for it.
-                if (episodes.isNotEmpty() && onSelectEpisode != null) {
-                    PlayerActionPill(
-                        label = "Episodes",
-                        icon = Icons.AutoMirrored.Filled.ViewList,
-                        onClick = {
+                bottomPrimaryIcons = {
+                    if (episodes.isNotEmpty() && onSelectEpisode != null) {
+                        PlayerActionPill("Episodes", Icons.AutoMirrored.Filled.ViewList, onClick = {
                             episodeDrawerExpanded = true
                             phoneControlsInteraction++
-                        },
-                    )
-                }
-                if (sourceOptions.size > 1) {
+                        })
+                    }
+                    PlayerActionPill("Audio & Subtitles", Icons.Default.ClosedCaption, onClick = {
+                        captionsExpanded = true
+                        phoneControlsInteraction++
+                    })
+                    PlayerActionPill("Speed", Icons.Default.Speed, onClick = {
+                        quickPlaybackPanel = "speed"
+                        phoneControlsInteraction++
+                    })
+                    PlayerActionPill("Quality", Icons.Default.HighQuality, onClick = {
+                        quickPlaybackPanel = "quality"
+                        phoneControlsInteraction++
+                    })
+                },
+                bottomRightIcons = {
+                // Portrait inline player shows only the controls not already obvious on
+                // the watch page: subtitles, casting, fullscreen, and settings. The
+                // episode list remains below the video instead of consuming its toolbar.
+                if (isFullscreen && sourceOptions.size > 1) {
                     PlayerActionPill(
                         label = "Sources",
                         icon = Icons.Default.SwapHoriz,
@@ -2256,7 +2300,7 @@ fun PlayerSurface(
                         },
                     )
                 }
-                PlayerActionPill(
+                if (!isFullscreen) PlayerActionPill(
                     label = "Subtitles",
                     icon = Icons.Default.ClosedCaption,
                     onClick = {
@@ -2281,7 +2325,8 @@ fun PlayerSurface(
                         phoneControlsInteraction++
                     },
                 )
-            }
+                },
+            )
         }
         }
 
@@ -2300,6 +2345,48 @@ fun PlayerSurface(
                     phoneControlsInteraction++
                 },
             )
+        }
+
+        if (quickPlaybackPanel != null && controller != null && !device.isTv) {
+            val activeController = controller!!
+            val closeQuickPanel = {
+                quickPlaybackPanel = null
+                restoreTvControlsFocus()
+            }
+            when (quickPlaybackPanel) {
+                "speed" -> PlayerQuickSpeedSheet(
+                    speed = playbackSpeed,
+                    onSpeedChange = { value ->
+                        playbackSpeed = value
+                        activeController.setPlaybackSpeed(value)
+                        SettingsStore.setDefaultPlaybackSpeed(value)
+                    },
+                    onDismiss = closeQuickPanel,
+                    fullscreen = isFullscreen,
+                )
+                "quality" -> {
+                    val heights = availableVideoHeights(activeController, nativeQualityStreams)
+                    val options = buildList {
+                        add(PlayerQualityOption("Auto", pinnedVideoHeight == null) {
+                            changeVideoHeight(activeController, null)
+                        })
+                        heights.forEach { height ->
+                            add(PlayerQualityOption(
+                                label = "${height}p",
+                                selected = pinnedVideoHeight == height,
+                                onSelect = { changeVideoHeight(activeController, height) },
+                                height = height,
+                            ))
+                        }
+                    }
+                    PlayerQuickQualitySheet(
+                        options = options,
+                        message = dataSaverFallbackMessage(defaultQuality, heights),
+                        onDismiss = closeQuickPanel,
+                        fullscreen = isFullscreen,
+                    )
+                }
+            }
         }
 
         if (settingsExpanded && controller != null) {
@@ -3036,7 +3123,7 @@ fun PlayerSurface(
             AutoSkipButtonBounds {
             OutlinedButton(
                 onClick = onClick,
-                shape = RoundedCornerShape(10.dp),
+                shape = CircleShape,
                 border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.86f)),
                 colors = controlFocus1.buttonColors(
                     ButtonDefaults.outlinedButtonColors(
@@ -3054,11 +3141,11 @@ fun PlayerSurface(
                 modifier = actionModifier
                     .focusRequester(tvSkipActionFocus)
                     .onFocusChanged { tvSkipActionFocused = it.hasFocus }
-                    .focusFill(controlFocus1, RoundedCornerShape(10.dp))
+                    .focusFill(controlFocus1, CircleShape)
                     .autoSkipSweep(
                         secondsLeft = countdownSeconds,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = CircleShape,
                     ),
             ) {
                 Text(

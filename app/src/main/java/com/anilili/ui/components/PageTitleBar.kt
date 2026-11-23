@@ -8,12 +8,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.border
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,7 +53,23 @@ fun PageTitleBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (background == null) Modifier.appCanvas() else Modifier.background(background))
+            .then(
+                when {
+                    background != null -> Modifier.background(background)
+                    device.isTv -> Modifier.appCanvas()
+                    else -> Modifier
+                        // A translucent neutral glass header, not an opaque canvas slab.
+                        // The title remains readable while content moves underneath.
+                        .background(
+                            Brush.verticalGradient(
+                                0f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.77f),
+                                0.72f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f),
+                                1f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.24f),
+                            ),
+                        )
+                },
+            )
+            // Keep a soft canvas-backed header without drawing another rectangular border.
             .statusBarsPadding()
             .padding(
                 // A back arrow carries its own touch padding, so the page inset would set it in
@@ -64,13 +83,13 @@ fun PageTitleBar(
     ) {
         leading?.invoke()
         Column(
-            Modifier.weight(1f),
+            Modifier.weight(1f).widthIn(min = 0.dp),
             verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
             Text(
                 title,
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Black,
+                style = if (device.isTv) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -84,6 +103,8 @@ fun PageTitleBar(
                 )
             }
         }
+        // Keep the trailing account/action control at the same vertical centre as the title.
+        // Its own semantics and touch area remain owned by the caller.
         trailing?.invoke()
     }
 }

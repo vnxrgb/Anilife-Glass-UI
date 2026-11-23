@@ -14,3 +14,7 @@ maintainer-supplied `Kyro_smooth_anilife gif.gif` was superseded and is not redi
 
 Third-party catalogue artwork, posters, backdrops, and provider media are fetched at runtime and
 are not redistributed as project branding.
+
+## Anilumos identity (2026-11-23)
+
+The new A-and-candle logo uses vector resources under `app/src/main/res/drawable/anilumos_mark*.xml` and the README presentation source at `docs/assets/anilumos-mark.svg`. Original AniLife icon and old startup videos are no longer the app's displayed brand identity, but are still kept in the repository for provenance. Their applicable rights and license obligations remain unchanged.

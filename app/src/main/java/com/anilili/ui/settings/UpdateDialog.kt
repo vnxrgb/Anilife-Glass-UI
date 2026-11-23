@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -74,7 +75,7 @@ fun UpdatePromptHost() {
                 MidnightPage(onDismiss = { expanded = false }) {
                     MidnightModalTitle(
                         kicker = "What's new",
-                        title = "Anilife ${UpdateManager.offeredLabel(s.update)}",
+                        title = "Anilumos ${UpdateManager.offeredLabel(s.update)}",
                         body = "You have ${UpdateManager.installedLabel(s.update)}.",
                     )
                     MidnightRule(Modifier.padding(top = 12.dp))
@@ -93,7 +94,7 @@ fun UpdatePromptHost() {
                 MidnightModal(onDismiss = UpdateManager::dismiss) {
                     MidnightModalTitle(
                         kicker = "Update available",
-                        title = "Anilife ${UpdateManager.offeredLabel(s.update)}",
+                        title = "Anilumos ${UpdateManager.offeredLabel(s.update)}",
                         body = "You have ${UpdateManager.installedLabel(s.update)}.",
                     )
                     if (notes.isNotEmpty()) {
@@ -134,10 +135,17 @@ fun UpdatePromptHost() {
                                                 true
                                             }
                                             .focusable()
+                                            .background(
+                                                if (LocalAppDeviceProfile.current.isTv) Color.Transparent
+                                                else MaterialTheme.colorScheme.surface.copy(alpha = 0.54f),
+                                                RoundedCornerShape(12.dp),
+                                            )
                                             .border(
                                                 1.dp,
-                                                if (notesFocused) Midnight.Line2 else Color.Transparent,
-                                                RoundedCornerShape(8.dp),
+                                                if (notesFocused) {
+                                                    if (LocalAppDeviceProfile.current.isTv) Midnight.Line2 else MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)
+                                                } else Color.Transparent,
+                                                RoundedCornerShape(12.dp),
                                             )
                                             .verticalScroll(notesScroll)
                                     } else {
@@ -172,7 +180,7 @@ fun UpdatePromptHost() {
         is UpdateManager.State.Downloading -> MidnightModal(onDismiss = {}) {
             MidnightModalTitle(
                 kicker = "Downloading",
-                title = "Anilife ${UpdateManager.offeredLabel(s.update)}",
+                title = "Anilumos ${UpdateManager.offeredLabel(s.update)}",
                 body = null,
             )
             MidnightProgressLine(
@@ -184,7 +192,7 @@ fun UpdatePromptHost() {
         is UpdateManager.State.ReadyToInstall -> MidnightModal(onDismiss = UpdateManager::dismiss) {
             MidnightModalTitle(
                 kicker = "Ready to install",
-                title = "Anilife ${UpdateManager.offeredLabel(s.update)} is downloaded",
+                title = "Anilumos ${UpdateManager.offeredLabel(s.update)} is downloaded",
                 body = "If nothing happens, allow installs from this app when Android asks, then " +
                     "choose Install again.",
             )

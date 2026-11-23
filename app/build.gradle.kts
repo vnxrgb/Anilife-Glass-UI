@@ -20,11 +20,11 @@ val diagnosticBuildSha = providers.environmentVariable("GITHUB_SHA").orNull
             isIgnoreExitValue = true
         }.standardOutput.asText.get().trim()
     }.getOrDefault("unknown").ifBlank { "unknown" }
-val appVersionCode = 6
-val appVersionName = "0.1.3"
+val appVersionCode = 7
+val appVersionName = "1.0.0"
 
 tasks.named<CyclonedxDirectTask>("cyclonedxDirectBom") {
-    componentName = "Anilife"
+    componentName = "Anilumos"
     componentVersion = appVersionName
     projectType = Component.Type.APPLICATION
     includeConfigs = listOf("mobileReleaseRuntimeClasspath", "tvReleaseRuntimeClasspath")
@@ -68,7 +68,7 @@ android {
     buildToolsVersion = "35.0.1"
 
     defaultConfig {
-        applicationId = "io.github.anilifecommunity.anilife"
+        applicationId = "com.anilumos.app"
         // Fire OS 5 devices (including the 1st/2nd-gen Fire TV Sticks) report API 22.
         minSdk = 22
         targetSdk = 36
@@ -91,7 +91,7 @@ android {
         manifestPlaceholders["discordRedirectScheme"] = discordApplicationId
             .takeIf(String::isNotBlank)
             ?.let { "discord-$it" }
-            ?: "anilife-discord-unconfigured"
+            ?: "anilumos-discord-unconfigured"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -212,20 +212,13 @@ android {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             val abi = output.getFilter(OutputFile.ABI)
             val buildTypeSuffix = if (buildType.name == "release") "" else "-${buildType.name}"
-            // Updaters in v0.1.32 and earlier install the release's first .apk asset, and
-            // GitHub orders assets by name: '.' sorts before '_', so "Anilife.apk" (universal,
-            // runs on every ABI) must precede "Anilife_<abi>.apk". Never name splits with '-';
-            // '-' sorts before '.' and legacy TVs would fetch an incompatible split.
-            //
-            // The mobile flavor keeps the historical names exactly, because every install out
-            // there is already looking for them. TV assets take an extra "_tv" segment, which
-            // sorts after all of the mobile names, so a legacy updater still lands on the
-            // universal mobile APK rather than a build meant for a different form factor.
+            // Anilumos is a separate app ID, so its generated APK names can use its own
+            // branding without affecting legacy AniLife update paths.
             val formSuffix = if (flavorName == "tv") "_tv" else ""
             output.outputFileName = if (abi == null) {
-                "Anilife$buildTypeSuffix$formSuffix.apk"
+                "Anilumos$buildTypeSuffix$formSuffix.apk"
             } else {
-                "Anilife$buildTypeSuffix${formSuffix}_$abi.apk"
+                "Anilumos$buildTypeSuffix${formSuffix}_$abi.apk"
             }
         }
     }

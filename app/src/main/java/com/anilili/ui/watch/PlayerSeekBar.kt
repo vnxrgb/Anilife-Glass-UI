@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,8 +21,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.anilili.ui.theme.LocalAppColors
@@ -39,9 +43,25 @@ internal fun playedFraction(positionMs: Long, durationMs: Long): Float {
 
 /** Where a press or drag at [xPx] across a bar [widthPx] wide lands, in milliseconds. */
 internal fun seekTargetMs(xPx: Float, widthPx: Float, durationMs: Long): Long {
-    if (widthPx <= 0f || durationMs <= 0L) return 0L
-    return ((xPx / widthPx).coerceIn(0f, 1f) * durationMs).toLong()
+    if (!xPx.isFinite() || !widthPx.isFinite() || widthPx <= 0f || durationMs <= 0L) return 0L
+    return ((xPx / widthPx).coerceIn(0f, 1f) * durationMs).toLong().coerceIn(0L, durationMs)
 }
+
+/** Match gestures to the inset track that the thumb actually travels along. */
+internal fun seekTargetOnInsetTrackMs(xPx: Float, widthPx: Float, insetPx: Float, durationMs: Long): Long {
+    if (!insetPx.isFinite() || insetPx < 0f || !widthPx.isFinite()) return 0L
+    val travelPx = (widthPx - insetPx * 2f).coerceAtLeast(0f)
+    if (travelPx <= 0f) return 0L
+    return seekTargetMs(xPx - insetPx, travelPx, durationMs)
+}
+
+/**
+ * Shift only the visible track closer to the time/lock row, keeping the entire
+ * 48dp touch and accessibility target in place. The previous centered track
+ * looked detached from the controls on short inline players.
+ */
+internal fun seekTrackVisualNudge(touchHeight: Dp): Dp =
+    if (touchHeight <= 28.dp) 10.dp else 7.dp
 
 /**
  * The player's timeline: a hand-drawn three-band track with its own thumb, scrubbable by finger and
@@ -100,6 +120,10 @@ internal fun PlayerSeekBar(
         label = "seekBarThumbRadius",
     )
 
+    // Keep finger-to-time mapping on the same inset geometry as the drawn thumb.
+    // Use the resting radius to avoid restarting an active drag during its animation.
+    val seekInsetPx = with(LocalDensity.current) { 9.dp.toPx() }
+
     // White unless the viewer asked for the accent in the player (Appearance): the seek bar sits on
     // the picture, where the player is monochrome by default (see PlayerPanelTheme).
     val played = LocalAppColors.current.playerAccent.let { if (enabled) it else it.copy(alpha = 0.38f) }
@@ -107,33 +131,45 @@ internal fun PlayerSeekBar(
     val remaining = Color.White.copy(alpha = if (enabled) 0.30f else 0.16f)
 
     fun commit(target: Long) {
-        currentOnSeek(target.coerceIn(0L, currentDurationMs))
+        // A stream may switch to unknown duration while a drag is in progress.
+        val validDuration = currentDurationMs
+        if (validDuration <= 0L) return
+        currentOnSeek(target.coerceIn(0L, validDuration))
         currentOnInteract()
     }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(touchHeight)
-            .semantics { contentDescription = "Seek" }
+            .heightIn(min = 48.dp)
+            .semantics {
+                contentDescription = "Playback position"
+                if (enabled) {
+                    progressBarRangeInfo = ProgressBarRangeInfo(fraction.coerceIn(0f, 1f), 0f..1f)
+                    setProgress { requestedFraction ->
+                        commit((requestedFraction.coerceIn(0f, 1f) * currentDurationMs).toLong())
+                        true
+                    }
+                }
+            }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
                 detectTapGestures { offset ->
-                    commit(seekTargetMs(offset.x, size.width.toFloat(), currentDurationMs))
+                    commit(seekTargetOnInsetTrackMs(offset.x, size.width.toFloat(), seekInsetPx, currentDurationMs))
                 }
             }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
                 detectDragGestures(
                     onDragStart = { offset ->
-                        val next = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        val next = if (currentDurationMs > 0L) seekTargetOnInsetTrackMs(offset.x, size.width.toFloat(), seekInsetPx, currentDurationMs).toFloat() / currentDurationMs else 0f
                         scrubFraction = next
                         currentOnScrubChange((next * currentDurationMs).toLong())
                         currentOnInteract()
                     },
                     onDrag = { change, _ ->
                         change.consume()
-                        val next = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        val next = if (currentDurationMs > 0L) seekTargetOnInsetTrackMs(change.position.x, size.width.toFloat(), seekInsetPx, currentDurationMs).toFloat() / currentDurationMs else 0f
                         scrubFraction = next
                         currentOnScrubChange((next * currentDurationMs).toLong())
                         currentOnInteract()
@@ -154,15 +190,21 @@ internal fun PlayerSeekBar(
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(touchHeight),
+                .heightIn(min = 48.dp),
         ) {
-            val centreY = size.height / 2f
+            // Nudge the stroke and thumb down inside the SAME 48dp hit target;
+            // the normal thumb (6dp) and active thumb (9dp) both stay in bounds.
+            // Scrub mapping remains horizontal and unchanged.
+            val centreY = size.height / 2f +
+                with(density) { seekTrackVisualNudge(touchHeight).toPx() }
             val strokePx = with(density) { drawnTrackHeight.toPx() }
             val thumbPx = with(density) { thumbRadius.toPx() }
             // The thumb must not run off either end, so the track it rides is inset by its own
             // radius and every band is drawn in that same space.
-            val left = thumbPx
-            val right = (size.width - thumbPx).coerceAtLeast(left)
+            // Keep travel geometry fixed while the thumb animates from 6dp to 9dp.
+            // The finger, visible track and accessibility endpoints must agree.
+            val left = seekInsetPx.coerceAtMost(size.width / 2f)
+            val right = (size.width - left).coerceAtLeast(left)
             val span = right - left
 
             fun band(color: Color, bandFraction: Float) {
@@ -172,6 +214,17 @@ internal fun PlayerSeekBar(
                     start = Offset(left, centreY),
                     end = Offset(left + span * bandFraction.coerceIn(0f, 1f), centreY),
                     strokeWidth = strokePx,
+                    cap = StrokeCap.Round,
+                )
+            }
+            // A soft underglow follows only the played segment and never obscures
+            // buffered progress, chapter markers, or the thumb's precise position.
+            if (enabled && fraction > 0f && span > 0f) {
+                drawLine(
+                    color = played.copy(alpha = 0.15f),
+                    start = Offset(left, centreY),
+                    end = Offset(left + span * fraction.coerceIn(0f, 1f), centreY),
+                    strokeWidth = strokePx * 4.2f,
                     cap = StrokeCap.Round,
                 )
             }
@@ -186,10 +239,25 @@ internal fun PlayerSeekBar(
                 strokePx = strokePx,
             )
             if (thumbPx > 0f) {
+                val thumbCenter = Offset(left + span * fraction.coerceIn(0f, 1f), centreY)
+                // A light-catching rim gives the seek knob the same neutral
+                // liquid-glass finish as the new control capsules. Its geometry
+                // and drag hit area are unchanged, so seeking remains exact.
                 drawCircle(
-                    color = played,
-                    radius = thumbPx,
-                    center = Offset(left + span * fraction.coerceIn(0f, 1f), centreY),
+                    color = Color.Black.copy(alpha = 0.28f),
+                    radius = thumbPx + with(density) { 2.dp.toPx() },
+                    center = thumbCenter,
+                )
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.60f),
+                    radius = thumbPx + with(density) { 0.9.dp.toPx() },
+                    center = thumbCenter,
+                )
+                drawCircle(color = played, radius = thumbPx * 0.86f, center = thumbCenter)
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.46f),
+                    radius = thumbPx * 0.32f,
+                    center = Offset(thumbCenter.x - thumbPx * 0.25f, thumbCenter.y - thumbPx * 0.24f),
                 )
             }
         }

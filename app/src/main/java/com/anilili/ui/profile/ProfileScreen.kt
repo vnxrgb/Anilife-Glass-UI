@@ -4,6 +4,12 @@ package com.anilili.ui.profile
 
 
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
+import com.anilili.ui.components.glassSelectionColor
+import com.anilili.ui.components.cinematicFilterChipColors
+import com.anilili.ui.components.glassAtmosphere
 import android.Manifest
 import android.net.Uri
 import android.widget.Toast
@@ -578,8 +584,8 @@ fun ProfileScreen(
     }
 
     Scaffold(
-        containerColor = canvasColor(),
-        modifier = modifier,
+        containerColor = if (device.isTv) canvasColor() else Color.Transparent,
+        modifier = modifier.then(if (device.isTv) Modifier else Modifier.glassAtmosphere()),
         topBar = {
             // A signed-in television names the page in its hero instead, over the account's art.
             if (!(device.isTv && loggedIn)) ScrollAwareTopBar {
@@ -619,10 +625,11 @@ fun ProfileScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             top = padding.calculateTopPadding(),
-                            bottom = padding.calculateBottomPadding() +
-                                LocalAppChromeBottomInset.current + AppChromeListBottomGap,
+                            bottom = padding.calculateBottomPadding()
+                                .coerceAtLeast(LocalAppChromeBottomInset.current) +
+                                AppChromeListBottomGap + (if (device.isTv) 0.dp else 20.dp),
                         ),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 7.dp),
                     ) {
                         if (device.isTv && !loggedIn) {
                             // Give the two provider buttons the whole first focus row. In the old
@@ -886,29 +893,27 @@ private fun ProfileHero(
     modifier: Modifier = Modifier,
 ) {
     val device = LocalAppDeviceProfile.current
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(22.dp)
     Column(
         modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, shape),
+            .glassCard(shape),
     ) {
-        Column(Modifier.fillMaxWidth().padding(20.dp)) {
+        Column(Modifier.fillMaxWidth().padding(if (device.isTv) 20.dp else 16.dp)) {
             Text("Your anime, in one place", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
             Text(
-                "Connect AniList or MyAnimeList to browse every list, score, and episode progress from Anilife.",
+                "Connect AniList or MyAnimeList to browse every list, score, and episode progress from Anilumos.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 5.dp),
+                modifier = Modifier.padding(top = if (device.isTv) 5.dp else 6.dp),
             )
             // One row per way in, each the full width of the card. The buttons these replace
             // sized themselves to their words, so "Login with MAL" wrapped onto two lines beside
             // a one-line AniList button and the TV link sat alone underneath — three shapes for
             // three equal choices, and nothing but the words to tell the services apart.
             Column(
-                Modifier.padding(top = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                Modifier.padding(top = if (device.isTv) 16.dp else 12.dp),
+                verticalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 8.dp),
             ) {
                 SignInOptionRow(
                     title = "Continue with AniList",
@@ -956,39 +961,40 @@ private fun SignInOptionRow(
     badge: @Composable () -> Unit,
     emphasized: Boolean = false,
 ) {
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(18.dp)
+    val device = LocalAppDeviceProfile.current
     val focus = rememberFocusFill()
     val container = if (emphasized) {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
     } else {
-        Color.Transparent
+        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.32f)
     }
     Surface(
         onClick = onClick,
         shape = shape,
         color = focus.background(container),
         contentColor = focus.content(MaterialTheme.colorScheme.onSurface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = if (emphasized) 0.9f else 0.6f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = if (emphasized) 0.30f else 0.17f)),
         modifier = Modifier
             .fillMaxWidth()
             .focusFill(focus, shape),
     ) {
         Row(
-            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            Modifier.padding(horizontal = 12.dp, vertical = if (device.isTv) 10.dp else 7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             badge()
             Column(
                 Modifier
                     .weight(1f)
-                    .padding(horizontal = 14.dp),
+                    .padding(horizontal = 11.dp),
             ) {
                 Text(
                     title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = focus.content(MaterialTheme.colorScheme.onSurface),
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
@@ -1061,7 +1067,7 @@ private fun LibraryHeader(
     customChips: CustomListChips,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(if (LocalAppDeviceProfile.current.isTv) 12.dp else 8.dp)) {
         PageSearch(
             value = titleFilter,
             onValueChange = onTitleFilterChange,
@@ -1139,7 +1145,14 @@ private fun LibraryViewChips(
                 val selected = view in selectedViews
                 val controlFocus7 = rememberFocusFill()
                 FilterChip(
-                    colors = controlFocus7.chipColors(FilterChipDefaults.filterChipColors()),
+                    shape = RoundedCornerShape(50),
+                    colors = controlFocus7.chipColors(
+                        if (LocalAppDeviceProfile.current.isTv) {
+                            FilterChipDefaults.filterChipColors()
+                        } else {
+                            cinematicFilterChipColors()
+                        },
+                    ),
                     selected = selected,
                     onClick = { onToggle(view) },
                     label = { Text("${view.chipLabel}  ${viewCounts[view] ?: 0}") },
@@ -1154,14 +1167,21 @@ private fun LibraryViewChips(
                     } else {
                         null
                     },
-                    modifier = Modifier.focusFill(controlFocus7, RoundedCornerShape(8.dp)),
+                    modifier = Modifier.focusFill(controlFocus7, RoundedCornerShape(50)),
                 )
             }
             // The viewer's own lists, after the account's statuses and toggled the same way.
             items(customChips.chips, key = { "custom_${listKey(it.name)}" }) { chip ->
                 val chipFocus = rememberFocusFill()
                 FilterChip(
-                    colors = chipFocus.chipColors(FilterChipDefaults.filterChipColors()),
+                    shape = RoundedCornerShape(50),
+                    colors = chipFocus.chipColors(
+                        if (LocalAppDeviceProfile.current.isTv) {
+                            FilterChipDefaults.filterChipColors()
+                        } else {
+                            cinematicFilterChipColors()
+                        },
+                    ),
                     selected = chip.selected,
                     onClick = { customChips.onToggle(chip.name) },
                     label = { Text("${chip.name}  ${chip.count}") },
@@ -1170,18 +1190,22 @@ private fun LibraryViewChips(
                     } else {
                         null
                     },
-                    modifier = Modifier.focusFill(chipFocus, RoundedCornerShape(8.dp)),
+                    modifier = Modifier.focusFill(chipFocus, RoundedCornerShape(50)),
                 )
             }
             item(key = "custom_new") {
                 val chipFocus = rememberFocusFill()
                 FilterChip(
-                    colors = chipFocus.chipColors(FilterChipDefaults.filterChipColors()),
+                    shape = RoundedCornerShape(50),
+                    colors = chipFocus.chipColors(
+                        if (LocalAppDeviceProfile.current.isTv) FilterChipDefaults.filterChipColors()
+                        else FilterChipDefaults.filterChipColors(containerColor = glassPanelColor()),
+                    ),
                     selected = false,
                     onClick = customChips.onNew,
                     label = { Text("New list") },
                     leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    modifier = Modifier.focusFill(chipFocus, RoundedCornerShape(8.dp)),
+                    modifier = Modifier.focusFill(chipFocus, RoundedCornerShape(50)),
                 )
             }
         }
@@ -1338,7 +1362,8 @@ private fun LibraryProfilePill(
             .focusFill(fillFocus1, RoundedCornerShape(50))
             .clickable(onClickLabel = "Open account", onClick = onClick),
         shape = RoundedCornerShape(50),
-        color = fillFocus1.background(MaterialTheme.colorScheme.surface),
+        color = fillFocus1.background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.47f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.21f)),
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Row(
@@ -1634,7 +1659,7 @@ private fun EpisodeDownloadCard(
         )[episode.id]?.takeIf { it.isBusy }
     }
     val device = LocalAppDeviceProfile.current
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(22.dp)
     val cardModifier = if (modifier != Modifier) {
         modifier.focusHighlight(shape)
     } else {
@@ -1649,8 +1674,8 @@ private fun EpisodeDownloadCard(
             onClick = onPlay,
         ),
         shape = shape,
-        color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.54f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f)),
     ) {
         Column {
             Box(
@@ -1884,7 +1909,7 @@ private fun SeriesDownloadCard(
         episode.metadata.episodeNumber.trim().toDoubleOrNull()
             ?.let { episodeWatchFraction(historyEntry, it) >= 0.999f } == true
     }
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(22.dp)
     val cardModifier = (if (modifier != Modifier) {
         modifier
     } else {
@@ -2008,8 +2033,10 @@ private fun HistoryCard(
             if (poster.shows(PosterElement.DUB) && DubIndex.hasDub(entry.anilistId)) {
                 DubBadge(Modifier.align(Alignment.BottomStart).padding(start = 7.dp, bottom = 11.dp))
             }
-            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.Black.copy(alpha = .4f))) {
-                Box(Modifier.fillMaxWidth(entry.progressFraction.coerceAtLeast(.02f)).height(4.dp).background(MaterialTheme.colorScheme.primary))
+            if (entry.durationMs > 0L) {
+                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.Black.copy(alpha = .4f))) {
+                    Box(Modifier.fillMaxWidth(entry.progressFraction.coerceIn(0f, 1f)).height(4.dp).background(MaterialTheme.colorScheme.primary))
+                }
             }
         }
         return
@@ -2030,25 +2057,36 @@ private fun HistoryCard(
     val cardModifier = if (modifier != Modifier) {
         modifier.focusHighlight(CaptionedCardShape).then(pressModifier)
     } else {
-        Modifier.width(device.posterWidth).focusHighlight(CaptionedCardShape).then(pressModifier)
+        Modifier.width(device.posterWidth.coerceAtMost(148.dp)).focusHighlight(CaptionedCardShape).then(pressModifier)
     }
     Column(cardModifier) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(9.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+            Modifier.fillMaxWidth().aspectRatio(1f).glassCard(RoundedCornerShape(20.dp)),
         ) {
             AsyncImage(entry.cover, entry.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Icon(Icons.Default.PlayArrow, contentDescription = "Resume", tint = Color.White, modifier = Modifier.align(Alignment.Center))
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.56f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = "Resume", tint = Color.White)
+            }
             if (poster.shows(PosterElement.DUB) && DubIndex.hasDub(entry.anilistId)) {
                 // Bottom-start like every other card, lifted clear of the progress bar that owns
                 // the last four pixels of this one.
                 DubBadge(Modifier.align(Alignment.BottomStart).padding(start = 5.dp, bottom = 9.dp))
             }
-            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.Black.copy(alpha = .4f))) {
-                Box(Modifier.fillMaxWidth(entry.progressFraction.coerceAtLeast(.02f)).height(4.dp).background(MaterialTheme.colorScheme.primary))
+            if (entry.durationMs > 0L) {
+                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.Black.copy(alpha = .4f))) {
+                    Box(Modifier.fillMaxWidth(entry.progressFraction.coerceIn(0f, 1f)).height(4.dp).background(MaterialTheme.colorScheme.primary))
+                }
             }
         }
         if (poster.shows(PosterElement.TITLE)) {
-            Text(entry.title, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 5.dp))
+            Text(entry.title, style = MaterialTheme.typography.labelLarge, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 5.dp))
         }
         if (poster.shows(PosterElement.DETAILS)) {
             Text(
@@ -2296,7 +2334,7 @@ private fun SavedAnimeCard(
     }
     Column(cardModifier) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(9.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+            Modifier.fillMaxWidth().aspectRatio(2f / 3f).glassCard(RoundedCornerShape(20.dp)),
         ) {
             AsyncImage(entry.cover, entry.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             when {
@@ -2428,18 +2466,51 @@ private fun SavedAnimeCardData.progressLabel(): String? = when {
 private fun EmptyPanel(text: String) {
     val device = LocalAppDeviceProfile.current
     Panel(Modifier.padding(horizontal = device.pagePadding)) {
-        Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
+        if (text == "Tap the heart on any anime to save it" && !device.isTv) {
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                Icon(
+                    Icons.Default.SaveAlt,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp),
+                )
+                Text("Your watchlist is empty", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Tap the heart on any anime to save it for later.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
+        } else {
+            Text(
+                text,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
+            )
+        }
     }
 }
 
 @Composable
 private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val shape = RoundedCornerShape(10.dp)
+    val device = LocalAppDeviceProfile.current
+    val shape = RoundedCornerShape(if (device.isTv) 10.dp else 22.dp)
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth()
+            .then(if (device.isTv) Modifier else Modifier.glassCard(shape)),
         shape = shape,
-        color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        color = if (device.isTv) MaterialTheme.colorScheme.surface else Color.Transparent,
+        border = if (device.isTv) {
+            androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        } else {
+            null // glassCard draws its own neutral rim and soft elevation
+        },
         content = content,
     )
 }

@@ -23,6 +23,8 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.anilili.ui.theme.LocalAppColors
+import com.anilili.ui.adaptive.LocalAppDeviceProfile
+import com.anilili.ui.components.glassCard
 
 /** A round chip of [color], ringed so white and black both read against any row. */
 @Composable
@@ -47,14 +49,21 @@ internal fun ThemeSwatch(color: Color, modifier: Modifier = Modifier) {
 internal fun ThemePreview(modifier: Modifier = Modifier) {
     val colors = LocalAppColors.current
     val scheme = colors.scheme
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(18.dp)
+    val onTv = LocalAppDeviceProfile.current.isTv
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
-            .clip(shape)
-            .background(scheme.surfaceContainerLow, shape)
-            .border(1.dp, colors.line, shape)
+            .then(
+                if (onTv) {
+                    Modifier.clip(shape)
+                        .background(scheme.surfaceContainerLow, shape)
+                        .border(1.dp, colors.line, shape)
+                } else {
+                    Modifier.glassCard(shape)
+                },
+            )
             .padding(14.dp)
             .clearAndSetSemantics { },
         verticalArrangement = Arrangement.spacedBy(12.dp),

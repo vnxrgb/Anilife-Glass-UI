@@ -455,7 +455,7 @@ object UpdateManager {
                 .setDataAndType(uri, APK_MIME_TYPE)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             if (policy.uriKind == UpdateInstallerUriKind.FILE_PROVIDER) {
-                intent.clipData = ClipData.newRawUri("Anilife update", uri)
+                intent.clipData = ClipData.newRawUri("Anilumos update", uri)
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             try {
@@ -522,7 +522,7 @@ object UpdateManager {
         val candidate = packageManager.getPackageArchiveInfo(file.path, flags)
             ?: error("Downloaded file is not an APK")
         val installed = packageManager.getPackageInfo(context.packageName, flags)
-        if (candidate.packageName != context.packageName) error("Downloaded APK package does not match Anilife")
+        if (candidate.packageName != context.packageName) error("Downloaded APK package does not match Anilumos")
         info.build?.let { expected ->
             val actual = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 candidate.longVersionCode
@@ -537,8 +537,8 @@ object UpdateManager {
         if (!signersMatch(installedSigners, candidateSigners)) {
             AnililiError.UPDATE_SIGNATURE_MISMATCH.raise(
                 detail = "This installed APK was signed with a different certificate than the official update. " +
-                    "Back up anything you need, uninstall Anilife, then install the latest APK from " +
-                    "https://anilife.cc/downloads.",
+                    "Back up anything you need, uninstall the incompatible installation, then " +
+                    "install the APK from the release page for the version you intend to use.",
                 attributes = mapOf(
                     "installedSignerSha256" to signerDigests(installedSigners).joinToString(","),
                     "candidateSignerSha256" to signerDigests(candidateSigners).joinToString(","),

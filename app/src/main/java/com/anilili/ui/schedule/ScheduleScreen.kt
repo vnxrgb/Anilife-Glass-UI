@@ -1,11 +1,16 @@
 package com.anilili.ui.schedule
 
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassAtmosphere
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -42,6 +47,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -105,10 +113,10 @@ private const val DAY_STRIP_FIRST = -2L
 private const val DAY_STRIP_LENGTH = 9
 
 /** How tall the loading and error panels stand when they are items in the calendar's own list. */
-private val CalendarStatusHeight = 220.dp
+private val CalendarStatusHeight = 176.dp
 
 /** Height of the phone's floating day stepper; both lists reserve it below their last row. */
-private val DayStepperHeight = 56.dp
+private val DayStepperHeight = 48.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -162,7 +170,8 @@ fun ScheduleScreen(
     // A television changes the day from the pickers at the top, a D-pad press away; the stepper is
     // for a thumb at the bottom of a phone that has scrolled the pickers out of reach.
     val showDayStepper = !device.isTv
-    val stepperClearance = if (showDayStepper) DayStepperHeight + 12.dp else 0.dp
+    // Stepper occupies its own footer rather than drawing over episode rows.
+    val stepperClearance = 0.dp
     // Fresh for each visit to the month view, the way it was when the calendar owned it.
     val calendarListState = remember(calendarView) { LazyListState() }
     // The stepper changes the day from wherever the month view has been scrolled to, and left alone
@@ -181,8 +190,8 @@ fun ScheduleScreen(
     }
 
     Scaffold(
-        containerColor = canvasColor(),
-        modifier = modifier,
+        containerColor = if (device.isTv) canvasColor() else Color.Transparent,
+        modifier = modifier.then(if (device.isTv) Modifier else Modifier.glassAtmosphere()),
         topBar = {
             ScrollAwareTopBar {
                 PageTitleBar(
@@ -206,8 +215,8 @@ fun ScheduleScreen(
             }
         },
     ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
-            Column(Modifier.fillMaxSize()) {
+        Column(Modifier.padding(padding).fillMaxSize()) {
+            Column(Modifier.fillMaxWidth().weight(1f)) {
                 if (calendarView) {
                     CalendarSchedule(
                         vm = vm,
@@ -254,10 +263,13 @@ fun ScheduleScreen(
                         vm.selectDate(date)
                     },
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
+                        // Centre the capped glass stepper on tablets; do not leave it
+                        // anchored to the left while the calendar spans the screen.
+                        .fillMaxWidth()
+                        .widthIn(max = 520.dp)
+                        .align(Alignment.CenterHorizontally)
                         .padding(horizontal = device.pagePadding)
-                        .padding(bottom = LocalAppChromeBottomInset.current + 12.dp)
-                        .widthIn(max = 520.dp),
+                        .padding(bottom = LocalAppChromeBottomInset.current + 6.dp),
                 )
             }
         }
@@ -350,7 +362,7 @@ private fun SelectedDateLabel(date: LocalDate) {
         text = date.format(dateFmt),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = device.pagePadding, top = 8.dp, bottom = 4.dp),
+        modifier = Modifier.padding(start = device.pagePadding, top = 6.dp, bottom = 4.dp),
     )
 }
 
@@ -360,7 +372,17 @@ private fun EmptyDayNotice() {
         Modifier.fillMaxWidth().height(CalendarStatusHeight),
         contentAlignment = Alignment.Center,
     ) {
-        Text("Nothing scheduled", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            "No episodes scheduled for this day",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier
+                .padding(horizontal = LocalAppDeviceProfile.current.pagePadding)
+                .fillMaxWidth()
+                .glassCard(RoundedCornerShape(30.dp))
+                .padding(horizontal = 16.dp, vertical = 18.dp),
+        )
     }
 }
 
@@ -386,8 +408,8 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
     LazyRow(
         state = listState,
         modifier = Modifier.focusGroup(),
-        contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 6.dp else 5.dp),
     ) {
         items(DAY_STRIP_LENGTH) { index ->
             val date = today.plusDays(DAY_STRIP_FIRST + index)
@@ -395,36 +417,37 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
             val fillFocus1 = rememberFocusFill()
             Column(
                 modifier = Modifier
-                    .width(88.dp)
-                    .height(68.dp)
-                    .focusFill(fillFocus1, RoundedCornerShape(14.dp))
-                    .clip(RoundedCornerShape(14.dp))
+                    .width(if (device.isTv) 80.dp else 74.dp)
+                    .height(if (device.isTv) 60.dp else 52.dp)
+                    .focusFill(fillFocus1, CircleShape)
+                    .clip(CircleShape)
                     .background(
-                        fillFocus1.background(if (active) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surface),
+                        fillFocus1.background(if (active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                        else glassPanelColor()),
                     )
                     .border(
                         width = 1.dp,
-                        color = fillFocus1.content(if (active) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline),
-                        shape = RoundedCornerShape(14.dp),
+                        color = fillFocus1.content(if (active) glassRimColor()
+                        else glassRimColor().copy(alpha = 0.66f)),
+                        shape = CircleShape,
                     )
-                    .clickable { onSelect(date) }
-                    .padding(vertical = 10.dp),
+                    .clickable(onClickLabel = "Show schedule for ${date.format(dateFmt)}") { onSelect(date) }
+                    .semantics { this.selected = active }
+                    .padding(vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
                     text = relativeDayName(date, today) ?: date.format(dayFmt),
                     style = MaterialTheme.typography.labelLarge,
-                    color = fillFocus1.content(if (active) MaterialTheme.colorScheme.onPrimary
+                    color = fillFocus1.content(if (active) MaterialTheme.colorScheme.onSurface
                     else MaterialTheme.colorScheme.onSurface),
                     maxLines = 1,
                 )
                 Text(
                     text = date.format(shortDateFmt),
                     style = MaterialTheme.typography.labelSmall,
-                    color = fillFocus1.content(if (active) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.72f)
+                    color = fillFocus1.content(if (active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
                     else MaterialTheme.colorScheme.onSurfaceVariant),
                 )
             }
@@ -461,10 +484,13 @@ private fun DayStepper(
     val onToday = selected == today
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(28.dp),
-        color = colors.primaryContainer,
-        contentColor = colors.onPrimaryContainer,
-        shadowElevation = 6.dp,
+        shape = CircleShape,
+        // Neutral glass rather than a solid accent banner that overwhelms
+        // the schedule and looks like a second navigation bar.
+        color = glassPanelColor(),
+        contentColor = colors.onSurface,
+        border = BorderStroke(1.dp, glassRimColor()),
+        shadowElevation = 4.dp,
         tonalElevation = 0.dp,
     ) {
         Row(
@@ -485,7 +511,7 @@ private fun DayStepper(
                     .weight(1f)
                     .fillMaxHeight()
                     .padding(vertical = 4.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(CircleShape)
                     .clickable(enabled = !onToday, onClickLabel = "Go to today") { onSelect(today) },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -502,7 +528,7 @@ private fun DayStepper(
                     Text(
                         text = "Back to today",
                         style = MaterialTheme.typography.labelSmall,
-                        color = colors.onPrimaryContainer.copy(alpha = 0.72f),
+                        color = colors.onSurfaceVariant.copy(alpha = 0.78f),
                         maxLines = 1,
                     )
                 }
@@ -641,26 +667,26 @@ private fun ScheduleCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = device.pagePadding + 28.dp, end = device.pagePadding, top = 5.dp, bottom = 7.dp)
-            .focusHighlight(RoundedCornerShape(14.dp))
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
-            .clickable { onAnimeClick(media.id) }
-            .padding(10.dp),
+            .padding(start = device.pagePadding + 26.dp, end = device.pagePadding, top = 5.dp, bottom = 6.dp)
+            .focusHighlight(RoundedCornerShape(30.dp))
+            .glassCard(RoundedCornerShape(30.dp))
+            .clickable(onClickLabel = "Open ${media.title.preferred} episode ${item.episode}") {
+                onAnimeClick(media.id)
+            }
+            .padding(if (device.isTv) 9.dp else 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AsyncImage(
             model = media.coverImage.best,
             contentDescription = media.title.preferred,
             modifier = Modifier
-                .size(width = 62.dp, height = 82.dp)
-                .clip(RoundedCornerShape(9.dp)),
+                .size(width = if (device.isTv) 60.dp else 54.dp, height = if (device.isTv) 78.dp else 74.dp)
+                .clip(RoundedCornerShape(22.dp)),
             contentScale = ContentScale.Crop,
         )
         Column(
-            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.weight(1f).padding(horizontal = if (device.isTv) 10.dp else 8.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             Text(
                 text = media.title.preferred,
@@ -681,15 +707,16 @@ private fun ScheduleCard(
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = Instant.ofEpochSecond(item.airingAt).atZone(zone).format(LocalTimeOfDayFormatter.current),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
+                maxLines = 1,
             )
             Text(
                 text = if (upcoming) "UPCOMING" else "AIRED",
                 style = MaterialTheme.typography.labelSmall,
                 color = if (upcoming) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
+                modifier = Modifier.padding(top = 3.dp),
             )
             if (upcoming) {
                 val controlFocus4 = rememberFocusFill()
@@ -698,12 +725,12 @@ private fun ScheduleCard(
                     onClick = { onToggleReminder(item) },
                     modifier = Modifier
                         .padding(top = 2.dp)
-                        .size(36.dp)
+                        .size(48.dp)
                         .focusFill(controlFocus4, CircleShape),
                 ) {
                     Icon(
                         imageVector = if (reminded) Icons.Filled.Notifications else Icons.Outlined.NotificationsNone,
-                        contentDescription = if (reminded) "Remove reminder" else "Remind me",
+                        contentDescription = if (reminded) "Remove episode reminder" else "Set episode reminder",
                         tint = controlFocus4.content(if (reminded) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant),
                         modifier = Modifier.size(19.dp),
@@ -721,8 +748,9 @@ private fun ScheduleTag(label: String) {
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 7.dp, vertical = 3.dp),
+            .clip(CircleShape)
+            .background(glassPanelColor())
+            .border(1.dp, glassRimColor().copy(alpha = 0.75f), CircleShape)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }

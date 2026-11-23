@@ -1,6 +1,5 @@
 package com.anilili.ui.components
 
-import com.anilili.ui.theme.appCanvasFade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.MaterialTheme
@@ -9,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -58,30 +58,30 @@ val AppChromeFade = Brush.verticalGradient(
 @OptIn(ExperimentalHazeApi::class)
 @Composable
 fun Modifier.chromeFade(overHero: Boolean, backdrop: HazeState? = null): Modifier {
-    val backingColor = MaterialTheme.colorScheme.background
-    val backing = remember(backingColor) {
-        Brush.verticalGradient(
-            0f to backingColor,
-            0.86f to backingColor,
-            1f to backingColor.copy(alpha = 0f),
-        )
-    }
+    val scheme = MaterialTheme.colorScheme
+    val backingColor = scheme.surfaceContainerHigh
     val settled by animateFloatAsState(
         targetValue = if (overHero) 0f else 1f,
-        animationSpec = tween(200),
+        animationSpec = tween(220),
         label = "chromeBacking",
     )
-    // Frosted, the backing is the page itself blurred under a lighter wash of the page colour,
-    // faded in by the same [settled] and cut to the same soft foot by a mask, so the only change is
-    // what the backing is made of. The black fade then gives way partly, or the glass under the
-    // wordmark would be smoked back to the flat bar it replaces.
+    // The scrolling header transitions from a readable artwork scrim to a neutral
+    // translucent glass panel. Never paint an opaque canvas/background rectangle,
+    // which previously appeared as a solid black band on every scrolled page.
+    val glassBrush = remember(backingColor, scheme.onSurface) {
+        Brush.verticalGradient(
+            0f to backingColor.copy(alpha = 0.77f),
+            0.78f to backingColor.copy(alpha = 0.67f),
+            1f to backingColor.copy(alpha = 0.18f),
+        )
+    }
     val frosted = backdrop != null && backdropBlurAvailable
     val glass = if (frosted) {
         Modifier.hazeEffect(
             backdrop!!,
             HazeStyle(
-                backgroundColor = backingColor,
-                tint = HazeTint(backingColor.copy(alpha = .55f)),
+                backgroundColor = scheme.surface,
+                tint = HazeTint(backingColor.copy(alpha = 0.40f)),
                 blurRadius = 24.dp,
                 noiseFactor = 0f,
             ),
@@ -91,26 +91,17 @@ fun Modifier.chromeFade(overHero: Boolean, backdrop: HazeState? = null): Modifie
             inputScale = HazeInputScale.Fixed(0.33f)
             canDrawArea = { true }
         }
-    } else {
-        Modifier
-    }
-    return this.then(glass).drawBehind {
-        if (frosted) {
-            drawRect(AppChromeFade, alpha = 1f - .6f * settled)
-        } else {
-            drawRect(AppChromeFade)
+    } else Modifier
+
+    return this
+        .then(glass)
+        .drawBehind {
+            // Once the header is scrolled over ordinary content, the black hero
+            // gradient fades out instead of permanently darkening the glass.
+            if (settled < 1f) drawRect(AppChromeFade, alpha = 1f - settled)
+            // Keep a painted-glass fallback for devices without live Haze blur.
+            if (!frosted && settled > 0f) drawRect(glassBrush, alpha = settled)
         }
-    }.then(
-        // Drawn above the fade, as the flat backing always was; with a background picture it is the
-        // picture's slice rather than a band of the canvas colour.
-        if (frosted) Modifier else Modifier.appCanvasFade(alpha = { settled }) { canvas ->
-            Brush.verticalGradient(
-                0f to canvas,
-                0.86f to canvas,
-                1f to canvas.copy(alpha = 0f),
-            )
-        },
-    )
 }
 
 private val ChromeGlassMask = Brush.verticalGradient(

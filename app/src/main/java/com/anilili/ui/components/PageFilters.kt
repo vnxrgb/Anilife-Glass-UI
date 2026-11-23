@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -20,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,8 +30,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.anilili.ui.adaptive.focusFill
@@ -52,7 +57,7 @@ fun PageFilterRow(
 ) {
     Row(
         modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )
@@ -72,16 +77,19 @@ fun PageFilterPill(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(min = 48.dp)
                 .focusFill(fillFocus1, RoundedCornerShape(50))
-                .clickable { expanded = true },
+                .clickable(role = Role.Button, onClickLabel = "Choose $label filter") { expanded = true }
+                .semantics { contentDescription = "Filter: $label" },
             shape = RoundedCornerShape(50),
-            color = fillFocus1.background(MaterialTheme.colorScheme.surface),
+            color = fillFocus1.background(glassPanelColor()),
+            border = BorderStroke(1.dp, glassRimColor()),
             contentColor = fillFocus1.content(LocalContentColor.current),
         ) {
             Row(
-                Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
             ) {
                 Text(
                     label,
@@ -99,10 +107,21 @@ fun PageFilterPill(
                 )
             }
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = RoundedCornerShape(20.dp),
+        ) {
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option.label) },
+                    modifier = Modifier.semantics { selected = option.label == label },
+                    trailingIcon = {
+                        if (option.label == label) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                        }
+                    },
                     onClick = { expanded = false; onSelect(option.value) },
                 )
             }
@@ -128,11 +147,13 @@ fun PageSortControl(
         val fillFocus2 = rememberFocusFill()
         Surface(
             modifier = Modifier
+                .heightIn(min = 48.dp)
                 .focusFill(fillFocus2, RoundedCornerShape(50))
-                .clickable { expanded = true }
+                .clickable(role = Role.Button, onClickLabel = contentDescription) { expanded = true }
                 .semantics { this.contentDescription = contentDescription },
             shape = RoundedCornerShape(50),
-            color = fillFocus2.background(MaterialTheme.colorScheme.surface),
+            color = fillFocus2.background(glassPanelColor()),
+            border = BorderStroke(1.dp, glassRimColor()),
             contentColor = fillFocus2.content(LocalContentColor.current),
         ) {
             Row(
@@ -149,7 +170,12 @@ fun PageSortControl(
                 )
             }
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = RoundedCornerShape(20.dp),
+        ) {
             menu { expanded = false }
         }
     }
@@ -171,6 +197,7 @@ fun PageMenuSectionLabel(text: String) {
 fun PageMenuChoice(label: String, selected: Boolean, onClick: () -> Unit) {
     DropdownMenuItem(
         text = { Text(label) },
+        modifier = Modifier.semantics { this.selected = selected },
         trailingIcon = {
             if (selected) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))

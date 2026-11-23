@@ -1,6 +1,12 @@
 package com.anilili.ui.notifications
 
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassAtmosphere
+import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.LocalAppChromeBottomInset
+import com.anilili.ui.components.AppChromeListBottomGap
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -158,8 +164,8 @@ fun NotificationsScreen(
     }
 
     Scaffold(
-        containerColor = canvasColor(),
-        modifier = modifier,
+        containerColor = if (device.isTv) canvasColor() else androidx.compose.ui.graphics.Color.Transparent,
+        modifier = modifier.then(if (device.isTv) Modifier else Modifier.glassAtmosphere()),
         topBar = {
             ScrollAwareTopBar { TopAppBar(
                 title = { Text("Notifications", fontWeight = FontWeight.Black) },
@@ -296,22 +302,28 @@ private fun NotificationList(
             start = pagePadding,
             end = pagePadding,
             top = contentPadding.calculateTopPadding(),
-            bottom = contentPadding.calculateBottomPadding() + 32.dp,
+            bottom = contentPadding.calculateBottomPadding()
+                .coerceAtLeast(LocalAppChromeBottomInset.current) + AppChromeListBottomGap,
         ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.padding(vertical = 6.dp)) {
                 items(Tab.entries.size) { index ->
                     val entry = Tab.entries[index]
                     val count = items.count { it.unread && entry.matches(it) }
                     val controlFocus4 = rememberFocusFill()
                     FilterChip(
-                        colors = controlFocus4.chipColors(FilterChipDefaults.filterChipColors()),
+                        shape = RoundedCornerShape(50),
+                        colors = controlFocus4.chipColors(FilterChipDefaults.filterChipColors(
+                            containerColor = glassPanelColor(),
+                            selectedContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f),
+                            selectedLabelColor = MaterialTheme.colorScheme.onSurface,
+                        )),
                         selected = tab == entry,
                         onClick = { onTab(entry) },
                         label = { Text(if (unreadTotal > 0) "${entry.label}  $count" else entry.label) },
-                        modifier = Modifier.focusFill(controlFocus4, RoundedCornerShape(8.dp)),
+                        modifier = Modifier.focusFill(controlFocus4, RoundedCornerShape(50.dp)),
                     )
                 }
             }
@@ -319,10 +331,14 @@ private fun NotificationList(
         if (filtered.isEmpty()) {
             item {
                 Text(
-                    "Nothing here yet.",
+                    "No notifications in this category yet.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 32.dp).fillMaxWidth(),
+                    modifier = Modifier
+                        .padding(top = 20.dp)
+                        .fillMaxWidth()
+                        .glassCard(RoundedCornerShape(20.dp))
+                        .padding(horizontal = 20.dp, vertical = 24.dp),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
             }
@@ -395,13 +411,14 @@ private fun TvNotificationGrid(
                     val count = items.count { it.unread && entry.matches(it) }
                     val controlFocus5 = rememberFocusFill()
                     FilterChip(
+                        shape = RoundedCornerShape(50),
                         colors = controlFocus5.chipColors(FilterChipDefaults.filterChipColors()),
                         selected = tab == entry,
                         onClick = { onTab(entry) },
                         label = { Text(if (unreadTotal > 0) "${entry.label}  $count" else entry.label) },
                         modifier = Modifier
                             .focusProperties { up = backFocusRequester }
-                            .focusFill(controlFocus5, RoundedCornerShape(8.dp)),
+                            .focusFill(controlFocus5, RoundedCornerShape(50.dp)),
                     )
                 }
             }
@@ -449,13 +466,12 @@ private fun NotificationCard(
     compactTv: Boolean = false,
 ) {
     val isTv = LocalAppDeviceProfile.current.isTv
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(22.dp)
     Box(
         Modifier
             .fillMaxWidth()
             .focusHighlight(shape)
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surface)
+            .glassCard(shape)
             .border(
                 width = if (item.unread) 1.5.dp else 1.dp,
                 color = when {
@@ -463,16 +479,18 @@ private fun NotificationCard(
                     // theme, which is the focus ring's colour too, so a page of unread cards read as
                     // a page of focused ones. A lighter grey than a read card's still tells them apart.
                     item.unread && isTv -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    item.unread -> MaterialTheme.colorScheme.primary
-                    else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+                    item.unread -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.32f)
+                    else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
                 },
                 shape = shape,
             )
             .then(
                 when {
-                    item.mediaId != null -> Modifier.clickable(onClick = onClick)
+                    item.mediaId != null -> Modifier.clickable(
+                        onClickLabel = "Open ${item.title}", onClick = onClick,
+                    )
                     compactTv -> Modifier.focusable()
-                    else -> Modifier.clickable(enabled = false, onClick = onClick)
+                    else -> Modifier
                 },
             )
             .then(if (compactTv) Modifier.height(112.dp) else Modifier),
@@ -487,7 +505,7 @@ private fun NotificationCard(
             )
         }
         Row(
-            Modifier.padding(10.dp),
+            Modifier.padding(if (isTv) 10.dp else 11.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AsyncImage(
@@ -496,12 +514,12 @@ private fun NotificationCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(
-                        width = if (compactTv) 64.dp else 58.dp,
+                        width = if (compactTv) 64.dp else 56.dp,
                         height = if (compactTv) 86.dp else 76.dp,
                     )
-                    .clip(RoundedCornerShape(8.dp)),
+                    .clip(RoundedCornerShape(15.dp)),
             )
-            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Column(Modifier.weight(1f).padding(horizontal = if (isTv) 12.dp else 10.dp)) {
                 Text(
                     item.title,
                     style = MaterialTheme.typography.titleMedium,
@@ -546,7 +564,8 @@ private fun NotificationBadge(badge: String, modifier: Modifier = Modifier) {
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
         modifier = modifier
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
+            .background(glassPanelColor(), RoundedCornerShape(12.dp))
+            .border(1.dp, glassRimColor().copy(alpha = 0.6f), RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }
@@ -558,7 +577,8 @@ private fun NotificationDate(epochSeconds: Long, modifier: Modifier = Modifier) 
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
         modifier = modifier
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
+            .background(glassPanelColor(), RoundedCornerShape(12.dp))
+            .border(1.dp, glassRimColor().copy(alpha = 0.6f), RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }

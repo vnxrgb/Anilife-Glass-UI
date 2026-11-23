@@ -11,6 +11,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -298,6 +299,7 @@ fun MidnightSettingSwitchRow(
         enabled = enabled,
         onClick = { onCheckedChange(!checked) },
         role = Role.Switch,
+        checked = checked,
         title = title,
         description = description,
         danger = false,
@@ -312,6 +314,7 @@ private fun MidnightSettingRowScaffold(
     enabled: Boolean,
     onClick: (() -> Unit)?,
     role: Role,
+    checked: Boolean? = null,
     title: String,
     description: String?,
     danger: Boolean,
@@ -323,17 +326,30 @@ private fun MidnightSettingRowScaffold(
     // The same rounded badge every choice row in the app wears: white under the cursor with its
     // copy and its control inverted, a faint card otherwise. No rule between rows — the gap and
     // the corner are what separate them now.
-    val shape = RoundedCornerShape(MidnightRowRadius)
-    val fill = if (focused) MidnightFocusFill else MidnightRestFill
+    val shape = RoundedCornerShape(if (device.isTv) MidnightRowRadius else 22.dp)
+    val fill = when {
+        focused -> MidnightFocusFill
+        device.isTv -> MidnightRestFill
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.43f)
+    }
     // A television's row does not fill under the cursor (see MidnightFocusFill), so a danger row
     // stays red there.
     val ink = when {
         focused && !device.isTv -> MidnightFocusCopy
+        !enabled && !device.isTv -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.42f)
         !enabled -> Midnight.Text3
         danger -> Midnight.Red
-        else -> Midnight.Text
+        device.isTv -> Midnight.Text
+        // Settings on a light theme can draw translucent, near-white cards.
+        // Use the actual theme foreground, not the always-light TV text colour.
+        else -> MaterialTheme.colorScheme.onSurface
     }
-    val support = if (focused) MidnightFocusCopy.copy(alpha = 0.66f) else Midnight.Text3
+    val support = when {
+        focused && !device.isTv -> MidnightFocusCopy.copy(alpha = 0.66f)
+        focused -> MidnightFocusCopy.copy(alpha = 0.66f)
+        device.isTv -> Midnight.Text3
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
     // Matched by title because that is the only name a row and the search index share; a row the
     // index has since had renamed out from under it simply goes unmarked, which is why
     // `SettingsSearchIndexTest` reads both back out of the source and pins them together.
@@ -374,6 +390,14 @@ private fun MidnightSettingRowScaffold(
             .focusHalo(focused && device.isTv, shape, FocusRingGap)
             .clip(shape)
             .background(fill, shape)
+            .then(
+                if (device.isTv || focused) Modifier
+                else Modifier.border(
+                    1.dp,
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f),
+                    shape,
+                )
+            )
             .bringIntoViewRequester(bringIntoView)
             .onSizeChanged { rowSize = it }
             // Ahead of the clickable below, which is the focus target it names.
@@ -383,13 +407,23 @@ private fun MidnightSettingRowScaffold(
                 if (focused) spotlight?.onReached?.invoke()
             }
             .then(
-                if (onClick != null) {
-                    Modifier.clickable(enabled = enabled, role = role) {
+                when {
+                    // Toggleable makes the checked state available to TalkBack, while
+                    // retaining the same row action for touch and D-pad interaction.
+                    onClick != null && checked != null -> Modifier.toggleable(
+                        value = checked,
+                        enabled = enabled,
+                        role = Role.Switch,
+                        onValueChange = {
+                            spotlight?.onReached?.invoke()
+                            onClick()
+                        },
+                    )
+                    onClick != null -> Modifier.clickable(enabled = enabled, role = role) {
                         spotlight?.onReached?.invoke()
                         onClick()
                     }
-                } else {
-                    Modifier
+                    else -> Modifier
                 },
             ),
     ) {

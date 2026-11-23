@@ -2,6 +2,7 @@ package com.anilili.ui.detail
 
 import com.anilili.ui.nav.AnililiLink
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassAtmosphere
 import com.anilili.ui.theme.appCanvasFade
 import com.anilili.ui.theme.appCanvas
 import android.content.Context
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,6 +42,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -80,21 +84,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -133,6 +147,14 @@ import com.anilili.ui.adaptive.TvRefreshRequest
 import com.anilili.ui.adaptive.focusFill
 import com.anilili.ui.adaptive.focusHighlight
 import com.anilili.ui.adaptive.rememberFocusFill
+import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
+import com.anilili.ui.components.glassSelectionColor
+import com.anilili.ui.components.cinematicPrimaryButtonBorder
+import com.anilili.ui.components.cinematicPrimaryButtonColors
+import com.anilili.ui.components.cinematicSecondaryButtonColors
+import com.anilili.ui.components.cinematicSecondaryButtonBorder
 import com.anilili.ui.components.compactMemberCount
 import com.anilili.ui.components.LocalAppChromeBottomInset
 import com.anilili.ui.components.AnimeListActionsDialog
@@ -158,6 +180,7 @@ import com.anilili.ui.components.TvTopNavigationHeight
 import com.anilili.ui.components.UNAIRED_ALPHA
 import com.anilili.ui.components.WatchProgressBar
 import com.anilili.ui.components.WatchedToggleButton
+import com.anilili.ui.components.watchedToggleAvailable
 import com.anilili.ui.components.blockIndexOf
 import com.anilili.ui.components.openingEpisode
 import com.anilili.ui.components.chromeFade
@@ -179,7 +202,7 @@ import com.anilili.data.settings.GlassSection
 import com.anilili.ui.components.glassEnabled
 
 private enum class DetailTab(val label: String) {
-    HOME("Home"),
+    HOME("Overview"),
     EPISODES("Episodes"),
     RELATED("Related"),
 }
@@ -346,8 +369,8 @@ private fun DetailScreenBody(
     }
 
     Scaffold(
-        modifier = Modifier.appCanvas(),
-        containerColor = canvasColor(),
+        modifier = if (device.isTv) Modifier.appCanvas() else Modifier.glassAtmosphere(),
+        containerColor = if (device.isTv) canvasColor() else Color.Transparent,
         topBar = {
             ScrollAwareTopBar {
                 TopAppBar(
@@ -593,14 +616,48 @@ private fun DetailContent(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // A softly tinted, unbroken glow from the poster. Do not draw a second
+        // full-size banner bitmap here: on pre-Android-12 devices Modifier.blur()
+        // cannot soften it, and its cropped colors become a hard brown/blue band
+        // behind the Quick Facts and countdown rows when the detail page scrolls.
+        // Drawing the ambient spill as a radial brush over the WHOLE viewport
+        // removes the rectangular artwork boundary on all supported Android APIs.
+        if (!device.isTv) {
+            val coverTint = remember(info.id, info.coverImage.color) {
+                info.coverImage.color?.let { hex ->
+                    runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
+                }
+            } ?: MaterialTheme.colorScheme.primary
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .drawBehind {
+                        if (size.width <= 0f || size.height <= 0f) return@drawBehind
+                        val reach = maxOf(size.width * 1.15f, size.height * 0.76f)
+                        drawRect(
+                            brush = Brush.radialGradient(
+                                0f to coverTint.copy(alpha = 0.12f),
+                                0.35f to coverTint.copy(alpha = 0.065f),
+                                0.67f to coverTint.copy(alpha = 0.020f),
+                                1f to Color.Transparent,
+                                center = Offset(size.width * 0.50f, size.height * 0.01f),
+                                radius = reach,
+                            ),
+                        )
+                    },
+            )
+        }
         LazyColumn(
             state = detailListState,
-            modifier = Modifier.fillMaxSize(),
+            // Keep content above the floating navigation instead of covering the next card.
+            modifier = Modifier.fillMaxSize().padding(
+                bottom = if (device.isTv) 0.dp else LocalAppChromeBottomInset.current,
+            ),
             // Scroll padding, not layout padding, so rows travel under the bar as it retreats. The
             // hero takes that height into itself instead, so the banner starts at the top edge
             // rather than below the bar; everything under it keeps the room it had.
             contentPadding = PaddingValues(
-                bottom = contentPadding.calculateBottomPadding() + 30.dp,
+                bottom = contentPadding.calculateBottomPadding() + 45.dp,
             ),
         ) {
             item {
@@ -613,6 +670,8 @@ private fun DetailContent(
                     onStudioClick = onStudioClick,
                     onCoverClick = { coverPreviewVisible = true },
                     topInset = contentPadding.calculateTopPadding(),
+                    watchedEntry = saveEntry,
+                    totalEpisodes = info.episodes ?: if (isMovieFormat(info.format)) 1 else null,
                 )
             }
             item {
@@ -698,7 +757,7 @@ private fun DetailContent(
                                 onToggleOrder = { SettingsStore.setEpisodeOrder(episodeOrder.toggled()) },
                                 showFilter = episodeFilterVisible,
                                 focusRequester = browserFocus,
-                                modifier = Modifier.padding(horizontal = device.pagePadding, vertical = 6.dp),
+                                modifier = Modifier.padding(horizontal = device.pagePadding, vertical = 4.dp),
                             )
                         }
                     }
@@ -910,6 +969,8 @@ private fun DetailHero(
     logo: String?,
     onStudioClick: (StudioNode) -> Unit,
     onCoverClick: () -> Unit,
+    watchedEntry: WatchlistEntry,
+    totalEpisodes: Int?,
     /**
      * The height of the chrome the banner runs beneath. Added to the hero rather than taken out of
      * it, so the artwork gains that much height and the cover and title block below keep the room
@@ -919,35 +980,75 @@ private fun DetailHero(
 ) {
     val device = LocalAppDeviceProfile.current
     val banner = info.bannerImage ?: info.coverImage.best
-    val bannerHeight = topInset + if (device.isExpanded) 230.dp else 190.dp
-    Box(Modifier.fillMaxWidth().height(topInset + if (device.isExpanded) 330.dp else 286.dp)) {
+    val bannerHeight = topInset + if (device.isExpanded) 258.dp else if (device.isTablet) 224.dp else 195.dp
+    Box(
+        Modifier.fillMaxWidth().height(
+            topInset + if (device.isExpanded) 258.dp else if (device.isTablet) 224.dp else 195.dp,
+        ),
+    ) {
         AsyncImage(
             model = banner,
             contentDescription = null,
-            modifier = Modifier.fillMaxWidth().height(bannerHeight),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(bannerHeight)
+                .then(
+                    if (device.isTv) Modifier else Modifier
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    0f to Color.White,
+                                    0.54f to Color.White,
+                                    0.75f to Color.White.copy(alpha = 0.78f),
+                                    0.92f to Color.White.copy(alpha = 0.22f),
+                                    1f to Color.Transparent,
+                                    endY = size.height,
+                                ),
+                                blendMode = BlendMode.DstIn,
+                            )
+                        }
+                ),
             contentScale = ContentScale.Crop,
         )
         Box(
             Modifier
                 .fillMaxWidth()
                 .height(bannerHeight)
-                .appCanvasFade { canvas -> Brush.verticalGradient(listOf(Color.Transparent, canvas)) },
+                .appCanvasFade { canvas ->
+                    if (device.isTv) {
+                        Brush.verticalGradient(
+                            0f to Color.Black.copy(alpha = 0.16f),
+                            0.42f to Color.Black.copy(alpha = 0.29f),
+                            1f to canvas.copy(alpha = 0.88f),
+                        )
+                    } else {
+                        // Use a gentle text scrim, not an opaque canvas block:
+                        // the soft banner spill can continue under the buttons.
+                        Brush.verticalGradient(
+                            0f to Color.Black.copy(alpha = 0.18f),
+                            0.42f to Color.Black.copy(alpha = 0.30f),
+                            0.73f to canvas.copy(alpha = 0.26f),
+                            1f to canvas.copy(alpha = 0.08f),
+                        )
+                    }
+                },
         )
         Row(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .padding(horizontal = device.pagePadding, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(horizontal = device.pagePadding, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
             Box(
                 modifier = Modifier
-                    .width(if (device.isExpanded) 126.dp else 98.dp)
+                    .width(if (device.isExpanded) 104.dp else if (device.isTablet) 90.dp else 78.dp)
                     .aspectRatio(2f / 3f)
-                    .focusHighlight(RoundedCornerShape(12.dp))
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                    .focusHighlight(RoundedCornerShape(18.dp))
+                    .glassCard(RoundedCornerShape(18.dp))
                     .clickable(onClickLabel = "View larger cover", onClick = onCoverClick),
             ) {
                 AsyncImage(
@@ -965,7 +1066,7 @@ private fun DetailHero(
                         .padding(6.dp)
                         .size(24.dp)
                         .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.72f))
+                        .background(Color.Black.copy(alpha = 0.64f))
                         .padding(4.dp),
                 )
             }
@@ -979,7 +1080,7 @@ private fun DetailHero(
                     alignment = Alignment.BottomStart,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(if (device.isExpanded) 76.dp else 60.dp)
+                        .height(if (device.isExpanded) 70.dp else if (device.isTablet) 58.dp else 49.dp)
                         .padding(bottom = 4.dp),
                 ) {
                     ShrinkingTitle(
@@ -989,12 +1090,37 @@ private fun DetailHero(
                         minFontSize = 15.sp,
                     )
                 }
-                info.studios.nodes.firstOrNull { it.isAnimationStudio && !it.name.isNullOrBlank() }?.let { studio ->
-                    StudioBadge(
-                        name = studio.name.orEmpty(),
-                        enabled = studio.id > 0,
-                        onClick = { onStudioClick(studio) },
-                    )
+                // The watched action belongs beside the studio metadata, not stranded
+                // below the Watch buttons. Keep the original TV action layout.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    info.studios.nodes.firstOrNull { it.isAnimationStudio && !it.name.isNullOrBlank() }?.let { studio ->
+                        StudioBadge(
+                            name = studio.name.orEmpty(),
+                            enabled = studio.id > 0,
+                            onClick = { onStudioClick(studio) },
+                        )
+                    }
+                    if (!device.isTv && watchedToggleAvailable(info.id)) {
+                        // Keep the watched action on the right end of the studio line,
+                        // separate from the studio's own clickable chip.
+                        Spacer(Modifier.weight(1f))
+                        val eyeShape = RoundedCornerShape(50)
+                        WatchedToggleButton(
+                            anilistId = info.id,
+                            totalEpisodes = totalEpisodes,
+                            markEntry = watchedEntry,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(eyeShape)
+                                .background(glassPanelColor().copy(alpha = 0.48f))
+                                .border(1.dp, glassRimColor().copy(alpha = 0.55f), eyeShape),
+                        )
+                    }
                 }
                 Text(
                     text = listOfNotNull(
@@ -1006,8 +1132,10 @@ private fun DetailHero(
                             info.episodes?.let { "$it episodes" }
                         },
                     ).joinToString(" · "),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
@@ -1035,8 +1163,8 @@ private fun StudioBadge(name: String, enabled: Boolean, onClick: () -> Unit) {
             .padding(top = 5.dp)
             .focusFill(fillFocus2, StudioBadgeShape)
             .clip(StudioBadgeShape)
-            .background(fillFocus2.background(tint.copy(alpha = 0.16f)))
-            .border(1.dp, tint.copy(alpha = 0.55f), StudioBadgeShape)
+            .background(fillFocus2.background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)))
+            .border(1.dp, tint.copy(alpha = if (enabled) 0.48f else 0.22f), StudioBadgeShape)
             .then(
                 if (enabled) {
                     Modifier.clickable(onClickLabel = "Browse $name titles", onClick = onClick)
@@ -1044,7 +1172,7 @@ private fun StudioBadge(name: String, enabled: Boolean, onClick: () -> Unit) {
                     Modifier
                 },
             )
-            .padding(start = 10.dp, end = if (enabled) 4.dp else 10.dp, top = 4.dp, bottom = 4.dp),
+            .padding(start = 9.dp, end = if (enabled) 5.dp else 9.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -1089,7 +1217,8 @@ private fun DetailActions(
     primaryActionFocusRequester: FocusRequester,
     onPrimaryFocusAcquired: () -> Unit,
 ) {
-    val pad = LocalAppDeviceProfile.current.pagePadding
+    val device = LocalAppDeviceProfile.current
+    val pad = device.pagePadding
     // This button used to be a plain save toggle, which meant the only route from the detail page to
     // "watching", "paused", "finished" or "dropped" was to start an episode and use the player's
     // list picker. It opens the shared list menu instead — the same one a poster's long press opens
@@ -1106,16 +1235,28 @@ private fun DetailActions(
             saveEntry = saveEntry,
         )
     }
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(start = pad, end = pad, bottom = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(start = pad, end = pad, bottom = 12.dp),
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
         val controlFocus4 = rememberFocusFill()
         OutlinedButton(
-            colors = controlFocus4.buttonColors(ButtonDefaults.outlinedButtonColors()),
+            shape = RoundedCornerShape(50),
+            // A neutral frosted secondary action, even when the anime's accent is vivid.
+            colors = controlFocus4.buttonColors(
+                if (device.isTv) ButtonDefaults.outlinedButtonColors()
+                else cinematicSecondaryButtonColors(),
+            ),
+            border = if (device.isTv) androidx.compose.foundation.BorderStroke(1.dp, glassRimColor())
+                else cinematicSecondaryButtonBorder(),
             onClick = { listMenuVisible = true },
             modifier = Modifier
                 .weight(1f)
+                .heightIn(min = 48.dp)
                 .then(
                     if (!canWatch) Modifier.focusRequester(primaryActionFocusRequester)
                     else Modifier,
@@ -1132,31 +1273,42 @@ private fun DetailActions(
                 modifier = Modifier.size(18.dp),
             )
             Text(
-                listStatusLabel ?: if (saved) "In library" else "Add to list",
+                if (device.isTv) (listStatusLabel ?: if (saved) "In library" else "Add to list")
+                else if (saved || listStatusLabel != null) "In My List" else "Add to list",
                 Modifier.padding(start = 6.dp),
                 maxLines = 1,
             )
             // The chevron is the only thing distinguishing this from the toggle it replaced, and a
             // viewer who presses expecting a save still gets one, from the menu's own footer.
+            if (device.isTv) {
             Icon(
                 imageVector = Icons.Filled.ExpandMore,
                 contentDescription = null,
                 modifier = Modifier.padding(start = 2.dp).size(18.dp),
             )
+            }
         }
+        if (device.isTv) {
         WatchedToggleButton(
             anilistId = anilistId,
             totalEpisodes = totalEpisodes,
             markEntry = saveEntry,
             modifier = Modifier,
         )
+        }
         val controlFocus6 = rememberFocusFill()
-        Button(
-            colors = controlFocus6.buttonColors(ButtonDefaults.buttonColors()),
+        OutlinedButton(
+            shape = RoundedCornerShape(50),
+            colors = controlFocus6.buttonColors(
+                if (device.isTv) ButtonDefaults.outlinedButtonColors() else cinematicPrimaryButtonColors(),
+            ),
+            border = if (device.isTv) androidx.compose.foundation.BorderStroke(1.dp, glassRimColor())
+                else cinematicPrimaryButtonBorder(),
             onClick = onWatch,
             enabled = canWatch,
             modifier = Modifier
                 .weight(1f)
+                .heightIn(min = 48.dp)
                 .then(
                     if (canWatch) Modifier.focusRequester(primaryActionFocusRequester)
                     else Modifier,
@@ -1171,7 +1323,9 @@ private fun DetailActions(
                 CircularProgressIndicator(
                     modifier = Modifier.size(17.dp),
                     strokeWidth = 2.dp,
-                    color = controlFocus6.content(MaterialTheme.colorScheme.onPrimary),
+                    color = controlFocus6.content(
+                        if (device.isTv) MaterialTheme.colorScheme.onPrimary else Color(0xFF17181B),
+                    ),
                 )
             } else {
                 Icon(Icons.Default.PlayArrow, contentDescription = null, Modifier.size(19.dp))
@@ -1187,6 +1341,7 @@ private fun DetailActions(
                 modifier = Modifier.padding(start = 5.dp),
                 maxLines = 1,
             )
+        }
         }
     }
 }
@@ -1227,40 +1382,61 @@ private fun DetailTabs(
     selected: DetailTab,
     tabs: List<DetailTab>,
     onSelect: (DetailTab) -> Unit,
-    // The episode browser below is invisible to 2D focus search, so the way down is named.
     downFocus: FocusRequester? = null,
 ) {
-    // Centred while the pills fit, so three short tabs do not hug the left edge of a wide row; the
-    // box keeps the sticky header's canvas full width behind them. Too many to fit, they scroll.
+    val device = LocalAppDeviceProfile.current
+    // A neutral, subtle backdrop while the section header is sticky; no opaque
+    // rectangular strip behind these buttons on mobile.
     Box(
-        modifier = Modifier.fillMaxWidth().appCanvas(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (device.isTv) Modifier.appCanvas()
+                else Modifier.background(glassPanelColor().copy(alpha = 0.12f))),
         contentAlignment = Alignment.Center,
     ) {
         Row(
             modifier = Modifier
-                .horizontalScroll(rememberScrollState())
+                .then(if (device.isTv) Modifier.horizontalScroll(rememberScrollState()) else Modifier.fillMaxWidth())
+                .selectableGroup()
                 .then(downFocus?.let { target -> Modifier.focusProperties { down = target } } ?: Modifier)
-                .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = device.pagePadding, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 8.dp else 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             tabs.forEach { tab ->
                 val active = tab == selected
-                val fillFocus4 = rememberFocusFill()
-                Text(
-                    text = tab.label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = fillFocus4.content(if (active) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant),
+                val shape = RoundedCornerShape(50)
+                val focus = rememberFocusFill()
+                Box(
                     modifier = Modifier
-                        .focusFill(fillFocus4, RoundedCornerShape(18.dp))
-                        .clip(RoundedCornerShape(18.dp))
+                        .then(if (device.isTv) Modifier else Modifier.weight(1f))
+                        .heightIn(min = 48.dp)
+                        .focusFill(focus, shape)
+                        .clip(shape)
                         .background(
-                            fillFocus4.background(if (active) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.surface),
+                            focus.background(if (active) glassSelectionColor()
+                            else glassPanelColor().copy(alpha = 0.38f)),
                         )
-                        .clickable { onSelect(tab) }
-                        .padding(horizontal = 18.dp, vertical = 9.dp),
-                )
+                        .border(
+                            1.dp,
+                            if (active) glassRimColor()
+                            else glassRimColor().copy(alpha = 0.45f),
+                            shape,
+                        )
+                        .selectable(selected = active, role = Role.Tab, onClick = { onSelect(tab) }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = tab.label,
+                        style = MaterialTheme.typography.labelLarge,
+                        textAlign = TextAlign.Center,
+                        color = focus.content(if (active) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurfaceVariant),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+                    )
+                }
             }
         }
     }
@@ -1277,22 +1453,27 @@ private fun QuickFacts(info: Media) {
     // Centred like the tabs above while the cards fit; a fourth (Duration) on a narrow phone scrolls.
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        contentPadding = PaddingValues(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
     ) {
         items(facts) { (value, label) ->
             // At least 112dp, wider when the value needs it: at a fixed width "Not yet released"
             // wrapped, lost its second line to maxLines, and left "Not yet" at the card's left edge.
             Column(
                 modifier = Modifier
-                    .widthIn(min = 112.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-                    .padding(12.dp),
+                    .widthIn(min = 90.dp)
+                    .glassCard(RoundedCornerShape(16.dp))
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1, softWrap = false)
+                Text(
+                    value,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 168.dp),
+                )
                 Text(
                     label,
                     style = MaterialTheme.typography.labelSmall,
@@ -1324,16 +1505,17 @@ private fun GenreRow(genres: List<String>) {
             modifier = Modifier
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             genres.forEach { genre ->
                 Text(
                     text = genre,
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(horizontal = 11.dp, vertical = 6.dp),
+                        .clip(RoundedCornerShape(50))
+                        .background(glassPanelColor())
+                        .border(1.dp, glassRimColor(), RoundedCornerShape(50))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                 )
             }
         }
@@ -1349,7 +1531,12 @@ private fun Description(description: String?) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp)
-            .clickable { expanded = !expanded },
+            .glassCard(RoundedCornerShape(20.dp))
+            .clickable(onClickLabel = if (expanded) "Collapse overview" else "Expand overview") {
+                expanded = !expanded
+            }
+            .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" }
+            .padding(horizontal = 14.dp, vertical = 13.dp),
     ) {
         Text("Overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(
@@ -1361,7 +1548,7 @@ private fun Description(description: String?) {
             modifier = Modifier.padding(top = 7.dp),
         )
         Text(
-            text = if (expanded) "Show less" else "More",
+            text = if (expanded) "Show less" else "Read more",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(top = 5.dp),
@@ -1460,13 +1647,11 @@ private fun MetadataCard(info: Media) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .glassCard(RoundedCornerShape(20.dp))
+            .padding(horizontal = 13.dp, vertical = 9.dp),
     ) {
         rows.forEach { (label, value) ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
                 Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                 Text(value, fontWeight = FontWeight.SemiBold)
             }
@@ -1505,25 +1690,24 @@ private fun SeasonFilterRow(
                     .focusFill(fillFocus5, RoundedCornerShape(12.dp))
                     .clip(RoundedCornerShape(12.dp))
                     .background(
-                        fillFocus5.background(if (active) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surface),
+                        fillFocus5.background(if (active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
+                        else glassPanelColor()),
                     )
                     .border(
                         1.dp,
-                        if (active) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline,
+                        if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.48f)
+                        else glassRimColor(),
                         RoundedCornerShape(12.dp),
                     )
                     .clickable(enabled = choosable) { onSelect(season.id) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
                     text = labels[season.id] ?: "Season ${index + 1}",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
-                    color = fillFocus5.content(if (active) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurface),
+                    color = fillFocus5.content(MaterialTheme.colorScheme.onSurface),
                 )
                 (season.seasonYear ?: season.startDate?.year)?.let { year ->
                     Text(
@@ -1776,8 +1960,8 @@ private fun DetailSectionHeader(
             .padding(
                 start = LocalAppDeviceProfile.current.pagePadding,
                 end = LocalAppDeviceProfile.current.pagePadding,
-                top = 14.dp,
-                bottom = 2.dp,
+                top = 12.dp,
+                bottom = 4.dp,
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1786,6 +1970,8 @@ private fun DetailSectionHeader(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         if (trailing != null) {
             Text(

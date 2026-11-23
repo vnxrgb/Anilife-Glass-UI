@@ -62,7 +62,7 @@ internal fun playerLayoutMetrics(widthDp: Int, heightDp: Int): PlayerLayoutMetri
             timeTextSize = 15.sp,
             titleTextSize = 24.sp,
             edgeInset = 32.dp,
-            showPillLabels = true,
+            showPillLabels = !compactHeight,
             compactHeight = compactHeight,
         )
         widthDp >= PlayerWidthTier.MEDIUM_DP -> PlayerLayoutMetrics(
@@ -76,7 +76,7 @@ internal fun playerLayoutMetrics(widthDp: Int, heightDp: Int): PlayerLayoutMetri
             timeTextSize = 14.sp,
             titleTextSize = 21.sp,
             edgeInset = 28.dp,
-            showPillLabels = true,
+            showPillLabels = !compactHeight,
             compactHeight = compactHeight,
         )
         widthDp >= PlayerWidthTier.COMPACT_DP -> PlayerLayoutMetrics(

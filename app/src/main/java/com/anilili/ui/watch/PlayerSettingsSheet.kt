@@ -3,6 +3,8 @@ package com.anilili.ui.watch
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -55,6 +57,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -116,6 +119,70 @@ internal data class PlayerQualityOption(
     val height: Int? = null,
     val onSelect: () -> Unit,
 )
+
+/**
+ * Dedicated fullscreen shortcuts. These reuse the same selection sliders, persistence callbacks,
+ * focus handling and responsive side-panel/bottom-sheet container as the full settings page.
+ * Keep the options wired to the existing playback controller; never create a second player.
+ */
+@Composable
+internal fun PlayerQuickSpeedSheet(
+    speed: Float,
+    onSpeedChange: (Float) -> Unit,
+    onDismiss: () -> Unit,
+    fullscreen: Boolean,
+) {
+    PlayerOptionsSheet(
+        title = "Playback speed",
+        paneTitle = "Playback speed",
+        closeDescription = "Close playback speed",
+        onDismiss = onDismiss,
+        fullscreen = fullscreen,
+    ) {
+        Text(
+            text = "Choose how fast this episode plays",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Midnight.Text.copy(alpha = 0.76f),
+            modifier = Modifier.padding(bottom = 12.dp),
+        )
+        SpeedSlider(speed = speed, onSpeedChange = onSpeedChange)
+    }
+}
+
+@Composable
+internal fun PlayerQuickQualitySheet(
+    options: List<PlayerQualityOption>,
+    message: String?,
+    onDismiss: () -> Unit,
+    fullscreen: Boolean,
+) {
+    PlayerOptionsSheet(
+        title = "Video quality",
+        paneTitle = "Video quality",
+        closeDescription = "Close video quality",
+        onDismiss = onDismiss,
+        fullscreen = fullscreen,
+    ) {
+        if (options.size > 1) {
+            QualitySlider(options)
+        } else {
+            Text(
+                text = "The current source does not offer additional video resolutions.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Midnight.Text,
+                modifier = Modifier.padding(vertical = 10.dp),
+            )
+        }
+        if (!message.isNullOrBlank()) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = Midnight.Text.copy(alpha = 0.76f),
+                modifier = Modifier.padding(top = 10.dp),
+            )
+        }
+    }
+}
 
 /**
  * The player's general playback settings. Subtitle controls deliberately live in
@@ -350,9 +417,9 @@ private fun PlayerModalSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Midnight.SheetSurface,
+        containerColor = PlayerPanelSurface.copy(alpha = 0.87f),
         contentColor = Midnight.Text,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
         dragHandle = null,
         tonalElevation = 0.dp,
     ) {
@@ -360,13 +427,29 @@ private fun PlayerModalSheet(
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                // A static, soft reflection rather than a live backdrop blur:
+                // the Media3 video and Morphe sampler remain unobstructed.
+                .background(
+                    Brush.verticalGradient(
+                        0f to Color.White.copy(alpha = 0.10f),
+                        0.20f to Color.White.copy(alpha = 0.045f),
+                        0.68f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = 0.12f),
+                    ),
+                    RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+                )
+                .border(
+                    1.dp,
+                    Color.White.copy(alpha = 0.21f),
+                    RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+                )
                 .padding(start = 18.dp, end = 18.dp, bottom = 18.dp),
         ) {
             Box(
                 Modifier
                     .padding(top = 9.dp, bottom = 12.dp)
                     .align(Alignment.CenterHorizontally)
-                    .size(width = 30.dp, height = 3.dp)
+                    .size(width = 36.dp, height = 4.dp)
                     .clip(RoundedCornerShape(99.dp))
                     .background(PlayerPanelOutline),
             )
@@ -420,7 +503,7 @@ private fun PlayerSidePanel(
             // Only load-bearing on the television path, which reaches this composable directly
             // rather than through the wrapper that carries the same z.
             .zIndex(PLAYER_OPTIONS_Z)
-            .background(Color.Black.copy(alpha = 0.55f))
+            .background(Color.Black.copy(alpha = 0.43f))
             // The dimmed video is the sheet's scrim by another name, and it dismisses like one.
             // A tap gesture rather than `clickable` so the scrim never becomes a focus stop the
             // remote has to step over on its way out of the panel.
@@ -433,7 +516,21 @@ private fun PlayerSidePanel(
                 .width(panelWidth)
                 // The episode drawer's frame, shared by every picker the player opens.
                 .clip(PlayerPanelShape)
-                .background(PlayerPanelSurface)
+                .background(PlayerPanelSurface.copy(alpha = 0.94f))
+                .background(
+                    Brush.verticalGradient(
+                        0f to Color.White.copy(alpha = 0.11f),
+                        0.24f to Color.White.copy(alpha = 0.04f),
+                        0.65f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = 0.10f),
+                    ),
+                    PlayerPanelShape,
+                )
+                .border(
+                    1.dp,
+                    Color.White.copy(alpha = 0.24f),
+                    PlayerPanelShape,
+                )
                 // Taps inside the panel are the panel's own; without this they would reach the
                 // scrim behind it and close what was just opened.
                 .pointerInput(Unit) { detectTapGestures { } }
@@ -951,7 +1048,7 @@ private fun PlayerAdjustButton(
     }
 }
 
-private val PlayerAdjustShape = RoundedCornerShape(10.dp)
+private val PlayerAdjustShape = RoundedCornerShape(18.dp)
 
 /** Wide enough for the longest delay, "+30.00 s", so no value moves the + button. */
 private val PlayerAdjustValueWidth = 84.dp
@@ -978,7 +1075,7 @@ private val PlayerAdjustValueWidth = 84.dp
 @Composable
 private fun PlayerSliderRow(content: @Composable RowScope.() -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(18.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()

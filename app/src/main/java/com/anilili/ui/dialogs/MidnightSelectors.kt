@@ -161,8 +161,8 @@ fun <T> MidnightUnderlineSelector(
     claimInitialFocus: Boolean = true,
 ) {
     val device = LocalAppDeviceProfile.current
-    val trackShape = RoundedCornerShape(MidnightRowRadius + 2.dp)
-    val pillShape = RoundedCornerShape(MidnightRowRadius)
+    val trackShape = RoundedCornerShape(50)
+    val pillShape = RoundedCornerShape(50)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -473,11 +473,13 @@ private fun MidnightRowScaffold(
     val device = LocalAppDeviceProfile.current
     val minHeight = if (device.isTv) 52.dp else 46.dp
     var focused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(MidnightRowRadius)
+    val shape = RoundedCornerShape(if (device.isTv) MidnightRowRadius else 22.dp)
     val fill = when {
         focused -> MidnightFocusFill
+        selected && !device.isTv -> MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
         selected -> MidnightSelectedFill
-        else -> MidnightRestFill
+        device.isTv -> MidnightRestFill
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.43f)
     }
     // Everything inside a filled row has to invert with it, including whatever colour a caller
     // asked for: a destructive red on white still reads as destructive, a muted grey does not.
@@ -499,6 +501,15 @@ private fun MidnightRowScaffold(
             .focusHalo(focused && device.isTv, shape, FocusRingGap)
             .clip(shape)
             .background(fill, shape)
+            .then(
+                if (device.isTv || focused) Modifier
+                else Modifier.border(
+                    1.dp,
+                    (if (selected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface).copy(alpha = if (selected) 0.42f else 0.14f),
+                    shape,
+                )
+            )
             .midnightInitialFocus(claimInitialFocus)
             .onFocusChanged { focused = it.isFocused || it.hasFocus }
             .midnightSelectable(

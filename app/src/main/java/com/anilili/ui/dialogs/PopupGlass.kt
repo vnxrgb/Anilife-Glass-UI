@@ -1,6 +1,9 @@
 package com.anilili.ui.dialogs
 
+import android.app.ActivityManager
+import android.content.Context
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.PixelCopy
@@ -51,10 +54,12 @@ import kotlin.coroutines.resume
 @Composable
 internal fun rememberPopupBackdrop(): PopupBackdrop? {
     val wanted = glassEnabled(GlassSection.POPUPS)
-    val activity = LocalContext.current.findActivity()
+    val context = LocalContext.current
+    val activity = context.findActivity()
+    val lowRam = (context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager)?.isLowRamDevice == true
     var backdrop by remember { mutableStateOf<PopupBackdrop?>(null) }
-    LaunchedEffect(wanted, activity) {
-        if (!wanted || activity == null) {
+    LaunchedEffect(wanted, activity, lowRam) {
+        if (!wanted || activity == null || lowRam || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             backdrop = null
             return@LaunchedEffect
         }
@@ -66,17 +71,43 @@ internal fun rememberPopupBackdrop(): PopupBackdrop? {
             (decor.height / SCALE).coerceAtLeast(1),
             Bitmap.Config.ARGB_8888,
         )
-        val result = suspendCancellableCoroutine { continuation ->
-            PixelCopy.request(window, copy, { continuation.resume(it) }, Handler(Looper.getMainLooper()))
+        // A secure video surface or disappearing activity can make PixelCopy fail.
+        // An already-dismissed popup must not resume a cancelled continuation.
+        val result = try {
+            suspendCancellableCoroutine<Int> { continuation ->
+                try {
+                    PixelCopy.request(window, copy, { status ->
+                        if (continuation.isActive) continuation.resume(status)
+                        else if (!copy.isRecycled) copy.recycle()
+                    }, Handler(Looper.getMainLooper()))
+                } catch (_: Exception) {
+                    if (continuation.isActive) continuation.resume(PixelCopy.ERROR_UNKNOWN)
+                }
+            }
+        } catch (cancel: kotlinx.coroutines.CancellationException) {
+            // If the request is in flight, its callback owns disposal.
+            throw cancel
+        } catch (_: Exception) {
+            PixelCopy.ERROR_UNKNOWN
         }
-        if (result != PixelCopy.SUCCESS) return@LaunchedEffect
-        withContext(Dispatchers.Default) { boxBlur(copy, BLUR_RADIUS, passes = 3) }
-        val origin = IntArray(2).also(decor::getLocationOnScreen)
-        backdrop = PopupBackdrop(
-            image = copy.asImageBitmap(),
-            screenOrigin = IntOffset(origin[0], origin[1]),
-            screenSize = IntSize(decor.width, decor.height),
-        )
+        if (result != PixelCopy.SUCCESS) {
+            if (!copy.isRecycled) copy.recycle()
+            return@LaunchedEffect
+        }
+        try {
+            withContext(Dispatchers.Default) { boxBlur(copy, BLUR_RADIUS, passes = 3) }
+            val origin = IntArray(2).also(decor::getLocationOnScreen)
+            backdrop = PopupBackdrop(
+                image = copy.asImageBitmap(),
+                screenOrigin = IntOffset(origin[0], origin[1]),
+                screenSize = IntSize(decor.width, decor.height),
+            )
+        } catch (cancel: kotlinx.coroutines.CancellationException) {
+            if (!copy.isRecycled) copy.recycle()
+            throw cancel
+        } catch (_: Exception) {
+            if (!copy.isRecycled) copy.recycle()
+        }
     }
     return backdrop
 }

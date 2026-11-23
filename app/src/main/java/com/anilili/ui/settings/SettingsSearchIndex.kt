@@ -62,6 +62,10 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
             "Prefer dubbed audio" to listOf("dub", "dubbed", "sub", "audio"),
             "Brightness and volume gestures" to listOf("gesture", "brightness", "volume", "swipe"),
             "Drag to seek" to listOf("gesture", "seek", "scrub", "drag", "swipe"),
+            ("Ambient video glow" to listOf("ambient", "glow", "light", "video", "colour",
+                "color", "blur", "youtube", "cinematic")).takeIf { !isTv },
+            ("Ambient glow strength" to listOf("ambient", "glow", "strength", "intensity", "subtle",
+                "balanced", "vivid", "brightness")).takeIf { !isTv },
             "Status bar over the player" to listOf("status", "bar", "fullscreen", "notch"),
             "Clock and finishing time" to listOf("clock", "time", "ends", "ending", "finish",
                 "bedtime", "night", "late", "watch"),
@@ -191,7 +195,7 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
             add("Reset theme" to listOf("theme", "reset", "default", "restore"))
             if (isTv) add("Interface size" to listOf("size", "scale", "text", "big", "small", "zoom"))
             if (isTv) add("Overscan" to listOf("overscan", "edges", "cut off", "cropped", "bounds", "margin", "border", "fit"))
-            add("Layout" to listOf("layout", "tv", "tablet", "phone", "form factor", "leanback"))
+            if (BuildConfig.FLAVOR != "mobile") add("Layout" to listOf("layout", "tv", "tablet", "phone", "form factor", "leanback"))
             add("App layout" to listOf("layout", "legacy", "cinema", "navigation", "icons"))
             add(
                 "Keep the bars on screen" to listOf(
@@ -262,9 +266,8 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
     )
     section(
         "about", "About",
-        listOf(
-            "Watch on Anilife.cc" to listOf("anilife", "website", "web", "watch"),
-            "Discord server" to listOf("discord", "support", "community", "help"),
+        listOf(            "Discord server" to listOf("discord", "support", "community", "help"),
+            "Morphe attribution" to listOf("morphe", "credit", "attribution", "license", "gpl", "about", "website"),
         ),
     )
 }

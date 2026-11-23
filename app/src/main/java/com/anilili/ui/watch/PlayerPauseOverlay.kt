@@ -68,8 +68,8 @@ internal fun PlayerPauseOverlay(
                 // nothing is written over.
                 .background(
                     Brush.horizontalGradient(
-                        0f to Color.Black.copy(alpha = 0.82f),
-                        0.55f to Color.Black.copy(alpha = 0.40f),
+                        0f to Color.Black.copy(alpha = 0.74f),
+                        0.55f to Color.Black.copy(alpha = 0.27f),
                         1f to Color.Transparent,
                     ),
                 ),
@@ -78,17 +78,17 @@ internal fun PlayerPauseOverlay(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .statusBarsPadding()
-                    .padding(start = 28.dp, end = 24.dp)
-                    .widthIn(max = 460.dp)
+                    .padding(start = 24.dp, end = 20.dp)
+                    .widthIn(max = 360.dp)
                     .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 if (seriesTitle.isNotBlank()) {
                     // The series' own logo, as streaming apps bill a paused episode; the title in
                     // type wherever there is none.
                     PlayerSeriesName(
                         title = seriesTitle,
-                        maxHeight = 96.dp,
+                        maxHeight = 80.dp,
                         maxWidth = 360.dp,
                         modifier = Modifier.padding(bottom = 4.dp),
                     ) {
@@ -127,7 +127,7 @@ internal fun PlayerPauseOverlay(
                         color = Color.White.copy(alpha = 0.78f),
                         // Enough to place the episode, short enough that it never reaches the
                         // controls when they come back up on a short screen.
-                        maxLines = 4,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }

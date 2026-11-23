@@ -1,6 +1,7 @@
 package com.anilili.ui.settings
 
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassAtmosphere
 import com.anilili.ui.theme.drawAppCanvas
 import com.anilili.ui.theme.LocalAppBackdrop
 import android.Manifest
@@ -27,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,6 +38,7 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -70,6 +73,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.BorderStroke
+import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.glassPanelColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -396,6 +402,8 @@ fun SettingsScreen(
     val playerSeekGesture by SettingsStore.playerSeekGesture.collectAsState()
     val playerStatusBar by SettingsStore.playerStatusBar.collectAsState()
     val playerClock by SettingsStore.playerClock.collectAsState()
+    val playerAmbientGlow by SettingsStore.playerAmbientGlow.collectAsState()
+    val playerAmbientIntensity by SettingsStore.playerAmbientIntensity.collectAsState()
     val tvDoubleBackToExit by SettingsStore.tvDoubleBackToExit.collectAsState()
     val serverPriority by SettingsStore.serverPriority.collectAsState()
     val disabledProviders by SettingsStore.disabledProviders.collectAsState()
@@ -1967,7 +1975,7 @@ fun SettingsScreen(
         SettingsPicker.APP_LAYOUT -> MidnightChoicePicker(
             kicker = "Appearance",
             title = "App layout",
-            explanation = "Legacy keeps the familiar Anilife navigation. Cinema uses the same " +
+            explanation = "Legacy keeps the familiar Anilumos navigation. Cinema uses the same " +
                 "screens and theme with compact, icon-first navigation.",
             options = AppLayoutMode.entries,
             selected = appLayoutMode,
@@ -2011,8 +2019,8 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        containerColor = canvasColor(),
-        modifier = modifier,
+        containerColor = if (device.isTv) canvasColor() else Color.Transparent,
+        modifier = modifier.then(if (device.isTv) Modifier else Modifier.glassAtmosphere()),
         topBar = {
             if (device.isTv) return@Scaffold
             ScrollAwareTopBar {
@@ -2102,9 +2110,14 @@ fun SettingsScreen(
                 val columns = if (device.isTv) 5 else 3
                 items(sectionTiles.chunked(columns), key = { it.first().id }) { row ->
                     Row(
-                        Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
+                        // Center an incomplete final phone row without stretching its cards.
+                        val missing = columns - row.size
+                        if (!device.isTv && missing > 0) {
+                            Spacer(Modifier.weight(missing / 2f))
+                        }
                         row.forEach { tile ->
                             SettingsSectionCard(
                                 tile = tile,
@@ -2113,7 +2126,11 @@ fun SettingsScreen(
                                 modifier = Modifier.weight(1f),
                             )
                         }
-                        repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                        if (!device.isTv && missing > 0) {
+                            Spacer(Modifier.weight(missing / 2f))
+                        } else if (device.isTv) {
+                            repeat(missing) { Spacer(Modifier.weight(1f)) }
+                        }
                     }
                 }
             }
@@ -2130,7 +2147,7 @@ fun SettingsScreen(
                 item(key = "Open episodes in external player") {
                     MidnightSettingSwitchRow(
                         title = "Open episodes in external player",
-                        description = "Skip Anilife's player and open another installed video app",
+                        description = "Skip Anilumos's player and open another installed video app",
                         checked = openEpisodesInExternalPlayer,
                         onCheckedChange = SettingsStore::setOpenEpisodesInExternalPlayer,
                     )
@@ -2291,6 +2308,35 @@ fun SettingsScreen(
                     }
                 }
                 if (!device.isTv) {
+                    item(key = "Ambient video glow") {
+                        MidnightSettingSwitchRow(
+                            title = "Ambient video glow",
+                            description = "Soft colours from the current video below the portrait player",
+                            checked = playerAmbientGlow,
+                            onCheckedChange = SettingsStore::setPlayerAmbientGlow,
+                        )
+                    }
+                    // Keep this searchable and discoverable even when the glow is off.
+                    // Disabling the glow suspends sampling; strength is saved for re-enabling.
+                    item(key = "Ambient glow strength") {
+                            MidnightStepperRow(
+                                label = "Ambient glow strength",
+                                value = when {
+                                    !playerAmbientGlow -> "Off"
+                                    playerAmbientIntensity <= 0.5f -> "Subtle"
+                                    playerAmbientIntensity <= 0.75f -> "Balanced"
+                                    else -> "Vivid"
+                                },
+                                onDecrease = {
+                                    SettingsStore.setPlayerAmbientIntensity(playerAmbientIntensity - 0.25f)
+                                },
+                                onIncrease = {
+                                    SettingsStore.setPlayerAmbientIntensity(playerAmbientIntensity + 0.25f)
+                                },
+                                decreaseEnabled = playerAmbientGlow && playerAmbientIntensity > 0.5f,
+                                increaseEnabled = playerAmbientGlow && playerAmbientIntensity < 1f,
+                            )
+                    }
                     item(key = "Hold to change speed") {
                         MidnightSettingSwitchRow(
                             title = "Hold to change speed",
@@ -2619,7 +2665,7 @@ fun SettingsScreen(
                     item {
                         MidnightInlineNotice(
                             "Discord's consent screen asks for more than this uses: it bundles " +
-                                "presence with friends-list and game-invite access. Anilife only " +
+                                "presence with friends-list and game-invite access. Anilumos only " +
                                 "ever sets your activity.",
                             tone = MidnightNoticeTone.INFO,
                         )
@@ -2946,6 +2992,7 @@ fun SettingsScreen(
                 }
                 // On every form factor rather than a television-only list: the viewer who needs this
                 // row is by definition someone the app has *not* recognised as being on one.
+                if (BuildConfig.FLAVOR != "mobile") {
                 item(key = "Layout") {
                     MidnightSettingRow(
                         title = "Layout",
@@ -2957,6 +3004,7 @@ fun SettingsScreen(
                         },
                         onClick = { openPicker = SettingsPicker.FORM_FACTOR },
                     )
+                }
                 }
                 item(key = "App layout") {
                     MidnightSettingRow(
@@ -2992,7 +3040,7 @@ fun SettingsScreen(
                 item(key = "Startup animation") {
                     MidnightSettingSwitchRow(
                         title = "Startup animation",
-                        description = "Show the Anilife animation when the app opens",
+                        description = "Gently animate the Anilumos candle flame on the black splash screen",
                         checked = videoLaunchIntro,
                         onCheckedChange = SettingsStore::setVideoLaunchIntro,
                     )
@@ -3242,7 +3290,7 @@ fun SettingsScreen(
                 item(key = "Upload diagnostics now") {
                     MidnightSettingRow(
                         title = "Upload diagnostics now",
-                        description = "Send one redacted report to the private Anilife console",
+                        description = "Send one redacted report to the private Anilumos diagnostics endpoint",
                         enabled = !diagnosticsBusy,
                         busy = diagnosticsBusy,
                         onClick = {
@@ -3275,19 +3323,6 @@ fun SettingsScreen(
             }
 
             settingsSection("about", openSectionId) {
-                item(key = "Watch on Anilife.cc") {
-                    MidnightSettingRow(
-                        title = "Watch on Anilife.cc",
-                        description = "Open the Anilife web app",
-                        leading = {
-                            Icon(
-                                imageVector = Icons.Outlined.Language,
-                                contentDescription = null,
-                            )
-                        },
-                        onClick = { openLink(context, "https://anilife.cc") },
-                    )
-                }
                 item(key = "Discord server") {
                     val inviteUrl = validatedDiscordInviteUrl(BuildConfig.DISCORD_INVITE_URL)
                     MidnightSettingRow(
@@ -3300,6 +3335,19 @@ fun SettingsScreen(
                         leading = { AboutBrandGlyph(R.drawable.ic_brand_discord) },
                         enabled = inviteUrl != null,
                         onClick = { inviteUrl?.let { openLink(context, it) } },
+                    )
+                }
+                item(key = "AniLife foundation") {
+                    MidnightSettingRow(
+                        title = "AniLife foundation",
+                        description = "Anilumos is built on the AniLife codebase. Credits to its original maintainers and contributors. Tap to visit the original repository.",
+                        onClick = { openLink(context, "https://github.com/anilifecommunity/android-and-tv") },
+                    )
+                }
+                item(key = "Morphe attribution") {
+                    AboutMorpheNotice(
+                        title = "Morphe attribution",
+                        onClick = { openLink(context, "https://morphe.software") },
                     )
                 }
                 item(key = "about-note") { AboutSignature() }
@@ -3404,24 +3452,37 @@ private fun SettingsSectionCard(
     val fillFocus1 = rememberFocusFill()
     Surface(
         modifier = modifier
-            .focusFill(fillFocus1, RoundedCornerShape(16.dp))
-            .clickable(role = Role.Button, onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        color = fillFocus1.background(MaterialTheme.colorScheme.surface),
+            .heightIn(min = if (LocalAppDeviceProfile.current.isTv) 88.dp else 86.dp)
+            .focusFill(fillFocus1, RoundedCornerShape(22.dp))
+            .glassCard(RoundedCornerShape(22.dp))
+            .clickable(role = Role.Button, onClickLabel = "Open ${tile.title} settings", onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = Color.Transparent,
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = 6.dp),
+            Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 5.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
         ) {
-            SectionBadge(badged) {
-                Icon(
-                    tile.icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(26.dp),
-                    tint = fillFocus1.content(LocalMidnightAccent.current),
-                )
+            // A softly tinted emblem separates the glyph from the glass tile.
+            // Accent stays with the icon; the pane itself adapts neutrally to the theme.
+            Box(
+                modifier = Modifier
+                    .size(if (LocalAppDeviceProfile.current.isTv) 36.dp else 32.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.09f))
+                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                SectionBadge(badged) {
+                    Icon(
+                        tile.icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = fillFocus1.content(LocalMidnightAccent.current),
+                    )
+                }
             }
             Text(
                 tile.title,
@@ -3429,6 +3490,7 @@ private fun SettingsSectionCard(
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
+                minLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = fillFocus1.content(LocalContentColor.current),
             )
@@ -3724,8 +3786,8 @@ private fun OpenSubtitlesAccountDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(top = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             OutlinedTextField(
                 value = username,
@@ -4093,7 +4155,7 @@ private fun TvSettingsRailRow(
                 shape,
             )
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 13.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val ink = MaterialTheme.colorScheme.onSurface
@@ -4151,6 +4213,45 @@ private fun AboutBrandGlyph(@DrawableRes id: Int) {
 }
 
 /**
+ * The original Morphe code's required, user-visible credit.
+ *
+ * It is a full-height About item rather than a one-line Settings description,
+ * so the complete wording is always readable on phones AND televisions,
+ * even before focus. The entire card opens Morphe's website.
+ */
+@Composable
+private fun AboutMorpheNotice(title: String, onClick: () -> Unit) {
+    val focus = rememberFocusFill()
+    val shape = RoundedCornerShape(22.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp)
+            .focusFill(focus, shape)
+            .glassCard(shape)
+            .clickable(
+                role = Role.Button,
+                onClickLabel = "Visit Morphe website",
+                onClick = onClick,
+            )
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = focus.content(MaterialTheme.colorScheme.onSurface),
+        )
+        Text(
+            text = "This app uses code from Morphe. To learn more, visit https://morphe.software",
+            style = MaterialTheme.typography.bodyMedium,
+            color = focus.content(MaterialTheme.colorScheme.onSurfaceVariant),
+            modifier = Modifier.padding(top = 5.dp),
+        )
+    }
+}
+
+/**
  * The sign-off at the foot of About.
  *
  * Not a row: there is nothing to press and nothing to change, so it wears no badge and takes no
@@ -4164,11 +4265,12 @@ private fun AboutSignature() {
             .padding(start = 14.dp, end = 14.dp, top = 22.dp, bottom = 8.dp),
     ) {
         Text(
-            text = "Anilife is a community-driven anime platform built to make watching anime " +
-                "simple and enjoyable. It discovers episodes across multiple sources, remembers " +
-                "where you left off, and keeps your anime library synchronised with AniList and " +
-                "MyAnimeList.\n\nNo unnecessary ads, no account required. Just anime, the way it " +
-                "should be.\n\n♡ Built with passion by the Anilife Team",
+            text = "Anilumos is a personalized anime streaming app built around a simple idea: " +
+                "watching anime should feel effortless and enjoyable. With a refined interface, " +
+                "immersive video playback, multiple streaming sources, and watchlist " +
+                "synchronization, Anilumos brings together the features that make watching anime " +
+                "better.\n\nNo unnecessary distractions. Just anime, the way you like it." +
+                "\n\n♡ Anilumos is built on the AniLife codebase. Thanks to the original AniLife contributors.",
             style = MaterialTheme.typography.bodyMedium,
             color = Midnight.Text2,
         )

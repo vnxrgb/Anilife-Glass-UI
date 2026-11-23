@@ -5,6 +5,15 @@ package com.anilili.ui.home
 
 
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassAtmosphere
+import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.cinematicPrimaryButtonBorder
+import com.anilili.ui.components.cinematicPrimaryButtonColors
+import com.anilili.ui.components.cinematicSecondaryButtonColors
+import com.anilili.ui.components.cinematicSecondaryButtonBorder
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassSelectionColor
+import com.anilili.ui.components.glassRimColor
 import com.anilili.ui.theme.appCanvasFade
 import com.anilili.ui.theme.appCanvas
 import androidx.compose.animation.core.animateFloatAsState
@@ -55,6 +64,7 @@ import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
@@ -122,7 +132,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalDensity
 import com.anilili.ui.tour.RegisterTourScroller
-import com.anilili.ui.tour.StartWhatsNewTourWhenSettled
 import com.anilili.ui.tour.TourTarget
 import com.anilili.ui.tour.tourTarget
 import androidx.compose.ui.unit.sp
@@ -292,13 +301,15 @@ fun HomeScreen(
     // glass switched off, which takes the recording away along with the blur.
     val homeGlass = glassEnabled(GlassSection.HOME)
     val homeBackdrop = if (homeGlass) remember { HazeState() } else null
-    val chromeOverHero by remember(hasSpotlight) {
-        derivedStateOf { hasSpotlight && homeListState.firstVisibleItemIndex == 0 }
+    val chromeOverHero by remember(hasSpotlight, device.isTv) {
+        // On phone the hero now starts BELOW the wordmark and genre chips; no artwork
+        // passes underneath the header. Keep the old edge-to-edge treatment on TV.
+        derivedStateOf { device.isTv && hasSpotlight && homeListState.firstVisibleItemIndex == 0 }
     }
 
     Scaffold(
-        modifier = modifier.appCanvas(),
-        containerColor = canvasColor(),
+        modifier = modifier.then(if (device.isTv) Modifier.appCanvas() else Modifier.glassAtmosphere()),
+        containerColor = if (device.isTv) canvasColor() else Color.Transparent,
         topBar = {
             ScrollAwareTopBar {
                 HomeTopChrome(
@@ -402,7 +413,7 @@ private fun HomeTopChrome(
         TopAppBar(
             title = {
                 if (showWordmark) {
-                    AnililiWordmark(modifier = Modifier.height(38.dp))
+                    AnililiWordmark(modifier = Modifier.height(36.dp))
                 }
             },
             actions = {
@@ -547,7 +558,7 @@ private fun HomeContent(
         // padding, so the artwork runs behind the fade instead of starting below it. Scroll padding
         // is only reserved when there is no spotlight to run underneath — without that, a feed that
         // came back without one would open with its first row already behind the wordmark.
-        val spotlight = data.spotlight.take(6)
+        val spotlight = remember(data.spotlight) { data.spotlight.take(6) }
         val topOverlay = contentPadding.calculateTopPadding()
 
         // The rows drawn right now, each with its LazyColumn key: shown, and with something in
@@ -562,18 +573,26 @@ private fun HomeContent(
                 }
             }
         }
+        // Lazy list keys are Any (a rail may use a string or another stable
+        // key type). Preserve that explicit contract while caching this map.
+        val keyToRow: Map<Any, HomeRow> = remember(drawnKeys) {
+            buildMap<Any, HomeRow> {
+                drawnKeys.forEach { (row, key) -> if (key != null) put(key, row) }
+            }
+        }
         val drag = rememberHomeRowDragState(
             listState = listState,
-            keyToRow = drawnKeys.entries.mapNotNull { (row, key) -> key?.let { it to row } }.toMap(),
+            keyToRow = keyToRow,
             topInset = topOverlay,
             bottomInset = contentPadding.calculateBottomPadding() + chromeBottomInset,
         )
         val shown = drag.order ?: layout
-        val drawnRows = shown.visible.filter { drawnKeys[it] != null }
+        val drawnRows = remember(shown, drawnKeys) {
+            shown.visible.filter { drawnKeys[it] != null }
+        }
 
         // What's new (ui/tour): starts once Home has settled, and scrolls the row a step points at
         // to just below the top bar. Item 0 is the spotlight; the rows follow in drawn order.
-        StartWhatsNewTourWhenSettled()
         val tourTopPx = with(LocalDensity.current) { (topOverlay + 12.dp).roundToPx() }
         RegisterTourScroller { target ->
             val row = when (target) {
@@ -591,7 +610,7 @@ private fun HomeContent(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = if (spotlight.isEmpty()) topOverlay else 0.dp,
+                    top = if (device.isTv && spotlight.isNotEmpty()) 0.dp else topOverlay,
                     bottom = contentPadding.calculateBottomPadding() + chromeBottomInset +
                         AppChromeListBottomGap,
                 ),
@@ -601,7 +620,16 @@ private fun HomeContent(
                     HeroPager(
                         items = spotlight,
                         onAnimeClick = onAnimeClick,
-                        topInset = topOverlay,
+                        onWatch = { id ->
+                            // Resume immediately when this hero is already in Continue
+                            // Watching. A first-time title still opens Details to choose
+                            // its first available episode/source safely.
+                            val previous = history.firstOrNull { it.anilistId == id }
+                            if (previous != null) onResume(previous) else onAnimeClick(id)
+                        },
+                        // Header clearance is owned by the scrolling list on phones.
+                        // Adding it to the hero inflated the artwork and misaligned its CTAs.
+                        topInset = if (device.isTv) topOverlay else 0.dp,
                         onMoveDown = if (showContinue) {
                             { runCatching { continueFocusRequester.requestFocus() }.isSuccess }
                         } else {
@@ -753,7 +781,7 @@ private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, 
     Text(
         label,
         style = MaterialTheme.typography.labelLarge,
-        color = fillFocus1.content(if (highlighted) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = .92f)),
+        color = fillFocus1.content(Color.White.copy(alpha = if (highlighted) 1f else .92f)),
         fontWeight = if (highlighted) FontWeight.Bold else FontWeight.SemiBold,
         modifier = Modifier
             .focusFill(fillFocus1, shape)
@@ -762,7 +790,7 @@ private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, 
             .background(
                 fillFocus1.background(
                     when {
-                        highlighted -> MaterialTheme.colorScheme.primary
+                        highlighted -> Color.White.copy(alpha = 0.23f)
                         frosted -> Color.Transparent
                         else -> Color.Black.copy(alpha = .52f)
                     },
@@ -770,7 +798,7 @@ private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, 
             )
             .border(
                 1.dp,
-                if (highlighted) Color.Transparent else Color.White.copy(alpha = .18f),
+                if (highlighted) Color.White.copy(alpha = .38f) else Color.White.copy(alpha = .18f),
                 shape,
             )
             .clickable(onClick = onClick)
@@ -790,12 +818,14 @@ private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, 
 private fun HeroPager(
     items: List<Media>,
     onAnimeClick: (Int) -> Unit,
+    onWatch: (Int) -> Unit,
     onMoveDown: (() -> Boolean)?,
     topInset: Dp = 0.dp,
 ) {
     if (items.isEmpty()) return
     val device = LocalAppDeviceProfile.current
     val pagerState = rememberPagerState(pageCount = { items.size })
+    val indicatorScope = rememberCoroutineScope()
     val heroIds = items.map(Media::id)
     var tvPage by remember(heroIds) { mutableIntStateOf(0) }
     var tvHeroHasFocus by remember(heroIds) { mutableStateOf(false) }
@@ -803,15 +833,12 @@ private fun HeroPager(
     val pagerIsDragged by pagerState.interactionSource.collectIsDraggedAsState()
     val heroHeight = topInset + when {
         device.isTv -> 420.dp
-        device.isExpanded -> 360.dp
-        device.isTablet -> 320.dp
-        // Fifteen per cent taller than the 270dp this used to be, counted across the hero as a
-        // whole — the chrome inset is part of what a viewer sees as the spotlight, so the extra
-        // goes on top of the pair. The height is what decides how much of the cover survives:
-        // a portrait cover fills this box by its width and is trimmed top and bottom, so every dp
-        // added here is artwork kept rather than cut. At 270dp it lost a fifth of its height; at
-        // this it loses about a ninth.
-        else -> 334.dp
+        device.isExpanded -> 336.dp
+        device.isTablet -> 294.dp
+        // A phone needs a distinct artwork zone above the title and actions. The old 244dp
+        // forced long titles, metadata, genre chips, buttons and dots into one crowded block.
+        // Keep the hero stable as slides change so page indicators never jump.
+        else -> 314.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -840,9 +867,14 @@ private fun HeroPager(
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = if (device.isTv) device.pagePadding else 0.dp)
+            .padding(horizontal = if (device.isTv) device.pagePadding else 14.dp)
             .height(heroHeight)
-            .clip(if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(0.dp)),
+            .clip(if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(26.dp))
+            .border(
+                1.dp,
+                Color.White.copy(alpha = if (device.isTv) 0.10f else 0.24f),
+                if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(26.dp),
+            ),
     ) {
         if (device.isTv) {
             val page = safeTvPage
@@ -852,6 +884,7 @@ private fun HeroPager(
                 pageIndex = page,
                 pageCount = items.size,
                 onAnimeClick = onAnimeClick,
+                onWatch = onWatch,
                 canGoPrevious = page > 0,
                 canGoNext = page < items.lastIndex,
                 navigationInProgress = false,
@@ -876,6 +909,7 @@ private fun HeroPager(
                     pageIndex = page,
                     pageCount = items.size,
                     onAnimeClick = onAnimeClick,
+                    onWatch = onWatch,
                     canGoPrevious = page > 0,
                     canGoNext = page < items.lastIndex,
                     navigationInProgress = false,
@@ -886,27 +920,65 @@ private fun HeroPager(
                 )
             }
         }
-        Row(
-            Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            repeat(items.size) { i ->
-                Box(
-                    Modifier
-                        .height(5.dp)
-                        .width(if (i == if (device.isTv) safeTvPage else pagerState.currentPage) 18.dp else 5.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (i == if (device.isTv) safeTvPage else pagerState.currentPage) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                Color.White.copy(.4f)
-                            },
-                        ),
-                )
+        // Interactive on touch: the previous decorative 5dp dots were not usable to select a
+        // featured title or discover a page through accessibility services.
+        if (items.size > 1) {
+            val activePage = if (device.isTv) safeTvPage else pagerState.currentPage
+            val visibleIndicators = heroVisibleIndicatorIndices(
+                page = activePage,
+                pageCount = items.size,
+            )
+            Row(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 6.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.29f))
+                    .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(50))
+                    .padding(horizontal = if (device.isTv) 4.dp else 3.dp, vertical = if (device.isTv) 5.dp else 1.dp),
+                horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 5.dp else 0.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                visibleIndicators.forEach { i ->
+                    val selected = i == activePage
+                    Box(
+                        modifier = Modifier
+                            .then(
+                                if (device.isTv) Modifier else Modifier
+                                    .size(21.dp)
+                                    .clickable(
+                                        onClickLabel = "Show featured anime ${i + 1} of ${items.size}",
+                                        role = Role.Button,
+                                    ) { indicatorScope.launch { pagerState.animateScrollToPage(i) } },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            Modifier
+                                .height(4.dp)
+                                .width(if (selected) 12.dp else 4.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primary
+                                    else Color.White.copy(alpha = 0.57f),
+                                ),
+                        )
+                    }
+                }
             }
         }
     }
+}
+
+/**
+ * Keep the spotlight pager dots compact even when a provider supplies dozens of featured shows.
+ * The active page stays visible in a sliding, at-most-seven-dot window, with no broken count.
+ */
+internal fun heroVisibleIndicatorIndices(page: Int, pageCount: Int, maxDots: Int = 7): IntRange {
+    if (pageCount <= 0 || maxDots <= 0) return IntRange.EMPTY
+    val count = minOf(pageCount, maxDots)
+    val first = (page.coerceIn(0, pageCount - 1) - count / 2).coerceIn(0, pageCount - count)
+    return first until first + count
 }
 
 @Composable
@@ -916,6 +988,7 @@ private fun HeroCard(
     pageIndex: Int,
     pageCount: Int,
     onAnimeClick: (Int) -> Unit,
+    onWatch: (Int) -> Unit,
     canGoPrevious: Boolean,
     canGoNext: Boolean,
     navigationInProgress: Boolean,
@@ -977,9 +1050,12 @@ private fun HeroCard(
             Box(
                 Modifier.fillMaxSize().appCanvasFade { canvas ->
                     Brush.verticalGradient(
-                        0.0f to Color.Black.copy(.30f),
-                        0.42f to Color.Black.copy(.12f),
-                        0.72f to Color.Black.copy(.45f),
+                        // The centre of a light poster is often white: retain the artwork
+                        // while giving the logo, genre pill and CTA rows a stable contrast bed.
+                        0.0f to Color.Black.copy(.25f),
+                        0.34f to Color.Black.copy(.08f),
+                        0.58f to Color.Black.copy(.27f),
+                        0.83f to Color.Black.copy(.67f),
                         1f to canvas,
                     )
                 },
@@ -993,7 +1069,7 @@ private fun HeroCard(
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .padding(top = topInset)
-                .padding(horizontal = device.pagePadding, vertical = 14.dp),
+                .padding(horizontal = device.pagePadding, vertical = if (device.isTv) 14.dp else 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top,
         ) {
@@ -1003,7 +1079,7 @@ private fun HeroCard(
                     Text(label, Modifier.padding(start = 5.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                 }
             } ?: Spacer(Modifier)
-            if (pageCount > 1) {
+            if (pageCount > 1 && device.isTv) {
                 HeroPill(backdrop = heroArt) {
                     Text("${pageIndex + 1}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                     Text(
@@ -1024,20 +1100,25 @@ private fun HeroCard(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth(if (device.isExpanded) 0.8f else 1f)
                 .padding(horizontal = device.pagePadding)
-                .padding(top = 26.dp, bottom = 22.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(
+                    top = if (device.isTv) 16.dp else 8.dp,
+                    bottom = if (device.isTv) 26.dp else if (pageCount > 1) 35.dp else 15.dp,
+                ),
+            horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
-            HeroMetaRow(media)
-            // A fixed box about the height of the two title lines it replaces, so the genre pill
-            // does not jump while the logo decodes; centred, like the title.
+            // Desktop/TV keeps the full metadata and genre hierarchy. On phones, let artwork
+            // breathe above the title and show only a short metadata line below it.
+            if (device.isTv) HeroMetaRow(media)
+            // Reserve a fixed two-line title slot so long names are shrunk rather than
+            // squeezing the buttons down into the pager or the top countdown chips.
             SeriesLogo(
                 url = logo,
                 contentDescription = media.title.preferred,
-                alignment = Alignment.Center,
+                alignment = if (device.isTv) Alignment.Center else Alignment.CenterStart,
                 modifier = Modifier
-                    .padding(top = 10.dp)
-                    .fillMaxWidth(if (device.isExpanded) 0.6f else 0.82f)
-                    .height(if (device.isTv || device.isExpanded) 88.dp else 72.dp),
+                    .padding(top = if (device.isTv) 10.dp else 0.dp)
+                    .fillMaxWidth(if (device.isExpanded) 0.6f else 1f)
+                    .height(if (device.isTv) 88.dp else if (device.isExpanded) 68.dp else 54.dp),
             ) {
                 ShrinkingTitle(
                     text = media.title.preferred,
@@ -1045,22 +1126,60 @@ private fun HeroCard(
                         if (device.isTv || device.isExpanded) {
                             MaterialTheme.typography.displaySmall
                         } else {
-                            MaterialTheme.typography.headlineMedium
+                            MaterialTheme.typography.titleLarge
                         }
                     ).copy(
                         fontWeight = FontWeight.Black,
-                        textAlign = TextAlign.Center,
-                        lineHeight = if (device.isTv || device.isExpanded) 42.sp else 34.sp,
+                        textAlign = if (device.isTv) TextAlign.Center else TextAlign.Start,
+                        lineHeight = if (device.isTv || device.isExpanded) 42.sp else 28.sp,
                     ),
                     color = Color.White,
                     maxLines = 2,
-                    modifier = Modifier.padding(top = 10.dp),
+                    minFontSize = 17.sp,
+                    modifier = Modifier.padding(top = if (device.isTv) 10.dp else 2.dp),
                 )
             }
             val genreLabel = media.genres.take(3).joinToString("  ·  ")
-            if (genreLabel.isNotBlank()) {
-                HeroPill(Modifier.padding(top = 12.dp), backdrop = heroArt) {
+            if (device.isTv && genreLabel.isNotBlank()) {
+                HeroPill(Modifier.padding(top = 5.dp), backdrop = heroArt) {
                     Text(genreLabel, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
+                }
+            }
+            if (!device.isTv) {
+                // Restrained single-line metadata takes the place of a third frosted genre row.
+                HeroMetaRow(media, compact = true)
+                // The hero is a destination as well as artwork. Keep the actionable
+                // call-to-action visible instead of relying on an undocumented poster tap.
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedButton(
+                        onClick = { onWatch(media.id) },
+                        // Neutral high-contrast action; keep the artwork free of theme-accent tint.
+                        colors = cinematicSecondaryButtonColors(onArtwork = true),
+                        border = cinematicSecondaryButtonBorder(onArtwork = true),
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                        shape = RoundedCornerShape(50),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 9.dp),
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(19.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Watch now", fontWeight = FontWeight.Bold, maxLines = 1)
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                        onClick = { onAnimeClick(media.id) },
+                        colors = cinematicSecondaryButtonColors(onArtwork = true),
+                        border = cinematicSecondaryButtonBorder(onArtwork = true),
+                        shape = RoundedCornerShape(50),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                    ) {
+                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text("Details", maxLines = 1)
+                    }
                 }
             }
         }
@@ -1214,7 +1333,8 @@ private fun HeroPill(
         modifier
             .clip(RoundedCornerShape(50))
             .backdropBlur(backdrop, tint = Color.Black.copy(alpha = .22f), radius = 12.dp)
-            .background(Color.Black.copy(if (frosted) 0f else .42f))
+            .background(Color.Black.copy(if (frosted) 0.05f else .42f))
+            .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50))
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
@@ -1226,16 +1346,20 @@ private data class HeroMetaCell(val icon: ImageVector?, val text: String, val ic
 
 /** Centered format / episodes / score / runtime strip, each present only when known. */
 @Composable
-private fun HeroMetaRow(media: Media) {
+private fun HeroMetaRow(media: Media, compact: Boolean = false) {
     val cells = buildList {
         media.format?.let { add(HeroMetaCell(icon = null, text = heroFormatLabel(it))) }
         // For an airing show the CC count is what's actually out, not the season's planned total.
         val airedEpisodes = media.nextAiringEpisode?.episode?.minus(1) ?: media.episodes
-        airedEpisodes?.takeIf { it > 0 }?.let { add(HeroMetaCell(Icons.Default.ClosedCaption, "$it")) }
+        if (!compact) {
+            airedEpisodes?.takeIf { it > 0 }?.let { add(HeroMetaCell(Icons.Default.ClosedCaption, "$it")) }
+        }
         media.averageScore?.takeIf { it > 0 }?.let {
             add(HeroMetaCell(Icons.Default.Star, "$it", iconTint = HERO_STAR_COLOR))
         }
-        media.duration?.takeIf { it > 0 }?.let { add(HeroMetaCell(Icons.Default.Schedule, "$it mins")) }
+        if (!compact) {
+            media.duration?.takeIf { it > 0 }?.let { add(HeroMetaCell(Icons.Default.Schedule, "$it mins")) }
+        }
     }
     if (cells.isEmpty()) return
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1245,7 +1369,7 @@ private fun HeroMetaRow(media: Media) {
                     "•",
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.White.copy(.45f),
-                    modifier = Modifier.padding(horizontal = 8.dp),
+                    modifier = Modifier.padding(horizontal = if (compact) 6.dp else 8.dp),
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1326,16 +1450,17 @@ private fun RailTitle(title: String, dragHandle: Modifier?, modifier: Modifier =
             title,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            // All the width the handle leaves, so the title keeps one line and the space after a
-            // short one is still something to hold.
+            // Keep long row names from stealing space from Grid/Rail controls on small phones.
             modifier = if (dragHandle != null) Modifier.weight(1f) else Modifier,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         if (dragHandle != null) {
             Icon(
                 Icons.Default.DragHandle,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
-                modifier = Modifier.padding(horizontal = 8.dp).size(22.dp),
+                modifier = Modifier.padding(horizontal = if (LocalAppDeviceProfile.current.isTv) 8.dp else 4.dp).size(if (LocalAppDeviceProfile.current.isTv) 22.dp else 18.dp),
             )
         }
     }
@@ -1361,25 +1486,53 @@ private fun MediaRail(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                // Use consistent page gutters. The floating shortcut overlays cards,
+                // not the header; reserving 70dp here squeezed long titles.
                 .padding(horizontal = device.pagePadding),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             RailTitle(title, dragHandle, Modifier.weight(1f))
             if (onToggleExpand != null) {
-                val controlFocus6 = rememberFocusFill()
-                TextButton(
-                    colors = controlFocus6.buttonColors(ButtonDefaults.textButtonColors()),
-                    onClick = onToggleExpand,
-                    modifier = Modifier.focusFill(controlFocus6, RoundedCornerShape(50)),
+                // Two independent, equal-size targets rather than a label that switches
+                // between Grid and Rail. Highlight the *current* layout, and allow
+                // either button to select its own layout without changing other rows.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        if (isExpanded) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(if (isExpanded) "Carousel" else "Expand")
+                    listOf(false to Icons.AutoMirrored.Filled.ViewList, true to Icons.Default.GridView)
+                        .forEach { (grid, glyph) ->
+                            val selected = isExpanded == grid
+                            val shape = CircleShape
+                            val focus = rememberFocusFill()
+                            IconButton(
+                                onClick = { if (!selected) onToggleExpand() },
+                                colors = focus.iconButtonColors(),
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(shape)
+                                    .background(
+                                        if (selected) glassSelectionColor()
+                                        else glassPanelColor().copy(alpha = 0.46f),
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (selected) glassRimColor()
+                                        else glassRimColor().copy(alpha = 0.36f),
+                                        shape,
+                                    )
+                                    .focusFill(focus, shape),
+                            ) {
+                                Icon(
+                                    glyph,
+                                    contentDescription = if (grid) "Show $title as grid" else "Show $title as rail",
+                                    tint = if (selected) MaterialTheme.colorScheme.onSurface
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
+                        }
                 }
             }
         }
@@ -1422,8 +1575,8 @@ private fun MediaRail(
                             colors = controlFocus7.buttonColors(ButtonDefaults.outlinedButtonColors()),
                             onClick = onLoadMore,
                             enabled = !isLoadingMore,
-                            shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.focusFill(controlFocus7, RoundedCornerShape(20.dp)),
+                            shape = RoundedCornerShape(50),
+                            modifier = Modifier.focusFill(controlFocus7, RoundedCornerShape(50)),
                         ) {
                             if (isLoadingMore) {
                                 CircularProgressIndicator(
@@ -1569,7 +1722,9 @@ private fun ContinueRail(
         device.isTv -> 240.dp
         device.isExpanded -> 220.dp
         device.isTablet -> 200.dp
-        else -> 174.dp
+        // Keep three thumb-sized cards nearly visible on a normal phone, matching
+        // the supplied mockup and leaving room for the title beneath each thumbnail.
+        else -> 156.dp
     }
     Column {
         RailTitle(
@@ -1577,12 +1732,14 @@ private fun ContinueRail(
             dragHandle,
             Modifier.fillMaxWidth().padding(horizontal = device.pagePadding),
         )
-        Text(
-            "Long-press a title to move it on your anime list",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = device.pagePadding, vertical = 2.dp),
-        )
+        if (device.isTv) {
+            Text(
+                "Long-press a title to move it on your anime list",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = device.pagePadding, vertical = 2.dp),
+            )
+        }
         LazyRow(
             state = rememberContinueRailState(history.firstOrNull()?.anilistId),
             modifier = Modifier.focusGroup(),
@@ -1604,41 +1761,98 @@ private fun ContinueRail(
                             onLongClick = { managedEntry = entry },
                         ),
                 ) {
-                    Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                    Box(
+                        Modifier.fillMaxWidth()
+                            .aspectRatio(if (device.isTv) 16f / 9f else 1.4f)
+                            .glassCard(RoundedCornerShape(20.dp)),
+                    ) {
                         // Each card frosts its own thumbnail under its corner buttons: a source
                         // this small is cheap to record, and the buttons never need the feed.
                         val thumbnail = if (homeGlass) remember { HazeState() } else null
                         Box(Modifier.fillMaxSize().then(if (thumbnail != null) Modifier.hazeSource(thumbnail) else Modifier)) {
                             AsyncImage(model = entry.cover, contentDescription = "Resume ${entry.title}", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                            Box(Modifier.fillMaxSize().background(Color.Black.copy(.3f)))
+                            Box(Modifier.fillMaxSize().background(Color.Black.copy(.16f)))
                         }
-                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.align(Alignment.Center))
-                        // The two things anyone actually does to a Continue Watching card, on the
-                        // card. They were reachable only behind a long press, which is a gesture
-                        // nothing on this screen advertises and most viewers never tried; the
-                        // menu stays for moving a title between lists, which needs a list to pick.
-                        Row(
-                            Modifier.align(Alignment.TopStart).fillMaxWidth().padding(5.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                        Box(
+                            Modifier
+                                .align(Alignment.Center)
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.50f))
+                                .border(1.dp, Color.White.copy(alpha = 0.45f), CircleShape),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            CardCornerAction(
-                                icon = Icons.Default.Info,
-                                contentDescription = "Details for ${entry.title}",
-                                onClick = { onOpenDetails(entry) },
-                                backdrop = thumbnail,
-                            )
-                            CardCornerAction(
-                                icon = Icons.Default.Close,
-                                contentDescription = "Remove ${entry.title} from Continue Watching",
-                                onClick = { removingEntry = entry },
-                                backdrop = thumbnail,
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
+                        }
+                        // Overflow exposes Details, Remove and list-management actions.
+                        // The rest of the thumbnail remains a direct Resume target.
+                        // One reachable action menu instead of two large corner discs
+                        // obscuring most of the artwork on a 124dp thumbnail. It still
+                        // contains Details, Remove and account list-management actions.
+                        // Keep a full 48dp accessible touch target, but paint only a
+                        // 28dp translucent disc. The previous 48dp frosted circle covered
+                        // nearly half of the 124dp thumbnail in the reference screenshots.
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(3.dp)
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .clickable(onClickLabel = "More options for ${entry.title}") {
+                                    managedEntry = entry
+                                },
+                            contentAlignment = Alignment.TopEnd,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(3.dp)
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.65f))
+                                    .border(1.dp, Color.White.copy(alpha = 0.28f), CircleShape),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        }
+                        // Keep the resume-time badge inside the artwork rather than adding a
+                        // third text line to every small card. Show it only for real playback
+                        // history; remote list sync alone does not establish a duration.
+                        val remainingMs = (entry.durationMs - entry.positionMs).coerceAtLeast(0L)
+                        if (!device.isTv && entry.durationMs > 0L && entry.positionMs > 0L && remainingMs > 0L) {
+                            val minutesLeft = (remainingMs + 59_999L) / 60_000L
+                            Text(
+                                text = "${minutesLeft}m left",
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(end = 6.dp, bottom = 10.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Color.Black.copy(alpha = 0.76f))
+                                    .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(50))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                maxLines = 1,
                             )
                         }
-                        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.White.copy(.25f))) {
-                            Box(Modifier.fillMaxWidth(entry.progressFraction.coerceAtLeast(.03f)).height(4.dp).background(MaterialTheme.colorScheme.primary))
+                        // A remote-synced entry may not yet have a real playback duration.
+                        // Draw actual progress only, instead of fabricating a visible 3% strip.
+                        if (entry.durationMs > 0L) {
+                            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.White.copy(.25f))) {
+                                Box(
+                                    Modifier.fillMaxWidth(entry.progressFraction.coerceIn(0f, 1f))
+                                        .height(4.dp)
+                                        .background(MaterialTheme.colorScheme.primary),
+                                )
+                            }
                         }
                     }
-                    Text(entry.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
+                    Text(entry.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
                     Text("Episode ${entry.episodeLabel}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

@@ -1,11 +1,17 @@
 package com.anilili.ui.downloads
 
+import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassSelectionColor
+
 import com.anilili.ui.theme.appCanvas
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import com.anilili.ui.components.glassAtmosphere
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusGroup
@@ -25,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -270,7 +277,7 @@ fun DownloadsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .appCanvas(),
+            .then(if (device.isTv) Modifier.appCanvas() else Modifier.glassAtmosphere()),
         // No statusBarsPadding here: PageTitleBar applies its own, and this page has no Scaffold to
         // arbitrate between them, so both would be honoured and the title would sit a status bar
         // lower than every other page's.
@@ -285,6 +292,7 @@ fun DownloadsScreen(
             },
             subtitle = when {
                 selecting -> selectionSummary(selectedEpisodes)
+                allSeries.isEmpty() -> "Offline anime for you"
                 else -> downloadsSummary(openSeries, allSeries)
             },
             leading = when {
@@ -317,13 +325,57 @@ fun DownloadsScreen(
         )
 
         if (allSeries.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    "Nothing downloaded yet. Save an episode from its watch page to keep it here.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 32.dp),
-                )
+            // Center within the actual usable content, not underneath the floating capsule.
+            Box(
+                Modifier.fillMaxSize().padding(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = if (device.isTv) 16.dp else 4.dp,
+                    bottom = LocalAppChromeBottomInset.current + if (device.isTv) 12.dp else 12.dp,
+                ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 440.dp)
+                        .glassCard(RoundedCornerShape(24.dp))
+                        .padding(horizontal = 20.dp, vertical = if (device.isTv) 24.dp else 18.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(9.dp),
+                    ) {
+                        Box(
+                            Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f), CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Default.Download,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
+                        Text(
+                            "Ready for offline viewing",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        )
+                        Text(
+                            "Download an episode from its watch page. Saved episodes will appear here, ready to play without a connection.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        )
+                    }
+                }
             }
             return@Column
         }
@@ -347,7 +399,7 @@ fun DownloadsScreen(
                     item {
                         Column(
                             Modifier.padding(horizontal = device.pagePadding),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             PageSearch(
                                 value = titleFilter,
@@ -389,11 +441,11 @@ fun DownloadsScreen(
                     if (series.isEmpty()) {
                         item {
                             Box(
-                                Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 40.dp),
+                                Modifier.fillMaxWidth().padding(horizontal = device.pagePadding, vertical = 12.dp).glassCard(RoundedCornerShape(22.dp)).padding(horizontal = 18.dp, vertical = 16.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    "No downloaded anime matches these filters.",
+                                    "No downloads match these filters. Clear a filter to see more.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -459,25 +511,35 @@ fun DownloadsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = device.pagePadding, vertical = 4.dp),
+                    .padding(horizontal = device.pagePadding, vertical = 4.dp)
+                    // Keep trailing categories available in narrow and split-screen windows.
+                    .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 val controlFocus3 = rememberFocusFill()
                 FilterChip(
-                    colors = controlFocus3.chipColors(FilterChipDefaults.filterChipColors()),
+                    shape = RoundedCornerShape(50),
+                    colors = controlFocus3.chipColors(FilterChipDefaults.filterChipColors(
+                        containerColor = glassPanelColor(),
+                        selectedContainerColor = glassSelectionColor(),
+                    )),
                     selected = selectedCategory == null,
                     onClick = { selectedCategory = null },
                     label = { Text("All") },
-                    modifier = Modifier.focusFill(controlFocus3, RoundedCornerShape(8.dp)),
+                    modifier = Modifier.focusFill(controlFocus3, RoundedCornerShape(50)),
                 )
                 categories.forEach { category ->
                     val controlFocus4 = rememberFocusFill()
                     FilterChip(
-                        colors = controlFocus4.chipColors(FilterChipDefaults.filterChipColors()),
+                    shape = RoundedCornerShape(50),
+                        colors = controlFocus4.chipColors(FilterChipDefaults.filterChipColors(
+                            containerColor = glassPanelColor(),
+                            selectedContainerColor = glassSelectionColor(),
+                        )),
                         selected = selectedCategory == category,
                         onClick = { selectedCategory = category },
                         label = { Text(category.uppercase()) },
-                        modifier = Modifier.focusFill(controlFocus4, RoundedCornerShape(8.dp)),
+                        modifier = Modifier.focusFill(controlFocus4, RoundedCornerShape(50)),
                     )
                 }
             }
@@ -491,11 +553,15 @@ fun DownloadsScreen(
                 items(blocks.size) { index ->
                     val controlFocus5 = rememberFocusFill()
                     FilterChip(
-                        colors = controlFocus5.chipColors(FilterChipDefaults.filterChipColors()),
+                    shape = RoundedCornerShape(50),
+                        colors = controlFocus5.chipColors(FilterChipDefaults.filterChipColors(
+                            containerColor = glassPanelColor(),
+                            selectedContainerColor = glassSelectionColor(),
+                        )),
                         selected = blockIndex == index,
                         onClick = { selectedBlock = index },
                         label = { Text(blocks[index].label) },
-                        modifier = Modifier.focusFill(controlFocus5, RoundedCornerShape(8.dp)),
+                        modifier = Modifier.focusFill(controlFocus5, RoundedCornerShape(50)),
                     )
                 }
             }
@@ -687,8 +753,7 @@ private fun DownloadSeriesCard(
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
-                .clip(RoundedCornerShape(9.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .glassCard(RoundedCornerShape(22.dp)),
         ) {
             AsyncImage(
                 model = series.artworkUrl,
@@ -704,9 +769,10 @@ private fun DownloadSeriesCard(
                 Modifier
                     .align(Alignment.TopEnd)
                     .padding(4.dp)
-                    .size(28.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = .6f))
+                    .background(Color.Black.copy(alpha = .72f))
+                    .border(1.dp, Color.White.copy(alpha = 0.28f), CircleShape)
                     .clickable(
                         role = Role.Button,
                         onClick = onRemoveSeries,
@@ -717,7 +783,7 @@ private fun DownloadSeriesCard(
                     Icons.Default.Delete,
                     contentDescription = "Remove every episode of ${series.title}",
                     tint = Color.White,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(18.dp),
                 )
             }
             if (series.totalBytes > 0) {
@@ -737,7 +803,7 @@ private fun DownloadSeriesCard(
             series.title,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 5.dp),
         )
@@ -832,7 +898,7 @@ private fun EpisodeRow(
         resumeMs != null -> "Resume offline"
         else -> "Play offline"
     }
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(22.dp)
     // Only true when the card itself holds focus, never when one of its buttons does — see the
     // modifier chain below for why the distinction decides whether a remote can press them at all.
     var cardFocused by remember { mutableStateOf(false) }
@@ -842,7 +908,7 @@ private fun EpisodeRow(
             containerColor = if (selected) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
-                MaterialTheme.colorScheme.surfaceVariant
+                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.54f)
             },
         ),
         modifier = Modifier
@@ -1059,8 +1125,7 @@ private fun EpisodeRowArtwork(
         Modifier
             .width(104.dp)
             .aspectRatio(16f / 9f)
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surface),
+            .glassCard(RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center,
     ) {
         AsyncImage(

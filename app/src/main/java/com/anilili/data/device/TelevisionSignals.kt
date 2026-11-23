@@ -1,6 +1,7 @@
 package com.anilili.data.device
 
 import android.app.UiModeManager
+import com.anilili.BuildConfig
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -107,6 +108,9 @@ fun televisionSignal(
  * — which need none — are what carry the decision there.
  */
 fun isTelevision(context: Context): Boolean {
+    // This fork's mobile APK must use phone/tablet playback, update and UI
+    // policies even if the device or an imported setting claims television.
+    if (BuildConfig.FLAVOR == "mobile") return false
     val configuration = context.applicationContext.resources.configuration
     val signals = readTelevisionSignals(context).copy(
         launchedFromLeanbackLauncher = SettingsStore.leanbackLauncherSeen.value,

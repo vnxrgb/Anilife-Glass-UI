@@ -1,6 +1,8 @@
 package com.anilili.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.anilili.ui.theme.Midnight
+import com.anilili.ui.components.glassRimColor
 import java.util.Locale
 import kotlinx.coroutines.delay
 
@@ -52,19 +55,31 @@ fun NextEpisodeCountdown(
         else -> "THE NEXT EPISODE WILL BE RELEASED IN"
     }
     val value = if (remaining <= 0L) "AVAILABLE NOW" else formatAiringCountdown(remaining)
+    // A screen reader should not be interrupted every second by a changing countdown.
+    // Keep the visual clock precise while announcing only minute-level changes.
+    val spokenRemaining = if (remaining <= 0L) 0L else ((remaining + 59L) / 60L) * 60L
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Midnight.Panel2)
-            .padding(horizontal = 18.dp, vertical = 14.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .glassCard(RoundedCornerShape(22.dp))
+            .background(
+                Brush.horizontalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f),
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.04f),
+                    ),
+                ),
+            )
+            .border(1.dp, glassRimColor(), RoundedCornerShape(22.dp))
+            .padding(horizontal = 14.dp, vertical = 14.dp)
             // One announcement rather than five, and phrased the way it would be said aloud: a
             // screen reader walking "EPISODE 20 WILL BE RELEASED IN" then "1 DAY 3 HRS…" reads the
             // abbreviations letter by letter.
             .clearAndSetSemantics {
                 liveRegion = LiveRegionMode.Polite
-                contentDescription = spokenAiringCountdown(remaining, episode)
+                contentDescription = spokenAiringCountdown(spokenRemaining, episode)
             },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -72,15 +87,15 @@ fun NextEpisodeCountdown(
         Text(
             text = heading,
             style = MaterialTheme.typography.labelSmall,
-            color = Midnight.Text3,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            letterSpacing = 1.2.sp,
+            letterSpacing = 0.8.sp,
             textAlign = TextAlign.Center,
         )
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
-            color = Midnight.Text,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.6.sp,
             textAlign = TextAlign.Center,

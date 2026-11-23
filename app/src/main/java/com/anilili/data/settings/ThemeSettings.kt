@@ -28,7 +28,7 @@ enum class ThemeBackground(val storedValue: String, val label: String, val descr
  * [CUSTOM] is whatever the viewer mixed in the custom colour dialog.
  */
 enum class ThemeAccent(val storedValue: String, val label: String, val seed: Long?) {
-    ANILIFE_GREEN("anilife_green", "Anilife green", 0xFF79D66C),
+    ANILIFE_GREEN("anilife_green", "Anilumos green", 0xFF79D66C),
     MONOCHROME("monochrome", "Monochrome", null),
     WALLPAPER("wallpaper", "From wallpaper", null),
     /** The viewer's own colour, stored beside it as `theme_custom_seed`. */
@@ -101,7 +101,7 @@ enum class ThemePreset(
     val style: ThemeStyle,
     val contrast: ThemeContrast = ThemeContrast.STANDARD,
 ) {
-    ANILIFE("Anilife", ThemeBackground.AMOLED, ThemeAccent.ANILIFE_GREEN, ThemeStyle.VIVID),
+    ANILIFE("Anilumos", ThemeBackground.AMOLED, ThemeAccent.ANILIFE_GREEN, ThemeStyle.VIVID),
     MIDNIGHT("Legacy Midnight", ThemeBackground.AMOLED, ThemeAccent.MONOCHROME, ThemeStyle.VIVID),
     CRIMSON_NIGHT("Crimson Night", ThemeBackground.AMOLED, ThemeAccent.BLOOD_RED, ThemeStyle.VIVID),
     TOXIC("Toxic", ThemeBackground.AMOLED, ThemeAccent.NEON_GREEN, ThemeStyle.VIBRANT),

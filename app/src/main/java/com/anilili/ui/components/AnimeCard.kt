@@ -117,7 +117,7 @@ fun AnimeCard(
             // combinedClickable's long press is pointer-only; the remote gets its own.
             .dpadClickable(onClick = onClick, onLongClick = { actionsVisible = true })
             .combinedClickable(
-                onClickLabel = "Open details",
+                onClickLabel = "Open details for ${media.title.preferred}",
                 onLongClickLabel = "Move ${media.title.preferred} on your anime list",
                 role = Role.Button,
                 onClick = onClick,
@@ -128,8 +128,7 @@ fun AnimeCard(
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .glassCard(RoundedCornerShape(18.dp)),
         ) {
             // Decorative: the title text below is part of the same merged semantics node.
             AsyncImage(
@@ -162,7 +161,7 @@ fun AnimeCard(
                 maxLines = titleMaxLines,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .padding(top = 5.dp)
+                    .padding(top = if (device.isTv) 8.dp else 5.dp)
                     .heightIn(min = titleBlockMinHeight),
             )
         }
@@ -179,7 +178,7 @@ fun AnimeCard(
                 overflow = TextOverflow.Ellipsis,
                 // Without a title above it this line is the caption, and it would otherwise sit
                 // flush against the artwork it belongs under.
-                modifier = if (poster.shows(PosterElement.TITLE)) Modifier else Modifier.padding(top = 5.dp),
+                modifier = if (poster.shows(PosterElement.TITLE)) Modifier.padding(top = 2.dp) else Modifier.padding(top = 5.dp),
             )
         }
     }
@@ -210,7 +209,7 @@ fun PosterTag(
 ) {
     val style = MaterialTheme.typography.labelSmall
     val accent = MaterialTheme.colorScheme.primary
-    val shape = RoundedCornerShape(5.dp)
+    val shape = RoundedCornerShape(50)
     Row(
         modifier
             .then(if (description != null) Modifier.clearAndSetSemantics { contentDescription = description } else Modifier)
@@ -296,12 +295,14 @@ fun CardCornerAction(
     val frosted = backdrop != null && backdropBlurAvailable
     Box(
         modifier
-            .size(30.dp)
+            // Keep the overlay compact without requiring a tiny 30dp tap target.
+            .size(48.dp)
             .clip(CircleShape)
             // Frosted, the disc can be lighter and still hold the glyph: the blur already takes
             // the busy detail out from under it, which is what the heavier scrim was there for.
             .backdropBlur(backdrop, tint = Color.Black.copy(alpha = .30f), radius = 10.dp)
-            .background(Color.Black.copy(alpha = if (frosted) 0f else .55f))
+            .background(Color.Black.copy(alpha = if (frosted) 0.08f else .57f))
+            .border(1.dp, Color.White.copy(alpha = 0.23f), CircleShape)
             .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

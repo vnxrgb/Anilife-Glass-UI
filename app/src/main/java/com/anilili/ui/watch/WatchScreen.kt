@@ -22,6 +22,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -102,6 +103,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -185,6 +187,9 @@ import com.anilili.ui.adaptive.focusFill
 import com.anilili.ui.adaptive.focusHighlight
 import com.anilili.ui.adaptive.rememberFocusFill
 import com.anilili.ui.adaptive.rememberTvFocusTarget
+import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
 import com.anilili.ui.components.AnimeListStatusDialog
 import com.anilili.ui.components.BulkDownloadStatus
 import com.anilili.ui.components.compactMemberCount
@@ -703,6 +708,12 @@ private fun WatchContent(
     val context = LocalContext.current
     val device = LocalAppDeviceProfile.current
     val isMovie = isMovieFormat(data.seriesFormat)
+    // Keep ambient colours local to each episode and stream, never behind the entire page.
+    var ambientPalette by remember(data.anilistId, data.currentIndex, data.chosenStream?.url) {
+        mutableStateOf(VideoAmbientPalette.Empty)
+    }
+    val playerAmbientGlow by SettingsStore.playerAmbientGlow.collectAsState()
+    val playerAmbientIntensity by SettingsStore.playerAmbientIntensity.collectAsState()
     val showLoadingOverlay by SettingsStore.showLoadingOverlay.collectAsState()
     // AniList ships its synopses with HTML in them, so the player gets the same cleaned text the
     // details pane below already shows rather than markup.
@@ -1457,6 +1468,9 @@ private fun WatchContent(
                         onAddToList = { listStatusDialogVisible = true },
                         onControlsVisibilityChanged = onControlsVisibilityChanged,
                         onPlaybackActiveChanged = { playerHasPicture = it },
+                        onAmbientPaletteChanged = if (playerAmbientGlow) {
+                            { palette -> ambientPalette = palette }
+                        } else null,
                     )
                 }
             }
@@ -1549,7 +1563,13 @@ private fun WatchContent(
                 onRequestAllSources = onRequestAllSources,
                 onRetryMiruroSources = onRetryMiruroSources,
                 onSelectEpisode = onSelectEpisode,
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .videoAmbientWash(
+                        if (playerAmbientGlow) ambientPalette else VideoAmbientPalette.Empty,
+                        intensity = playerAmbientIntensity,
+                    ),
             )
             return@Column
         }
@@ -1566,12 +1586,16 @@ private fun WatchContent(
         }
         val tvBlockIndex = (chosenBlockIndex ?: blockIndexContaining(blocks, data.current.number))
             .coerceIn(0, (blocks.size - 1).coerceAtLeast(0))
-        val tvShownEpisodes = if (isMovie) {
-            emptyList()
-        } else if (episodeQuery.isNotBlank()) {
-            filterEpisodes(data.episodes, episodeQuery)
-        } else {
-            blocks.getOrNull(tvBlockIndex)?.episodes.orEmpty()
+        // Ambient color updates and player clock ticks must not re-filter a
+        // potentially thousand-episode series when the query has not changed.
+        val tvShownEpisodes = remember(isMovie, episodeQuery, data.episodes, blocks, tvBlockIndex) {
+            if (isMovie) {
+                emptyList()
+            } else if (episodeQuery.isNotBlank()) {
+                filterEpisodes(data.episodes, episodeQuery)
+            } else {
+                blocks.getOrNull(tvBlockIndex)?.episodes.orEmpty()
+            }
         }
         val episodeRows = remember(tvShownEpisodes, device.episodeColumns) {
             tvShownEpisodes.chunked(device.episodeColumns)
@@ -2373,12 +2397,26 @@ private fun MobileWatchDetails(
     }
     val blockIndex = (chosenBlockIndex ?: blockIndexContaining(blocks, data.current.number))
         .coerceIn(0, (blocks.size - 1).coerceAtLeast(0))
-    val shownEpisodes = if (isMovie) {
-        emptyList()
-    } else if (episodeQuery.isNotBlank()) {
-        filterEpisodes(data.episodes, episodeQuery)
-    } else {
-        blocks.getOrNull(blockIndex)?.episodes.orEmpty()
+    // Keep the visible episode list stable while video progress, download
+    // statuses and Morphe ambience update. Re-filter only for query, episode
+    // or selected block changes, not on every unrelated recomposition.
+    val shownEpisodes = remember(isMovie, episodeQuery, data.episodes, blocks, blockIndex) {
+        if (isMovie) {
+            emptyList()
+        } else if (episodeQuery.isNotBlank()) {
+            filterEpisodes(data.episodes, episodeQuery)
+        } else {
+            blocks.getOrNull(blockIndex)?.episodes.orEmpty()
+        }
+    }
+    // The episode grid and artwork fallback are not live playback state.
+    // Compute them once for the visible block rather than for each timeline
+    // tick, and never scan the whole episode list once per visible row.
+    val shownEpisodeRows = remember(shownEpisodes, device.episodeColumns) {
+        shownEpisodes.chunked(device.episodeColumns)
+    }
+    val episodeFallbackImage = remember(shownEpisodes, data.artworkUrl) {
+        episodeArtworkFallback(shownEpisodes, data.artworkUrl)
     }
     LazyColumn(modifier = modifier) {
         item {
@@ -2418,21 +2456,37 @@ private fun MobileWatchDetails(
             BulkDownloadStatus(modifier = Modifier.padding(horizontal = pad))
             if (!isMovie) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = pad, vertical = 14.dp),
+                    modifier = Modifier.fillMaxWidth().padding(start = pad, end = pad, top = 6.dp, bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Episodes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(
-                        "  ${data.episodes.size}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Episodes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            "  ${data.episodes.size}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    // Short seasons need just the layout toggle, not a full empty toolbar below.
+                    if (data.episodes.isNotEmpty() && data.episodes.size <= EPISODE_BROWSER_MIN_EPISODES) {
+                        EpisodeBrowserBar(
+                            blocks = blocks,
+                            selectedBlockIndex = blockIndex,
+                            onSelectBlock = { chosenBlockIndex = it },
+                            query = episodeQuery,
+                            onQueryChange = { episodeQuery = it },
+                            layout = episodeLayout,
+                            onToggleLayout = { SettingsStore.setEpisodeLayout(episodeLayout.toggled()) },
+                            showFilter = false,
+                        )
+                    }
                 }
             }
         }
         // Any series at all gets the layout toggle; only a long one also gets a range picker and a
         // filter field to go with it.
-        if (!isMovie && data.episodes.isNotEmpty()) {
+        if (!isMovie && data.episodes.size > EPISODE_BROWSER_MIN_EPISODES) {
             item {
                 EpisodeBrowserBar(
                     blocks = blocks,
@@ -2449,7 +2503,7 @@ private fun MobileWatchDetails(
         }
         when {
             shownEpisodes.isNotEmpty() && episodeLayout == EpisodeLayout.GRID -> items(
-                shownEpisodes.chunked(device.episodeColumns),
+                shownEpisodeRows,
                 key = { row -> row.first().pipeId },
             ) { row ->
                 Row(
@@ -2473,7 +2527,7 @@ private fun MobileWatchDetails(
                 val index = indexByPipeId[episode.pipeId] ?: -1
                 MobileEpisodeRow(
                     episode = episode,
-                    fallbackImage = episodeArtworkFallback(shownEpisodes, data.artworkUrl),
+                    fallbackImage = episodeFallbackImage,
                     blurred = blurEpisodeImages,
                     selected = index == data.currentIndex,
                     watchedFraction = episodeWatchFraction(resume, episode.number),
@@ -2510,21 +2564,17 @@ private fun MobileEpisodeRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 5.dp)
-            .focusHighlight(RoundedCornerShape(12.dp))
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (selected) MaterialTheme.colorScheme.surfaceVariant
-                else Color.Transparent,
-            )
+            .focusHighlight(RoundedCornerShape(20.dp))
+            .glassCard(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .padding(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             Modifier
-                .width(132.dp)
+                .width(124.dp)
                 .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(9.dp)),
+                .clip(RoundedCornerShape(14.dp)),
         ) {
             EpisodeArtwork(
                 image = episodeArtworkImage(episode.image, fallbackImage),
@@ -3045,7 +3095,7 @@ private fun MobileServerPickerContent(
                 // check itself instead of a button that will fail again.
                 val extraFocus3 = rememberFocusFill()
                 TextButton(
-                    colors = extraFocus3.buttonColors(ButtonDefaults.textButtonColors()),onClick = onUnlockServers, modifier = Modifier.focusFill(extraFocus3, RoundedCornerShape(24.dp)),) {
+                    colors = extraFocus3.buttonColors(ButtonDefaults.textButtonColors()),onClick = onUnlockServers, shape = CircleShape, modifier = Modifier.focusFill(extraFocus3, CircleShape).background(glassPanelColor(), CircleShape),) {
                     Text("Unlock more servers")
                 }
             } else if (!data.hasMiruroSources) {
@@ -3053,7 +3103,7 @@ private fun MobileServerPickerContent(
                 TextButton(
                     colors = extraFocus4.buttonColors(ButtonDefaults.textButtonColors()),
                     onClick = onRetryMiruroSources,
-                    enabled = !data.isRetryingMiruro, modifier = Modifier.focusFill(extraFocus4, RoundedCornerShape(24.dp)),) {
+                    enabled = !data.isRetryingMiruro, shape = CircleShape, modifier = Modifier.focusFill(extraFocus4, CircleShape).background(glassPanelColor(), CircleShape),) {
                     Text(
                         if (data.isRetryingMiruro) "Retrying Miruro…"
                         else "Retry Miruro servers",
@@ -3062,7 +3112,7 @@ private fun MobileServerPickerContent(
             }
             val extraFocus5 = rememberFocusFill()
             TextButton(
-                colors = extraFocus5.buttonColors(ButtonDefaults.textButtonColors()),onClick = onClose, modifier = Modifier.focusFill(extraFocus5, RoundedCornerShape(24.dp)),) {
+                colors = extraFocus5.buttonColors(ButtonDefaults.textButtonColors()),onClick = onClose, shape = CircleShape, modifier = Modifier.focusFill(extraFocus5, CircleShape).background(glassPanelColor(), CircleShape),) {
                 Text("Close")
             }
         }
@@ -3099,16 +3149,16 @@ private fun CompactClickablePill(
                     true
                 }
             }
-            .focusFill(fillFocus7, RoundedCornerShape(10.dp))
-            .clip(RoundedCornerShape(10.dp))
+            .focusFill(fillFocus7, CircleShape)
+            .clip(CircleShape)
             .background(
-                fillFocus7.background(if (active) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.surface),
+                fillFocus7.background(if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
+                else glassPanelColor()),
             )
             .border(
                 1.dp,
-                if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(10.dp),
+                if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.65f) else glassRimColor(),
+                CircleShape,
             )
             .clickable(enabled = enabled, onClick = onClick)
             // The short end padding is there for the dropdown arrow, whose glyph carries its own
@@ -3136,7 +3186,7 @@ private fun CompactClickablePill(
         Text(
             label,
             style = MaterialTheme.typography.bodyMedium,
-            color = fillFocus7.content(if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface),
+            color = fillFocus7.content(MaterialTheme.colorScheme.onSurface),
         )
         if (showArrow) {
             Icon(
@@ -3162,10 +3212,10 @@ private fun CompactDropdown(
         Row(
             modifier = Modifier
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-                .focusFill(fillFocus8, RoundedCornerShape(10.dp))
-                .clip(RoundedCornerShape(10.dp))
-                .background(fillFocus8.background(MaterialTheme.colorScheme.surface))
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
+                .focusFill(fillFocus8, CircleShape)
+                .clip(CircleShape)
+                .background(fillFocus8.background(glassPanelColor()))
+                .border(1.dp, glassRimColor(), CircleShape)
                 .clickable(enabled = enabled) { expanded = true }
                 .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,

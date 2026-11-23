@@ -10,10 +10,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Only the television flavor advertises Leanback hardware. -->
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+
     <application
         android:icon="@drawable/tv_launcher_icon"
         android:roundIcon="@drawable/tv_launcher_icon"
-        tools:replace="android:icon,android:roundIcon">
+        android:banner="@drawable/tv_banner_art"
+        tools:replace="android:icon,android:roundIcon,android:banner">
 
         <!-- The launcher entry stays on MainActivity itself, exactly as before the phone flavor's
              icon colours: a pinned Fire TV tile points at this component, and moving it would drop
@@ -25,6 +29,10 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
     </application>

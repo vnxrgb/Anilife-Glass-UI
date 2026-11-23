@@ -1,0 +1,6 @@
+Anilumos final release candidate preview verification
+Source revision: 83a2be063449bb0e22a425d795ffb2462f09df28
+New app ID: com.anilumos.app (debug suffix .debug)
+Includes clickable AniLife foundation repository credit, retained bottom credit and Morphe notice, updated personal About description, native black candle logo splash and streaming/provider review workflow.
+Run Android unit tests, lint and universal mobile debug APK assembly; verify APK signature and publish anilumos-universal.apk to Anilumos preview release only on success.
+This is a final candidate preview for user testing; do not publish stable signed release automatically.

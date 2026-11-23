@@ -22,6 +22,7 @@ import com.anilili.ui.dialogs.MidnightInlineNotice
 import com.anilili.ui.dialogs.MidnightMediaHeader
 import com.anilili.ui.dialogs.MidnightNoticeTone
 import com.anilili.ui.dialogs.MidnightStatusRow
+import com.anilili.ui.rethrowIfCancellation
 import kotlinx.coroutines.launch
 
 /**
@@ -47,8 +48,8 @@ internal fun AnimeScoreDialog(
     val scores by LibraryStore.remoteScores.collectAsState()
     val current = scores[anilistId]
     val scope = rememberCoroutineScope()
-    var busyScore by remember(anilistId) { mutableStateOf<Int?>(null) }
-    var errorMessage by remember(anilistId) { mutableStateOf<String?>(null) }
+    var busyScore by remember(anilistId, service) { mutableStateOf<Int?>(null) }
+    var errorMessage by remember(anilistId, service) { mutableStateOf<String?>(null) }
     val busy = busyScore != null
 
     fun rate(score: Int) {
@@ -64,6 +65,7 @@ internal fun AnimeScoreDialog(
                     onDismiss()
                 }
                 .onFailure { error ->
+                    error.rethrowIfCancellation()
                     errorMessage = error.toFailure(
                         AnililiError.ACCOUNT_SCORE_UPDATE_FAILED,
                         service.label,

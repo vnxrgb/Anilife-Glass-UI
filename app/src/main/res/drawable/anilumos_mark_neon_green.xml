@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Original Anilumos A-and-candle launcher identity. The dark tile stays black. -->
+    <path android:fillColor="#FF080A0B"
+        android:pathData="M26,4 L82,4 C94,4 104,14 104,26 L104,82 C104,94 94,104 82,104 L26,104 C14,104 4,94 4,82 L4,26 C4,14 14,4 26,4 Z" />
+    <path android:fillColor="@android:color/transparent"
+        android:strokeColor="#5080FF9D" android:strokeWidth="16"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M28,85 L52,34 L80,85" />
+    <path android:fillColor="@android:color/transparent"
+        android:strokeColor="#80FF9D" android:strokeWidth="7.8"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M28,85 L52,34 L80,85 M39,70 Q54,65 68,70" />
+    <path android:fillColor="#FFFFC16B"
+        android:pathData="M53,8 C58,17 66,22 60,30 C57,35 49,35 46,30 C42,23 50,18 53,8 Z" />
+    <path android:fillColor="#FFFFEDCA"
+        android:pathData="M52,20 C54,25 54,29 51,31 C49,29 49,25 52,20 Z" />
+</vector>

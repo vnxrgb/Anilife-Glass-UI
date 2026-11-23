@@ -250,10 +250,10 @@ private fun EpisodeOrderToggle(order: EpisodeOrder, onToggle: () -> Unit) {
     val label = if (order == EpisodeOrder.NEWEST_FIRST) "Newest" else "Oldest"
     Row(
         modifier = Modifier
-            .focusFill(fill, RoundedCornerShape(10.dp))
-            .background(fill.background(Color.Transparent), RoundedCornerShape(10.dp))
-            .clip(RoundedCornerShape(10.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
+            .focusFill(fill, RoundedCornerShape(18.dp))
+            .background(fill.background(Color.Transparent), RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(18.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(18.dp))
             .clickable(onClickLabel = "Change episode order") { onToggle() }
             .semantics { contentDescription = "$label episodes first" }
             .padding(start = 8.dp, end = 10.dp, top = 11.dp, bottom = 11.dp),
@@ -287,10 +287,10 @@ internal fun EpisodeBlockPicker(
         val fillFocus1 = rememberFocusFill()
         Row(
             modifier = Modifier
-                .focusFill(fillFocus1, RoundedCornerShape(10.dp))
-                .background(fillFocus1.background(Color.Transparent), RoundedCornerShape(10.dp))
-                .clip(RoundedCornerShape(10.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
+                .focusFill(fillFocus1, RoundedCornerShape(18.dp))
+                .background(fillFocus1.background(Color.Transparent), RoundedCornerShape(18.dp))
+                .clip(RoundedCornerShape(18.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(18.dp))
                 .clickable(onClickLabel = "Choose episode range") { expanded = true }
                 .padding(start = 14.dp, end = 6.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -355,7 +355,7 @@ private fun EpisodeFilterField(
             decorationBox = { innerTextField ->
                 Row(
                     modifier = Modifier
-                        .border(1.dp, colors.outline, RoundedCornerShape(10.dp))
+                        .border(1.dp, colors.outline, RoundedCornerShape(18.dp))
                         .padding(start = 10.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -469,14 +469,14 @@ fun EpisodeNumberChip(
                     }
                 },
             )
-            .then(if (enabled) Modifier.focusFill(fillFocus2, RoundedCornerShape(8.dp)) else Modifier)
+            .then(if (enabled) Modifier.focusFill(fillFocus2, RoundedCornerShape(16.dp)) else Modifier)
             .height(44.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(fillFocus2.background(background))
             .border(
                 1.dp,
                 if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(8.dp),
+                RoundedCornerShape(16.dp),
             )
             .then(
                 when {

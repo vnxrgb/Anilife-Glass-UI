@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.anilili.ui.adaptive.LocalAppDeviceProfile
@@ -125,26 +128,30 @@ fun PageSearchField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().heightIn(min = 56.dp)
+            .semantics { contentDescription = if (value.isBlank()) placeholder else "$placeholder: $value" },
         placeholder = { Text(placeholder) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         trailingIcon = if (value.isNotEmpty()) {
             {
                 val extraFocus1 = rememberFocusFill()
                 IconButton(
-                    colors = extraFocus1.iconButtonColors(IconButtonDefaults.iconButtonColors()),onClick = { onValueChange("") }, modifier = Modifier.focusFill(extraFocus1, CircleShape),) {
+                    colors = extraFocus1.iconButtonColors(IconButtonDefaults.iconButtonColors()),
+                    onClick = { onValueChange("") },
+                    modifier = Modifier.size(48.dp).focusFill(extraFocus1, CircleShape),
+                ) {
                     Icon(Icons.Default.Close, contentDescription = clearLabel)
                 }
             }
         } else {
             null
         },
-        shape = RoundedCornerShape(50),
+        shape = RoundedCornerShape(28.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedBorderColor = Color.Transparent,
-            focusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedContainerColor = glassPanelColor(),
+            unfocusedContainerColor = glassPanelColor(),
+            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.54f),
+            unfocusedBorderColor = glassRimColor(),
         ),
         singleLine = true,
     )
@@ -175,9 +182,10 @@ private fun PageSearchButton(
             .fillMaxWidth()
             .heightIn(min = 56.dp)
             .focusFill(fillFocus1, shape)
-            .clickable(role = Role.Button, onClick = onClick),
+            .clickable(role = Role.Button, onClickLabel = "Search ${value.ifEmpty { placeholder }}", onClick = onClick),
         shape = shape,
-        color = fillFocus1.background(MaterialTheme.colorScheme.surface),
+        color = fillFocus1.background(glassPanelColor()),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)),
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Row(
@@ -261,7 +269,10 @@ private fun PageSearchDialog(
                 // cannot reach; this is the same affordance as something the D-pad can land on.
                 val extraFocus2 = rememberFocusFill()
                 TextButton(
-                    colors = extraFocus2.buttonColors(ButtonDefaults.textButtonColors()),onClick = { onValueChange("") }, modifier = Modifier.focusFill(extraFocus2, RoundedCornerShape(24.dp)),) { Text(clearLabel) }
+                    colors = extraFocus2.buttonColors(ButtonDefaults.textButtonColors()),
+                    onClick = { onValueChange("") },
+                    modifier = Modifier.heightIn(min = 48.dp).focusFill(extraFocus2, RoundedCornerShape(24.dp)),
+                ) { Text(clearLabel) }
             }
         }
     }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.border
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -62,8 +64,8 @@ internal fun CustomListNameDialog(
     initial: String = "",
 ) {
     val device = LocalAppDeviceProfile.current
-    var value by remember { mutableStateOf(initial) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var value by remember(title, initial) { mutableStateOf(initial) }
+    var error by remember(title, initial) { mutableStateOf<String?>(null) }
     val fieldFocus = rememberTvFocusTarget()
     val phoneFocus = remember { FocusRequester() }
     fun save() {
@@ -106,7 +108,13 @@ internal fun CustomListNameDialog(
                 modifier = fieldModifier.focusRequester(phoneFocus),
                 placeholder = { Text("List name") },
                 singleLine = true,
-                shape = RoundedCornerShape(9.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = glassPanelColor(),
+                    unfocusedContainerColor = glassPanelColor(),
+                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
+                    unfocusedBorderColor = glassRimColor(),
+                ),
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences,
                     imeAction = ImeAction.Done,

@@ -388,11 +388,6 @@ class MainActivity : FragmentActivity() {
                                     } ?: false
                                 }
                             }
-                            val themeAccent by SettingsStore.themeAccent.collectAsState()
-                            val introResource = launchIntroResource(
-                                themeAccent,
-                                MaterialTheme.colorScheme.primary.toArgb(),
-                            )
                             AnimatedVisibility(
                                 visibleState = launchSplashState,
                                 modifier = Modifier.fillMaxSize(),
@@ -410,12 +405,9 @@ class MainActivity : FragmentActivity() {
                             ) {
                                 when (videoIntro) {
                                     // The window's own colour, which the mark's splash also opens on.
-                                    null -> Box(Modifier.fillMaxSize().background(ComposeColor(0xFF0B0B0F)))
-                                    true -> VideoLaunchSplash(
-                                        onFinished = { showLaunchSplash = false },
-                                        introResource = introResource,
-                                    )
-                                    false -> AppLaunchSplash(onFinished = { showLaunchSplash = false })
+                                    null -> Box(Modifier.fillMaxSize().background(ComposeColor.Black))
+                                    true -> AppLaunchSplash(onFinished = { showLaunchSplash = false }, animateFlame = true)
+                                    false -> AppLaunchSplash(onFinished = { showLaunchSplash = false }, animateFlame = false)
                                 }
                             }
                         }
@@ -752,10 +744,10 @@ private fun Tab.navigationIcon(cinema: Boolean): ImageVector =
 private val PhoneNavigationBarHeight = FloatingNavBarExpandedHeight + FloatingNavBarMargin
 
 /** The dice's right edge on the capsule's, which is inset this far from the screen's. */
-private val RandomButtonEndInset = 12.dp
+private val RandomButtonEndInset = 18.dp
 
 /** Air between the dice and the capsule top, so the two read as a pair rather than as one shape. */
-private val RandomButtonGap = 12.dp
+private val RandomButtonGap = 4.dp
 
 @Composable
 private fun MiruroRoot(
@@ -1179,7 +1171,6 @@ private fun MiruroRoot(
             }
             // Over the app and its bars, the dice included, since it points at them; under the
             // profile screens, which it waits for anyway.
-            com.anilili.ui.tour.WhatsNewTourOverlay()
             // Last, so the first-run setup and the profile switcher draw over everything else.
             com.anilili.ui.profiles.ProfilesHost()
         }

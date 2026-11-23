@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.anilili.ui.adaptive.LocalAppDeviceProfile
 import com.anilili.ui.adaptive.focusFill
 import com.anilili.ui.adaptive.rememberFocusFill
 import kotlinx.coroutines.android.awaitFrame
@@ -61,6 +63,8 @@ fun SynopsisDialog(
     onDismiss: () -> Unit,
 ) {
     if (description.isBlank()) return
+    val isTv = LocalAppDeviceProfile.current.isTv
+    val scheme = MaterialTheme.colorScheme
     val scroll = rememberScrollState()
     val closeFocus = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
@@ -73,7 +77,7 @@ fun SynopsisDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.94f))
+                .background(if (isTv) Color.Black.copy(alpha = 0.94f) else scheme.scrim.copy(alpha = 0.76f))
                 .clickable(onClickLabel = "Close synopsis", onClick = onDismiss)
                 .onPreviewKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -95,19 +99,23 @@ fun SynopsisDialog(
                     .align(Alignment.Center)
                     .widthIn(max = 900.dp)
                     .fillMaxWidth()
-                    .padding(horizontal = 48.dp, vertical = 56.dp)
+                    .padding(horizontal = if (isTv) 48.dp else 18.dp, vertical = if (isTv) 56.dp else 28.dp)
+                    .then(
+                        if (isTv) Modifier else Modifier.glassCard(RoundedCornerShape(26.dp))
+                            .padding(horizontal = 22.dp, vertical = 24.dp)
+                    )
                     .verticalScroll(scroll),
             ) {
                 Text(
                     text = title,
-                    color = Color.White,
-                    fontSize = 26.sp,
+                    color = if (isTv) Color.White else scheme.onSurface,
+                    fontSize = if (isTv) 26.sp else 23.sp,
                     lineHeight = 32.sp,
                     fontWeight = FontWeight.Black,
                 )
                 Text(
                     text = description,
-                    color = Color.White.copy(alpha = 0.88f),
+                    color = if (isTv) Color.White.copy(alpha = 0.88f) else scheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyLarge,
                     lineHeight = 26.sp,
                     modifier = Modifier.padding(top = 16.dp),
@@ -123,7 +131,7 @@ fun SynopsisDialog(
                     .focusRequester(closeFocus)
                     .focusFill(controlFocus1, CircleShape),
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Close", tint = controlFocus1.content(Color.White))
+                Icon(Icons.Default.Close, contentDescription = "Close", tint = controlFocus1.content(if (isTv) Color.White else scheme.onSurface))
             }
         }
     }

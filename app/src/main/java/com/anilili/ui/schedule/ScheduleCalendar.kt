@@ -14,6 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -39,6 +44,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.anilili.data.model.ScheduleDayCount
 import com.anilili.ui.adaptive.LocalAppDeviceProfile
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
 import com.anilili.ui.adaptive.focusFill
 import com.anilili.ui.adaptive.rememberFocusFill
 import java.time.DayOfWeek
@@ -84,8 +91,8 @@ internal fun MonthCalendar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = device.pagePadding, vertical = 8.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(28.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(28.dp))
             .padding(vertical = 6.dp)
             // One group for the whole grid, so a remote leaving it does not have to walk every
             // remaining cell on the way out.
@@ -186,10 +193,10 @@ private fun DayCell(
     modifier: Modifier = Modifier,
 ) {
     val device = LocalAppDeviceProfile.current
-    val shape = RoundedCornerShape(10.dp)
+    val shape = RoundedCornerShape(18.dp)
     val dimmed = if (inMonth) 1f else 0.45f
     val dayColor = when {
-        selected -> MaterialTheme.colorScheme.onPrimary
+        selected -> MaterialTheme.colorScheme.onSurface
         today -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.onSurface
     }
@@ -200,17 +207,23 @@ private fun DayCell(
             .padding(2.dp)
             .focusFill(fillFocus1, shape)
             .clip(shape)
-            .background(fillFocus1.background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface))
+            .background(
+                fillFocus1.background(
+                    if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
+                    else glassPanelColor(),
+                ),
+            )
             .border(
                 width = 1.dp,
                 color = fillFocus1.content(when {
-                    selected -> MaterialTheme.colorScheme.primary
-                    today -> MaterialTheme.colorScheme.primary
-                    else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    selected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.70f)
+                    today -> MaterialTheme.colorScheme.primary.copy(alpha = 0.50f)
+                    else -> glassRimColor()
                 }),
                 shape = shape,
             )
-            .clickable { onSelect(date) }
+            .clickable(onClickLabel = "Show schedule for $date") { onSelect(date) }
+            .semantics { this.selected = selected }
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -230,7 +243,7 @@ private fun DayCell(
                 text = if (count?.atLeast == true) "$episodes+" else episodes.toString(),
                 style = MaterialTheme.typography.labelSmall,
                 color = fillFocus1.content((
-                    if (selected) MaterialTheme.colorScheme.onPrimary
+                    if (selected) MaterialTheme.colorScheme.onSurface
                     else MaterialTheme.colorScheme.onSurfaceVariant
                     ).let { it.copy(alpha = it.alpha * dimmed) }),
                 maxLines = 1,

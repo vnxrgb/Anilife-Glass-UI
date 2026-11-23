@@ -1,11 +1,14 @@
 package com.anilili.ui.search
 
 import com.anilili.ui.theme.canvasColor
+import com.anilili.ui.components.glassAtmosphere
+import com.anilili.ui.components.glassCard
 import com.anilili.ui.theme.appCanvas
 import android.view.KeyEvent as AndroidKeyEvent
 import android.view.inputmethod.EditorInfo
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
@@ -98,6 +101,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.paneTitle
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
+import com.anilili.ui.components.glassSelectionColor
+import com.anilili.ui.components.cinematicFilterChipColors
+import com.anilili.ui.components.cinematicPrimaryButtonColors
 import com.anilili.ui.components.PageMenuChoice
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.material3.DropdownMenu
@@ -294,11 +302,11 @@ fun SearchScreen(
                                 if (browseBackdrop != null) {
                                     Modifier.backdropBlur(
                                         browseBackdrop,
-                                        tint = MaterialTheme.colorScheme.background.copy(alpha = .72f),
+                                        tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .38f),
                                         radius = 24.dp,
                                     )
                                 } else {
-                                    Modifier.appCanvas()
+                                    Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.52f))
                                 },
                             )
                             .statusBarsPadding()
@@ -320,7 +328,7 @@ fun SearchScreen(
                     onAnimeClick(suggestion.id)
                 },
             )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .7f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .22f))
         }
     }
 
@@ -330,7 +338,7 @@ fun SearchScreen(
             // The floating bar holds this itself, and the grid scrolls the whole window the way
             // Home's does — rows pass under the status bar as the bar retreats.
             .then(if (headerFloats) Modifier else Modifier.statusBarsPadding())
-            .appCanvas(),
+            .then(if (device.isTv) Modifier.appCanvas() else Modifier.glassAtmosphere()),
     ) {
         Column(Modifier.fillMaxSize()) {
             if (!headerFloats) {
@@ -492,8 +500,13 @@ private fun SearchTopBar(
                 trailing = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val extraFocus1 = rememberFocusFill()
-                        TextButton(
-                            colors = extraFocus1.buttonColors(ButtonDefaults.textButtonColors()),onClick = vm::clearAll, modifier = Modifier.focusFill(extraFocus1, RoundedCornerShape(24.dp)),) { Text("Reset") }
+                        if (device.isTv || vm.query.isNotBlank() || vm.filters.activeCount > 0) {
+                            TextButton(
+                                colors = extraFocus1.buttonColors(ButtonDefaults.textButtonColors()),
+                                onClick = vm::clearAll,
+                                modifier = Modifier.focusFill(extraFocus1, RoundedCornerShape(24.dp)),
+                            ) { Text("Reset") }
+                        }
                         if (!device.isTv) {
                             IconButton(
                                 onClick = {
@@ -521,7 +534,7 @@ private fun SearchTopBar(
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = device.pagePadding)
-                        .padding(bottom = 12.dp),
+                        .padding(bottom = 6.dp),
                 ) {
                     Row(
                         Modifier.fillMaxWidth().padding(top = 10.dp),
@@ -563,18 +576,18 @@ private fun SearchTopBar(
                                         if (fieldFocused && !it.isFocused) vm.commitTypedQuery()
                                         fieldFocused = it.isFocused
                                     },
-                                placeholder = { Text("Search anime…") },
+                                placeholder = { Text("Search anime…", maxLines = 1) },
                                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                                 trailingIcon = {
                                     if (vm.query.isNotEmpty()) {
                                         val extraFocus2 = rememberFocusFill()
                                         IconButton(
-                                            colors = extraFocus2.iconButtonColors(IconButtonDefaults.iconButtonColors()),onClick = { vm.onQueryChange("") }, modifier = Modifier.size(40.dp).focusFill(extraFocus2, CircleShape)) {
+                                            colors = extraFocus2.iconButtonColors(IconButtonDefaults.iconButtonColors()),onClick = { vm.onQueryChange("") }, modifier = Modifier.size(48.dp).focusFill(extraFocus2, CircleShape)) {
                                             Icon(Icons.Default.Close, contentDescription = "Clear search")
                                         }
                                     }
                                 },
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(24.dp),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(onSearch = {
@@ -583,21 +596,27 @@ private fun SearchTopBar(
                                     focusManager.moveFocus(FocusDirection.Down)
                                 }),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    focusedContainerColor = glassPanelColor(),
+                                    unfocusedContainerColor = glassPanelColor(),
+                                    focusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f),
+                                    unfocusedBorderColor = glassRimColor(),
                                 ),
                             )
                         }
                         val controlFocus1 = rememberFocusFill()
                         Button(
-                            colors = controlFocus1.buttonColors(ButtonDefaults.buttonColors()),
+                            colors = controlFocus1.buttonColors(ButtonDefaults.buttonColors(
+                                containerColor = glassPanelColor(),
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                            )),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, glassRimColor()),
                             onClick = onOpenFilters,
-                            contentPadding = PaddingValues(horizontal = 13.dp),
+                            contentPadding = PaddingValues(horizontal = 15.dp),
                             modifier = Modifier
                                 .focusRequester(filterFocusRequester)
                                 .height(56.dp)
                                 .focusFill(controlFocus1, RoundedCornerShape(50)),
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(22.dp),
                         ) {
                             Icon(Icons.Default.FilterList, contentDescription = "Open filters")
                             if (vm.filters.activeCount > 0) {
@@ -643,12 +662,14 @@ private fun SearchTopBar(
                     )
                     LazyRow(
                         modifier = Modifier.fillMaxWidth().focusGroup(),
+                        contentPadding = PaddingValues(end = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(7.dp),
                     ) {
                         item(key = "season") {
                             val extraFocusSeason = rememberFocusFill()
                             FilterChip(
-                                colors = extraFocusSeason.chipColors(FilterChipDefaults.filterChipColors()),
+                shape = RoundedCornerShape(50),
+                                colors = extraFocusSeason.chipColors(cinematicFilterChipColors()),
                                 selected = vm.filters.season != null,
                                 onClick = {
                                     if (vm.filters.season != null) vm.clearSeason() else vm.startSeasonBrowsing()
@@ -657,24 +678,26 @@ private fun SearchTopBar(
                                 leadingIcon = {
                                     Icon(Icons.Default.WbSunny, contentDescription = null, modifier = Modifier.size(16.dp))
                                 },
-                                modifier = Modifier.focusFill(extraFocusSeason, RoundedCornerShape(8.dp)),
+                                modifier = Modifier.focusFill(extraFocusSeason, RoundedCornerShape(50)),
                             )
                         }
                         item(key = "format-movie") {
                             val extraFocus3 = rememberFocusFill()
                             FilterChip(
-                                colors = extraFocus3.chipColors(FilterChipDefaults.filterChipColors()),
+                shape = RoundedCornerShape(50),
+                                colors = extraFocus3.chipColors(cinematicFilterChipColors()),
                                 selected = vm.filters.format == "MOVIE",
                                 onClick = { vm.setFormat(if (vm.filters.format == "MOVIE") null else "MOVIE") },
-                                label = { Text("Movies") }, modifier = Modifier.focusFill(extraFocus3, RoundedCornerShape(8.dp)),)
+                                label = { Text("Movies") }, modifier = Modifier.focusFill(extraFocus3, RoundedCornerShape(50)),)
                         }
                         items(options.genres.take(14), key = { it }) { genre ->
                             val extraFocus4 = rememberFocusFill()
                             FilterChip(
-                                colors = extraFocus4.chipColors(FilterChipDefaults.filterChipColors()),
+                shape = RoundedCornerShape(50),
+                                colors = extraFocus4.chipColors(cinematicFilterChipColors()),
                                 selected = genre in vm.filters.genres,
                                 onClick = { vm.toggleGenre(genre) },
-                                label = { Text(genre) }, modifier = Modifier.focusFill(extraFocus4, RoundedCornerShape(8.dp)),)
+                                label = { Text(genre) }, modifier = Modifier.focusFill(extraFocus4, RoundedCornerShape(50)),)
                         }
                     }
                     ActiveFilterRow(vm = vm)
@@ -708,9 +731,11 @@ private fun SeasonBar(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(28.dp),
-        color = colors.primaryContainer,
-        contentColor = colors.onPrimaryContainer,
-        shadowElevation = 6.dp,
+        // Keep browse season controls within the neutral glass system.
+        color = glassPanelColor(),
+        contentColor = colors.onSurface,
+        border = BorderStroke(1.dp, glassRimColor()),
+        shadowElevation = 4.dp,
         tonalElevation = 0.dp,
     ) {
         Row(
@@ -960,18 +985,21 @@ private fun ActiveFilterRow(vm: SearchViewModel) {
         items(chips, key = { it.key }) { chip ->
             val activeFocus = rememberFocusFill()
             FilterChip(
-                colors = activeFocus.chipColors(FilterChipDefaults.filterChipColors()),
+                shape = RoundedCornerShape(50),
+                colors = activeFocus.chipColors(cinematicFilterChipColors()),
                 selected = true,
                 onClick = chip.onRemove,
                 label = { Text(chip.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 trailingIcon = {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = "Remove ${chip.label}",
+                        contentDescription = null,
                         modifier = Modifier.size(16.dp),
                     )
                 },
-                modifier = Modifier.focusFill(activeFocus, RoundedCornerShape(8.dp)),
+                modifier = Modifier
+                    .focusFill(activeFocus, RoundedCornerShape(50))
+                    .semantics { contentDescription = "Remove filter: ${chip.label}" },
             )
         }
     }
@@ -998,9 +1026,10 @@ private fun SearchSuggestions(
     AnimatedVisibility(visible = recent.isNotEmpty() || matches.isNotEmpty()) {
         Surface(
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f),
-            tonalElevation = 2.dp,
+            shape = RoundedCornerShape(22.dp),
+            color = glassPanelColor(),
+            border = BorderStroke(1.dp, glassRimColor()),
+            tonalElevation = 0.dp,
         ) {
             Column(Modifier.padding(vertical = 4.dp)) {
                 recent.forEach { term ->
@@ -1179,12 +1208,13 @@ private fun QuickSortPill(label: String, selected: String, onSelect: (String) ->
         Surface(
             onClick = { expanded = true },
             shape = RoundedCornerShape(50),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = glassPanelColor(),
+            border = BorderStroke(1.dp, glassRimColor()),
+            contentColor = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.semantics { contentDescription = "Sort by $label" },
         ) {
             Row(
-                Modifier.padding(start = 10.dp, end = 6.dp, top = 5.dp, bottom = 5.dp),
+                Modifier.padding(start = 10.dp, end = 7.dp, top = 7.dp, bottom = 7.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -1241,13 +1271,27 @@ private fun ResultsGrid(
     if (results.isEmpty()) {
         val hideAdultContent by SettingsStore.hideAdultContent.collectAsState()
         Box(
-            Modifier.fillMaxSize().padding(top = headerPadding).padding(24.dp),
+            Modifier.fillMaxSize().padding(top = headerPadding).padding(16.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Nothing matched", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Column(
+                modifier = (if (device.isTv) Modifier else Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 420.dp)
+                    .glassCard(RoundedCornerShape(26.dp))
+                    .padding(horizontal = 22.dp, vertical = 22.dp))
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Text(
-                    "Try removing a filter or searching another title.",
+                    "Nothing matched",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    "Try a different title or remove a filter to see more results.",
+                    textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
@@ -1283,6 +1327,7 @@ private fun ResultsGrid(
                         "Explicit titles are hidden by your settings.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 18.dp),
                     )
                     val controlFocus4 = rememberFocusFill()
@@ -1338,7 +1383,7 @@ private fun ResultsGrid(
         }
         return
     }
-    val horizontalSpacing = if (device.isTv) 18.dp else 9.dp
+    val horizontalSpacing = if (device.isTv) 18.dp else if (device.isTablet) 12.dp else 10.dp
     // On TV the spelling notice is the grid's only item ahead of the results, and Up from the first
     // row stops on it before the header, so the remote can reach "Search instead".
     val tvLeadingItems = if (device.isTv && correction != null) 1 else 0
@@ -1356,7 +1401,10 @@ private fun ResultsGrid(
             derivedStateOf { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
         }
         LaunchedEffect(lastVisibleIndex, results.size, columnCount) {
-            if (lastVisibleIndex >= results.size - columnCount * 2) onLoadMore()
+            // Empty/error/loading results have no last poster: avoid prefetching off index zero.
+            if (results.isNotEmpty() && lastVisibleIndex >= results.size - columnCount * 2) {
+                onLoadMore()
+            }
         }
 
         // A TV result row comes to rest mid-screen, going up as well as down, as Home's rails do.
@@ -1378,18 +1426,18 @@ private fun ResultsGrid(
                         end = device.pagePadding,
                         // The search bar floats over this grid the way the capsule does below it, so
                         // the first row buys its clearance here rather than being laid out beneath it.
-                        top = 14.dp + headerPadding,
+                        top = 4.dp + headerPadding,
                         // The floating season bar is the second such overlay on a phone; when it is
                         // out, the last row reserves its height the same way.
                         bottom = AppChromeListBottomGap + LocalAppChromeBottomInset.current + seasonBarClearance,
                     ),
                     horizontalArrangement = Arrangement.spacedBy(horizontalSpacing, Alignment.Start),
-                    verticalArrangement = Arrangement.spacedBy(if (device.isTv) 16.dp else 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (device.isTv) 16.dp else if (device.isTablet) 12.dp else 10.dp),
                 ) {
                     if (!device.isTv) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             Row(
-                                Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                                Modifier.fillMaxWidth().padding(bottom = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
@@ -1417,7 +1465,7 @@ private fun ResultsGrid(
                                             "$total results",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(end = 6.dp),
+                                            modifier = Modifier.padding(end = 5.dp),
                                         )
                                     }
                                     QuickSortPill(label = sortLabel, selected = filters.sort, onSelect = onSortChange)
@@ -1566,8 +1614,11 @@ internal fun adaptiveColumnCount(
     minimumTileWidth: androidx.compose.ui.unit.Dp,
     spacing: androidx.compose.ui.unit.Dp,
 ): Int {
-    val contentWidth = availableWidth - horizontalPadding * 2
-    return ((contentWidth.value + spacing.value) / (minimumTileWidth.value + spacing.value))
+    // Bad/zero configuration widths should never generate hundreds of phantom grid columns.
+    if (minimumTileWidth <= 0.dp) return 1
+    val contentWidth = (availableWidth - horizontalPadding * 2).coerceAtLeast(0.dp)
+    val denominator = (minimumTileWidth + spacing).coerceAtLeast(1.dp)
+    return ((contentWidth.value + spacing.value) / denominator.value)
         .toInt()
         .coerceAtLeast(1)
 }
@@ -1740,10 +1791,13 @@ private fun FilterSheet(
     val showResults: @Composable () -> Unit = {
         val extraFocus14 = rememberFocusFill()
         Button(
-            colors = extraFocus14.buttonColors(ButtonDefaults.buttonColors()),
+            colors = extraFocus14.buttonColors(
+                if (LocalAppDeviceProfile.current.isTv) ButtonDefaults.buttonColors()
+                else cinematicPrimaryButtonColors(),
+            ),
             onClick = onDismiss,
             modifier = Modifier.fillMaxWidth().height(50.dp).focusFill(extraFocus14, RoundedCornerShape(50)),
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(22.dp),
         ) {
             Text("Show results", fontWeight = FontWeight.Bold)
         }
@@ -1865,7 +1919,7 @@ private fun FilterSheet(
                         placeholder = { Text("Search all ${options.tags.size} AniList tags") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(22.dp),
                     )
                 }
                 if (visibleTags.isEmpty()) {
@@ -1937,7 +1991,7 @@ private fun FilterSheet(
                             focusManager.moveFocus(FocusDirection.Down)
                         }),
                         singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(22.dp),
                     )
                 }
                 if (studioSuggestions.isNotEmpty()) {
@@ -1946,11 +2000,12 @@ private fun FilterSheet(
                             val name = studio.name ?: return@forEach
                             val controlFocus7 = rememberFocusFill()
                             FilterChip(
-                                colors = controlFocus7.chipColors(FilterChipDefaults.filterChipColors()),
+                shape = RoundedCornerShape(50),
+                                colors = controlFocus7.chipColors(cinematicFilterChipColors()),
                                 selected = filters.studioId == studio.id,
                                 onClick = { vm.selectStudio(studio) },
                                 label = { Text(name) },
-                                modifier = Modifier.focusFill(controlFocus7, RoundedCornerShape(8.dp)),
+                                modifier = Modifier.focusFill(controlFocus7, RoundedCornerShape(50)),
                             )
                         }
                     }
@@ -2236,9 +2291,10 @@ private fun TriStateFilterChip(
             ),
         )
     } else {
-        chipFocus.chipColors(FilterChipDefaults.filterChipColors())
+        chipFocus.chipColors(cinematicFilterChipColors())
     }
     FilterChip(
+                shape = RoundedCornerShape(50),
         colors = colors,
         selected = included || excluded,
         onClick = onClick,
@@ -2246,6 +2302,6 @@ private fun TriStateFilterChip(
         leadingIcon = if (included) {
             { Text("✓", color = MaterialTheme.colorScheme.primary) }
         } else null,
-        modifier = Modifier.focusFill(chipFocus, RoundedCornerShape(8.dp)),
+        modifier = Modifier.focusFill(chipFocus, RoundedCornerShape(50)),
     )
 }
