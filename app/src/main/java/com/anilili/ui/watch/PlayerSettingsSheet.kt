@@ -749,6 +749,38 @@ private fun ColumnScope.SheetSections(
         )
     }
 
+    // Cinema Mode 2.0 starts with a real, persisted live-frame lighting preset.
+    // Reuse the native ambient renderer rather than adding a second video decoder.
+    val cinemaGlowEnabled by SettingsStore.playerAmbientGlow.collectAsState()
+    val cinemaGlowIntensity by SettingsStore.playerAmbientIntensity.collectAsState()
+    MidnightSectionLabel("Cinema lighting")
+    MidnightSettingSwitchRow(
+        title = "Ambient cinema lighting",
+        description = "Extend live video colours into the surrounding screen",
+        checked = cinemaGlowEnabled,
+        onCheckedChange = SettingsStore::setPlayerAmbientGlow,
+    )
+    if (cinemaGlowEnabled) {
+        MidnightUnderlineSelector(
+            options = listOf(0.50f, 0.75f, 1.00f),
+            selected = when {
+                cinemaGlowIntensity < 0.625f -> 0.50f
+                cinemaGlowIntensity < 0.875f -> 0.75f
+                else -> 1.00f
+            },
+            onSelect = SettingsStore::setPlayerAmbientIntensity,
+            tabLabel = { strength ->
+                when (strength) {
+                    0.50f -> "Soft"
+                    0.75f -> "Balanced"
+                    else -> "Vivid"
+                }
+            },
+            claimInitialFocus = false,
+        )
+        MidnightHelper("Live colours on supported native video. Secure or unsupported video surfaces stay dark.")
+    }
+
     MidnightSectionLabel("Playback")
     MidnightSettingSwitchRow(
         title = "Auto-play next episode",
