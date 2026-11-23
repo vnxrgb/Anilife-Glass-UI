@@ -628,19 +628,35 @@ fun SettingsScreen(
     fun startDiscordLogin() {
         discordError = null
         discordMessage = null
-        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.com"))
-        val hasBrowser = !device.isTv && context.packageManager.resolveActivity(browserIntent, 0) != null
+        // A new or partially configured release may have no Discord application ID.
+        // Building the OAuth URL throws in that case; never let a Settings tap crash the app.
+        if (!DiscordAuthManager.isConfigured) {
+            discordError = "Discord Rich Presence is unavailable in this build. The Discord application ID must be configured."
+            return
+        }
+        val url = runCatching { DiscordAuthManager.authorizeUrl(DiscordRedirect.MOBILE) }
+            .onFailure {
+                DiagnosticsLog.throwable("Discord sign-in could not start", it)
+                discordError = "Could not start Discord sign-in. Please try again."
+            }
+            .getOrNull() ?: return
+        val hasBrowser = runCatching {
+            !device.isTv && context.packageManager.resolveActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse("https://discord.com")), 0,
+            ) != null
+        }.getOrDefault(false)
         if (hasBrowser) {
-            val url = DiscordAuthManager.authorizeUrl(DiscordRedirect.MOBILE)
             val opened = runCatching {
                 context.startActivity(
                     Intent(Intent.ACTION_VIEW, Uri.parse(url))
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
-            }.isSuccess
+            }.onFailure { DiagnosticsLog.throwable("Discord browser could not open", it) }
+                .isSuccess
             if (opened) return
         }
-        discordLoginUrl = DiscordAuthManager.authorizeUrl(DiscordRedirect.MOBILE)
+        // Only fall back to the in-app OAuth screen after a valid URL exists.
+        discordLoginUrl = url
     }
 
     CompiledSeparately {
