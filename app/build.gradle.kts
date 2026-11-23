@@ -321,6 +321,13 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
     implementation(libs.qrcodegen)
+    // QR scanning belongs to the phone only. TV has no camera, and keeps its lean APK.
+    // ZXing core 3.3.0 supports our minSdk 22; 3.4.x requires Android 24+.
+    "mobileImplementation"("com.journeyapps:zxing-android-embedded:4.3.0") {
+        isTransitive = false
+    }
+    "mobileImplementation"("com.google.zxing:core:3.3.0")
+
     implementation(libs.haze)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.work.runtime.ktx)
