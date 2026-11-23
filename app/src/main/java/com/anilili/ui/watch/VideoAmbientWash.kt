@@ -68,8 +68,11 @@ internal fun NativeVideoAmbientSampler(
 ) {
     val currentCallback by rememberUpdatedState(onPalette)
     val context = LocalContext.current
-    val lowMemoryDevice = (context.getSystemService(Context.ACTIVITY_SERVICE)
-        as? ActivityManager)?.isLowRamDevice == true
+    // Hardware capability does not change while this composable is mounted.
+    val lowMemoryDevice = remember(context) {
+        (context.getSystemService(Context.ACTIVITY_SERVICE)
+            as? ActivityManager)?.isLowRamDevice == true
+    }
     LaunchedEffect(playerView, active, lowMemoryDevice) {
         if (!active || lowMemoryDevice || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@LaunchedEffect
         val surface = playerView?.videoSurfaceView as? SurfaceView ?: return@LaunchedEffect
@@ -78,32 +81,50 @@ internal fun NativeVideoAmbientSampler(
         while (isActive) {
             if (surface.holder.surface.isValid && surface.width > 0 && surface.height > 0 &&
                 surface.isShown && playerView?.player?.isPlaying == true) {
+                // PixelCopy is asynchronous. Keep the tiny destination bitmap alive
+                // until its callback actually finishes, even when navigating away
+                // cancels the sampler mid-request. Never run getPixels or the
+                // Morphe CPU light-field calculations on the UI thread.
                 val bitmap = Bitmap.createBitmap(96, 54, Bitmap.Config.ARGB_8888)
-                // PixelCopy only reads the existing decoded SurfaceView; the Morphe
-                // renderer does its light-field processing on the worker dispatcher.
-                val pixels = try {
-                    suspendCancellableCoroutine<IntArray?> { continuation ->
+                var requestPending = false
+                var requestFinished = false
+                var recycleAfterCopy = false
+                val sampledLight = try {
+                    val copyResult = suspendCancellableCoroutine<Int?> { continuation ->
                         try {
+                            synchronized(bitmap) { requestPending = true }
                             PixelCopy.request(surface, bitmap, { result ->
-                                val captured = if (result == PixelCopy.SUCCESS) {
-                                    IntArray(bitmap.width * bitmap.height).also {
-                                        bitmap.getPixels(it, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-                                    }
-                                } else null
-                                bitmap.recycle()
-                                if (continuation.isActive) continuation.resume(captured)
+                                synchronized(bitmap) {
+                                    requestFinished = true
+                                    if (recycleAfterCopy && !bitmap.isRecycled) bitmap.recycle()
+                                }
+                                // The callback deliberately does no pixel reading or
+                                // rendering: it only wakes the sampling coroutine.
+                                if (continuation.isActive) continuation.resume(result)
                             }, handler)
                         } catch (_: Exception) {
-                            bitmap.recycle()
+                            synchronized(bitmap) { requestPending = false }
                             if (continuation.isActive) continuation.resume(null)
                         }
                     }
-                } catch (_: Exception) {
-                    null
+                    if (copyResult == PixelCopy.SUCCESS) withContext(Dispatchers.Default) {
+                        val pixels = IntArray(bitmap.width * bitmap.height)
+                        bitmap.getPixels(
+                            pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height,
+                        )
+                        spatialRenderer.render(pixels)
+                    } else null
+                } finally {
+                    synchronized(bitmap) {
+                        if (!requestPending || requestFinished) {
+                            if (!bitmap.isRecycled) bitmap.recycle()
+                        } else {
+                            // Cancelled before PixelCopy's callback. Recycle only
+                            // *after* SurfaceFlinger stops writing the destination.
+                            recycleAfterCopy = true
+                        }
+                    }
                 }
-                val sampledLight = if (pixels != null) withContext(Dispatchers.Default) {
-                    spatialRenderer.render(pixels)
-                } else null
                 if (sampledLight != null) {
                     currentCallback(
                         VideoAmbientPalette(
@@ -118,6 +139,7 @@ internal fun NativeVideoAmbientSampler(
             // Morphe's light updates multiple times per second. A short cadence plus
             // GPU crossfades avoids the visibly stepped 260ms bitmap replacement.
             // The renderer skips unchanged frames and low-memory devices opt out.
+            // All CPU bitmap work now runs off main; no extra video decoder is used.
             delay(125L)
         }
     }
