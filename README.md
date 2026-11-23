@@ -74,6 +74,10 @@ Provider updates are not delivered directly to installed APKs; a new app release
 
 The current stable release is **[Anilumos v1.0.0](https://github.com/vnxrgb/Anilumos/releases/tag/v1.0.0)**, distributed as a signed universal Android APK.
 
+<p align="center">
+  <a href="https://rookieenough.github.io/Orion-Data/app/?id=anilumos"><img src="https://raw.githubusercontent.com/RookieEnough/Orion-Store/refs/heads/main/assets/orion-badge.png" alt="Get it on Orion Store" height="60"></a>
+</p>
+
 - **Stable:** `com.anilumos.app`
 - **Preview:** `com.anilumos.app.debug` — [preview builds](https://github.com/vnxrgb/Anilumos/releases/tag/anilumos-preview)
 
