@@ -1,4 +1,4 @@
-AniLife unified glass UI direct test APK — coordinated screenshot corrections
-Source baseline: 31c012c86bbe728abba1b9a7b8e664b33a757085
-Includes translucent shared headers across My List, Downloads and Schedule, frosted Home/Details primary CTA treatment, Details hero gradient and action spacing, shorter episode list toolbar correction, and mobile screen density fixes.
-Build universal mobile debug APK from this trigger commit. Require mobile unit tests, lint, assembly, and apksigner verification, then replace exactly the existing glass-ui-preview/anilife-glass-universal.apk release asset only if successful. No main merge or stable release. Device visual acceptance still needed.
+AniLife Glass UI consolidated device-test APK — latest screenshot feedback
+Source baseline: 9dbbaf43839ae17ce6a582ad0edde11a87814c9a
+Includes Home neutral frosted CTA and spacing; Details studio-adjacent watched icon and aligned glass tabs; Browse floating header tint and result spacing; Watch short-season episode header grid toggle; shared scrolled/title glass headers; My List, Downloads and Schedule spacing changes.
+Build one universal mobile debug APK from this trigger commit. Require Gradle unit tests, lint, assembly, and APK signature verification; on success replace only glass-ui-preview/anilife-glass-universal.apk. No merge to main or stable release. Physical device visual and playback testing still outstanding.
