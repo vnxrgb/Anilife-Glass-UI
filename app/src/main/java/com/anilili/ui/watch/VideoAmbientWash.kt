@@ -1,5 +1,8 @@
 package com.anilili.ui.watch
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import android.app.ActivityManager
@@ -114,7 +117,17 @@ internal fun NativeVideoAmbientSampler(
                         bitmap.getPixels(
                             pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height,
                         )
-                        spatialRenderer.render(pixels)
+                        val spatialLight = spatialRenderer.render(pixels)
+                        spatialLight?.let { light ->
+                            // Keep edge colours for fullscreen sidebars without a second capture.
+                            val colours = extractAmbientPalette(bitmap)
+                            VideoAmbientPalette(
+                                left = colours?.left ?: Color.Transparent,
+                                right = colours?.right ?: Color.Transparent,
+                                center = colours?.center ?: Color.Transparent,
+                                spatialLight = light,
+                            )
+                        }
                     } else null
                 } finally {
                     synchronized(bitmap) {
@@ -128,14 +141,7 @@ internal fun NativeVideoAmbientSampler(
                     }
                 }
                 if (sampledLight != null) {
-                    currentCallback(
-                        VideoAmbientPalette(
-                            left = Color.Transparent,
-                            right = Color.Transparent,
-                            center = Color.Transparent,
-                            spatialLight = sampledLight,
-                        ),
-                    )
+                    currentCallback(sampledLight)
                 }
             }
             // Morphe's light updates multiple times per second. A short cadence plus
@@ -336,5 +342,57 @@ internal fun Modifier.videoAmbientWash(
                 radius = maxOf(w * 0.72f, h * 0.36f),
             ),
         )
+    }
+}
+
+/**
+ * Soft live-frame glow ONLY in true side letterboxes in landscape Fit mode.
+ * Drawn above Media3's black bars but before the player controls. No second decoder,
+ * blur layer, image replacement, or touch interception. Never obscures the video.
+ */
+@Composable
+internal fun FullscreenSideAmbient(
+    palette: VideoAmbientPalette,
+    videoAspectRatio: Float,
+    enabled: Boolean,
+    intensity: Float,
+    modifier: Modifier = Modifier,
+) {
+    val left by animateColorAsState(palette.left, tween(450), label = "fullscreenAmbientLeft")
+    val right by animateColorAsState(palette.right, tween(450), label = "fullscreenAmbientRight")
+    if (!enabled || videoAspectRatio <= 0f) return
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        if (w <= 0f || h <= 0f) return@Canvas
+        val pictureWidth = h * videoAspectRatio
+        val side = (w - pictureWidth) / 2f
+        if (side <= 2f) return@Canvas
+        val power = intensity.coerceIn(0f, 1f) * 0.52f
+        // Clip both light fields strictly to the letterbox areas, so the video,
+        // subtitles and gesture layer stay fully readable.
+        clipRect(left = 0f, top = 0f, right = side, bottom = h) {
+            drawRect(
+                brush = Brush.horizontalGradient(
+                    0f to Color.Transparent,
+                    0.48f to left.copy(alpha = 0.14f * power),
+                    1f to left.copy(alpha = 0.52f * power),
+                    startX = 0f, endX = side,
+                ),
+                size = Size(side, h),
+            )
+        }
+        clipRect(left = w - side, top = 0f, right = w, bottom = h) {
+            drawRect(
+                brush = Brush.horizontalGradient(
+                    0f to right.copy(alpha = 0.52f * power),
+                    0.52f to right.copy(alpha = 0.14f * power),
+                    1f to Color.Transparent,
+                    startX = w - side, endX = w,
+                ),
+                topLeft = Offset(w - side, 0f),
+                size = Size(side, h),
+            )
+        }
     }
 }
