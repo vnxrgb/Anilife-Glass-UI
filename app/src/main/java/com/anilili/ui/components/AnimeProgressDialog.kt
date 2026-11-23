@@ -73,13 +73,13 @@ internal fun AnimeProgressDialog(
         loading = false
     }
 
-    val max = loaded?.maxEpisodes
+    val max = loaded?.maxEpisodes?.takeIf { it > 0 }
     val ready = !loading && loaded != null
     val busy = loading || saving
 
     fun nudge(by: Int) {
-        val next = (count + by).coerceAtLeast(0)
-        count = max?.let { next.coerceAtMost(it) } ?: next
+        val next = (count.toLong() + by).coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+        count = max?.takeIf { it >= 0 }?.let { next.coerceAtMost(it) } ?: next
     }
 
     fun save() {

@@ -64,8 +64,8 @@ internal fun CustomListNameDialog(
     initial: String = "",
 ) {
     val device = LocalAppDeviceProfile.current
-    var value by remember { mutableStateOf(initial) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var value by remember(title, initial) { mutableStateOf(initial) }
+    var error by remember(title, initial) { mutableStateOf<String?>(null) }
     val fieldFocus = rememberTvFocusTarget()
     val phoneFocus = remember { FocusRequester() }
     fun save() {
