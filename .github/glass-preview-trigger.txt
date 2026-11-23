@@ -1,5 +1,5 @@
-AniLife Glass preview - prevent Morphe ambient blinking while retaining all combined UI updates
-Source: d77e3252a55e71d55f1cf020b7c9ea8fe222dfb0
-Previous combined batch included: rounded Schedule page and blended Details poster above action buttons; preserve these and Morphe GPLv3 notices.
-Fix: transition time 95ms instead of 155ms for 125ms sampling; isolated additive premultiplied blend preserves total glow brightness in every intermediate frame instead of double semi-transparent SrcOver. Do not affect player surface, subtitles or decoder.
-Verify mobile unit tests, lint, APK signature, publish exactly one universal debug APK only after passing; stable release untouched. Physical-device behavior remains to be tested.
+AniLife Glass UI — Details seam removal + verified Morphe ambient flicker correction
+Source feature branch: c6af83723a57840c16d7f8486e4a2e071771cc8a
+Fix the hard horizontal brown/blue band below Details quick facts with a continuous full-viewport radial artwork-tinted atmosphere that does not rely on Android 12+ RenderEffect blur. Keep actual banner hero's translucent fade, poster, watched action, tab/buttons, Schedule rounding, and GPLv3 Morphe notice intact.
+Prior ambient fix: preserve 95ms capture crossfade and brightness-preserving additive spatial blending; build the combined feature branch into exactly one mobile universal APK after tests, lint, and signing check.
+Publish only if the workflow succeeds; stable release unchanged. Android device visual validation still needed.
