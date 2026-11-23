@@ -21,6 +21,7 @@ internal enum class DpadPress { CLICK, LONG_CLICK }
  */
 internal class DpadPressTracker(private val longPressTimeoutMs: Long) {
     private var heldLongEnough = false
+    private var pressActive = false
 
     /**
      * A key-down at [heldMs] after the press began. Android repeats a held key, so this arrives
@@ -34,6 +35,7 @@ internal class DpadPressTracker(private val longPressTimeoutMs: Long) {
      * is record that it has gone long.
      */
     fun onKeyDown(heldMs: Long) {
+        pressActive = true
         if (heldMs >= longPressTimeoutMs) heldLongEnough = true
     }
 
@@ -43,8 +45,10 @@ internal class DpadPressTracker(private val longPressTimeoutMs: Long) {
      * The duration is measured again rather than trusted to [onKeyDown]: not every television box
      * auto-repeats a held OK, and on those the release is the only event that arrives at all.
      */
-    fun onKeyUp(heldMs: Long): DpadPress {
+    fun onKeyUp(heldMs: Long): DpadPress? {
+        if (!pressActive) return null
         val long = heldLongEnough || heldMs >= longPressTimeoutMs
+        pressActive = false
         heldLongEnough = false
         return if (long) DpadPress.LONG_CLICK else DpadPress.CLICK
     }
@@ -106,6 +110,7 @@ fun Modifier.dpadClickable(
             KeyEventType.KeyUp -> when (tracker.onKeyUp(heldMs)) {
                 DpadPress.CLICK -> onClick()
                 DpadPress.LONG_CLICK -> onLongClick()
+                null -> Unit // Ignore an orphaned release after focus moved to this card.
             }
             else -> return@onPreviewKeyEvent false
         }
