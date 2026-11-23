@@ -321,6 +321,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
     implementation(libs.qrcodegen)
+    // Permission-free QR scanning for the mobile-to-TV pairing address.
+    mobileImplementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     implementation(libs.haze)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.work.runtime.ktx)
