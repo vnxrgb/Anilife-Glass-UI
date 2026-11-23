@@ -5,6 +5,8 @@ on:
     branches: [release/tv-alpha-1.0.2]
     paths:
       - .github/workflows/tv-alpha-release.yml
+      - app/src/main/java/com/anilili/ui/pairing/**
+      - app/build.gradle.kts
   workflow_dispatch:
 
 permissions:
@@ -52,9 +54,9 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'val appVersionCode = 10' app/build.gradle.kts
-          grep -Fq 'val appVersionName = "1.0.2-alpha.1"' app/build.gradle.kts
-          if gh release view "v1.0.2-alpha.1" >/dev/null 2>&1; then
-            echo "::error::Release v1.0.2-alpha.1 already exists; refusing overwrite."
+          grep -Fq 'val appVersionName = "1.0.2-alpha.2"' app/build.gradle.kts
+          if gh release view "v1.0.2-alpha.2" >/dev/null 2>&1; then
+            echo "::error::Release v1.0.2-alpha.2 already exists; refusing overwrite."
             exit 1
           fi
 
@@ -148,7 +150,7 @@ jobs:
           test "${fingerprint,,}" = "${ANDROID_SIGNING_CERT_SHA256,,}"
           package_line="$("$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$apk" | head -n 1)"
           [[ "$package_line" == *"name='com.anilumos.app'"* ]]
-          [[ "$package_line" == *"versionName='1.0.2-alpha.1'"* ]]
+          [[ "$package_line" == *"versionName='1.0.2-alpha.2'"* ]]
           [[ "$package_line" == *"versionCode='10'"* ]]
           # Reject a phone APK or a TV APK missing the remote launcher.
           badging="$("$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$apk")"
@@ -158,7 +160,7 @@ jobs:
           cp "$apk" dist/Anilumos_tv.apk
           printf '%s\n' "$fingerprint" > dist/SIGNING-CERTIFICATE-SHA256.txt
           (cd dist && sha256sum Anilumos_tv.apk SIGNING-CERTIFICATE-SHA256.txt > SHA256SUMS)
-          printf '%s\n' "Anilumos TV 1.0.2-alpha.1 release: main commit $GITHUB_SHA" > dist/BUILD-REVISION.txt
+          printf '%s\n' "Anilumos TV 1.0.2-alpha.2 release: isolated TV branch commit $GITHUB_SHA" > dist/BUILD-REVISION.txt
 
       - name: Verify release checksum manifest
         shell: bash
@@ -171,11 +173,12 @@ jobs:
         run: |
           set -euo pipefail
           cat > release-notes.txt <<'EOF'
-          # AniLumos TV v1.0.2-alpha.1
+          # AniLumos TV v1.0.2-alpha.2
 
           Experimental release-signed Android TV and Fire TV alpha candidate for testers.
 
           - TV remote and D-pad navigation polish.
+          - Link a TV now displays a scannable pairing address QR code.
           - Fixed AniList login and MyAnimeList login.
           - You can now update directly from the app.
           
@@ -185,6 +188,6 @@ jobs:
           This app uses code from Morphe. To learn more, visit https://morphe.software
           See LICENSE and notices for applicable terms.
           EOF
-          gh release create "v1.0.2-alpha.1" dist/Anilumos_tv.apk dist/SHA256SUMS dist/SIGNING-CERTIFICATE-SHA256.txt dist/BUILD-REVISION.txt \
-            --target "$GITHUB_SHA" --title "AniLumos TV v1.0.2-alpha.1 — Alpha Candidate" --notes-file release-notes.txt --prerelease
-          echo "Stable APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v1.0.2-alpha.1/Anilumos_tv.apk" >> "$GITHUB_STEP_SUMMARY"
+          gh release create "v1.0.2-alpha.2" dist/Anilumos_tv.apk dist/SHA256SUMS dist/SIGNING-CERTIFICATE-SHA256.txt dist/BUILD-REVISION.txt \
+            --target "$GITHUB_SHA" --title "AniLumos TV v1.0.2-alpha.2 — Alpha Candidate" --notes-file release-notes.txt --prerelease
+          echo "TV Alpha APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v1.0.2-alpha.2/Anilumos_tv.apk" >> "$GITHUB_STEP_SUMMARY"
