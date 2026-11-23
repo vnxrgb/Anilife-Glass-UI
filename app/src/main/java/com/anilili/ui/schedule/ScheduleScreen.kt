@@ -263,10 +263,13 @@ fun ScheduleScreen(
                         vm.selectDate(date)
                     },
                     modifier = Modifier
+                        // Centre the capped glass stepper on tablets; do not leave it
+                        // anchored to the left while the calendar spans the screen.
                         .fillMaxWidth()
+                        .widthIn(max = 520.dp)
+                        .align(Alignment.CenterHorizontally)
                         .padding(horizontal = device.pagePadding)
-                        .padding(bottom = LocalAppChromeBottomInset.current + 6.dp)
-                        .widthIn(max = 520.dp),
+                        .padding(bottom = LocalAppChromeBottomInset.current + 6.dp),
                 )
             }
         }
