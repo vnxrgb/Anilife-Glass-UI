@@ -547,7 +547,7 @@ private fun HomeContent(
         // read across, so the card only has to be legible, not to tile. The grid an expanded rail
         // opens is what the column count is for, and it comes from the profile so Home lands on the
         // same poster grid Search and Browse use instead of inventing a second one.
-        val columns = if (device.isTv) 7 else device.posterColumns
+        val columns = if (device.isTv) 7 else device.homePosterColumns(available, gridSpacing)
         val cardWidth = if (device.isTv) {
             device.posterWidth
         } else {
@@ -868,7 +868,7 @@ private fun HeroPager(
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = if (device.isTv) device.pagePadding else 14.dp)
+            .padding(horizontal = if (device.isTv || device.isTablet) device.pagePadding else 14.dp)
             .height(heroHeight)
             .clip(if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(26.dp))
             .border(
