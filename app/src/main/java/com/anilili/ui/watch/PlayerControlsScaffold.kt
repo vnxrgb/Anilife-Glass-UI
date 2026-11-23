@@ -493,16 +493,16 @@ internal fun PlayerControlsScaffold(
             if (showBack || !compactHeight) {
                 PlayerControlIconButton("Rewind 10 seconds", Icons.Default.FastRewind, onClick = onRewind)
             }
-            // Play/pause keeps the accent — it and the seek bar are the only things that carry it.
+            // The main transport target is brighter glass, not a theme-coloured disc.
+            // The seeker retains the user's optional player-accent preference.
             val extraFocus1 = rememberFocusFill()
             IconButton(
                 colors = extraFocus1.iconButtonColors(IconButtonDefaults.iconButtonColors()),
                 onClick = onPlayPause,
                 modifier = Modifier
                     .size(metrics.playButtonSize)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.30f), CircleShape)
-                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape).focusFill(extraFocus1, CircleShape),
+                    .focusFill(extraFocus1, CircleShape)
+                    .playerLiquidGlass(CircleShape, PlayerLiquidGlassTone.PRIMARY),
             ) {
                 Icon(
                     painter = painterResource(
@@ -651,15 +651,7 @@ private fun PlayerActionRow(
     Layout(
         content = content,
         modifier = modifier
-            .clip(RoundedCornerShape(28.dp))
-            .background(
-                Brush.verticalGradient(
-                    0f to Color(0xFF55565B).copy(alpha = 0.34f),
-                    0.35f to Color(0xFF28292D).copy(alpha = 0.52f),
-                    1f to Color(0xFF111216).copy(alpha = 0.64f),
-                ),
-            )
-            .border(1.dp, Color.White.copy(alpha = 0.23f), RoundedCornerShape(28.dp))
+            .playerLiquidGlass(RoundedCornerShape(28.dp), PlayerLiquidGlassTone.DOCK)
             .padding(horizontal = 6.dp, vertical = 5.dp),
     ) { measurables, constraints ->
         val placeables = measurables.map { it.measure(Constraints()) }
@@ -746,9 +738,7 @@ internal fun PlayerActionPill(
     Row(
         modifier = modifier
             .focusFill(fillFocus1, shape)
-            .clip(shape)
-            .background(fillFocus1.background(Color(0xFF24252A).copy(alpha = 0.54f)), shape)
-            .border(1.dp, Color.White.copy(alpha = 0.20f), shape)
+            .playerLiquidGlass(shape)
             .clickable(enabled = enabled, onClick = onClick)
             .heightIn(min = 48.dp)
             .padding(horizontal = if (showLabel) 12.dp else 10.dp, vertical = 8.dp)
@@ -793,10 +783,8 @@ internal fun PlayerTimePill(
 ) {
     Box(
         modifier = modifier
-            .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.48f))
-            .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
-            .padding(horizontal = 8.dp, vertical = 3.dp),
+            .playerLiquidGlass(CircleShape)
+            .padding(horizontal = 9.dp, vertical = 4.dp),
     ) {
         Text(
             text = text,
@@ -821,7 +809,9 @@ private fun PlayerBackArrow() {
     IconButton(
         colors = focus.iconButtonColors(IconButtonDefaults.iconButtonColors()),
         onClick = { dispatcher?.onBackPressed() },
-        modifier = Modifier.focusFill(focus, CircleShape),
+        modifier = Modifier
+            .focusFill(focus, CircleShape)
+            .playerLiquidGlass(CircleShape),
     ) {
         Icon(
             Icons.AutoMirrored.Filled.ArrowBack,
@@ -902,9 +892,8 @@ internal fun PlayerControlIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // On a phone the accent belongs to play/pause and the seek bar alone — ringing every control
-    // in purple made the overlay shout over the video. The dark circle already separates the icons
-    // from the picture, so the ring adds nothing there.
+    // The mobile controls use neutral glass; neither the glass fill nor its rim borrows
+    // the user's accent colour. This stays readable on dark and bright anime scenes.
     //
     // A TV keeps it: with no touch, that outline is what tells a viewer across the room where the
     // controls are, and it is the shape the focus highlight sits on.
@@ -926,9 +915,15 @@ internal fun PlayerControlIconButton(
         Box(
             modifier = Modifier
                 .size(circle)
-                .clip(CircleShape)
-                .background(extraFocus2.background(if (isTv) Color.Black.copy(alpha = 0.58f) else Color.Black.copy(alpha = 0.48f)), CircleShape)
-                .then(if (!isTv) Modifier.border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape) else Modifier)
+                .then(
+                    if (isTv) {
+                        Modifier
+                            .clip(CircleShape)
+                            .background(extraFocus2.background(Color.Black.copy(alpha = 0.58f)), CircleShape)
+                    } else {
+                        Modifier.playerLiquidGlass(CircleShape)
+                    }
+                )
                 .then(
                     if (isTv && !extraFocus2.focused) {
                         Modifier.border(
