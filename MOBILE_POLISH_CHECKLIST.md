@@ -23,3 +23,9 @@ Last audited 2026-11-23: `main` at `36d3254327659ec821e0b0a61d8b7d5b9c7dc3a6`; b
 - [ ] Review lifecycle, loading/error states, image caching and touch targets with concrete evidence.
 
 No smoothness, compatibility or visual-quality improvement is declared device-verified.
+
+## Branch reconciliation (2026-11-23)
+- Current `main`: `c8edaa9503519042a3f5f6313c2d0f0b5ed7cc65` (v1.0.2 direct in-app updates). GitHub comparison: polish branch 14 commits ahead / 4 behind, merge base `43cf518`.
+- Overlap to reconcile before merging: OAuthUnavailableDialog, ProfileScreen, SettingsScreen and TV manifest are modified on both histories; release workflow also differs. Do not blindly merge or overwrite current main's direct-update security checks, versioning, signing verification or account fixes.
+- The prior green CI milestone is `acb85c8`, **not** the current polish branch tip. Newer changes need fresh mobile compile/tests/lint after reconciliation; device smoothness and ambient-lighting regressions remain unverified.
+- Next action: isolate mobile performance commits against current main (or carefully reconcile overlapping files), then run one meaningful CI milestone; avoid speculative player changes and APK publication.
