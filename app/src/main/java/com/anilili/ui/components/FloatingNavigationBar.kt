@@ -73,7 +73,7 @@ data class FloatingNavItem(
 )
 
 /** The capsule's one height; scrolling no longer changes it. */
-val FloatingNavBarExpandedHeight = 54.dp
+val FloatingNavBarExpandedHeight = 52.dp
 val FloatingNavBarMargin = 9.dp
 
 /** An idle icon's slot: the 48dp touch minimum, so the rest is free for the open pill's label. */
@@ -93,8 +93,8 @@ private fun barGlass(): Brush {
     return remember(top, middle, bottom) {
         Brush.verticalGradient(
             0f to top.copy(alpha = 0.72f),
-            0.42f to middle.copy(alpha = 0.76f),
-            1f to bottom.copy(alpha = 0.85f),
+            0.42f to middle.copy(alpha = 0.72f),
+            1f to bottom.copy(alpha = 0.79f),
         )
     }
 }
@@ -172,7 +172,7 @@ fun FloatingNavigationBar(
                 .fillMaxWidth()
                 .height(FloatingNavBarExpandedHeight)
                 // Reduce the dark halo on OLED; the rim carries the depth.
-                .shadow(7.dp, BarShape)
+                .shadow(5.dp, BarShape)
                 .clip(BarShape)
                 .then(
                     if (blurred) {
@@ -246,7 +246,7 @@ fun FloatingNavDisc(
 internal fun floatingNavShowsCaption(itemWidth: Dp): Boolean = itemWidth >= 58.dp
 
 /** A touch under the capsule's 58dp, so the disc reads as its companion rather than its rival. */
-val FloatingNavDiscSize = 52.dp
+val FloatingNavDiscSize = 48.dp
 
 /**
  * Fixed-width navigation destination. Icons remain visible in every state, with a
