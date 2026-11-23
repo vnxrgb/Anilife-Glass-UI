@@ -366,9 +366,8 @@ internal fun PlayerControlsScaffold(
     PlayerChromeBox(modifier.fillMaxSize()) {
         val metrics = playerLayoutMetrics(maxWidth.value.toInt(), maxHeight.value.toInt())
         val compactHeight = metrics.compactHeight
-        // The bottom bar has always carried a scrim; the top row never did, and the title and its
-        // icons sat unbacked over whatever the frame happened to be. A bright sky is where that
-        // fails, and it fails for the controls the same way it failed for the title text.
+        // A restrained top scrim keeps the title readable without washing out
+        // the video. The actual controls have their own dark neutral glass capsules.
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -376,7 +375,7 @@ internal fun PlayerControlsScaffold(
                 .height(if (compactHeight) 68.dp else 120.dp)
                 .background(
                     Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.48f),
+                        0f to Color.Black.copy(alpha = 0.31f),
                         1f to Color.Transparent,
                     ),
                 ),
@@ -536,8 +535,8 @@ internal fun PlayerControlsScaffold(
                 .background(
                     Brush.verticalGradient(
                         0f to Color.Transparent,
-                        .32f to Color.Black.copy(alpha = 0.22f),
-                        1f to Color.Black.copy(alpha = 0.60f),
+                        .32f to Color.Black.copy(alpha = 0.10f),
+                        1f to Color.Black.copy(alpha = 0.42f),
                     ),
                 )
                 // The picture keeps the camera hole (see PlayerSystemBarsEffect); the seek bar and
