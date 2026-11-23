@@ -289,10 +289,9 @@ internal data class NostrEvent(
      *
      *     {"version":…, "apkUrl":…, "variants":{"tv":{"url":…,"sizeBytes":…}}}
      *
-     * A TV takes `variants.tv` when the publisher provided it and otherwise falls back to
-     * `apkUrl`, so an older manifest still updates a TV (with the phone build, exactly as it did
-     * before the split) rather than leaving it stranded. Apps older than this simply ignore
-     * `variants`, which is why the top-level fields stay put.
+     * A TV must have an explicit `variants.tv.url`. Falling back to the top-level
+     * mobile URL offered phone APKs to Android TV/Fire TV devices. Older manifests
+     * without a TV variant are intentionally not eligible for TV updates.
      */
     fun parseManifest(
         json: Json,
@@ -309,9 +308,18 @@ internal data class NostrEvent(
             ?: error("Nostr update manifest version is not recognizable: $versionText")
         val variant = (manifest["variants"] as? JsonObject)
             ?.get(if (isTv) "tv" else "mobile") as? JsonObject
-        val apkUrl = variant?.get("url")?.jsonPrimitive?.content
-            ?: manifest["apkUrl"]?.jsonPrimitive?.content
-            ?: error("Nostr update manifest is missing an APK URL")
+        // The legacy top-level apkUrl is a MOBILE build. Never offer it to a TV.
+        // Android package identifiers alone do not distinguish form-factor flavors.
+        if (isTv && variant == null) error("Update manifest has no TV APK variant")
+        val apkUrl = if (isTv) {
+            variant?.get("url")?.jsonPrimitive?.content
+                ?.takeIf(String::isNotBlank)
+                ?: error("Update manifest TV variant has no APK URL")
+        } else {
+            variant?.get("url")?.jsonPrimitive?.content
+                ?: manifest["apkUrl"]?.jsonPrimitive?.content
+                ?: error("Nostr update manifest is missing an APK URL")
+        }
         val sizeBytes = variant?.get("sizeBytes")?.jsonPrimitive?.content?.toLongOrNull()
             ?: manifest["sizeBytes"]?.jsonPrimitive?.content?.toLongOrNull()
             ?: -1L
