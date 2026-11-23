@@ -1586,12 +1586,16 @@ private fun WatchContent(
         }
         val tvBlockIndex = (chosenBlockIndex ?: blockIndexContaining(blocks, data.current.number))
             .coerceIn(0, (blocks.size - 1).coerceAtLeast(0))
-        val tvShownEpisodes = if (isMovie) {
-            emptyList()
-        } else if (episodeQuery.isNotBlank()) {
-            filterEpisodes(data.episodes, episodeQuery)
-        } else {
-            blocks.getOrNull(tvBlockIndex)?.episodes.orEmpty()
+        // Ambient color updates and player clock ticks must not re-filter a
+        // potentially thousand-episode series when the query has not changed.
+        val tvShownEpisodes = remember(isMovie, episodeQuery, data.episodes, blocks, tvBlockIndex) {
+            if (isMovie) {
+                emptyList()
+            } else if (episodeQuery.isNotBlank()) {
+                filterEpisodes(data.episodes, episodeQuery)
+            } else {
+                blocks.getOrNull(tvBlockIndex)?.episodes.orEmpty()
+            }
         }
         val episodeRows = remember(tvShownEpisodes, device.episodeColumns) {
             tvShownEpisodes.chunked(device.episodeColumns)
@@ -2393,12 +2397,17 @@ private fun MobileWatchDetails(
     }
     val blockIndex = (chosenBlockIndex ?: blockIndexContaining(blocks, data.current.number))
         .coerceIn(0, (blocks.size - 1).coerceAtLeast(0))
-    val shownEpisodes = if (isMovie) {
-        emptyList()
-    } else if (episodeQuery.isNotBlank()) {
-        filterEpisodes(data.episodes, episodeQuery)
-    } else {
-        blocks.getOrNull(blockIndex)?.episodes.orEmpty()
+    // Keep the visible episode list stable while video progress, download
+    // statuses and Morphe ambience update. Re-filter only for query, episode
+    // or selected block changes, not on every unrelated recomposition.
+    val shownEpisodes = remember(isMovie, episodeQuery, data.episodes, blocks, blockIndex) {
+        if (isMovie) {
+            emptyList()
+        } else if (episodeQuery.isNotBlank()) {
+            filterEpisodes(data.episodes, episodeQuery)
+        } else {
+            blocks.getOrNull(blockIndex)?.episodes.orEmpty()
+        }
     }
     LazyColumn(modifier = modifier) {
         item {
