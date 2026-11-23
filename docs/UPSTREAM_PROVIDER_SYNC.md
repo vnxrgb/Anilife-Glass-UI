@@ -4,13 +4,13 @@ Anilumos stays independently branded while tracking provider-site changes made i
 
 ## Automated review
 
-The GitHub Actions workflow [provider-sync.yml](../.github/workflows/provider-sync.yml) lives on both `main` and `feature/unified-glass-ui`. GitHub runs schedules only from `main`. The monitor runs every Monday at 10:17 UTC and can also be started manually from Actions > Review upstream streaming-provider updates > Run workflow.
+The GitHub Actions workflow [provider-sync.yml](../.github/workflows/provider-sync.yml) runs from `main`. GitHub runs schedules only from `main`. The monitor runs every Monday at 10:17 UTC and can also be started manually from Actions > Review upstream streaming-provider updates > Run workflow.
 
 The workflow:
 
-1. Fetches AniLife's `main` and finds the shared Git ancestor with the Anilumos feature branch.
+1. Fetches AniLife's `main` and finds the shared Git ancestor with the Anilumos `main` branch.
 2. Identifies upstream edits to site provider classes, selected extractors/resolvers, provider registration, and directly related tests.
-3. Proposes those changes on `automation/upstream-provider-sync`, opening or refreshing a **draft** pull request targeting `feature/unified-glass-ui`.
+3. Proposes those changes on `automation/upstream-provider-sync`, opening or refreshing a **draft** pull request targeting `main`.
 4. Does not automatically merge, build an APK, change branding, or release anything.
 
 If a provider was removed upstream, its removal appears in the proposed diff for review. A domain change or website update might need additional integrations outside the monitored paths.
