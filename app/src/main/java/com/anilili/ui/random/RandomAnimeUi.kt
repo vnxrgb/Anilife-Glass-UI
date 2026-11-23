@@ -145,9 +145,9 @@ fun RandomAnimeButton(
         Icon(
             Icons.Default.Casino,
             contentDescription = null,
-            tint = LocalMidnightAccent.current,
+            tint = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
-                .size(24.dp)
+                .size(22.dp)
                 .graphicsLayer { rotationZ = spin.value },
         )
     }
