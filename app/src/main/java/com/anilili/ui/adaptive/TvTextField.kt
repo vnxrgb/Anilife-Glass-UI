@@ -106,9 +106,10 @@ fun TvNativeTextField(
             factory = { context ->
                 SafeTvEditText(context).apply {
                     editorHolder = this
-                    tag = NativeTvTextWatcher(this, currentOnValueChange).also(::addTextChangedListener)
+                    // Restored text is not a user edit; avoid emitting it as a new search.
                     setText(value)
                     setSelection(value.length)
+                    tag = NativeTvTextWatcher(this, currentOnValueChange).also(::addTextChangedListener)
                     setSingleLine(true)
                     this.hint = hint
                     setTextColor(textColor)
