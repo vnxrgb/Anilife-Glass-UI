@@ -936,7 +936,7 @@ private fun DetailHero(
 ) {
     val device = LocalAppDeviceProfile.current
     val banner = info.bannerImage ?: info.coverImage.best
-    val bannerHeight = topInset + if (device.isExpanded) 192.dp else if (device.isTablet) 158.dp else 140.dp
+    val bannerHeight = topInset + if (device.isExpanded) 258.dp else if (device.isTablet) 224.dp else 195.dp
     Box(
         Modifier.fillMaxWidth().height(
             topInset + if (device.isExpanded) 258.dp else if (device.isTablet) 224.dp else 195.dp,
@@ -954,9 +954,9 @@ private fun DetailHero(
                 .height(bannerHeight)
                 .appCanvasFade { canvas ->
                     Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.20f),
-                        0.40f to Color.Black.copy(alpha = 0.38f),
-                        1f to canvas,
+                        0f to Color.Black.copy(alpha = 0.16f),
+                        0.42f to Color.Black.copy(alpha = 0.29f),
+                        1f to canvas.copy(alpha = 0.88f),
                     )
                 },
         )
@@ -1136,11 +1136,11 @@ private fun DetailActions(
         )
     }
     Column(
-        modifier = Modifier.fillMaxWidth().padding(start = pad, end = pad, bottom = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = pad, end = pad, bottom = 12.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 9.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
         val controlFocus4 = rememberFocusFill()
@@ -1243,7 +1243,7 @@ private fun DetailActions(
         }
         if (!device.isTv && watchedToggleAvailable(anilistId)) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 3.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1251,6 +1251,7 @@ private fun DetailActions(
                     "Mark as watched",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 8.dp),
                 )
                 WatchedToggleButton(
                     anilistId = anilistId,
