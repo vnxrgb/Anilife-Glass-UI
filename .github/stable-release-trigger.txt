@@ -1,7 +1,8 @@
 AniLumos stable release trigger
-Version v1.0.1
-Hotfix: AniList login and MyAnimeList login.
-Publish only after reviewed hotfix is merged into main.
-Require OAuth client configuration, signed universal mobile release build, tests, lint,
-package version 1.0.1 (versionCode 8), zip alignment and certificate verification.
-Do not overwrite v1.0.0; publish v1.0.1 as an in-place upgrade.
+Version v1.0.2
+Update: you can now update directly from the app.
+Publish only after the reviewed direct-update hotfix merges into main.
+Require tests, lint, signed universal mobile APK, OAuth configuration,
+package version 1.0.2 (versionCode 9), zip alignment and certificate verification.
+The installer verifies package identity, published APK checksum and trusted signer.
+Do not overwrite v1.0.1; publish v1.0.2 as an in-place upgrade.
