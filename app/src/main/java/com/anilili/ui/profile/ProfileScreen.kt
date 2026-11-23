@@ -359,6 +359,10 @@ fun ProfileScreen(
 
     when (loginService) {
         AccountService.ANILIST -> {
+            if (!AuthManager.isConfigured) {
+                OAuthUnavailableDialog("AniList") { loginService = null }
+                return
+            }
             LoginWebView(
                 authorizeUrl = remember { AuthManager.authorizeUrl() },
                 isRedirect = AuthManager::isRedirect,
@@ -376,6 +380,10 @@ fun ProfileScreen(
             return
         }
         AccountService.MAL -> {
+            if (!MalAuthManager.isConfigured) {
+                OAuthUnavailableDialog("MyAnimeList") { loginService = null }
+                return
+            }
             LoginWebView(
                 authorizeUrl = remember { MalAuthManager.authorizeUrl() },
                 isRedirect = MalAuthManager::isRedirect,
