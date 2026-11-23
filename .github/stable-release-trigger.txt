@@ -2,3 +2,5 @@ Anilumos stable release trigger
 Version v1.0.0
 Verified merged main source: 59276f5b37b136eea8c7425c006dbc2fb7da38c4
 Build and publish only if unit tests, lint, signed universal mobile APK assembly, package/version, zip alignment and release certificate verification all pass.
+
+Retry 2: CRLF-safe release preflight and signing credential validation at commit 9fd692eaf31a22e264d3135411fb12f706149faa
