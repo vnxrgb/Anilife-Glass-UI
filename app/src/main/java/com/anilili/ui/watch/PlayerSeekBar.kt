@@ -56,6 +56,14 @@ internal fun seekTargetOnInsetTrackMs(xPx: Float, widthPx: Float, insetPx: Float
 }
 
 /**
+ * Shift only the visible track closer to the time/lock row, keeping the entire
+ * 48dp touch and accessibility target in place. The previous centered track
+ * looked detached from the controls on short inline players.
+ */
+internal fun seekTrackVisualNudge(touchHeight: Dp): Dp =
+    if (touchHeight <= 28.dp) 10.dp else 7.dp
+
+/**
  * The player's timeline: a hand-drawn three-band track with its own thumb, scrubbable by finger and
  * by remote.
  *
@@ -184,7 +192,11 @@ internal fun PlayerSeekBar(
                 .fillMaxWidth()
                 .heightIn(min = 48.dp),
         ) {
-            val centreY = size.height / 2f
+            // Nudge the stroke and thumb down inside the SAME 48dp hit target;
+            // the normal thumb (6dp) and active thumb (9dp) both stay in bounds.
+            // Scrub mapping remains horizontal and unchanged.
+            val centreY = size.height / 2f +
+                with(density) { seekTrackVisualNudge(touchHeight).toPx() }
             val strokePx = with(density) { drawnTrackHeight.toPx() }
             val thumbPx = with(density) { thumbRadius.toPx() }
             // The thumb must not run off either end, so the track it rides is inset by its own
