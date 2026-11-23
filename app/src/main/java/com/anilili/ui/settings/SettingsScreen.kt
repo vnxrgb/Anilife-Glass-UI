@@ -2992,6 +2992,7 @@ fun SettingsScreen(
                 }
                 // On every form factor rather than a television-only list: the viewer who needs this
                 // row is by definition someone the app has *not* recognised as being on one.
+                if (BuildConfig.FLAVOR != "mobile") {
                 item(key = "Layout") {
                     MidnightSettingRow(
                         title = "Layout",
@@ -3003,6 +3004,7 @@ fun SettingsScreen(
                         },
                         onClick = { openPicker = SettingsPicker.FORM_FACTOR },
                     )
+                }
                 }
                 item(key = "App layout") {
                     MidnightSettingRow(
