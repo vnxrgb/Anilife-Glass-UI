@@ -12,6 +12,8 @@
 
     <!-- Only the television flavor advertises Leanback hardware. -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
+    <!-- TV devices can navigate entirely with a remote; do not require touch hardware. -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <application
         android:icon="@drawable/tv_launcher_icon"
