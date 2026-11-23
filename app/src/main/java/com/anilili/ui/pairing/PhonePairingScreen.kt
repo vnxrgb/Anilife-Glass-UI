@@ -188,6 +188,7 @@ private fun BrowsingContent(
     val context = LocalContext.current
     val televisions by vm.televisions.collectAsStateWithLifecycle()
     var manualAddress by remember { mutableStateOf("") }
+    var scanError by remember { mutableStateOf<String?>(null) }
 
     Text("Link a TV", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
     Text(
@@ -212,6 +213,22 @@ private fun BrowsingContent(
             onClick = { onServiceChange(PAIRING_SERVICE_MAL) },
             label = { Text(AccountService.MAL.label) }, modifier = Modifier.focusFill(extraFocus7, RoundedCornerShape(8.dp)),)
     }
+
+    // The TV QR contains only an address. Scanning starts the same encrypted,
+    // confirmation-gated flow as choosing a TV from discovery.
+    PairingQrScanButton(
+        modifier = Modifier.padding(bottom = 12.dp),
+        onScanned = { contents ->
+            val tv = parseScannedTvPairingAddress(contents)
+            if (tv != null) {
+                scanError = null
+                vm.connect(tv, service)
+            } else {
+                scanError = "That QR code is not an AniLumos TV pairing address."
+            }
+        },
+    )
+    scanError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
     if (televisions.isEmpty()) {
         Row(
@@ -311,4 +328,27 @@ internal fun parseManualAddress(value: String): DiscoveredTv? {
     val port = trimmed.substring(separator + 1).trim().toIntOrNull() ?: return null
     if (host.isEmpty() || port !in 1..65535) return null
     return DiscoveredTv(name = host, host = host, port = port)
+}
+
+/**
+ * The TV QR contains a plain IPv4 LAN address with a short-lived pairing port.
+ * Refuse URLs, hostnames and public IPs so an untrusted QR cannot point our
+ * encrypted pairing client at an arbitrary internet server.
+ */
+internal fun parseScannedTvPairingAddress(payload: String): DiscoveredTv? {
+    val value = payload.trim()
+    if (value.length !in 9..21 || !value.all { it.isDigit() || it == '.' || it == ':' }) return null
+    val tv = parseManualAddress(value) ?: return null
+    val octets = tv.host.split('.')
+    if (octets.size != 4) return null
+    val ip = octets.map { token ->
+        if (token.isEmpty() || token.length > 3 || (token.length > 1 && token[0] == '0')) return null
+        token.toIntOrNull()?.takeIf { it in 0..255 } ?: return null
+    }
+    val onLan = ip[0] == 10 ||
+        (ip[0] == 172 && ip[1] in 16..31) ||
+        (ip[0] == 192 && ip[1] == 168) ||
+        (ip[0] == 169 && ip[1] == 254)
+    if (!onLan) return null
+    return tv.copy(name = "AniLumos TV")
 }
