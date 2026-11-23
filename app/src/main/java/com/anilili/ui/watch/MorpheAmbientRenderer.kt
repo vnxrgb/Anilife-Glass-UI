@@ -36,6 +36,12 @@ internal class MorpheAmbientRenderer {
     private val encoded = FloatArray(grid.size)
     private val presented = FloatArray(grid.size)
     private val imagePixels = IntArray(gridWidth * gridHeight)
+    // The vertical attenuation depends only on row, not on video content. Cache
+    // pow() and rounding once rather than 88 times for every captured frame.
+    private val rowAlpha = IntArray(gridHeight) { y ->
+        ((1f - y.toFloat() / gridHeight).coerceIn(0f, 1f).pow(1.40f) * 168f)
+            .roundToInt().coerceIn(0, 255)
+    }
     private val pageLinear = FloatArray(3)
     private val virtualWidth = 640
     private val virtualHeight = 880
@@ -98,13 +104,12 @@ internal class MorpheAmbientRenderer {
         AmbientLightMath.encode(grid, encoded, presented, gridWidth, gridHeight, pageSpace)
         encoded.copyInto(presented)
         for (y in 0 until gridHeight) {
-            val fade = (1f - y.toFloat() / gridHeight).coerceIn(0f, 1f).pow(1.40f)
+            val alpha = rowAlpha[y]
             for (x in 0 until gridWidth) {
                 val n = (y * gridWidth + x) * 3
                 val r = (encoded[n].coerceIn(0f, 1f) * 255).roundToInt()
                 val g = (encoded[n + 1].coerceIn(0f, 1f) * 255).roundToInt()
                 val b = (encoded[n + 2].coerceIn(0f, 1f) * 255).roundToInt()
-                val alpha = (fade * 168f).roundToInt().coerceIn(0, 255)
                 imagePixels[y * gridWidth + x] = (alpha shl 24) or (r shl 16) or (g shl 8) or b
             }
         }
