@@ -24,7 +24,7 @@ val appVersionCode = 6
 val appVersionName = "0.1.3"
 
 tasks.named<CyclonedxDirectTask>("cyclonedxDirectBom") {
-    componentName = "Anilife"
+    componentName = "Anilumos"
     componentVersion = appVersionName
     projectType = Component.Type.APPLICATION
     includeConfigs = listOf("mobileReleaseRuntimeClasspath", "tvReleaseRuntimeClasspath")
@@ -68,7 +68,7 @@ android {
     buildToolsVersion = "35.0.1"
 
     defaultConfig {
-        applicationId = "io.github.anilifecommunity.anilife"
+        applicationId = "com.anilumos.app"
         // Fire OS 5 devices (including the 1st/2nd-gen Fire TV Sticks) report API 22.
         minSdk = 22
         targetSdk = 36
@@ -91,7 +91,7 @@ android {
         manifestPlaceholders["discordRedirectScheme"] = discordApplicationId
             .takeIf(String::isNotBlank)
             ?.let { "discord-$it" }
-            ?: "anilife-discord-unconfigured"
+            ?: "anilumos-discord-unconfigured"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
