@@ -195,7 +195,7 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
             add("Reset theme" to listOf("theme", "reset", "default", "restore"))
             if (isTv) add("Interface size" to listOf("size", "scale", "text", "big", "small", "zoom"))
             if (isTv) add("Overscan" to listOf("overscan", "edges", "cut off", "cropped", "bounds", "margin", "border", "fit"))
-            add("Layout" to listOf("layout", "tv", "tablet", "phone", "form factor", "leanback"))
+            if (BuildConfig.FLAVOR != "mobile") add("Layout" to listOf("layout", "tv", "tablet", "phone", "form factor", "leanback"))
             add("App layout" to listOf("layout", "legacy", "cinema", "navigation", "icons"))
             add(
                 "Keep the bars on screen" to listOf(
