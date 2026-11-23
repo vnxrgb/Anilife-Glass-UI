@@ -4,7 +4,7 @@ The Anilife logo and startup animation were supplied by the project maintainer f
 Anilife Android and Android TV application, repository presentation, and release materials.
 Derived launcher icons, transparent marks, wordmarks, and TV banners retain that provenance.
 
-The canonical round emblem in `docs/assets/anilife-logo-round-transparent.png` was derived from
+The original AniLife round emblem (available in the [upstream repository](https://github.com/anilifecommunity/android-and-tv/blob/main/docs/assets/anilife-logo-round-transparent.png)) was derived from
 the maintainer-supplied `Anilife App icon 1024.png` by removing only the connected outer tile.
 Launcher density variants and the adaptive foreground are mechanical resizes/padding of that file.
 The bundled launch videos are 30 fps H.264/YUV420P transcodes of the maintainer-supplied
@@ -17,4 +17,4 @@ are not redistributed as project branding.
 
 ## Anilumos identity (2026-11-23)
 
-The new A-and-candle logo uses vector resources under `app/src/main/res/drawable/anilumos_mark*.xml` and the README presentation source at `docs/assets/anilumos-mark.svg`. Original AniLife icon and old startup videos are no longer the app's displayed brand identity, but are still kept in the repository for provenance. Their applicable rights and license obligations remain unchanged.
+The new A-and-candle logo uses vector resources under `app/src/main/res/drawable/anilumos_mark*.xml` and the README presentation source at `docs/assets/anilumos-mark.svg`. Original AniLife art and startup-video resources still referenced by launcher-generation or legacy launch code are retained under `app/src`, while obsolete repository-presentation copies can be removed. These resources are not the Anilumos splash-screen identity. Their original provenance, copyright and license obligations remain unchanged.
