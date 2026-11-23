@@ -5,3 +5,5 @@ Publish exactly one universal, signed mobile APK after tests, lint, OAuth config
 zip alignment, package/version identity and release-certificate verification succeed.
 Use the existing production signing key. Do not overwrite previous stable releases.
 Keep preview and Android TV releases in the separate experimental repository.
+
+Retry stable v1.0.3 after correcting strict versionCode verification to 13.
