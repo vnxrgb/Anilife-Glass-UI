@@ -75,7 +75,7 @@ fun UpdatePromptHost() {
                 MidnightPage(onDismiss = { expanded = false }) {
                     MidnightModalTitle(
                         kicker = "What's new",
-                        title = "Anilife ${UpdateManager.offeredLabel(s.update)}",
+                        title = "Anilumos ${UpdateManager.offeredLabel(s.update)}",
                         body = "You have ${UpdateManager.installedLabel(s.update)}.",
                     )
                     MidnightRule(Modifier.padding(top = 12.dp))
@@ -94,7 +94,7 @@ fun UpdatePromptHost() {
                 MidnightModal(onDismiss = UpdateManager::dismiss) {
                     MidnightModalTitle(
                         kicker = "Update available",
-                        title = "Anilife ${UpdateManager.offeredLabel(s.update)}",
+                        title = "Anilumos ${UpdateManager.offeredLabel(s.update)}",
                         body = "You have ${UpdateManager.installedLabel(s.update)}.",
                     )
                     if (notes.isNotEmpty()) {
@@ -180,7 +180,7 @@ fun UpdatePromptHost() {
         is UpdateManager.State.Downloading -> MidnightModal(onDismiss = {}) {
             MidnightModalTitle(
                 kicker = "Downloading",
-                title = "Anilife ${UpdateManager.offeredLabel(s.update)}",
+                title = "Anilumos ${UpdateManager.offeredLabel(s.update)}",
                 body = null,
             )
             MidnightProgressLine(
@@ -192,7 +192,7 @@ fun UpdatePromptHost() {
         is UpdateManager.State.ReadyToInstall -> MidnightModal(onDismiss = UpdateManager::dismiss) {
             MidnightModalTitle(
                 kicker = "Ready to install",
-                title = "Anilife ${UpdateManager.offeredLabel(s.update)} is downloaded",
+                title = "Anilumos ${UpdateManager.offeredLabel(s.update)} is downloaded",
                 body = "If nothing happens, allow installs from this app when Android asks, then " +
                     "choose Install again.",
             )

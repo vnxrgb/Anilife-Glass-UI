@@ -584,7 +584,7 @@ enum class DownloadQuality(
  * single MP4, so `DEVICE_ONLY` does not skip the library — it drops the cached copy afterwards.
  */
 enum class DownloadDestination(val storedValue: String, val label: String) {
-    APP_ONLY("app", "Anilife library"),
+    APP_ONLY("app", "Anilumos library"),
     DEVICE_ONLY("device", "Device Downloads"),
     BOTH("both", "Both");
 

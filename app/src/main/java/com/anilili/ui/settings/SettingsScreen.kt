@@ -3290,7 +3290,7 @@ fun SettingsScreen(
                 item(key = "Upload diagnostics now") {
                     MidnightSettingRow(
                         title = "Upload diagnostics now",
-                        description = "Send one redacted report to the private Anilumos console",
+                        description = "Send one redacted report to the private Anilumos diagnostics endpoint",
                         enabled = !diagnosticsBusy,
                         busy = diagnosticsBusy,
                         onClick = {

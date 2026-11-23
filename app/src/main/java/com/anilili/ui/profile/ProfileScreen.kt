@@ -902,7 +902,7 @@ private fun ProfileHero(
         Column(Modifier.fillMaxWidth().padding(if (device.isTv) 20.dp else 16.dp)) {
             Text("Your anime, in one place", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
             Text(
-                "Connect AniList or MyAnimeList to browse every list, score, and episode progress from Anilife.",
+                "Connect AniList or MyAnimeList to browse every list, score, and episode progress from Anilumos.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = if (device.isTv) 5.dp else 6.dp),
