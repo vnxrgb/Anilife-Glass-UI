@@ -609,7 +609,10 @@ private fun DetailContent(
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = detailListState,
-            modifier = Modifier.fillMaxSize(),
+            // Keep content above the floating navigation instead of covering the next card.
+            modifier = Modifier.fillMaxSize().padding(
+                bottom = if (device.isTv) 0.dp else LocalAppChromeBottomInset.current,
+            ),
             // Scroll padding, not layout padding, so rows travel under the bar as it retreats. The
             // hero takes that height into itself instead, so the banner starts at the top edge
             // rather than below the bar; everything under it keeps the room it had.
