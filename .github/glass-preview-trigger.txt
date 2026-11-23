@@ -1,4 +1,3 @@
-AniLife Glass UI device-test preview — consolidated three screenshot suggestions
-Source baseline: f3aa5f67c991bbbfe1d345e5cde4583a1eb51995
-Home hero Watch now matches Details glass fill and rim, while each Home media section uses two equal-sized selectable Rail and Grid layout controls with independent rail state. Details Overview/Episodes/Related have equal width, centered text, and subtle matching glass background, with the 48dp watched eye action aligned beside its studio badge. All prior shared glass, Browse and player corrections preserved.
-Run mobile unit tests, lint, assemble universal Android debug APK and verify signing. On success update glass-ui-preview/anilife-glass-universal.apk only; do not touch stable release. Device validation pending.
+AniLife Glass UI preview — compact Home hero pagination and rounded layout controls
+Source baseline: 9dc76f916d920df5415ce52db9b64e0b3c8b756c
+Reduce mobile hero page-indicator pill footprint (21dp tap cells, 12dp selected marker, no excess dot spacing); make the Home rail and grid layout selector buttons circular while preserving their selected states and independent section switching. Preserve other screenshot fixes. Verify unit tests, lint, universal APK signature, publish preview only on success. No stable release.
