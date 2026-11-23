@@ -8,16 +8,16 @@
 
 - Display name: **Anilumos**
 - Brand: a luminous A with a warm candle flame; the launch background is always pure black
-- Android application ID: `io.github.anilifecommunity.anilife` (unchanged to preserve update and data compatibility)
+- Android application ID: `com.anilumos.app` (new, independent from AniLife; existing app data is not migrated automatically)
 - Internal source namespace: `com.anilili` (retained to avoid breaking source integration)
-- The `anilife://` deep-link protocol stays supported for backwards compatibility
+- The legacy `anilife://` deep-link protocol remains supported for link compatibility, not as app branding
 - The existing GitHub repository path remains unchanged while the code is rebranded
 
 ## Mobile preview APK
 
 The feature-branch preview workflow builds and verifies a single `anilumos-universal.apk` for phone/tablet testing. The direct download appears under the [Anilumos preview release](https://github.com/vnxrgb/Anilife-Glass-UI/releases/tag/anilumos-preview) only after tests, lint, APK assembly and signature verification pass.
 
-This is a debug preview, **not** the stable signed release. To update an existing installation, both APKs need matching application IDs and compatible signing certificates. Debug builds have a separate `.debug` application ID suffix, so they install alongside release builds.
+This is a debug preview, **not** the stable signed release. Anilumos has a different application ID from AniLife, so both can be installed together and have separate data. Debug builds additionally use a `.debug` suffix and install alongside Anilumos release builds.
 
 ## Build from source
 
