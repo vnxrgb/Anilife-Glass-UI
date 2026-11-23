@@ -1,4 +1,4 @@
-AniLife universal mobile APK preview rebuild after compile fix
-Source revision: 89411097c383e435d2837e9bd0cff73f2cd4557e
-Fixed PlayerSurface.kt missing androidx.compose.foundation.shape.CircleShape import at skip button (three unresolved references in previous build 45125808791).
-Includes rounded settings, server picker cards, watch page selector pills, skip controls, optional fullscreen ambient side glow. Run mobile tests, lint, assemble and publish one direct universal APK only after success.
+AniLife UI preview: stronger fullscreen letterbox ambience and no automatic What's New tour
+Source revision: bf9758067fc490472a54f8ce4ed7abee6d8f15bb
+Increase fullscreen side glow saturation/opacity while keeping video content unobscured and preserving player ambient settings. Remove auto-start of What's New tour on Home (mobile and TV) and its root overlay; keep existing home functions.
+Run mobile unit tests, lint and APK build. Publish direct anilife-glass-universal.apk only on successful verification.
