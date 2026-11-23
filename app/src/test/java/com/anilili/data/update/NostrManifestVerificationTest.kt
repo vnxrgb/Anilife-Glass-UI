@@ -5,6 +5,7 @@ import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 /**
@@ -45,12 +46,13 @@ class NostrManifestVerificationTest {
         assertTrue("size should be populated", info.sizeBytes > 0)
     }
 
-    /** Manifests published before the flavor split have no variants; a TV must still update. */
+    /** Legacy top-level APKs are mobile builds and cannot be installed as TV updates. */
     @Test
-    fun `a legacy manifest still gives a TV something to install`() {
-        val info = event().parseManifest(json, isTv = true)
-        assertEquals("0.1.0-beta.1", info.version)
-        assertTrue("falls back to the single apkUrl", info.apkUrl.endsWith("Anilife.apk"))
+    fun `a legacy mobile-only manifest is refused on TV`() {
+        assertThrows(IllegalStateException::class.java) {
+            event().parseManifest(json, isTv = true)
+        }
+        assertEquals("0.1.0-beta.1", event().parseManifest(json, isTv = false).version)
     }
 
     @Test
@@ -87,17 +89,30 @@ class NostrManifestVerificationTest {
     }
 
     @Test
-    fun `a manifest with only a mobile variant does not strand a TV`() {
+    fun `mobile-only variants never fall back to a phone APK on TV`() {
         val mobileOnly = event().copy(
             content = """
                 {"version":"0.1.56","apkUrl":"https://example.test/Anilife.apk",
                  "variants":{"mobile":{"url":"https://example.test/Anilife.apk"}}}
             """.trimIndent(),
         )
-        assertEquals(
-            "https://example.test/Anilife.apk",
-            mobileOnly.parseManifest(json, isTv = true).apkUrl,
+        assertThrows(IllegalStateException::class.java) {
+            mobileOnly.parseManifest(json, isTv = true)
+        }
+        assertEquals("https://example.test/Anilife.apk", mobileOnly.parseManifest(json).apkUrl)
+    }
+
+    @Test
+    fun `empty TV variant URL cannot fall back to mobile APK`() {
+        val emptyTvUrl = event().copy(
+            content = """
+                {"version":"0.1.56","apkUrl":"https://example.test/Anilife.apk",
+                 "variants":{"tv":{"url":""}}}
+            """.trimIndent(),
         )
+        assertThrows(IllegalStateException::class.java) {
+            emptyTvUrl.parseManifest(json, isTv = true)
+        }
     }
 
     @Test
