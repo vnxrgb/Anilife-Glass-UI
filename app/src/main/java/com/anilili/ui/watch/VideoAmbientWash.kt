@@ -368,16 +368,40 @@ internal fun FullscreenSideAmbient(
         val pictureWidth = h * videoAspectRatio
         val side = (w - pictureWidth) / 2f
         if (side <= 2f) return@Canvas
-        val power = intensity.coerceIn(0f, 1f) * 0.94f
-        // Clip both light fields strictly to the letterbox areas, so the video,
-        // subtitles and gesture layer stay fully readable.
+        val power = intensity.coerceIn(0f, 1f)
+        if (power <= 0f) return@Canvas
+        // Fullscreen ambience should feel like the colours of the picture are
+        // spreading into the letterboxes, not like a thin tinted border.
+        // Keep the entire effect clipped outside the real video and captions.
+        fun lifted(color: Color): Color = Color(
+            red = (color.red * 0.90f + 0.10f).coerceIn(0f, 1f),
+            green = (color.green * 0.90f + 0.10f).coerceIn(0f, 1f),
+            blue = (color.blue * 0.90f + 0.10f).coerceIn(0f, 1f),
+            alpha = color.alpha,
+        )
+        val leftGlow = lifted(left)
+        val rightGlow = lifted(right)
+        val middleGlow = lifted(palette.center)
+        val reach = maxOf(h * 0.62f, side * 2.4f)
         clipRect(left = 0f, top = 0f, right = side, bottom = h) {
+            // A low-intensity floor prevents large black dead zones at the outer edge.
             drawRect(
                 brush = Brush.horizontalGradient(
-                    0f to Color.Transparent,
-                    0.48f to left.copy(alpha = 0.28f * power),
-                    1f to left.copy(alpha = 0.80f * power),
+                    0f to leftGlow.copy(alpha = 0.20f * power),
+                    0.40f to leftGlow.copy(alpha = 0.39f * power),
+                    1f to leftGlow.copy(alpha = 0.79f * power),
                     startX = 0f, endX = side,
+                ),
+                size = Size(side, h),
+            )
+            // Wide diffused colour blooms, gently influenced by the frame centre.
+            drawRect(
+                brush = Brush.radialGradient(
+                    0f to middleGlow.copy(alpha = 0.36f * power),
+                    0.50f to leftGlow.copy(alpha = 0.22f * power),
+                    1f to Color.Transparent,
+                    center = Offset(side * 1.08f, h * 0.50f),
+                    radius = reach,
                 ),
                 size = Size(side, h),
             )
@@ -385,10 +409,21 @@ internal fun FullscreenSideAmbient(
         clipRect(left = w - side, top = 0f, right = w, bottom = h) {
             drawRect(
                 brush = Brush.horizontalGradient(
-                    0f to right.copy(alpha = 0.80f * power),
-                    0.52f to right.copy(alpha = 0.28f * power),
-                    1f to Color.Transparent,
+                    0f to rightGlow.copy(alpha = 0.79f * power),
+                    0.60f to rightGlow.copy(alpha = 0.39f * power),
+                    1f to rightGlow.copy(alpha = 0.20f * power),
                     startX = w - side, endX = w,
+                ),
+                topLeft = Offset(w - side, 0f),
+                size = Size(side, h),
+            )
+            drawRect(
+                brush = Brush.radialGradient(
+                    0f to middleGlow.copy(alpha = 0.36f * power),
+                    0.50f to rightGlow.copy(alpha = 0.22f * power),
+                    1f to Color.Transparent,
+                    center = Offset(w - side * 1.08f, h * 0.50f),
+                    radius = reach,
                 ),
                 topLeft = Offset(w - side, 0f),
                 size = Size(side, h),
