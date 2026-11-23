@@ -1,29 +1,27 @@
-# Security policy
+# Security Policy
 
 ## Supported versions
 
-There is no approved public Anilife release yet. After the first release, only the latest version
-published by `anilifecommunity/android-and-tv` will receive security fixes.
+Anilumos has a published [v1.0.0 stable release](https://github.com/vnxrgb/Anilumos/releases/tag/v1.0.0). Security fixes are targeted at the latest supported Anilumos release; older builds and preview APKs are not guaranteed to receive fixes.
 
-## Report a vulnerability
+Anilumos is an independent fork of [AniLife](https://github.com/anilifecommunity/android-and-tv). Report vulnerabilities affecting Anilumos here, not as if they were official AniLife releases.
 
-Use a private [GitHub Security Advisory](https://github.com/anilifecommunity/android-and-tv/security/advisories/new).
-Do not open a public issue for a vulnerability, leaked credential, signing concern, or bypass that
-could put users at risk.
+## Reporting a vulnerability
 
-Include the affected version or commit, device and Android version, reproduction steps, impact, and
-the smallest useful diagnostic sample. Remove account tokens, cookies, private stream URLs, media
-history, and personal identifiers. We will acknowledge a usable report, investigate it privately,
-and coordinate disclosure after a fix is available.
+Please use a private [GitHub Security Advisory](https://github.com/vnxrgb/Anilumos/security/advisories/new) instead of opening a public issue.
 
-## Credential exposure
+Include the affected release or commit, device and Android version, steps to reproduce, and a description of the impact. Share only the smallest useful diagnostic sample, with account tokens, cookies, private stream URLs, watch history, and personal identifiers removed.
 
-Treat any credential committed to Git or printed in public CI as compromised. Revoke it at the
-provider, rotate the GitHub secret, invalidate derived sessions where possible, and document the
-incident without copying the secret into an issue or pull request.
+Reports will be reviewed privately, and disclosure should be coordinated so users can receive a fix before technical details are published. Response and fix times are not guaranteed.
 
-The Android application must not contain OAuth client secrets, Discord bot tokens, provider user
-accounts, the APK signing keystore, or the update-manifest private key.
+## Exposed credentials
 
-Maintainers should follow the [incident-response procedure](docs/security/incident-response.md) for
-credential exposure, signing concerns, or a vulnerable release.
+Treat any credential committed to Git or printed in public CI logs as compromised. Revoke or rotate it at its provider, update the relevant GitHub Actions secret, and invalidate affected sessions where possible. Never paste the exposed secret into a public issue or pull request.
+
+The Anilumos APK must not include OAuth client secrets, Discord bot tokens, user credentials, the Android signing keystore, or the update-manifest private key.
+
+For maintainers: see the [incident-response procedure](docs/security/incident-response.md).
+
+## Upstream and third-party code
+
+Anilumos uses code from AniLife, Morphe, and other dependencies. Their respective licenses and notices remain in place; see the [README](README.md) and [LICENSE](LICENSE).
