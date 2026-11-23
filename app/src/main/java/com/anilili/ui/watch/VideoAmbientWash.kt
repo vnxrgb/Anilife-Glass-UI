@@ -17,6 +17,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.graphics.FilterQuality
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -29,7 +34,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 /** Colours are sampled from the live picture, not guessed from the episode poster. */
-data class VideoAmbientPalette(val left: Color, val right: Color, val center: Color = left) {
+data class VideoAmbientPalette(
+    val left: Color,
+    val right: Color,
+    val center: Color = left,
+    val spatialLight: ImageBitmap? = null,
+) {
     companion object {
         val Empty = VideoAmbientPalette(Color.Transparent, Color.Transparent, Color.Transparent)
     }
@@ -56,22 +66,25 @@ internal fun NativeVideoAmbientSampler(
         if (!active || lowMemoryDevice || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@LaunchedEffect
         val surface = playerView?.videoSurfaceView as? SurfaceView ?: return@LaunchedEffect
         val handler = Handler(Looper.getMainLooper())
+        val spatialRenderer = MorpheAmbientRenderer()
         var lastPalette: VideoAmbientPalette? = null
         while (isActive) {
             if (surface.holder.surface.isValid && surface.width > 0 && surface.height > 0 &&
                 surface.isShown && playerView?.player?.isPlaying == true) {
-                val bitmap = Bitmap.createBitmap(48, 27, Bitmap.Config.ARGB_8888)
-                val sampled = try {
-                    suspendCancellableCoroutine<VideoAmbientPalette?> { continuation ->
+                val bitmap = Bitmap.createBitmap(96, 54, Bitmap.Config.ARGB_8888)
+                // PixelCopy only reads the existing decoded SurfaceView; the Morphe
+                // renderer does its light-field processing on the worker dispatcher.
+                val pixels = try {
+                    suspendCancellableCoroutine<IntArray?> { continuation ->
                         try {
                             PixelCopy.request(surface, bitmap, { result ->
-                                val palette = if (result == PixelCopy.SUCCESS) {
-                                    extractAmbientPalette(bitmap)
-                                } else {
-                                    null
-                                }
+                                val captured = if (result == PixelCopy.SUCCESS) {
+                                    IntArray(bitmap.width * bitmap.height).also {
+                                        bitmap.getPixels(it, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+                                    }
+                                } else null
                                 bitmap.recycle()
-                                if (continuation.isActive) continuation.resume(palette)
+                                if (continuation.isActive) continuation.resume(captured)
                             }, handler)
                         } catch (_: Exception) {
                             bitmap.recycle()
@@ -81,6 +94,16 @@ internal fun NativeVideoAmbientSampler(
                 } catch (_: Exception) {
                     null
                 }
+                val sampled = if (pixels != null) withContext(Dispatchers.Default) {
+                    val spatial = spatialRenderer.render(pixels)
+                    if (spatial != null) {
+                        // Preserve the existing palette for a gradient fallback when the
+                        // spatial view has no frames (e.g. playback or DRM transition).
+                        val original = Bitmap.createBitmap(pixels, 96, 54, Bitmap.Config.ARGB_8888)
+                        val tint = try { extractAmbientPalette(original) } finally { original.recycle() }
+                        tint?.copy(spatialLight = spatial)
+                    } else null
+                } else null
                 if (sampled != null && sampled != lastPalette) {
                     lastPalette = sampled
                     currentCallback(sampled)
@@ -157,6 +180,15 @@ internal fun Modifier.videoAmbientWash(
     val right by animateColorAsState(palette.right, tween(450), label = "ambientRight")
     val middle by animateColorAsState(palette.center, tween(450), label = "ambientMiddle")
     return this.drawBehind {
+        if (palette.spatialLight != null) {
+            drawImage(
+                image = palette.spatialLight,
+                dstSize = IntSize(size.width.toInt().coerceAtLeast(1), size.height.toInt().coerceAtLeast(1)),
+                alpha = intensity.coerceIn(0.2f, 1f),
+                filterQuality = FilterQuality.Medium,
+            )
+            return@drawBehind
+        }
         if (left.alpha <= 0f && right.alpha <= 0f && middle.alpha <= 0f) return@drawBehind
 
         val w = size.width
