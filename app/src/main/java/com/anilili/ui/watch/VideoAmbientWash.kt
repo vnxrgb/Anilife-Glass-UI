@@ -368,15 +368,15 @@ internal fun FullscreenSideAmbient(
         val pictureWidth = h * videoAspectRatio
         val side = (w - pictureWidth) / 2f
         if (side <= 2f) return@Canvas
-        val power = intensity.coerceIn(0f, 1f) * 0.52f
+        val power = intensity.coerceIn(0f, 1f) * 0.94f
         // Clip both light fields strictly to the letterbox areas, so the video,
         // subtitles and gesture layer stay fully readable.
         clipRect(left = 0f, top = 0f, right = side, bottom = h) {
             drawRect(
                 brush = Brush.horizontalGradient(
                     0f to Color.Transparent,
-                    0.48f to left.copy(alpha = 0.14f * power),
-                    1f to left.copy(alpha = 0.52f * power),
+                    0.48f to left.copy(alpha = 0.28f * power),
+                    1f to left.copy(alpha = 0.80f * power),
                     startX = 0f, endX = side,
                 ),
                 size = Size(side, h),
@@ -385,8 +385,8 @@ internal fun FullscreenSideAmbient(
         clipRect(left = w - side, top = 0f, right = w, bottom = h) {
             drawRect(
                 brush = Brush.horizontalGradient(
-                    0f to right.copy(alpha = 0.52f * power),
-                    0.52f to right.copy(alpha = 0.14f * power),
+                    0f to right.copy(alpha = 0.80f * power),
+                    0.52f to right.copy(alpha = 0.28f * power),
                     1f to Color.Transparent,
                     startX = w - side, endX = w,
                 ),
