@@ -3149,8 +3149,8 @@ private fun CompactClickablePill(
                     true
                 }
             }
-            .focusFill(fillFocus7, RoundedCornerShape(10.dp))
-            .clip(RoundedCornerShape(10.dp))
+            .focusFill(fillFocus7, CircleShape)
+            .clip(CircleShape)
             .background(
                 fillFocus7.background(if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
                 else glassPanelColor()),
@@ -3158,7 +3158,7 @@ private fun CompactClickablePill(
             .border(
                 1.dp,
                 if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.65f) else glassRimColor(),
-                RoundedCornerShape(10.dp),
+                CircleShape,
             )
             .clickable(enabled = enabled, onClick = onClick)
             // The short end padding is there for the dropdown arrow, whose glyph carries its own
@@ -3212,10 +3212,10 @@ private fun CompactDropdown(
         Row(
             modifier = Modifier
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-                .focusFill(fillFocus8, RoundedCornerShape(10.dp))
-                .clip(RoundedCornerShape(10.dp))
+                .focusFill(fillFocus8, CircleShape)
+                .clip(CircleShape)
                 .background(fillFocus8.background(glassPanelColor()))
-                .border(1.dp, glassRimColor(), RoundedCornerShape(10.dp))
+                .border(1.dp, glassRimColor(), CircleShape)
                 .clickable(enabled = enabled) { expanded = true }
                 .padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
