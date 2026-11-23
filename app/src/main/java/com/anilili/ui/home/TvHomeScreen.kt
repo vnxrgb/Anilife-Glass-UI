@@ -93,7 +93,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import com.anilili.ui.components.TvTopNavigationHeight
 import com.anilili.ui.tour.RegisterTourScroller
-import com.anilili.ui.tour.StartWhatsNewTourWhenSettled
 import com.anilili.ui.tour.TourTarget
 import com.anilili.ui.tour.tourTarget
 import androidx.compose.ui.res.stringResource
@@ -221,7 +220,6 @@ internal fun TvHomeContent(
 
     // What's new (ui/tour): starts once Home has settled. A row a step points at is scrolled to just
     // under the floating bar; the dice and Settings live in that bar, which shows at the top.
-    StartWhatsNewTourWhenSettled()
     val tourTopPx = with(LocalDensity.current) { (TvTopNavigationHeight + 12.dp).roundToPx() }
     RegisterTourScroller { target ->
         val row = when (target) {
