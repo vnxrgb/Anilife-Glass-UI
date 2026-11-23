@@ -7,6 +7,7 @@ package com.anilili.ui.home
 import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassAtmosphere
 import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.cinematicPrimaryButtonBorder
 import com.anilili.ui.components.cinematicPrimaryButtonColors
 import com.anilili.ui.components.cinematicSecondaryButtonColors
 import com.anilili.ui.components.cinematicSecondaryButtonBorder
@@ -1140,14 +1141,15 @@ private fun HeroCard(
                 // The hero is a destination as well as artwork. Keep the actionable
                 // call-to-action visible instead of relying on an undocumented poster tap.
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 9.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Button(
+                    OutlinedButton(
                         onClick = { onWatch(media.id) },
                         // Neutral high-contrast action; keep the artwork free of theme-accent tint.
-                        colors = cinematicPrimaryButtonColors(),
+                        colors = cinematicPrimaryButtonColors(onArtwork = true),
+                        border = cinematicPrimaryButtonBorder(onArtwork = true),
                         modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                         shape = RoundedCornerShape(50),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 9.dp),
