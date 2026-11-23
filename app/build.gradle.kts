@@ -212,20 +212,13 @@ android {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             val abi = output.getFilter(OutputFile.ABI)
             val buildTypeSuffix = if (buildType.name == "release") "" else "-${buildType.name}"
-            // Updaters in v0.1.32 and earlier install the release's first .apk asset, and
-            // GitHub orders assets by name: '.' sorts before '_', so "Anilife.apk" (universal,
-            // runs on every ABI) must precede "Anilife_<abi>.apk". Never name splits with '-';
-            // '-' sorts before '.' and legacy TVs would fetch an incompatible split.
-            //
-            // The mobile flavor keeps the historical names exactly, because every install out
-            // there is already looking for them. TV assets take an extra "_tv" segment, which
-            // sorts after all of the mobile names, so a legacy updater still lands on the
-            // universal mobile APK rather than a build meant for a different form factor.
+            // Anilumos is a separate app ID, so its generated APK names can use its own
+            // branding without affecting legacy AniLife update paths.
             val formSuffix = if (flavorName == "tv") "_tv" else ""
             output.outputFileName = if (abi == null) {
-                "Anilife$buildTypeSuffix$formSuffix.apk"
+                "Anilumos$buildTypeSuffix$formSuffix.apk"
             } else {
-                "Anilife$buildTypeSuffix${formSuffix}_$abi.apk"
+                "Anilumos$buildTypeSuffix${formSuffix}_$abi.apk"
             }
         }
     }
