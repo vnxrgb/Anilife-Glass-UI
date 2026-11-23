@@ -201,10 +201,10 @@ private fun BrowsingContent(
         )
     }
 
-    Text("Link a TV", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
+    Text("AniLumos Connect", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
     Text(
-        "Sign a television into your account from here. Both devices need to be on the same " +
-            "network.",
+        "Link your AniLumos phone and television securely. Keep both devices on the same " +
+            "local network, then scan the QR code shown on your TV.",
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 6.dp, bottom = 16.dp),
@@ -261,7 +261,7 @@ private fun BrowsingContent(
     }
 
     Text(
-        "Scan the QR code on your TV to connect without typing its address.",
+        "Scan the QR code in AniLumos on your TV to begin secure sign-in.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
