@@ -473,7 +473,7 @@ private fun MidnightRowScaffold(
     val device = LocalAppDeviceProfile.current
     val minHeight = if (device.isTv) 52.dp else 46.dp
     var focused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(MidnightRowRadius)
+    val shape = RoundedCornerShape(if (device.isTv) MidnightRowRadius else 22.dp)
     val fill = when {
         focused -> MidnightFocusFill
         selected && !device.isTv -> MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
