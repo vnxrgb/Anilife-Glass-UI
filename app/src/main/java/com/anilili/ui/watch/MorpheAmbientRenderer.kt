@@ -34,6 +34,7 @@ internal class MorpheAmbientRenderer {
     private val soft = FloatArray(grid.size)
     private val scratch = FloatArray(grid.size)
     private val encoded = FloatArray(grid.size)
+    private val presented = FloatArray(grid.size)
     private val imagePixels = IntArray(gridWidth * gridHeight)
     private val pageLinear = FloatArray(3)
     private val virtualWidth = 640
@@ -72,7 +73,9 @@ internal class MorpheAmbientRenderer {
 
         // Morphe's scene-cut behavior: snap to a different scene but ease normal motion.
         val sceneCut = previous != null && changed > frame.size / 8L * 70L
-        AmbientLightMath.blend(nearExact, near, if (!hasFrame || sceneCut) 0f else 0.36f, near)
+        // Keep a share of the prior frame to soften motion between captures.
+        // Retain a little even at scene cuts so bright flashes don't pop abruptly.
+        AmbientLightMath.blend(nearExact, near, if (!hasFrame) 0f else if (sceneCut) 0.12f else 0.58f, near)
         hasFrame = true
         lastFrame = frame
 
@@ -92,7 +95,8 @@ internal class MorpheAmbientRenderer {
             grid, soft, scratch, gridWidth, gridHeight,
             pageSpace, pageLinear, 0.30f,
         )
-        AmbientLightMath.encode(grid, encoded, FloatArray(encoded.size), gridWidth, gridHeight, pageSpace)
+        AmbientLightMath.encode(grid, encoded, presented, gridWidth, gridHeight, pageSpace)
+        encoded.copyInto(presented)
         for (y in 0 until gridHeight) {
             val fade = (1f - y.toFloat() / gridHeight).coerceIn(0f, 1f).pow(1.40f)
             for (x in 0 until gridWidth) {
