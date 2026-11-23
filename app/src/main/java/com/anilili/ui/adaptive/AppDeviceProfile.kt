@@ -1,6 +1,7 @@
 package com.anilili.ui.adaptive
 
 import android.app.ActivityManager
+import com.anilili.BuildConfig
 import android.content.Context
 import android.content.res.Configuration
 import androidx.compose.animation.core.animateFloatAsState
@@ -202,7 +203,10 @@ fun rememberAppDeviceProfile(): AppDeviceProfile {
     val uiScale = LocalUiScale.current
     val signals = rememberTelevisionSignals()
     val preference by SettingsStore.formFactorPreference.collectAsState()
-    return remember(uiModeType, configuration.screenWidthDp, lowRam, memoryClassMb, uiScale, signals, preference) {
+    // Mobile users must never enter the ten-foot UI, even after migrating a
+    // saved television override or running on hardware advertising Leanback.
+    val resolvedPreference = if (BuildConfig.FLAVOR == "mobile") FormFactorPreference.HANDHELD else preference
+    return remember(uiModeType, configuration.screenWidthDp, lowRam, memoryClassMb, uiScale, signals, resolvedPreference) {
         resolveAppDeviceProfile(
             uiModeType,
             configuration.screenWidthDp,
@@ -210,7 +214,7 @@ fun rememberAppDeviceProfile(): AppDeviceProfile {
             memoryClassMb,
             uiScale,
             signals,
-            preference,
+            resolvedPreference,
         )
     }
 }
@@ -228,7 +232,8 @@ fun rememberIsTelevision(): Boolean {
     val preference by SettingsStore.formFactorPreference.collectAsState()
     val uiModeType = configuration.uiMode and Configuration.UI_MODE_TYPE_MASK
     return remember(uiModeType, configuration.screenWidthDp, signals, preference) {
-        televisionSignal(uiModeType, configuration.screenWidthDp, signals, preference) != null
+        BuildConfig.FLAVOR != "mobile" &&
+            televisionSignal(uiModeType, configuration.screenWidthDp, signals, preference) != null
     }
 }
 
