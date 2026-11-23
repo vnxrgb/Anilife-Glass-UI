@@ -1,3 +1,4 @@
-AniLife Glass UI preview — compact Home hero pagination and rounded layout controls
-Source baseline: 9dc76f916d920df5415ce52db9b64e0b3c8b756c
-Reduce mobile hero page-indicator pill footprint (21dp tap cells, 12dp selected marker, no excess dot spacing); make the Home rail and grid layout selector buttons circular while preserving their selected states and independent section switching. Preserve other screenshot fixes. Verify unit tests, lint, universal APK signature, publish preview only on success. No stable release.
+AniLife Glass UI mobile test APK — enhanced scene-responsive video ambient upgrade
+Source baseline: 1de1f0c15435f7f5cf17ec22905876d941496292
+Includes three-zone left/center/right native video frame ambient color sampling, faster 260ms active-playback cadence, color transition smoothing and fallback; Details banner-based static ambient glow and right-side watched action; compact Home hero pager and circular Grid/Rail selectors, plus previous glass UI refinements.
+Build and verify mobile debug unit tests, lint, universal APK and signature; on success replace only glass-ui-preview/anilife-glass-universal.apk and update release target. Preserve stable release; device performance and UI acceptance remain pending.
