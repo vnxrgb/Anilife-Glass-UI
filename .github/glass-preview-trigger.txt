@@ -1,5 +1,5 @@
-AniLife Glass UI About attribution release verification
-Source branch: c271efc02c0239f44284ec0f6392882a5e7dd3b5
-Add easily accessible Morphe credit on Settings > About, verbatim: This app uses code from Morphe. To learn more, visit https://morphe.software
-Entire attribution card opens the official website; visible in full on phones and TV; searchable via Morphe attribution entry. Adds settings search index regression test. Preserve all previous UI and Morphe spatial ambient updates.
-Run mobile unit tests, lint and universal APK signature verification. Only publish glass-ui-preview on success; leave stable release unchanged.
+AniLife mobile-first preview — original website shortcut removed, Android TV mode removed from phone app
+Source feature commit: ee8099e64babc0743345d559e96a11bd417cf803
+Removed Watch on Anilife.cc action and its Settings search index item, kept Morphe's required GPL attribution. The mobile flavor is forced into handheld/tablet classification for both UI and app services even if a previous override requested TV, and no longer includes the LEANBACK_LAUNCHER intent. TV-only launcher stays confined to the separate tv flavor to preserve its legacy compile path, which is NOT included in this mobile APK. Preserved mobile package ID, signing/debug separation, player, downloads, library, settings storage and original anilife:// internal deep links.
+New unit regression checks: no original website link in About, no TV layout selector on mobile, Morphe credit still searchable, and no common Android TV launcher intent.
+Run mobile unit tests, lint and assembleMobileDebug, verify APK signature. Publish only on successful verification; never alter main or stable release. Physical-device smoke testing remains necessary.
