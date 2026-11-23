@@ -1,6 +1,15 @@
 package com.anilili.ui.pairing
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import io.nayuki.qrcodegen.QrCode
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -100,9 +109,17 @@ fun TvPairingScreen(
                 is TvPairingState.Waiting -> {
                     Heading("Sign in from your phone")
                     Body(
-                        "Open Anilife on your phone, go to your profile and choose " +
+                        "Open AniLumos on your phone, go to your profile and choose " +
                             "\"Link a TV\". This television will appear in the list.",
                     )
+                    // A QR is useful where mDNS is blocked, but never embeds a credential.
+                    // Scanning copies the address; the phone still performs authenticated
+                    // pairing with the six-digit confirmation on both screens.
+                    current.addresses.firstOrNull()?.let { formatted ->
+                        val address = formatted.substringBefore("  (").trim()
+                        TvPairingAddressQr(address)
+                        Body("Scan to copy the TV address, then paste it in AniLumos → Link a TV.")
+                    }
                     if (current.addresses.isEmpty()) {
                         Body("This television has no network address — check its connection.")
                     } else {
@@ -252,5 +269,37 @@ private fun Actions(
     LaunchedEffect(primaryLabel, secondaryLabel) {
         awaitFrame()
         runCatching { focus.requestFocus() }
+    }
+}
+
+/**
+ * QR encodes only the LAN address, never login tokens or pairing secrets.
+ * It is a fallback for phones whose router blocks mDNS discovery.
+ */
+@Composable
+private fun TvPairingAddressQr(address: String) {
+    val qr = remember(address) {
+        runCatching { QrCode.encodeText(address, QrCode.Ecc.MEDIUM) }.getOrNull()
+    } ?: return
+    Canvas(
+        modifier = Modifier
+            .padding(top = 16.dp)
+            .size(196.dp)
+            .background(Color.White)
+            .semantics { contentDescription = "TV pairing address: $address" },
+    ) {
+        val dimension = qr.size + 8
+        val cell = size.minDimension / dimension
+        for (y in 0 until qr.size) {
+            for (x in 0 until qr.size) {
+                if (qr.getModule(x, y)) {
+                    drawRect(
+                        color = Color.Black,
+                        topLeft = Offset((x + 4) * cell, (y + 4) * cell),
+                        size = Size(cell, cell),
+                    )
+                }
+            }
+        }
     }
 }
