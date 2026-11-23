@@ -27,18 +27,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Never delete original prereleases before an exact-copy migration AND
+          # two verified, release-signed experimental replacements have been published.
           for attempt in $(seq 1 55); do
             response="$(gh api repos/vnxrgb/anilumos-preview/releases?per_page=100)"
-            mobile="$(jq -r '[.[] | select(.prerelease and (.tag_name | startswith("mobile-beta-")) and ([.assets[].name] == ["AniLumos-MOBILE-BETA-debug.apk"]))] | length' <<< "$response")"
-            tv="$(jq -r '[.[] | select(.prerelease and (.tag_name | startswith("tv-alpha-")) and ([.assets[].name] == ["AniLumos-TV-ALPHA-debug.apk"]))] | length' <<< "$response")"
-            if (( mobile > 0 && tv > 0 )); then
-              echo "Confirmed standalone mobile and TV release APKs in vnxrgb/anilumos-preview"
+            mobile="$(jq -r '[.[] | select(.prerelease and (.tag_name | startswith("mobile-beta-signed-")) and ([.assets[].name] == ["AniLumos-MOBILE-BETA-signed.apk"]))] | length' <<< "$response")"
+            tv="$(jq -r '[.[] | select(.prerelease and (.tag_name | startswith("tv-alpha-signed-")) and ([.assets[].name] == ["AniLumos-TV-ALPHA-signed.apk"]))] | length' <<< "$response")"
+            originals="$(jq -r '[.[] | select(.prerelease and (.tag_name == "migrated-mobile-v1.0.3-beta.1" or .tag_name == "migrated-tv-v1.0.2-alpha.2" or .tag_name == "migrated-tv-anilumos-tv-preview") and ([.assets[] | select(.name | endswith(".apk"))] | length == 1))] | length' <<< "$response")"
+            if (( mobile > 0 && tv > 0 && originals == 3 )); then
+              echo "Verified both signed replacement APKs and all three exact-copy migrations"
               exit 0
             fi
-            echo "Preview APKs not both published yet (mobile=$mobile tv=$tv); check $attempt/55"
+            echo "Migration pending (signed mobile=$mobile signed tv=$tv migrated originals=$originals); check $attempt/55"
             sleep 60
           done
-          echo "::error::No confirmed mobile and TV APK-only replacements. Keeping old releases intact."
+          echo "::error::Migration incomplete: keeping old releases intact."
           exit 1
 
       - name: Retire only original experimental releases, never stable versions
