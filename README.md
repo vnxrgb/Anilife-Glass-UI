@@ -34,6 +34,19 @@ It is **not** presented as a new streaming service, an original anime catalogue 
 
 These are **customizations and integrations built on top of AniLife**, not a claim that every underlying capability was written from scratch. Appearance and playback behavior can vary by Android version, device and provider.
 
+## Redesigned video player — a central Anilumos customization
+
+The player was one of the biggest reasons for creating this fork. Rather than replacing AniLife's reliable Media3 playback engine, Anilumos **redesigns the viewing interface around it**:
+
+- **Cinematic fullscreen controls:** A more balanced control layout with rounded playback, skip and navigation actions, cleaner spacing and a carefully aligned seek bar.
+- **Neutral Liquid Glass overlays:** Translucent, softly highlighted buttons and control surfaces that complement different theme colors and the anime on screen, without an excessive grey cast.
+- **Improved mini-player presentation:** Reworked floating-player styling and layout to feel consistent with the fullscreen experience.
+- **Ambient lighting that follows the actual video:** Sampled frame colors illuminate the video surroundings, including side lighting in fullscreen; the effect remains separate from the playing picture and subtitles.
+- **Polished transitions and responsiveness:** Lightweight native drawing and conservative ambient sampling are intended to keep interaction smooth without interfering with decoding and playback.
+- **Original playback capabilities preserved:** Source selection, subtitles, episode controls, gestures, external playback and the underlying player behavior remain supported.
+
+This player redesign is **Anilumos-specific UI and integration work**. Morphe's ambient-light math and AniLife's original player architecture are credited separately below.
+
 ## Features retained from AniLife
 
 Anilumos keeps the original application's broad feature set, including:
