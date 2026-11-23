@@ -87,6 +87,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -614,34 +616,33 @@ private fun DetailContent(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Continue the hero's artwork well below its visible boundary. The sharp
-        // banner is alpha-masked at the bottom (see DetailHero) while this blurred
-        // backdrop remains behind the action buttons and the first detail sections.
-        // Both layers fade into the same page canvas, with no rectangular edge.
+        // A softly tinted, unbroken glow from the poster. Do not draw a second
+        // full-size banner bitmap here: on pre-Android-12 devices Modifier.blur()
+        // cannot soften it, and its cropped colors become a hard brown/blue band
+        // behind the Quick Facts and countdown rows when the detail page scrolls.
+        // Drawing the ambient spill as a radial brush over the WHOLE viewport
+        // removes the rectangular artwork boundary on all supported Android APIs.
         if (!device.isTv) {
-            AsyncImage(
-                model = info.bannerImage ?: info.coverImage.best,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
+            val coverTint = remember(info.id, info.coverImage.color) {
+                info.coverImage.color?.let { hex ->
+                    runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
+                }
+            } ?: MaterialTheme.colorScheme.primary
+            Box(
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(top = contentPadding.calculateTopPadding() + 90.dp)
-                    .height(610.dp)
-                    .blur(82.dp)
-                    .alpha(0.24f)
-                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                    .drawWithContent {
-                        drawContent()
+                    .matchParentSize()
+                    .drawBehind {
+                        if (size.width <= 0f || size.height <= 0f) return@drawBehind
+                        val reach = maxOf(size.width * 1.15f, size.height * 0.76f)
                         drawRect(
-                            brush = Brush.verticalGradient(
-                                0f to Color.White.copy(alpha = 0.75f),
-                                0.40f to Color.White,
-                                0.66f to Color.White.copy(alpha = 0.70f),
+                            brush = Brush.radialGradient(
+                                0f to coverTint.copy(alpha = 0.12f),
+                                0.35f to coverTint.copy(alpha = 0.065f),
+                                0.67f to coverTint.copy(alpha = 0.020f),
                                 1f to Color.Transparent,
-                                endY = size.height,
+                                center = Offset(size.width * 0.50f, size.height * 0.01f),
+                                radius = reach,
                             ),
-                            blendMode = BlendMode.DstIn,
                         )
                     },
             )
