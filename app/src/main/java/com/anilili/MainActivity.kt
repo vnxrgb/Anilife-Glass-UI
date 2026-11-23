@@ -1179,7 +1179,6 @@ private fun MiruroRoot(
             }
             // Over the app and its bars, the dice included, since it points at them; under the
             // profile screens, which it waits for anyway.
-            com.anilili.ui.tour.WhatsNewTourOverlay()
             // Last, so the first-run setup and the profile switcher draw over everything else.
             com.anilili.ui.profiles.ProfilesHost()
         }
