@@ -9,36 +9,41 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
- * Shared handheld action hierarchy for AniLife glass screens.
- *
- * Primary actions are deliberately independent of colorScheme.primary: themes with a
- * green accent must not wash the entire Watch/Continue CTA green. The primary action
- * uses a neutral, high-contrast surface rather than a fixed orange/purple/green fill. Supporting chips,
- * list toggles and tabs remain neutral glass, leaving the accent to indicate selection.
- * Keep TV's existing focus colours at the call sites.
+ * Neutral frosted action hierarchy. The primary CTA is distinguished by a brighter
+ * glass surface and rim, not an opaque white/green/orange fill. Artwork buttons stay
+ * readable over any banner; regular surfaces follow the current light/dark theme.
+ * TV focus styling stays with each caller.
  */
-private val PrimaryFill = Color(0xFFF4F4F5)
-private val PrimaryInk = Color(0xFF17181B)
+@Composable
+fun cinematicPrimaryButtonColors(onArtwork: Boolean = false) = ButtonDefaults.buttonColors(
+    containerColor = if (onArtwork) Color(0xFF292D32).copy(alpha = 0.79f)
+        else glassPanelColor(),
+    contentColor = if (onArtwork) Color.White else MaterialTheme.colorScheme.onSurface,
+    disabledContainerColor = if (onArtwork) Color.Black.copy(alpha = 0.27f)
+        else glassPanelColor().copy(alpha = 0.40f),
+    disabledContentColor = if (onArtwork) Color.White.copy(alpha = 0.44f)
+        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.44f),
+)
 
 @Composable
-fun cinematicPrimaryButtonColors() = ButtonDefaults.buttonColors(
-    containerColor = PrimaryFill,
-    contentColor = PrimaryInk,
-    disabledContainerColor = PrimaryFill.copy(alpha = 0.24f),
-    disabledContentColor = PrimaryInk.copy(alpha = 0.48f),
+fun cinematicPrimaryButtonBorder(onArtwork: Boolean = false) = BorderStroke(
+    1.dp,
+    if (onArtwork) Color.White.copy(alpha = 0.60f)
+        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.33f),
 )
 
 @Composable
 fun cinematicSecondaryButtonColors(onArtwork: Boolean = false) =
     ButtonDefaults.outlinedButtonColors(
-        containerColor = if (onArtwork) Color.Black.copy(alpha = 0.38f) else glassPanelColor(),
+        containerColor = if (onArtwork) Color.Black.copy(alpha = 0.30f)
+            else glassPanelColor().copy(alpha = 0.65f),
         contentColor = if (onArtwork) Color.White else MaterialTheme.colorScheme.onSurface,
     )
 
 @Composable
 fun cinematicSecondaryButtonBorder(onArtwork: Boolean = false) = BorderStroke(
     1.dp,
-    if (onArtwork) Color.White.copy(alpha = 0.36f) else glassRimColor(),
+    if (onArtwork) Color.White.copy(alpha = 0.28f) else glassRimColor(),
 )
 
 @Composable
