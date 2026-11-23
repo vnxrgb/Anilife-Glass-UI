@@ -1,9 +1,6 @@
 AniLumos stable release trigger
-Version v1.0.3 (versionCode 13)
-Changes: Simkl and Discord account connections; avoid crashes during sign-in.
-Publish exactly one universal, signed mobile APK after tests, lint, OAuth configuration,
-zip alignment, package/version identity and release-certificate verification succeed.
-Use the existing production signing key. Do not overwrite previous stable releases.
-Keep preview and Android TV releases in the separate experimental repository.
-
-Retry stable v1.0.3 after correcting strict versionCode verification to 13.
+Version v1.0.4 (versionCode 14)
+Changes: widened and softened fullscreen ambient lighting in video side letterboxes.
+Release the universal mobile APK using the existing production signing key only after
+build, unit tests, lint, APK signature, package and version verification succeed.
+Do not overwrite existing releases, merge unrelated preview changes or publish TV alpha builds here.
