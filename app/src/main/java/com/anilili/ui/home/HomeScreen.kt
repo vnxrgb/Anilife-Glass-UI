@@ -559,7 +559,7 @@ private fun HomeContent(
         // padding, so the artwork runs behind the fade instead of starting below it. Scroll padding
         // is only reserved when there is no spotlight to run underneath — without that, a feed that
         // came back without one would open with its first row already behind the wordmark.
-        val spotlight = data.spotlight.take(6)
+        val spotlight = remember(data.spotlight) { data.spotlight.take(6) }
         val topOverlay = contentPadding.calculateTopPadding()
 
         // The rows drawn right now, each with its LazyColumn key: shown, and with something in
@@ -574,14 +574,19 @@ private fun HomeContent(
                 }
             }
         }
+        val keyToRow = remember(drawnKeys) {
+            drawnKeys.entries.mapNotNull { (row, key) -> key?.let { it to row } }.toMap()
+        }
         val drag = rememberHomeRowDragState(
             listState = listState,
-            keyToRow = drawnKeys.entries.mapNotNull { (row, key) -> key?.let { it to row } }.toMap(),
+            keyToRow = keyToRow,
             topInset = topOverlay,
             bottomInset = contentPadding.calculateBottomPadding() + chromeBottomInset,
         )
         val shown = drag.order ?: layout
-        val drawnRows = shown.visible.filter { drawnKeys[it] != null }
+        val drawnRows = remember(shown, drawnKeys) {
+            shown.visible.filter { drawnKeys[it] != null }
+        }
 
         // What's new (ui/tour): starts once Home has settled, and scrolls the row a step points at
         // to just below the top bar. Item 0 is the spotlight; the rows follow in drawn order.
