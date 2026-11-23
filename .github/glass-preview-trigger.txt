@@ -1,3 +1,4 @@
-Screenshot-driven Home density and navigation preview
-Baseline change set: 1509864, 855abb2, f3f88c7, 6ec94a2; recorded in GLASS_UI_CHECKLIST.md at 7fdb542.
-Rebuild universal Android mobile debug APK only after unit tests and lint pass. Ensure source SHA is this trigger commit. Publish one direct anilife-glass-universal.apk to glass-ui-preview only after successful build, replacing older preview. Preserve stable/main and TV behavior; real-device visual acceptance remains pending.
+AniLife Glass UI preview build — Details screenshot correction
+Validated baseline: 6b949113cf6d6e23dba06a6f61d27efce1136bb7 (Android CI and CodeQL success)
+Includes latest Naruto Details header/action/tabs/status/bottom-nav clearance fixes, plus preceding Home banner and navigation improvements.
+Build one universal mobile debug APK from this trigger commit. Run mobile unit tests, lint, APK assembly and signing verification. Replace glass-ui-preview asset anilife-glass-universal.apk only on success. Do not publish stable or merge main.
