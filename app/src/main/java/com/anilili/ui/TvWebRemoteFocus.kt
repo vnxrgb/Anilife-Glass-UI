@@ -25,6 +25,11 @@ internal fun WebView.sendTab(shift: Boolean) {
     // focus sitting on the Turnstile box for thirteen presses in a row. The event also has to carry
     // a real keyboard source and device; a bare KeyEvent(...) is SOURCE_UNKNOWN from device 0.
     post {
+        // A navigation can destroy or detach the WebView before this posted traversal runs.
+        // Do not send synthetic keys to an obsolete page after leaving a login/challenge flow.
+        // The remote may have moved focus to a native button while this callback waited.
+        // In that case the old WebView must not steal the next keyboard traversal.
+        if (!isAttachedToWindow || !hasFocus()) return@post
         val now = SystemClock.uptimeMillis()
         listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP).forEach { action ->
             dispatchKeyEvent(

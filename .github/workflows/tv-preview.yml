@@ -1,0 +1,92 @@
+name: AniLumos Android TV preview APK
+
+on:
+  push:
+    branches: [feature/tv-polish]
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - '.github/workflows/tv-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: anilumos-tv-preview
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
+
+jobs:
+  build-tv-preview:
+    name: Verify and build Android TV APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-read-only: false
+
+      - name: Unit tests, lint and assemble TV debug APK
+        run: ./gradlew :app:testTvDebugUnitTest :app:lintTvDebug :app:assembleTvDebug --max-workers=2 --no-configuration-cache --console=plain
+
+      - name: Verify and stage TV APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="app/build/outputs/apk/tv/debug/Anilumos-debug_tv.apk"
+          test -s "$apk"
+          "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify --verbose "$apk"
+          # A successful build is not enough: reject an accidentally packaged phone APK
+          # or a TV APK that silently loses its remote launcher entry.
+          badging="$("$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$apk")"
+          grep -Fq "name='com.anilumos.app.debug'" <<< "$badging"
+          grep -Fq "uses-feature-not-required: name='android.hardware.touchscreen'" <<< "$badging"
+          "$ANDROID_HOME/build-tools/35.0.1/aapt" dump xmltree "$apk" AndroidManifest.xml |
+            grep -Fq 'android.intent.category.LEANBACK_LAUNCHER'
+          mkdir -p dist
+          cp "$apk" dist/Anilumos-TV-preview.apk
+          sha256sum dist/Anilumos-TV-preview.apk > dist/SHA256SUMS
+
+      - name: Upload TV APK artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: anilumos-tv-preview-apk
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish TV prerelease APK (not stable)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="anilumos-tv-preview"
+          note="Experimental Android TV debug APK built from $GITHUB_SHA. TV unit tests, lint and compilation passed. Requires testing on an actual TV or emulator. This APK uses a debug signing key and must not replace a stable release."
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --target "$GITHUB_SHA" --prerelease --title "AniLumos Android TV preview" --notes "$note"
+          fi
+          gh release upload "$tag" dist/Anilumos-TV-preview.apk dist/SHA256SUMS --clobber
+          gh release edit "$tag" --target "$GITHUB_SHA" --notes "$note"
+          echo "TV APK: https://github.com/$GH_REPO/releases/download/$tag/Anilumos-TV-preview.apk" >> "$GITHUB_STEP_SUMMARY"
