@@ -1,5 +1,5 @@
-AniLife Glass UI — Details seam removal + verified Morphe ambient flicker correction
-Source feature branch: c6af83723a57840c16d7f8486e4a2e071771cc8a
-Fix the hard horizontal brown/blue band below Details quick facts with a continuous full-viewport radial artwork-tinted atmosphere that does not rely on Android 12+ RenderEffect blur. Keep actual banner hero's translucent fade, poster, watched action, tab/buttons, Schedule rounding, and GPLv3 Morphe notice intact.
-Prior ambient fix: preserve 95ms capture crossfade and brightness-preserving additive spatial blending; build the combined feature branch into exactly one mobile universal APK after tests, lint, and signing check.
-Publish only if the workflow succeeds; stable release unchanged. Android device visual validation still needed.
+AniLife Glass UI About attribution release verification
+Source branch: c271efc02c0239f44284ec0f6392882a5e7dd3b5
+Add easily accessible Morphe credit on Settings > About, verbatim: This app uses code from Morphe. To learn more, visit https://morphe.software
+Entire attribution card opens the official website; visible in full on phones and TV; searchable via Morphe attribution entry. Adds settings search index regression test. Preserve all previous UI and Morphe spatial ambient updates.
+Run mobile unit tests, lint and universal APK signature verification. Only publish glass-ui-preview on success; leave stable release unchanged.
