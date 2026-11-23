@@ -3348,6 +3348,12 @@ fun SettingsScreen(
                         onClick = { inviteUrl?.let { openLink(context, it) } },
                     )
                 }
+                item(key = "Morphe attribution") {
+                    AboutMorpheNotice(
+                        title = "Morphe attribution",
+                        onClick = { openLink(context, "https://morphe.software") },
+                    )
+                }
                 item(key = "about-note") { AboutSignature() }
             }
         }
@@ -4208,6 +4214,45 @@ private fun AboutBrandGlyph(@DrawableRes id: Int) {
         tint = LocalContentColor.current,
         modifier = Modifier.size(22.dp),
     )
+}
+
+/**
+ * The original Morphe code's required, user-visible credit.
+ *
+ * It is a full-height About item rather than a one-line Settings description,
+ * so the complete wording is always readable on phones AND televisions,
+ * even before focus. The entire card opens Morphe's website.
+ */
+@Composable
+private fun AboutMorpheNotice(title: String, onClick: () -> Unit) {
+    val focus = rememberFocusFill()
+    val shape = RoundedCornerShape(22.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp)
+            .focusFill(focus, shape)
+            .glassCard(shape)
+            .clickable(
+                role = Role.Button,
+                onClickLabel = "Visit Morphe website",
+                onClick = onClick,
+            )
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = focus.content(MaterialTheme.colorScheme.onSurface),
+        )
+        Text(
+            text = "This app uses code from Morphe. To learn more, visit https://morphe.software",
+            style = MaterialTheme.typography.bodyMedium,
+            color = focus.content(MaterialTheme.colorScheme.onSurfaceVariant),
+            modifier = Modifier.padding(top = 5.dp),
+        )
+    }
 }
 
 /**
