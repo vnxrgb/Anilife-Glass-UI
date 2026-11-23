@@ -217,6 +217,7 @@ import com.anilili.ui.dialogs.MidnightStepperRow
 import com.anilili.ui.pairing.PhonePairingScreen
 import com.anilili.ui.profile.AniListProfile
 import com.anilili.ui.profile.LoginWebView
+import com.anilili.ui.profile.OAuthUnavailableDialog
 import com.anilili.ui.profile.MalImportProgress
 import com.anilili.ui.profile.MalImportStage
 import com.anilili.ui.profile.ProfileViewModel
@@ -975,6 +976,10 @@ fun SettingsScreen(
 
     when (loginService) {
         AccountService.ANILIST -> {
+            if (!AuthManager.isConfigured) {
+                OAuthUnavailableDialog("AniList") { loginService = null }
+                return
+            }
             LoginWebView(
                 authorizeUrl = remember(loginService) { AuthManager.authorizeUrl() },
                 isRedirect = AuthManager::isRedirect,
@@ -992,6 +997,10 @@ fun SettingsScreen(
             return
         }
         AccountService.MAL -> {
+            if (!MalAuthManager.isConfigured) {
+                OAuthUnavailableDialog("MyAnimeList") { loginService = null }
+                return
+            }
             LoginWebView(
                 authorizeUrl = remember(loginService) { MalAuthManager.authorizeUrl() },
                 isRedirect = MalAuthManager::isRedirect,
