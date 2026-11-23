@@ -4,6 +4,7 @@ import android.view.ViewConfiguration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -34,6 +35,12 @@ internal class DpadPressTracker(private val longPressTimeoutMs: Long) {
      * something in it, so there was never a moment in which to press anything. All the hold does
      * is record that it has gone long.
      */
+    /** Discard a half-finished hold when the focused card leaves the focus graph. */
+    fun cancel() {
+        pressActive = false
+        heldLongEnough = false
+    }
+
     fun onKeyDown(heldMs: Long) {
         pressActive = true
         if (heldMs >= longPressTimeoutMs) heldLongEnough = true
@@ -95,7 +102,13 @@ fun Modifier.dpadClickable(
     // The platform's own definition, so a hold that opens a menu everywhere else on the
     // television opens this one after the same wait.
     val tracker = remember { DpadPressTracker(ViewConfiguration.getLongPressTimeout().toLong()) }
-    return onPreviewKeyEvent { event ->
+    return this
+        .onFocusChanged { state ->
+            // Remote key-up may be delivered to a different card after a focus change.
+            // Never let a stale hold activate this card when focus returns.
+            if (!state.isFocused) tracker.cancel()
+        }
+        .onPreviewKeyEvent { event ->
         if (!enabled) return@onPreviewKeyEvent false
         if (event.key in ContextMenuKeys) {
             // On the release, so the menu does not open under a button the viewer is still holding.
