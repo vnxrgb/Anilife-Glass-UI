@@ -50,6 +50,19 @@ class SettingsSearchIndexTest {
     }
 
     @Test
+    fun `mobile Settings removes original website link and television mode choice`() {
+        val mobile = settingsSearchEntries(isTv = false)
+        assertTrue(mobile.none { it.title == "Watch on Anilife.cc" })
+        assertTrue(mobile.none { it.title == "Layout" })
+        assertTrue(mobile.any { it.title == "App layout" })
+        assertTrue(mobile.any { it.title == "Morphe attribution" })
+        val screen = screenSource()
+        assertTrue("Original AniLife website must not be linked", !screen.contains("https://anilife.cc"))
+        val commonManifest = File("src/main/AndroidManifest.xml").readText()
+        assertTrue("Mobile must not advertise Leanback launcher", !commonManifest.contains("LEANBACK_LAUNCHER"))
+    }
+
+    @Test
     fun `a name match outranks a keyword match`() {
         // "Skip button" and "Skip button length" are named for it; auto-skip only mentions it.
         val titles = searchSettings("skip button", entries).map { it.title }
