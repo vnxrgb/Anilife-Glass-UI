@@ -3340,7 +3340,8 @@ fun SettingsScreen(
                 item(key = "AniLife foundation") {
                     MidnightSettingRow(
                         title = "AniLife foundation",
-                        description = "Anilumos is built on the AniLife codebase. Credits to its original maintainers and contributors.",
+                        description = "Anilumos is built on the AniLife codebase. Credits to its original maintainers and contributors. Tap to visit the original repository.",
+                        onClick = { openLink(context, "https://github.com/anilifecommunity/android-and-tv") },
                     )
                 }
                 item(key = "Morphe attribution") {
@@ -4264,11 +4265,12 @@ private fun AboutSignature() {
             .padding(start = 14.dp, end = 14.dp, top = 22.dp, bottom = 8.dp),
     ) {
         Text(
-            text = "Anilumos is a community-driven anime platform built to make watching anime " +
-                "simple and enjoyable. It discovers episodes across multiple sources, remembers " +
-                "where you left off, and keeps your anime library synchronised with AniList and " +
-                "MyAnimeList.\n\nNo unnecessary ads, no account required. Just anime, the way it " +
-                "should be.\n\n♡ Anilumos is built on the AniLife codebase. Thanks to the original AniLife contributors.",
+            text = "Anilumos is a personalized anime streaming app built around a simple idea: " +
+                "watching anime should feel effortless and enjoyable. With a refined interface, " +
+                "immersive video playback, multiple streaming sources, and watchlist " +
+                "synchronization, Anilumos brings together the features that make watching anime " +
+                "better.\n\nNo unnecessary distractions. Just anime, the way you like it." +
+                "\n\n♡ Anilumos is built on the AniLife codebase. Thanks to the original AniLife contributors.",
             style = MaterialTheme.typography.bodyMedium,
             color = Midnight.Text2,
         )
