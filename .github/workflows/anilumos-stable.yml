@@ -57,6 +57,18 @@ jobs:
             exit 1
           fi
 
+      - name: Require AniList and MyAnimeList OAuth configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in ANILIST_CLIENT_ID MAL_CLIENT_ID MAL_REDIRECT_URI; do
+            value="${!name:-}"
+            if [[ -z "${value//[[:space:]]/}" ]]; then
+              echo "::error::Missing required OAuth setting: $name. Refusing to publish an APK with broken account login."
+              exit 1
+            fi
+          done
+
       - name: Check protected signing configuration
         shell: bash
         run: |
