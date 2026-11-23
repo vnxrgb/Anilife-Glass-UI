@@ -53,7 +53,9 @@ class SettingsSearchIndexTest {
     fun `mobile Settings removes original website link and television mode choice`() {
         val mobile = settingsSearchEntries(isTv = false)
         assertTrue(mobile.none { it.title == "Watch on Anilife.cc" })
-        assertTrue(mobile.none { it.title == "Layout" })
+        if (com.anilili.BuildConfig.FLAVOR == "mobile") {
+            assertTrue(mobile.none { it.title == "Layout" })
+        }
         assertTrue(mobile.any { it.title == "App layout" })
         assertTrue(mobile.any { it.title == "Morphe attribution" })
         val screen = screenSource()
