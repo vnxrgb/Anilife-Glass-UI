@@ -537,8 +537,8 @@ object UpdateManager {
         if (!signersMatch(installedSigners, candidateSigners)) {
             AnililiError.UPDATE_SIGNATURE_MISMATCH.raise(
                 detail = "This installed APK was signed with a different certificate than the official update. " +
-                    "Back up anything you need, uninstall Anilife, then install the latest APK from " +
-                    "https://anilife.cc/downloads.",
+                    "Back up anything you need, uninstall the incompatible installation, then " +
+                    "install the APK from the release page for the version you intend to use.",
                 attributes = mapOf(
                     "installedSignerSha256" to signerDigests(installedSigners).joinToString(","),
                     "candidateSignerSha256" to signerDigests(candidateSigners).joinToString(","),
