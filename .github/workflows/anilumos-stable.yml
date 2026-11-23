@@ -50,10 +50,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'val appVersionCode = 13' app/build.gradle.kts
-          grep -Fq 'val appVersionName = "1.0.3"' app/build.gradle.kts
-          if gh release view "v1.0.3" >/dev/null 2>&1; then
-            echo "::error::Release v1.0.3 already exists; refusing overwrite."
+          grep -Fq 'val appVersionCode = 14' app/build.gradle.kts
+          grep -Fq 'val appVersionName = "1.0.4"' app/build.gradle.kts
+          if gh release view "v1.0.4" >/dev/null 2>&1; then
+            echo "::error::Release v1.0.4 already exists; refusing overwrite."
             exit 1
           fi
 
@@ -163,12 +163,12 @@ jobs:
           test "${fingerprint,,}" = "${ANDROID_SIGNING_CERT_SHA256,,}"
           package_line="$("$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$apk" | head -n 1)"
           [[ "$package_line" == *"name='com.anilumos.app'"* ]]
-          [[ "$package_line" == *"versionName='1.0.3'"* ]]
-          [[ "$package_line" == *"versionCode='13'"* ]]
+          [[ "$package_line" == *"versionName='1.0.4'"* ]]
+          [[ "$package_line" == *"versionCode='14'"* ]]
           cp "$apk" dist/Anilumos.apk
           printf '%s\n' "$fingerprint" > dist/SIGNING-CERTIFICATE-SHA256.txt
           (cd dist && sha256sum Anilumos.apk SIGNING-CERTIFICATE-SHA256.txt > SHA256SUMS)
-          printf '%s\n' "Anilumos 1.0.3 release: main commit $GITHUB_SHA" > dist/BUILD-REVISION.txt
+          printf '%s\n' "Anilumos 1.0.4 release: main commit $GITHUB_SHA" > dist/BUILD-REVISION.txt
 
       - name: Verify release checksum manifest
         shell: bash
@@ -181,15 +181,14 @@ jobs:
         run: |
           set -euo pipefail
           cat > release-notes.txt <<'EOF'
-          # AniLumos v1.0.3
+          # AniLumos v1.0.4
 
-          - Added Simkl and Discord connection support.
-          - Fixed account connection crashes.
+          - Improved fullscreen ambient lighting with a wider, softer colour glow.
 
           AniLife: https://github.com/anilifecommunity/android-and-tv
           This app uses code from Morphe. To learn more, visit https://morphe.software
           See LICENSE and notices for applicable terms.
           EOF
-          gh release create "v1.0.3" dist/Anilumos.apk \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "AniLumos v1.0.3" --notes-file release-notes.txt --latest
-          echo "Stable APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v1.0.3/Anilumos.apk" >> "$GITHUB_STEP_SUMMARY"
+          gh release create "v1.0.4" dist/Anilumos.apk \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "AniLumos v1.0.4" --notes-file release-notes.txt --latest
+          echo "Stable APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v1.0.4/Anilumos.apk" >> "$GITHUB_STEP_SUMMARY"
