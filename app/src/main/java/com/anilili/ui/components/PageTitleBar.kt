@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.border
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -82,7 +83,7 @@ fun PageTitleBar(
     ) {
         leading?.invoke()
         Column(
-            Modifier.weight(1f),
+            Modifier.weight(1f).widthIn(min = 0.dp),
             verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
             Text(
@@ -102,6 +103,8 @@ fun PageTitleBar(
                 )
             }
         }
+        // Keep the trailing account/action control at the same vertical centre as the title.
+        // Its own semantics and touch area remain owned by the caller.
         trailing?.invoke()
     }
 }
