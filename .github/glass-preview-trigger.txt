@@ -1,6 +1,5 @@
-Batch UI acceptance test — AniLife Morphe ambient smoothness + complete Schedule rounding + Details poster blend
-Source feature commit: de383a8ba97f29b003379d5e51c7ac9ad202b968
-- Morphe spatial light: 125ms capture pacing, reusable buffers, temporal smoothing and 155ms GPU crossfades rather than abrupt bitmap swaps.
-- Schedule: pill-shaped day strip and bottom date stepper, softer timeline cards and image corners, pill format/year labels, rounded calendar frame and date cells.
-- Details: alpha-masked banner into transparent ambient continuation behind Add to List / Watch buttons, extended softly fading blurred artwork backdrop, same TV layout preserved.
-Run mobile unit tests, lint, debug universal APK assembly, signature validation; publish preview APK only after success. Stable release unchanged. Device visual/performance testing is still required.
+AniLife Glass preview - prevent Morphe ambient blinking while retaining all combined UI updates
+Source: d77e3252a55e71d55f1cf020b7c9ea8fe222dfb0
+Previous combined batch included: rounded Schedule page and blended Details poster above action buttons; preserve these and Morphe GPLv3 notices.
+Fix: transition time 95ms instead of 155ms for 125ms sampling; isolated additive premultiplied blend preserves total glow brightness in every intermediate frame instead of double semi-transparent SrcOver. Do not affect player surface, subtitles or decoder.
+Verify mobile unit tests, lint, APK signature, publish exactly one universal debug APK only after passing; stable release untouched. Physical-device behavior remains to be tested.
