@@ -101,6 +101,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -631,6 +632,8 @@ private fun DetailContent(
                     onStudioClick = onStudioClick,
                     onCoverClick = { coverPreviewVisible = true },
                     topInset = contentPadding.calculateTopPadding(),
+                    watchedEntry = saveEntry,
+                    totalEpisodes = info.episodes ?: if (isMovieFormat(info.format)) 1 else null,
                 )
             }
             item {
@@ -928,6 +931,8 @@ private fun DetailHero(
     logo: String?,
     onStudioClick: (StudioNode) -> Unit,
     onCoverClick: () -> Unit,
+    watchedEntry: WatchlistEntry,
+    totalEpisodes: Int?,
     /**
      * The height of the chrome the banner runs beneath. Added to the hero rather than taken out of
      * it, so the artwork gains that much height and the cover and title block below keep the room
@@ -1016,12 +1021,29 @@ private fun DetailHero(
                         minFontSize = 15.sp,
                     )
                 }
-                info.studios.nodes.firstOrNull { it.isAnimationStudio && !it.name.isNullOrBlank() }?.let { studio ->
-                    StudioBadge(
-                        name = studio.name.orEmpty(),
-                        enabled = studio.id > 0,
-                        onClick = { onStudioClick(studio) },
-                    )
+                // The watched action belongs beside the studio metadata, not stranded
+                // below the Watch buttons. Keep the original TV action layout.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    info.studios.nodes.firstOrNull { it.isAnimationStudio && !it.name.isNullOrBlank() }?.let { studio ->
+                        StudioBadge(
+                            name = studio.name.orEmpty(),
+                            enabled = studio.id > 0,
+                            onClick = { onStudioClick(studio) },
+                        )
+                    }
+                    if (!device.isTv && watchedToggleAvailable(info.id)) {
+                        Spacer(Modifier.weight(1f))
+                        WatchedToggleButton(
+                            anilistId = info.id,
+                            totalEpisodes = totalEpisodes,
+                            markEntry = watchedEntry,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
                 Text(
                     text = listOfNotNull(
@@ -1244,25 +1266,6 @@ private fun DetailActions(
             )
         }
         }
-        if (!device.isTv && watchedToggleAvailable(anilistId)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    "Mark as watched",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-                WatchedToggleButton(
-                    anilistId = anilistId,
-                    totalEpisodes = totalEpisodes,
-                    markEntry = saveEntry,
-                )
-            }
-        }
     }
 }
 
@@ -1312,16 +1315,17 @@ private fun DetailTabs(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (device.isTv) Modifier.appCanvas()
-                else Modifier.background(glassPanelColor().copy(alpha = 0.76f))),
+                else Modifier.background(glassPanelColor().copy(alpha = 0.24f))),
         contentAlignment = Alignment.Center,
     ) {
         Row(
             modifier = Modifier
-                .horizontalScroll(rememberScrollState())
+                .then(if (device.isTv) Modifier.horizontalScroll(rememberScrollState()) else Modifier.fillMaxWidth())
                 .selectableGroup()
                 .then(downFocus?.let { target -> Modifier.focusProperties { down = target } } ?: Modifier)
-                .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = device.pagePadding, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 8.dp else 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             tabs.forEach { tab ->
                 val active = tab == selected
@@ -1329,9 +1333,11 @@ private fun DetailTabs(
                 Text(
                     text = tab.label,
                     style = MaterialTheme.typography.labelLarge,
+                    textAlign = TextAlign.Center,
                     color = fillFocus4.content(if (active) MaterialTheme.colorScheme.onSurface
                     else MaterialTheme.colorScheme.onSurfaceVariant),
                     modifier = Modifier
+                        .then(if (device.isTv) Modifier else Modifier.weight(1f))
                         .focusFill(fillFocus4, RoundedCornerShape(50))
                         .clip(RoundedCornerShape(50))
                         .background(
@@ -1347,7 +1353,7 @@ private fun DetailTabs(
                         .selectable(selected = active, role = Role.Tab, onClick = { onSelect(tab) })
                         // 48dp minimum hit height for large fonts and narrow phones.
                         .heightIn(min = 48.dp)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = if (device.isTv) 16.dp else 4.dp, vertical = 8.dp),
                 )
             }
         }
