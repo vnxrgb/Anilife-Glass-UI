@@ -326,7 +326,7 @@ private fun MidnightSettingRowScaffold(
     // The same rounded badge every choice row in the app wears: white under the cursor with its
     // copy and its control inverted, a faint card otherwise. No rule between rows — the gap and
     // the corner are what separate them now.
-    val shape = RoundedCornerShape(MidnightRowRadius)
+    val shape = RoundedCornerShape(if (device.isTv) MidnightRowRadius else 22.dp)
     val fill = when {
         focused -> MidnightFocusFill
         device.isTv -> MidnightRestFill
