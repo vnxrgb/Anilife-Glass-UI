@@ -574,8 +574,12 @@ private fun HomeContent(
                 }
             }
         }
-        val keyToRow = remember(drawnKeys) {
-            drawnKeys.entries.mapNotNull { (row, key) -> key?.let { it to row } }.toMap()
+        // Lazy list keys are Any (a rail may use a string or another stable
+        // key type). Preserve that explicit contract while caching this map.
+        val keyToRow: Map<Any, HomeRow> = remember(drawnKeys) {
+            buildMap {
+                drawnKeys.forEach { (row, key) -> if (key != null) put(key, row) }
+            }
         }
         val drag = rememberHomeRowDragState(
             listState = listState,
