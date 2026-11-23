@@ -20,8 +20,8 @@ val diagnosticBuildSha = providers.environmentVariable("GITHUB_SHA").orNull
             isIgnoreExitValue = true
         }.standardOutput.asText.get().trim()
     }.getOrDefault("unknown").ifBlank { "unknown" }
-val appVersionCode = 6
-val appVersionName = "0.1.3"
+val appVersionCode = 7
+val appVersionName = "1.0.0"
 
 tasks.named<CyclonedxDirectTask>("cyclonedxDirectBom") {
     componentName = "Anilumos"
