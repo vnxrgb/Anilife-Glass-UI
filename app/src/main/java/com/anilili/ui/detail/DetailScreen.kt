@@ -1036,12 +1036,19 @@ private fun DetailHero(
                         )
                     }
                     if (!device.isTv && watchedToggleAvailable(info.id)) {
-                        Spacer(Modifier.weight(1f))
+                        // Keep the eye next to its studio metadata instead of floating on
+                        // the far edge of the banner. A 48dp target stays easy to tap.
+                        val eyeShape = RoundedCornerShape(50)
                         WatchedToggleButton(
                             anilistId = info.id,
                             totalEpisodes = totalEpisodes,
                             markEntry = watchedEntry,
                             tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(eyeShape)
+                                .background(glassPanelColor().copy(alpha = 0.48f))
+                                .border(1.dp, glassRimColor().copy(alpha = 0.55f), eyeShape),
                         )
                     }
                 }
@@ -1305,17 +1312,16 @@ private fun DetailTabs(
     selected: DetailTab,
     tabs: List<DetailTab>,
     onSelect: (DetailTab) -> Unit,
-    // The episode browser below is invisible to 2D focus search, so the way down is named.
     downFocus: FocusRequester? = null,
 ) {
-    // Centred while the pills fit, so three short tabs do not hug the left edge of a wide row; the
-    // box keeps the sticky header's canvas full width behind them. Too many to fit, they scroll.
     val device = LocalAppDeviceProfile.current
+    // A neutral, subtle backdrop while the section header is sticky; no opaque
+    // rectangular strip behind these buttons on mobile.
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (device.isTv) Modifier.appCanvas()
-                else Modifier.background(glassPanelColor().copy(alpha = 0.24f))),
+                else Modifier.background(glassPanelColor().copy(alpha = 0.12f))),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -1329,32 +1335,38 @@ private fun DetailTabs(
         ) {
             tabs.forEach { tab ->
                 val active = tab == selected
-                val fillFocus4 = rememberFocusFill()
-                Text(
-                    text = tab.label,
-                    style = MaterialTheme.typography.labelLarge,
-                    textAlign = TextAlign.Center,
-                    color = fillFocus4.content(if (active) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurfaceVariant),
+                val shape = RoundedCornerShape(50)
+                val focus = rememberFocusFill()
+                Box(
                     modifier = Modifier
                         .then(if (device.isTv) Modifier else Modifier.weight(1f))
-                        .focusFill(fillFocus4, RoundedCornerShape(50))
-                        .clip(RoundedCornerShape(50))
+                        .heightIn(min = 48.dp)
+                        .focusFill(focus, shape)
+                        .clip(shape)
                         .background(
-                            fillFocus4.background(if (active) glassSelectionColor()
-                            else glassPanelColor().copy(alpha = 0.52f)),
+                            focus.background(if (active) glassSelectionColor()
+                            else glassPanelColor().copy(alpha = 0.38f)),
                         )
                         .border(
                             1.dp,
                             if (active) glassRimColor()
                             else glassRimColor().copy(alpha = 0.45f),
-                            RoundedCornerShape(50),
+                            shape,
                         )
-                        .selectable(selected = active, role = Role.Tab, onClick = { onSelect(tab) })
-                        // 48dp minimum hit height for large fonts and narrow phones.
-                        .heightIn(min = 48.dp)
-                        .padding(horizontal = if (device.isTv) 16.dp else 4.dp, vertical = 8.dp),
-                )
+                        .selectable(selected = active, role = Role.Tab, onClick = { onSelect(tab) }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = tab.label,
+                        style = MaterialTheme.typography.labelLarge,
+                        textAlign = TextAlign.Center,
+                        color = focus.content(if (active) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurfaceVariant),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+                    )
+                }
             }
         }
     }
