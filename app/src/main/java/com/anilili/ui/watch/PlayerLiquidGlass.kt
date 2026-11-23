@@ -29,23 +29,25 @@ internal fun Modifier.playerLiquidGlass(
     tone: PlayerLiquidGlassTone = PlayerLiquidGlassTone.SOFT,
 ): Modifier {
     val dark = when (tone) {
-        PlayerLiquidGlassTone.SOFT -> 0.43f
-        PlayerLiquidGlassTone.DOCK -> 0.64f
-        PlayerLiquidGlassTone.PRIMARY -> 0.56f
+        PlayerLiquidGlassTone.SOFT -> 0.32f
+        PlayerLiquidGlassTone.DOCK -> 0.49f
+        PlayerLiquidGlassTone.PRIMARY -> 0.38f
     }
     val glint = when (tone) {
-        PlayerLiquidGlassTone.SOFT -> 0.16f
-        PlayerLiquidGlassTone.DOCK -> 0.20f
-        PlayerLiquidGlassTone.PRIMARY -> 0.29f
+        PlayerLiquidGlassTone.SOFT -> 0.055f
+        PlayerLiquidGlassTone.DOCK -> 0.075f
+        PlayerLiquidGlassTone.PRIMARY -> 0.10f
     }
     return this
         .clip(shape)
         .background(
             Brush.verticalGradient(
-                0f to Color(0xFFD1D2D6).copy(alpha = glint),
-                0.25f to Color(0xFF414248).copy(alpha = dark * 0.72f),
-                0.72f to Color(0xFF17181C).copy(alpha = dark),
-                1f to Color(0xFF0A0B0F).copy(alpha = (dark + 0.12f).coerceAtMost(0.90f)),
+                // Dark neutral glass, not a large silver/grey fill that veils
+                // bright anime frames or fights the Morphe lighting.
+                0f to Color.White.copy(alpha = glint),
+                0.18f to Color(0xFF101013).copy(alpha = dark * 0.60f),
+                0.74f to Color(0xFF09090D).copy(alpha = dark),
+                1f to Color(0xFF050507).copy(alpha = (dark + 0.08f).coerceAtMost(0.75f)),
             ),
             shape,
         )
@@ -66,10 +68,10 @@ internal fun Modifier.playerLiquidGlass(
             BorderStroke(
                 1.dp,
                 Brush.verticalGradient(
-                    0f to Color.White.copy(alpha = 0.48f),
-                    0.35f to Color.White.copy(alpha = 0.19f),
-                    0.72f to Color.White.copy(alpha = 0.10f),
-                    1f to Color.White.copy(alpha = 0.24f),
+                    0f to Color.White.copy(alpha = 0.28f),
+                    0.35f to Color.White.copy(alpha = 0.13f),
+                    0.72f to Color.White.copy(alpha = 0.07f),
+                    1f to Color.White.copy(alpha = 0.15f),
                 ),
             ),
             shape,
