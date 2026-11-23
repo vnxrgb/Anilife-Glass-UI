@@ -154,26 +154,10 @@ jobs:
           (cd dist && sha256sum Anilumos.apk SIGNING-CERTIFICATE-SHA256.txt > SHA256SUMS)
           printf '%s\n' "Anilumos 1.0.2 release: main commit $GITHUB_SHA" > dist/BUILD-REVISION.txt
 
-      - name: Verify update APK checksum matches published SHA256SUMS
+      - name: Verify release checksum manifest
         shell: bash
         run: |
           set -euo pipefail
-          grep -Eq '^[0-9a-f]{64}  Anilumos.apk
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat > release-notes.txt <<'EOF'
-          # AniLumos v1.0.2
-
-          - You can now update directly from the app.
-
-          AniLife: https://github.com/anilifecommunity/android-and-tv
-          This app uses code from Morphe. To learn more, visit https://morphe.software
-          See LICENSE and notices for applicable terms.
-          EOF
-          gh release create "v1.0.2" dist/Anilumos.apk dist/SHA256SUMS dist/SIGNING-CERTIFICATE-SHA256.txt dist/BUILD-REVISION.txt             --target "$GITHUB_SHA" --title "Anilumos v1.0.2 — Direct App Updates" --notes-file release-notes.txt --latest
-          echo "Stable APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v1.0.2/Anilumos.apk" >> "$GITHUB_STEP_SUMMARY"
- dist/SHA256SUMS
           (cd dist && sha256sum --check --ignore-missing SHA256SUMS)
 
       - name: Publish stable GitHub release
@@ -189,5 +173,6 @@ jobs:
           This app uses code from Morphe. To learn more, visit https://morphe.software
           See LICENSE and notices for applicable terms.
           EOF
-          gh release create "v1.0.2" dist/Anilumos.apk dist/SHA256SUMS dist/SIGNING-CERTIFICATE-SHA256.txt dist/BUILD-REVISION.txt             --target "$GITHUB_SHA" --title "Anilumos v1.0.2 — Direct App Updates" --notes-file release-notes.txt --latest
+          gh release create "v1.0.2" dist/Anilumos.apk dist/SHA256SUMS dist/SIGNING-CERTIFICATE-SHA256.txt dist/BUILD-REVISION.txt \
+            --target "$GITHUB_SHA" --title "Anilumos v1.0.2 — Direct App Updates" --notes-file release-notes.txt --latest
           echo "Stable APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v1.0.2/Anilumos.apk" >> "$GITHUB_STEP_SUMMARY"
