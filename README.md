@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/assets/anilumos-mark.svg" alt="Anilumos logo" width="130">
+  <img src="docs/assets/anilumos-ambient-showcase.png" alt="Anilumos app showcase: Liquid Glass interface, redesigned video player and ambient lighting" width="100%">
 
   # Anilumos
 
