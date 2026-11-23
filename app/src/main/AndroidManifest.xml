@@ -86,12 +86,8 @@
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode"
             android:supportsPictureInPicture="true"
             android:theme="@style/Theme.MiruroNative">
-            <!-- The LAUNCHER entry is per flavor: the TV manifest puts it back here unchanged, and
-                 the mobile manifest hangs it on one activity-alias per app-icon colour. -->
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
+            <!-- Launcher filters are flavor-owned. The mobile APK uses only the
+                 normal icon aliases and must not advertise an Android TV launcher. -->
         </activity>
 
         <!--
