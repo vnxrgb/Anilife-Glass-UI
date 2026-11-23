@@ -107,9 +107,9 @@ fun TvPairingScreen(
                 is TvPairingState.Starting -> Busy("Getting ready…")
 
                 is TvPairingState.Waiting -> {
-                    Heading("Sign in from your phone")
+                    Heading("AniLumos Connect")
                     Body(
-                        "Open AniLumos on your phone, go to your profile and choose " +
+                        "On your AniLumos phone, open your profile and choose " +
                             "\"Link a TV\". This television will appear in the list.",
                     )
                     // QR contains only a LAN address; credentials still require the
@@ -117,7 +117,7 @@ fun TvPairingScreen(
                     current.addresses.firstOrNull()?.let { formatted ->
                         val address = formatted.substringBefore("  (").trim()
                         TvPairingAddressQr(address)
-                        Body("Scan to copy the TV address, then paste it into Link a TV on your phone.")
+                        Body("In AniLumos on your phone, tap Link a TV → Scan TV QR code. Compare the six-digit confirmation on both devices before signing in.")
                     }
                     if (current.addresses.isEmpty()) {
                         Body("This television has no network address — check its connection.")
