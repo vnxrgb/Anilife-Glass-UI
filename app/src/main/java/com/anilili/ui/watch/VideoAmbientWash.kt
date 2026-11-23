@@ -11,10 +11,15 @@ import android.os.Looper
 import android.view.PixelCopy
 import android.view.SurfaceView
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -47,7 +52,7 @@ data class VideoAmbientPalette(
 
 /**
  * Native-player-only sampling for the ambient wash *below* a windowed video.
- * PixelCopy reads a tiny 48x27 SurfaceView frame on a limited interval, so the displayed
+ * PixelCopy reads a tiny 96x54 SurfaceView frame, downsampled by the Morphe renderer; the displayed
  * video, subtitles and controls are never blurred, reparented or screenshotted.
  * DRM/secure surfaces, unsupported decoders and older Android versions fail closed.
  */
@@ -67,7 +72,6 @@ internal fun NativeVideoAmbientSampler(
         val surface = playerView?.videoSurfaceView as? SurfaceView ?: return@LaunchedEffect
         val handler = Handler(Looper.getMainLooper())
         val spatialRenderer = MorpheAmbientRenderer()
-        var lastPalette: VideoAmbientPalette? = null
         while (isActive) {
             if (surface.holder.surface.isValid && surface.width > 0 && surface.height > 0 &&
                 surface.isShown && playerView?.player?.isPlaying == true) {
@@ -94,24 +98,24 @@ internal fun NativeVideoAmbientSampler(
                 } catch (_: Exception) {
                     null
                 }
-                val sampled = if (pixels != null) withContext(Dispatchers.Default) {
-                    val spatial = spatialRenderer.render(pixels)
-                    if (spatial != null) {
-                        // Preserve the existing palette for a gradient fallback when the
-                        // spatial view has no frames (e.g. playback or DRM transition).
-                        val original = Bitmap.createBitmap(pixels, 96, 54, Bitmap.Config.ARGB_8888)
-                        val tint = try { extractAmbientPalette(original) } finally { original.recycle() }
-                        tint?.copy(spatialLight = spatial)
-                    } else null
+                val sampledLight = if (pixels != null) withContext(Dispatchers.Default) {
+                    spatialRenderer.render(pixels)
                 } else null
-                if (sampled != null && sampled != lastPalette) {
-                    lastPalette = sampled
-                    currentCallback(sampled)
+                if (sampledLight != null) {
+                    currentCallback(
+                        VideoAmbientPalette(
+                            left = Color.Transparent,
+                            right = Color.Transparent,
+                            center = Color.Transparent,
+                            spatialLight = sampledLight,
+                        ),
+                    )
                 }
             }
-            // Faster than the old 1.2-second cadence, but deliberately throttled
-            // below video frame rate to protect battery and the decoder surface.
-            delay(260L)
+            // Morphe's light updates multiple times per second. A short cadence plus
+            // GPU crossfades avoids the visibly stepped 260ms bitmap replacement.
+            // The renderer skips unchanged frames and low-memory devices opt out.
+            delay(125L)
         }
     }
 }
@@ -179,12 +183,48 @@ internal fun Modifier.videoAmbientWash(
     val left by animateColorAsState(palette.left, tween(450), label = "ambientLeft")
     val right by animateColorAsState(palette.right, tween(450), label = "ambientRight")
     val middle by animateColorAsState(palette.center, tween(450), label = "ambientMiddle")
+
+    // Morphe's spatial field is a small bitmap, not a Compose Color. The old code
+    // replaced that bitmap instantly each capture (~4 times/s), making an otherwise
+    // accurate lighting effect visibly stutter. Interpolate successive fields on the
+    // GPU while PixelCopy and Morphe's blur calculations run on their own cadence.
+    var displayedLight by remember { mutableStateOf<ImageBitmap?>(null) }
+    var previousLight by remember { mutableStateOf<ImageBitmap?>(null) }
+    val blend = remember { Animatable(1f) }
+    LaunchedEffect(palette.spatialLight) {
+        val next = palette.spatialLight
+        if (next == null) {
+            previousLight = null
+            displayedLight = null
+            blend.snapTo(1f)
+        } else if (displayedLight !== next) {
+            previousLight = displayedLight
+            displayedLight = next
+            blend.snapTo(if (previousLight == null) 1f else 0f)
+            if (previousLight != null) {
+                blend.animateTo(1f, tween(155, easing = LinearEasing))
+                previousLight = null
+            }
+        }
+    }
     return this.drawBehind {
-        if (palette.spatialLight != null) {
+        val target = displayedLight ?: palette.spatialLight
+        if (target != null) {
+            val sizePx = IntSize(size.width.toInt().coerceAtLeast(1), size.height.toInt().coerceAtLeast(1))
+            val strength = intensity.coerceIn(0.2f, 1f)
+            val fraction = blend.value
+            previousLight?.let { outgoing ->
+                drawImage(
+                    image = outgoing,
+                    dstSize = sizePx,
+                    alpha = (1f - fraction) * strength,
+                    filterQuality = FilterQuality.Medium,
+                )
+            }
             drawImage(
-                image = palette.spatialLight,
-                dstSize = IntSize(size.width.toInt().coerceAtLeast(1), size.height.toInt().coerceAtLeast(1)),
-                alpha = intensity.coerceIn(0.2f, 1f),
+                image = target,
+                dstSize = sizePx,
+                alpha = fraction * strength,
                 filterQuality = FilterQuality.Medium,
             )
             return@drawBehind
