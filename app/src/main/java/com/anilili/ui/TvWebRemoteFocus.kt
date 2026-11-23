@@ -27,7 +27,9 @@ internal fun WebView.sendTab(shift: Boolean) {
     post {
         // A navigation can destroy or detach the WebView before this posted traversal runs.
         // Do not send synthetic keys to an obsolete page after leaving a login/challenge flow.
-        if (!isAttachedToWindow) return@post
+        // The remote may have moved focus to a native button while this callback waited.
+        // In that case the old WebView must not steal the next keyboard traversal.
+        if (!isAttachedToWindow || !hasFocus()) return@post
         val now = SystemClock.uptimeMillis()
         listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP).forEach { action ->
             dispatchKeyEvent(
