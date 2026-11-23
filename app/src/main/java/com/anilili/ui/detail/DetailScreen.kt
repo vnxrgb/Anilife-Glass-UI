@@ -84,6 +84,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -609,6 +610,24 @@ private fun DetailContent(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // Ambient artwork spill beneath the hero: an unfocused, very low-opacity
+        // second rendering of the banner gives the surrounding content a gentle,
+        // title-specific glow. It stays behind scrolling controls and text and does
+        // not affect TV focus or the player's independent video ambient setting.
+        if (!device.isTv) {
+            AsyncImage(
+                model = info.bannerImage ?: info.coverImage.best,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .padding(top = contentPadding.calculateTopPadding() + 125.dp)
+                    .height(510.dp)
+                    .blur(76.dp)
+                    .alpha(0.17f),
+            )
+        }
         LazyColumn(
             state = detailListState,
             // Keep content above the floating navigation instead of covering the next card.
@@ -1036,8 +1055,9 @@ private fun DetailHero(
                         )
                     }
                     if (!device.isTv && watchedToggleAvailable(info.id)) {
-                        // Keep the eye next to its studio metadata instead of floating on
-                        // the far edge of the banner. A 48dp target stays easy to tap.
+                        // Keep the watched action on the right end of the studio line,
+                        // separate from the studio's own clickable chip.
+                        Spacer(Modifier.weight(1f))
                         val eyeShape = RoundedCornerShape(50)
                         WatchedToggleButton(
                             anilistId = info.id,
