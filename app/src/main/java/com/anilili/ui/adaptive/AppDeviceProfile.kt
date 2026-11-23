@@ -118,6 +118,15 @@ data class AppDeviceProfile(
             else -> 100.dp
         }
 
+    /** Fit expanded Home posters within the actual content width on tablets, including
+     * landscape split-screen windows. Other form factors keep their existing columns.
+     */
+    fun homePosterColumns(availableWidth: Dp, spacing: Dp): Int {
+        if (!isTablet) return posterColumns
+        val fitting = ((availableWidth.value + spacing.value) / (gridMinWidth.value + spacing.value)).toInt()
+        return minOf(posterColumns, fitting.coerceAtLeast(2))
+    }
+
     val episodeColumns: Int
         get() = when {
             isTv -> scaledTvColumns(TV_EPISODE_COLUMNS)
