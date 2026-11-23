@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun Modifier.glassCard(
-    shape: Shape = RoundedCornerShape(18.dp),
+    shape: Shape = RoundedCornerShape(22.dp),
     tint: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
 ): Modifier {
     val scheme = MaterialTheme.colorScheme
