@@ -59,11 +59,20 @@ class DpadPressTrackerTest {
 
     @Test
     fun `a press exactly at the threshold is long, one below it is a click`() {
-        assertEquals(DpadPress.LONG_CLICK, tracker().onKeyUp(500))
-        assertEquals(DpadPress.CLICK, tracker().onKeyUp(499))
+        assertEquals(DpadPress.LONG_CLICK, tracker().apply { onKeyDown(0) }.onKeyUp(500))
+        assertEquals(DpadPress.CLICK, tracker().apply { onKeyDown(0) }.onKeyUp(499))
     }
 
     /** A hold must never also land as a click, or it would resume the episode it just managed. */
+    @Test
+    fun `a release without a matching down never activates a newly focused card`() {
+        val tracker = tracker()
+        assertEquals(null, tracker.onKeyUp(100))
+        tracker.onKeyDown(0)
+        assertEquals(DpadPress.CLICK, tracker.onKeyUp(100))
+        assertEquals(null, tracker.onKeyUp(100))
+    }
+
     @Test
     fun `the tracker is reusable and a hold does not colour the next press`() {
         val tracker = tracker()
