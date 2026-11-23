@@ -50,10 +50,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'val appVersionCode = 8' app/build.gradle.kts
-          grep -Fq 'val appVersionName = "1.0.1"' app/build.gradle.kts
-          if gh release view "v1.0.1" >/dev/null 2>&1; then
-            echo "::error::Release v1.0.1 already exists; refusing overwrite."
+          grep -Fq 'val appVersionCode = 9' app/build.gradle.kts
+          grep -Fq 'val appVersionName = "1.0.2"' app/build.gradle.kts
+          if gh release view "v1.0.2" >/dev/null 2>&1; then
+            echo "::error::Release v1.0.2 already exists; refusing overwrite."
             exit 1
           fi
 
@@ -147,29 +147,47 @@ jobs:
           test "${fingerprint,,}" = "${ANDROID_SIGNING_CERT_SHA256,,}"
           package_line="$("$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$apk" | head -n 1)"
           [[ "$package_line" == *"name='com.anilumos.app'"* ]]
-          [[ "$package_line" == *"versionName='1.0.1'"* ]]
-          [[ "$package_line" == *"versionCode='8'"* ]]
+          [[ "$package_line" == *"versionName='1.0.2'"* ]]
+          [[ "$package_line" == *"versionCode='9'"* ]]
           cp "$apk" dist/Anilumos.apk
           printf '%s\n' "$fingerprint" > dist/SIGNING-CERTIFICATE-SHA256.txt
           (cd dist && sha256sum Anilumos.apk SIGNING-CERTIFICATE-SHA256.txt > SHA256SUMS)
-          printf '%s\n' "Anilumos 1.0.1 release: main commit $GITHUB_SHA" > dist/BUILD-REVISION.txt
+          printf '%s\n' "Anilumos 1.0.2 release: main commit $GITHUB_SHA" > dist/BUILD-REVISION.txt
+
+      - name: Verify update APK checksum matches published SHA256SUMS
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Eq '^[0-9a-f]{64}  Anilumos.apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > release-notes.txt <<'EOF'
+          # AniLumos v1.0.2
+
+          - You can now update directly from the app.
+
+          AniLife: https://github.com/anilifecommunity/android-and-tv
+          This app uses code from Morphe. To learn more, visit https://morphe.software
+          See LICENSE and notices for applicable terms.
+          EOF
+          gh release create "v1.0.2" dist/Anilumos.apk dist/SHA256SUMS dist/SIGNING-CERTIFICATE-SHA256.txt dist/BUILD-REVISION.txt             --target "$GITHUB_SHA" --title "Anilumos v1.0.2 — Direct App Updates" --notes-file release-notes.txt --latest
+          echo "Stable APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v1.0.2/Anilumos.apk" >> "$GITHUB_STEP_SUMMARY"
+ dist/SHA256SUMS
+          (cd dist && sha256sum --check --ignore-missing SHA256SUMS)
 
       - name: Publish stable GitHub release
         shell: bash
         run: |
           set -euo pipefail
           cat > release-notes.txt <<'EOF'
-          # AniLumos v1.0.1 — Login Quickfix
+          # AniLumos v1.0.2
 
-          - Fixed AniList login.
-          - Fixed MyAnimeList login.
-
-          This update retains the existing app data, library, streaming providers and video player.
-          AniList and MyAnimeList login require valid registered OAuth application settings.
+          - You can now update directly from the app.
 
           AniLife: https://github.com/anilifecommunity/android-and-tv
           This app uses code from Morphe. To learn more, visit https://morphe.software
           See LICENSE and notices for applicable terms.
           EOF
-          gh release create "v1.0.1" dist/Anilumos.apk dist/SHA256SUMS dist/SIGNING-CERTIFICATE-SHA256.txt dist/BUILD-REVISION.txt             --target "$GITHUB_SHA" --title "Anilumos v1.0.1 — Login Quickfix" --notes-file release-notes.txt --latest
-          echo "Stable APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v1.0.1/Anilumos.apk" >> "$GITHUB_STEP_SUMMARY"
+          gh release create "v1.0.2" dist/Anilumos.apk dist/SHA256SUMS dist/SIGNING-CERTIFICATE-SHA256.txt dist/BUILD-REVISION.txt             --target "$GITHUB_SHA" --title "Anilumos v1.0.2 — Direct App Updates" --notes-file release-notes.txt --latest
+          echo "Stable APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v1.0.2/Anilumos.apk" >> "$GITHUB_STEP_SUMMARY"
