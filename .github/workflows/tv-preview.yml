@@ -61,6 +61,14 @@ jobs:
           badging="$("$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$apk")"
           grep -Fq "name='com.anilumos.app.debug'" <<< "$badging"
           grep -Fq "uses-feature-not-required: name='android.hardware.touchscreen'" <<< "$badging"
+          # TV builds must advertise Leanback without requiring Play Store TV hardware.
+          # This keeps Fire TV sideloads compatible and catches flavor-manifest regressions.
+          grep -Fq "uses-feature-not-required: name='android.software.leanback'" <<< "$badging"
+          # The TV launcher needs a real banner resource, not the phone's icon alone.
+          if ! grep -Eq "^application:.*banner='" <<< "$badging"; then
+            echo "::error::TV launcher banner missing from packaged APK"
+            exit 1
+          fi
           # Capture the complete manifest dump before matching: grep -q in a pipe can
           # close early and make aapt fail with SIGPIPE under pipefail.
           manifest_tree="$("$ANDROID_HOME/build-tools/35.0.1/aapt" dump xmltree "$apk" AndroidManifest.xml)"
