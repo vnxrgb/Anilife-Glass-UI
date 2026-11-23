@@ -85,7 +85,9 @@ internal fun NativeVideoAmbientSampler(
                 // until its callback actually finishes, even when navigating away
                 // cancels the sampler mid-request. Never run getPixels or the
                 // Morphe CPU light-field calculations on the UI thread.
-                val bitmap = Bitmap.createBitmap(96, 54, Bitmap.Config.ARGB_8888)
+                val bitmap = withContext(Dispatchers.Default) {
+                    Bitmap.createBitmap(96, 54, Bitmap.Config.ARGB_8888)
+                }
                 var requestPending = false
                 var requestFinished = false
                 var recycleAfterCopy = false
