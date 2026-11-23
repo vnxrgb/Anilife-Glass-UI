@@ -1,9 +1,4 @@
-Final mobile-safe AniLife preview (remove original website references, stop TV mode, preserve shared mobile behavior)
-Source commit: a3ce26068ce315c7cfe77eac537bb1e2dd8024fe
-- About website shortcut and Settings search entry removed.
-- Update signature recovery message no longer displays an original AniLife downloads URL.
-- Main mobile manifest no longer advertises LEANBACK_LAUNCHER; TV launcher remains in tv-only source manifest for legacy CI, not mobile distribution.
-- Mobile device profile and background device policy never enter TV mode, even with saved form-factor preference; mobile App layout stays available.
-- New checks verify mobile has no website row, no TV layout choice, and Morphe credit still available; tests explicitly conditional on mobile flavor so legacy TV tests remain valid.
-- Preserve mobile package ID, signing and debug install behavior, library, episode player, integrations, downloads, Google Cast, internal deep-link support and Morphe GPLv3 credits.
-Publish exactly one universal mobile debug APK only after mobile unit tests, lint, APK assembly and signature verification. Main/stable untouched.
+AniLife mobile-only preview lint fix — remove legacy site shortcuts and all Android TV launcher signals from mobile APK
+Source revision: d868d291f8f80eac8486d9001a2198d561cea622
+The previous workflow failed Android lint MissingLeanbackLauncher because the common manifest still advertised android.software.leanback. Move the Leanback uses-feature declaration to app/src/tv/AndroidManifest.xml along with its TV-specific launcher. Mobile manifest now has neither Leanback feature nor launcher, preserving phone/tablet launch compatibility. Settings About and update failure messages no longer link to anilife.cc; required Morphe GPLv3 notice remains.
+Do one final :app:testMobileDebugUnitTest :app:lintMobileDebug :app:assembleMobileDebug; validate APK signature. Publish only if all checks pass. Never alter stable release, main, mobile package ID or user data.
