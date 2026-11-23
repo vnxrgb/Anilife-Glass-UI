@@ -752,10 +752,10 @@ private fun Tab.navigationIcon(cinema: Boolean): ImageVector =
 private val PhoneNavigationBarHeight = FloatingNavBarExpandedHeight + FloatingNavBarMargin
 
 /** The dice's right edge on the capsule's, which is inset this far from the screen's. */
-private val RandomButtonEndInset = 12.dp
+private val RandomButtonEndInset = 18.dp
 
 /** Air between the dice and the capsule top, so the two read as a pair rather than as one shape. */
-private val RandomButtonGap = 12.dp
+private val RandomButtonGap = 4.dp
 
 @Composable
 private fun MiruroRoot(
