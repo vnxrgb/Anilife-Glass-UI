@@ -37,6 +37,19 @@ class SettingsSearchIndexTest {
     }
 
     @Test
+    fun `Morphe attribution is searchable and displays the complete required credit`() {
+        assertTrue(searchSettings("morphe", entries).any {
+            it.title == "Morphe attribution" && it.sectionId == "about"
+        })
+        val aboutSource = screenSource().substringAfter("settingsSection(\"about\"")
+        assertTrue(aboutSource.contains("item(key = \"Morphe attribution\")"))
+        assertTrue(aboutSource.contains(
+            "This app uses code from Morphe. To learn more, visit https://morphe.software"
+        ))
+        assertTrue(aboutSource.contains("openLink(context, \"https://morphe.software\")"))
+    }
+
+    @Test
     fun `a name match outranks a keyword match`() {
         // "Skip button" and "Skip button length" are named for it; auto-skip only mentions it.
         val titles = searchSettings("skip button", entries).map { it.title }
