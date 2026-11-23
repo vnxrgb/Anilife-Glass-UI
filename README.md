@@ -10,6 +10,13 @@
   [Download v1.0.0](https://github.com/vnxrgb/Anilumos/releases/tag/v1.0.0) · [All releases](https://github.com/vnxrgb/Anilumos/releases) · [Report an issue](https://github.com/vnxrgb/Anilumos/issues)
 </div>
 
+<p align="center">
+  <a href="https://github.com/vnxrgb/Anilumos/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/vnxrgb/Anilumos?style=for-the-badge&label=Stable%20Release"></a>
+  <a href="https://github.com/vnxrgb/Anilumos/releases"><img alt="Total APK downloads" src="https://img.shields.io/github/downloads/vnxrgb/Anilumos/total?style=for-the-badge&label=Downloads"></a>
+  <a href="https://github.com/vnxrgb/Anilumos/actions/workflows/ci.yml"><img alt="Android build status" src="https://img.shields.io/github/actions/workflow/status/vnxrgb/Anilumos/ci.yml?branch=main&style=for-the-badge&label=Android%20CI"></a>
+  <a href="https://github.com/vnxrgb/Anilumos/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/vnxrgb/Anilumos?style=for-the-badge"></a>
+</p>
+
 ## Overview
 
 Anilumos builds on AniLife's existing anime discovery, streaming and library features, with a focus on visual consistency, comfortable navigation and a more immersive playback experience. It retains the original application's core functionality while introducing a custom interface, player refinements and independent branding.
