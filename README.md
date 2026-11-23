@@ -69,7 +69,6 @@ Provider updates are not delivered directly to installed APKs; a new app release
   <a href="docs/store/screenshots/05-episode-playback.jpg"><img src="docs/store/screenshots/05-episode-playback.jpg" width="18%" alt="Episode playback and ambient lighting"></a>
 </p>
 
-[Original screenshots and direct store-submission links](docs/store/screenshots/README.md)
 
 ## Download
 
