@@ -80,17 +80,29 @@ internal fun SimklSettingRow() {
     var deviceSignInVisible by remember { mutableStateOf(false) }
     var disconnectVisible by remember { mutableStateOf(false) }
     var disconnected by remember { mutableStateOf(false) }
+    var connectError by remember { mutableStateOf<String?>(null) }
     // The sign-in's outcome is held process-wide so a browser return can land with no screen up;
     // once it has been seen here, leaving Settings retires it.
     DisposableEffect(Unit) { onDispose { SimklAuthManager.acknowledgeSignIn() } }
 
     fun connect() {
         disconnected = false
+        connectError = null
         SimklAuthManager.acknowledgeSignIn()
+        if (!SimklAuthManager.isConfigured) {
+            connectError = "Simkl isn't available in this build. The Simkl client ID must be configured."
+            return
+        }
         if (!device.isTv) {
+            val url = runCatching { SimklAuthManager.authorizeUrl() }
+                .onFailure {
+                    DiagnosticsLog.throwable("Simkl sign-in could not start", it)
+                    connectError = "Couldn't start Simkl sign-in. Please try again."
+                }
+                .getOrNull() ?: return
             val opened = runCatching {
                 context.startActivity(
-                    Intent(Intent.ACTION_VIEW, Uri.parse(SimklAuthManager.authorizeUrl()))
+                    Intent(Intent.ACTION_VIEW, Uri.parse(url))
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
             }.onFailure { DiagnosticsLog.throwable("Simkl browser sign-in could not open", it) }
@@ -113,6 +125,9 @@ internal fun SimklSettingRow() {
             connectedText = if (loggedIn) username?.takeIf { it.isNotBlank() } ?: "Connected" else "Connect",
             onClick = { if (loggedIn) disconnectVisible = true else connect() },
         )
+        connectError?.let { message ->
+            MidnightInlineNotice(message, tone = MidnightNoticeTone.ERROR)
+        }
         when (val state = signIn) {
             is SimklSignIn.Connected -> MidnightInlineNotice(
                 state.username?.let { "Simkl connected as $it" } ?: "Simkl connected",
