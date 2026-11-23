@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
-      BASE_BRANCH: feature/unified-glass-ui
+      BASE_BRANCH: main
       SYNC_BRANCH: automation/upstream-provider-sync
       UPSTREAM_REPO: anilifecommunity/android-and-tv
     steps:
