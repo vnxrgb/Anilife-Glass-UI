@@ -132,7 +132,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalDensity
 import com.anilili.ui.tour.RegisterTourScroller
-import com.anilili.ui.tour.StartWhatsNewTourWhenSettled
 import com.anilili.ui.tour.TourTarget
 import com.anilili.ui.tour.tourTarget
 import androidx.compose.ui.unit.sp
@@ -594,7 +593,6 @@ private fun HomeContent(
 
         // What's new (ui/tour): starts once Home has settled, and scrolls the row a step points at
         // to just below the top bar. Item 0 is the spotlight; the rows follow in drawn order.
-        StartWhatsNewTourWhenSettled()
         val tourTopPx = with(LocalDensity.current) { (topOverlay + 12.dp).roundToPx() }
         RegisterTourScroller { target ->
             val row = when (target) {
