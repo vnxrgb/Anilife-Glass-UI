@@ -57,6 +57,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -426,8 +427,17 @@ private fun PlayerModalSheet(
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                // A theme-accent rim keeps the video controls in the same
-                // cinematic glass language without reducing readability.
+                // A static, soft reflection rather than a live backdrop blur:
+                // the Media3 video and Morphe sampler remain unobstructed.
+                .background(
+                    Brush.verticalGradient(
+                        0f to Color.White.copy(alpha = 0.10f),
+                        0.20f to Color.White.copy(alpha = 0.045f),
+                        0.68f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = 0.12f),
+                    ),
+                    RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+                )
                 .border(
                     1.dp,
                     Color.White.copy(alpha = 0.21f),
@@ -507,6 +517,15 @@ private fun PlayerSidePanel(
                 // The episode drawer's frame, shared by every picker the player opens.
                 .clip(PlayerPanelShape)
                 .background(PlayerPanelSurface.copy(alpha = 0.94f))
+                .background(
+                    Brush.verticalGradient(
+                        0f to Color.White.copy(alpha = 0.11f),
+                        0.24f to Color.White.copy(alpha = 0.04f),
+                        0.65f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = 0.10f),
+                    ),
+                    PlayerPanelShape,
+                )
                 .border(
                     1.dp,
                     Color.White.copy(alpha = 0.24f),
