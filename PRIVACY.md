@@ -1,29 +1,27 @@
-# Privacy
+# Privacy Policy
 
-Anilife does not send analytics or usage telemetry. The application makes network requests only for
-features a user invokes or enables, such as catalogue data, playback sources, subtitles, account
-sync, update checks, and explicitly submitted diagnostics.
+Anilumos does not send advertising analytics or general usage telemetry. It makes network requests for features you use or enable, including anime catalogues, streaming sources, subtitles, account syncing, update checks, and diagnostics when you choose to share them.
 
 ## Diagnostics
 
-Diagnostic collection is local by default. A report is transmitted only when the user uploads one
-manually or explicitly enables the off-by-default daily upload option. Enabling automatic uploads
-starts a new consent window: events recorded before that point are excluded, disabling it cancels
-queued work and deletes staged uploads, and accepted reports are retained privately for 30 days.
-Local export remains available for review before sharing. Reports must not include account tokens,
-cookies, private media URLs, or unnecessary personal information.
+Diagnostics are stored locally by default. A report is transmitted only if you upload it yourself or enable the optional daily diagnostic uploads, which are off by default.
 
-## Accounts and configuration
+Enabling automatic uploads begins a new consent window: earlier diagnostic events are excluded. Disabling uploads cancels queued work and removes staged uploads. Accepted diagnostic reports are retained privately for 30 days.
 
-Optional account integrations are disabled when their public client identifier is not configured.
-Authentication tokens and preferences are stored in Android application storage. User-created
-backups are exported only on request and should be protected like other personal files.
+You can export and review local diagnostics before sharing them. Reports should not contain account tokens, cookies, private media URLs, or unnecessary personal information.
+
+## Accounts and app settings
+
+Optional account integrations are unavailable when the required public client identifier is not configured. Authentication tokens and app preferences are stored in Android application storage.
+
+Backups are created or exported at your request. Keep exported backups private, especially if they contain account information or viewing history.
 
 ## Third-party services
 
-Catalogue, account, subtitle, playback, and update features contact third-party services. Those
-services can observe ordinary connection metadata and apply their own terms and privacy policies.
-Anilife does not control their availability or data handling.
+Anilumos contacts third-party services to provide catalogue information, subtitles, streaming, account syncing, and updates. Those services may receive ordinary connection information such as your IP address and may have their own privacy policies and terms. Anilumos does not control how those services handle data.
 
-For a suspected privacy or security vulnerability, use a private
-[GitHub Security Advisory](https://github.com/anilifecommunity/android-and-tv/security/advisories/new).
+Anilumos does not host the anime streams provided by third-party websites.
+
+## Privacy and security concerns
+
+If you discover a privacy or security vulnerability, report it privately through [Anilumos GitHub Security Advisories](https://github.com/vnxrgb/Anilumos/security/advisories/new). Please do not post private information in a public issue.
