@@ -827,7 +827,7 @@ private fun HeroPager(
         // A phone needs a distinct artwork zone above the title and actions. The old 244dp
         // forced long titles, metadata, genre chips, buttons and dots into one crowded block.
         // Keep the hero stable as slides change so page indicators never jump.
-        else -> 338.dp
+        else -> 314.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -920,11 +920,11 @@ private fun HeroPager(
             Row(
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 7.dp)
+                    .padding(bottom = 6.dp)
                     .clip(RoundedCornerShape(50))
-                    .background(Color.Black.copy(alpha = 0.38f))
-                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
-                    .padding(horizontal = 6.dp, vertical = if (device.isTv) 5.dp else 2.dp),
+                    .background(Color.Black.copy(alpha = 0.29f))
+                    .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(50))
+                    .padding(horizontal = 4.dp, vertical = if (device.isTv) 5.dp else 1.dp),
                 horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 5.dp else 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -934,7 +934,7 @@ private fun HeroPager(
                         modifier = Modifier
                             .then(
                                 if (device.isTv) Modifier else Modifier
-                                    .size(28.dp)
+                                    .size(26.dp)
                                     .clickable(
                                         onClickLabel = "Show featured anime ${i + 1} of ${items.size}",
                                         role = Role.Button,
@@ -944,8 +944,8 @@ private fun HeroPager(
                     ) {
                         Box(
                             Modifier
-                                .height(5.dp)
-                                .width(if (selected) 18.dp else 5.dp)
+                                .height(4.dp)
+                                .width(if (selected) 14.dp else 4.dp)
                                 .clip(CircleShape)
                                 .background(
                                     if (selected) MaterialTheme.colorScheme.primary
@@ -1058,7 +1058,7 @@ private fun HeroCard(
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .padding(top = topInset)
-                .padding(horizontal = device.pagePadding, vertical = 14.dp),
+                .padding(horizontal = device.pagePadding, vertical = if (device.isTv) 14.dp else 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top,
         ) {
@@ -1091,7 +1091,7 @@ private fun HeroCard(
                 .padding(horizontal = device.pagePadding)
                 .padding(
                     top = if (device.isTv) 16.dp else 8.dp,
-                    bottom = if (device.isTv) 26.dp else if (pageCount > 1) 42.dp else 18.dp,
+                    bottom = if (device.isTv) 26.dp else if (pageCount > 1) 35.dp else 15.dp,
                 ),
             horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
@@ -1107,7 +1107,7 @@ private fun HeroCard(
                 modifier = Modifier
                     .padding(top = if (device.isTv) 10.dp else 0.dp)
                     .fillMaxWidth(if (device.isExpanded) 0.6f else 1f)
-                    .height(if (device.isTv) 88.dp else if (device.isExpanded) 76.dp else 64.dp),
+                    .height(if (device.isTv) 88.dp else if (device.isExpanded) 68.dp else 54.dp),
             ) {
                 ShrinkingTitle(
                     text = media.title.preferred,
@@ -1140,7 +1140,7 @@ private fun HeroCard(
                 // The hero is a destination as well as artwork. Keep the actionable
                 // call-to-action visible instead of relying on an undocumented poster tap.
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 9.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -1690,7 +1690,7 @@ private fun ContinueRail(
         device.isTablet -> 200.dp
         // Keep three thumb-sized cards nearly visible on a normal phone, matching
         // the supplied mockup and leaving room for the title beneath each thumbnail.
-        else -> 124.dp
+        else -> 156.dp
     }
     Column {
         RailTitle(
@@ -1729,7 +1729,7 @@ private fun ContinueRail(
                 ) {
                     Box(
                         Modifier.fillMaxWidth()
-                            .aspectRatio(if (device.isTv) 16f / 9f else 1.15f)
+                            .aspectRatio(if (device.isTv) 16f / 9f else 1.4f)
                             .glassCard(RoundedCornerShape(20.dp)),
                     ) {
                         // Each card frosts its own thumbnail under its corner buttons: a source
@@ -1737,7 +1737,7 @@ private fun ContinueRail(
                         val thumbnail = if (homeGlass) remember { HazeState() } else null
                         Box(Modifier.fillMaxSize().then(if (thumbnail != null) Modifier.hazeSource(thumbnail) else Modifier)) {
                             AsyncImage(model = entry.cover, contentDescription = "Resume ${entry.title}", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                            Box(Modifier.fillMaxSize().background(Color.Black.copy(.3f)))
+                            Box(Modifier.fillMaxSize().background(Color.Black.copy(.16f)))
                         }
                         Box(
                             Modifier
