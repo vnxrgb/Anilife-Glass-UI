@@ -577,7 +577,7 @@ private fun HomeContent(
         // Lazy list keys are Any (a rail may use a string or another stable
         // key type). Preserve that explicit contract while caching this map.
         val keyToRow: Map<Any, HomeRow> = remember(drawnKeys) {
-            buildMap {
+            buildMap<Any, HomeRow> {
                 drawnKeys.forEach { (row, key) -> if (key != null) put(key, row) }
             }
         }
