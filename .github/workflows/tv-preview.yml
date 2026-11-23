@@ -61,8 +61,10 @@ jobs:
           badging="$("$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$apk")"
           grep -Fq "name='com.anilumos.app.debug'" <<< "$badging"
           grep -Fq "uses-feature-not-required: name='android.hardware.touchscreen'" <<< "$badging"
-          "$ANDROID_HOME/build-tools/35.0.1/aapt" dump xmltree "$apk" AndroidManifest.xml |
-            grep -Fq 'android.intent.category.LEANBACK_LAUNCHER'
+          # Capture the complete manifest dump before matching: grep -q in a pipe can
+          # close early and make aapt fail with SIGPIPE under pipefail.
+          manifest_tree="$("$ANDROID_HOME/build-tools/35.0.1/aapt" dump xmltree "$apk" AndroidManifest.xml)"
+          grep -Fq 'android.intent.category.LEANBACK_LAUNCHER' <<< "$manifest_tree"
           mkdir -p dist
           cp "$apk" dist/Anilumos-TV-preview.apk
           sha256sum dist/Anilumos-TV-preview.apk > dist/SHA256SUMS
