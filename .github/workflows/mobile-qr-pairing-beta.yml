@@ -1,0 +1,189 @@
+name: AniLumos mobile QR pairing beta
+
+on:
+  push:
+    branches: [feature/qr-scan-tv-pairing]
+    paths:
+      - .github/workflows/mobile-qr-pairing-beta.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: anilumos-mobile-qr-beta
+  cancel-in-progress: false
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
+
+jobs:
+  publish:
+    name: Verify, sign and publish universal mobile APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: release
+    env:
+      ANILIST_CLIENT_ID: ${{ vars.ANILIST_CLIENT_ID }}
+      MAL_CLIENT_ID: ${{ vars.MAL_CLIENT_ID }}
+      MAL_REDIRECT_URI: ${{ vars.MAL_REDIRECT_URI }}
+      SIMKL_CLIENT_ID: ${{ vars.SIMKL_CLIENT_ID }}
+      DISCORD_APPLICATION_ID: ${{ vars.DISCORD_APPLICATION_ID }}
+      DISCORD_INVITE_URL: ${{ vars.DISCORD_INVITE_URL }}
+      DIAGNOSTICS_UPLOAD_URL: ${{ vars.DIAGNOSTICS_UPLOAD_URL }}
+      OPEN_SUBTITLES_API_KEY: ${{ secrets.OPEN_SUBTITLES_API_KEY }}
+      KARTOONS_ACCOUNT_TOKENS: ${{ secrets.KARTOONS_ACCOUNT_TOKENS }}
+      KARTOONS_TOKENS_MIRROR_URL: ${{ vars.KARTOONS_TOKENS_MIRROR_URL }}
+      RIFT_FIREBASE_API_KEY: ${{ secrets.RIFT_FIREBASE_API_KEY }}
+      ANDROID_SIGNING_KEYSTORE_BASE64: ${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}
+      ANDROID_SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
+      ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
+      ANDROID_SIGNING_KEY_ALIAS: ${{ vars.ANDROID_SIGNING_KEY_ALIAS }}
+      ANDROID_SIGNING_CERT_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out merged main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Confirm version and unpublished release
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'val appVersionCode = 11' app/build.gradle.kts
+          grep -Fq 'val appVersionName = "1.0.3-beta.1"' app/build.gradle.kts
+          if gh release view "v1.0.3-beta.1" >/dev/null 2>&1; then
+            echo "::error::Release v1.0.3-beta.1 already exists; refusing overwrite."
+            exit 1
+          fi
+
+      - name: Require AniList and MyAnimeList OAuth configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in ANILIST_CLIENT_ID MAL_CLIENT_ID MAL_REDIRECT_URI; do
+            value="${!name:-}"
+            if [[ -z "${value//[[:space:]]/}" ]]; then
+              echo "::error::Missing OAuth setting $name. Refusing to publish an APK with broken account login."
+              exit 1
+            fi
+          done
+          case "$MAL_REDIRECT_URI" in
+            http://localhost/|https://localhost/|anilife://auth/mal) ;;
+            *) echo "::error::Unexpected MAL redirect format. Check the app callback handler."; exit 1 ;;
+          esac
+
+      - name: Check protected signing configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in ANDROID_SIGNING_KEYSTORE_BASE64 ANDROID_SIGNING_STORE_PASSWORD ANDROID_SIGNING_KEY_PASSWORD ANDROID_SIGNING_KEY_ALIAS ANDROID_SIGNING_CERT_SHA256; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing required release signing secret or variable: $name"
+              exit 1
+            fi
+          done
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-read-only: false
+
+      - name: Restore protected signing keystore
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_SIGNING_KEYSTORE_BASE64"
+          test -n "$ANDROID_SIGNING_STORE_PASSWORD"
+          test -n "$ANDROID_SIGNING_KEY_PASSWORD"
+          test -n "$ANDROID_SIGNING_KEY_ALIAS"
+          test -n "$ANDROID_SIGNING_CERT_SHA256"
+          mkdir -p .release
+          printf '%s' "$ANDROID_SIGNING_KEYSTORE_BASE64" | base64 --decode > .release/anilumos-release.jks
+          chmod 600 .release/anilumos-release.jks
+          {
+            printf 'storeFile=.release/anilumos-release.jks\n'
+            printf 'storePassword=%s\n' "$ANDROID_SIGNING_STORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$ANDROID_SIGNING_KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$ANDROID_SIGNING_KEY_PASSWORD"
+          } > keystore.properties
+          chmod 600 keystore.properties
+
+      - name: Unit tests, lint and signed mobile release build
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if ./gradlew :app:testMobileDebugUnitTest :app:lintMobileDebug :app:assembleMobileRelease --max-workers=2 --no-configuration-cache --console=plain > gradle-build.log 2>&1; then
+              cat gradle-build.log
+              exit 0
+            fi
+            cat gradle-build.log
+            if ! grep -Eq 'Received status code 429|Too Many Requests|HTTP 429' gradle-build.log; then exit 1; fi
+            if [ "$attempt" -eq 3 ]; then exit 1; fi
+            sleep $((attempt * 120))
+          done
+
+      - name: Verify universal release APK and signer's identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          apk="app/build/outputs/apk/mobile/release/Anilumos.apk"
+          test -s "$apk"
+          "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify --verbose "$apk"
+          "$ANDROID_HOME/build-tools/35.0.1/zipalign" -c -P 16 4 "$apk"
+          fingerprint="$("$ANDROID_HOME/build-tools/35.0.1/apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
+          test -n "$fingerprint"
+          test "${fingerprint,,}" = "${ANDROID_SIGNING_CERT_SHA256,,}"
+          package_line="$("$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$apk" | head -n 1)"
+          [[ "$package_line" == *"name='com.anilumos.app'"* ]]
+          [[ "$package_line" == *"versionName='1.0.3-beta.1'"* ]]
+          [[ "$package_line" == *"versionCode='11'"* ]]
+          cp "$apk" dist/Anilumos.apk
+          printf '%s\n' "$fingerprint" > dist/SIGNING-CERTIFICATE-SHA256.txt
+          (cd dist && sha256sum Anilumos.apk SIGNING-CERTIFICATE-SHA256.txt > SHA256SUMS)
+          printf '%s\n' "Anilumos mobile 1.0.3-beta.1 candidate: main commit $GITHUB_SHA" > dist/BUILD-REVISION.txt
+
+      - name: Verify release checksum manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd dist && sha256sum --check --ignore-missing SHA256SUMS)
+
+      - name: Upload signed test APK as downloadable Actions artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: anilumos-mobile-qr-pairing-beta
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish experimental signed mobile beta
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > release-notes.txt <<'EOF'
+          # AniLumos v1.0.3-beta.1 — Link a TV QR Beta
+
+          - Scan the QR code on your TV to connect directly.
+          - Secure six-digit pairing confirmation and manual connection fallback preserved.
+
+          Experimental release-signed mobile APK for testing with AniLumos TV alpha.
+          AniLife: https://github.com/anilifecommunity/android-and-tv
+          This app uses code from Morphe. To learn more, visit https://morphe.software
+          See LICENSE and notices for applicable terms.
+          EOF
+          gh release create "v1.0.3-beta.1" dist/Anilumos.apk dist/SHA256SUMS dist/SIGNING-CERTIFICATE-SHA256.txt dist/BUILD-REVISION.txt \
+            --target "$GITHUB_SHA" --title "AniLumos v1.0.3-beta.1 — QR Pairing Beta" --notes-file release-notes.txt --prerelease
+          echo "Mobile beta APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v1.0.3-beta.1/Anilumos.apk" >> "$GITHUB_STEP_SUMMARY"

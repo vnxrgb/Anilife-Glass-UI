@@ -15,6 +15,12 @@
         advertises, it never browses.
     -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <!-- Camera access is requested only when Scan TV QR is opened on a phone.
+         Cameras remain optional so camera-free tablets can still install AniLumos. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
 
     <application>
         <meta-data
