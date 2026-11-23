@@ -10,6 +10,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Only the television flavor advertises Leanback hardware. -->
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+
     <application
         android:icon="@drawable/tv_launcher_icon"
         android:roundIcon="@drawable/tv_launcher_icon"
