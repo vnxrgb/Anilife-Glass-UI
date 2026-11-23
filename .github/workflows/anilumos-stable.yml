@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'val appVersionCode = 9' app/build.gradle.kts
+          grep -Fq 'val appVersionCode = 13' app/build.gradle.kts
           grep -Fq 'val appVersionName = "1.0.3"' app/build.gradle.kts
           if gh release view "v1.0.3" >/dev/null 2>&1; then
             echo "::error::Release v1.0.3 already exists; refusing overwrite."
