@@ -1,4 +1,4 @@
-AniLife Glass UI preview build — Details screenshot correction
-Validated baseline: 6b949113cf6d6e23dba06a6f61d27efce1136bb7 (Android CI and CodeQL success)
-Includes latest Naruto Details header/action/tabs/status/bottom-nav clearance fixes, plus preceding Home banner and navigation improvements.
-Build one universal mobile debug APK from this trigger commit. Run mobile unit tests, lint, APK assembly and signing verification. Replace glass-ui-preview asset anilife-glass-universal.apk only on success. Do not publish stable or merge main.
+AniLife unified glass UI direct test APK — coordinated screenshot corrections
+Source baseline: 31c012c86bbe728abba1b9a7b8e664b33a757085
+Includes translucent shared headers across My List, Downloads and Schedule, frosted Home/Details primary CTA treatment, Details hero gradient and action spacing, shorter episode list toolbar correction, and mobile screen density fixes.
+Build universal mobile debug APK from this trigger commit. Require mobile unit tests, lint, assembly, and apksigner verification, then replace exactly the existing glass-ui-preview/anilife-glass-universal.apk release asset only if successful. No main merge or stable release. Device visual acceptance still needed.
