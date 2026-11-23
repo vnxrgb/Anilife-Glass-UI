@@ -143,6 +143,7 @@ import com.anilili.ui.components.glassCard
 import com.anilili.ui.components.glassPanelColor
 import com.anilili.ui.components.glassRimColor
 import com.anilili.ui.components.glassSelectionColor
+import com.anilili.ui.components.cinematicPrimaryButtonBorder
 import com.anilili.ui.components.cinematicPrimaryButtonColors
 import com.anilili.ui.components.cinematicSecondaryButtonColors
 import com.anilili.ui.components.cinematicSecondaryButtonBorder
@@ -1197,11 +1198,13 @@ private fun DetailActions(
         )
         }
         val controlFocus6 = rememberFocusFill()
-        Button(
+        OutlinedButton(
             shape = RoundedCornerShape(50),
             colors = controlFocus6.buttonColors(
-                if (device.isTv) ButtonDefaults.buttonColors() else cinematicPrimaryButtonColors(),
+                if (device.isTv) ButtonDefaults.outlinedButtonColors() else cinematicPrimaryButtonColors(),
             ),
+            border = if (device.isTv) androidx.compose.foundation.BorderStroke(1.dp, glassRimColor())
+                else cinematicPrimaryButtonBorder(),
             onClick = onWatch,
             enabled = canWatch,
             modifier = Modifier
