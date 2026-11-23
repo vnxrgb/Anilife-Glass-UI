@@ -302,11 +302,11 @@ fun SearchScreen(
                                 if (browseBackdrop != null) {
                                     Modifier.backdropBlur(
                                         browseBackdrop,
-                                        tint = MaterialTheme.colorScheme.background.copy(alpha = .72f),
+                                        tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .38f),
                                         radius = 24.dp,
                                     )
                                 } else {
-                                    Modifier.appCanvas()
+                                    Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.52f))
                                 },
                             )
                             .statusBarsPadding()
@@ -328,7 +328,7 @@ fun SearchScreen(
                     onAnimeClick(suggestion.id)
                 },
             )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .7f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .22f))
         }
     }
 
@@ -534,7 +534,7 @@ private fun SearchTopBar(
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = device.pagePadding)
-                        .padding(bottom = 12.dp),
+                        .padding(bottom = 6.dp),
                 ) {
                     Row(
                         Modifier.fillMaxWidth().padding(top = 10.dp),
@@ -1426,7 +1426,7 @@ private fun ResultsGrid(
                         end = device.pagePadding,
                         // The search bar floats over this grid the way the capsule does below it, so
                         // the first row buys its clearance here rather than being laid out beneath it.
-                        top = 10.dp + headerPadding,
+                        top = 4.dp + headerPadding,
                         // The floating season bar is the second such overlay on a phone; when it is
                         // out, the last row reserves its height the same way.
                         bottom = AppChromeListBottomGap + LocalAppChromeBottomInset.current + seasonBarClearance,
