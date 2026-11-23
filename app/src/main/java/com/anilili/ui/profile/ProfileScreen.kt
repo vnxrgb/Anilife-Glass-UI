@@ -629,7 +629,7 @@ fun ProfileScreen(
                                 .coerceAtLeast(LocalAppChromeBottomInset.current) +
                                 AppChromeListBottomGap + (if (device.isTv) 0.dp else 20.dp),
                         ),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 7.dp),
                     ) {
                         if (device.isTv && !loggedIn) {
                             // Give the two provider buttons the whole first focus row. In the old
