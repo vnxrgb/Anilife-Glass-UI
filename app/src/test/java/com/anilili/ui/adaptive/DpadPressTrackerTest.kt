@@ -84,4 +84,17 @@ class DpadPressTrackerTest {
         tracker.onKeyDown(0)
         assertEquals(DpadPress.CLICK, tracker.onKeyUp(80))
     }
+    @Test
+    fun `losing focus cancels a held remote press`() {
+        val tracker = tracker()
+        tracker.onKeyDown(0)
+        tracker.onKeyDown(700)
+        tracker.cancel()
+        assertEquals(null, tracker.onKeyUp(900))
+
+        // A new press on the newly focused card must still work normally.
+        tracker.onKeyDown(0)
+        assertEquals(DpadPress.CLICK, tracker.onKeyUp(100))
+    }
+
 }
