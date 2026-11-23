@@ -10,6 +10,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- TV is remote-first; lint requires touchscreen explicitly optional in this flavor. -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
     <!-- Only the television flavor advertises Leanback hardware. -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
