@@ -265,7 +265,7 @@ fun ScheduleScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = device.pagePadding)
-                        .padding(bottom = LocalAppChromeBottomInset.current + 12.dp)
+                        .padding(bottom = LocalAppChromeBottomInset.current + 6.dp)
                         .widthIn(max = 520.dp),
                 )
             }
@@ -405,7 +405,7 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
     LazyRow(
         state = listState,
         modifier = Modifier.focusGroup(),
-        contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 6.dp),
+        contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 6.dp else 5.dp),
     ) {
         items(DAY_STRIP_LENGTH) { index ->
@@ -415,7 +415,7 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
             Column(
                 modifier = Modifier
                     .width(if (device.isTv) 80.dp else 74.dp)
-                    .height(if (device.isTv) 60.dp else 56.dp)
+                    .height(if (device.isTv) 60.dp else 52.dp)
                     .focusFill(fillFocus1, RoundedCornerShape(14.dp))
                     .clip(RoundedCornerShape(14.dp))
                     .background(
@@ -430,7 +430,7 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
                     )
                     .clickable(onClickLabel = "Show schedule for ${date.format(dateFmt)}") { onSelect(date) }
                     .semantics { this.selected = active }
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
