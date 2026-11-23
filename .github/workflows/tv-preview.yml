@@ -56,6 +56,13 @@ jobs:
           apk="app/build/outputs/apk/tv/debug/Anilumos-debug_tv.apk"
           test -s "$apk"
           "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify --verbose "$apk"
+          # A successful build is not enough: reject an accidentally packaged phone APK
+          # or a TV APK that silently loses its remote launcher entry.
+          badging="$("$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$apk")"
+          grep -Fq "name='com.anilumos.app.debug'" <<< "$badging"
+          grep -Fq "uses-feature-not-required: name='android.hardware.touchscreen'" <<< "$badging"
+          "$ANDROID_HOME/build-tools/35.0.1/aapt" dump xmltree "$apk" AndroidManifest.xml |
+            grep -Fq 'android.intent.category.LEANBACK_LAUNCHER'
           mkdir -p dist
           cp "$apk" dist/Anilumos-TV-preview.apk
           sha256sum dist/Anilumos-TV-preview.apk > dist/SHA256SUMS
