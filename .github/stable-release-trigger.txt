@@ -1,8 +1,7 @@
 AniLumos stable release trigger
-Version v1.0.2
-Update: you can now update directly from the app.
-Publish only after the reviewed direct-update hotfix merges into main.
-Require tests, lint, signed universal mobile APK, OAuth configuration,
-package version 1.0.2 (versionCode 9), zip alignment and certificate verification.
-The installer verifies package identity, published APK checksum and trusted signer.
-Do not overwrite v1.0.1; publish v1.0.2 as an in-place upgrade.
+Version v1.0.3 (versionCode 13)
+Changes: Simkl and Discord account connections; avoid crashes during sign-in.
+Publish exactly one universal, signed mobile APK after tests, lint, OAuth configuration,
+zip alignment, package/version identity and release-certificate verification succeed.
+Use the existing production signing key. Do not overwrite previous stable releases.
+Keep preview and Android TV releases in the separate experimental repository.
