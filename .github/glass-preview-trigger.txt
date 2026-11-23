@@ -1,4 +1,4 @@
-AniLife Glass UI mobile test APK — enhanced scene-responsive video ambient upgrade
-Source baseline: 1de1f0c15435f7f5cf17ec22905876d941496292
-Includes three-zone left/center/right native video frame ambient color sampling, faster 260ms active-playback cadence, color transition smoothing and fallback; Details banner-based static ambient glow and right-side watched action; compact Home hero pager and circular Grid/Rail selectors, plus previous glass UI refinements.
-Build and verify mobile debug unit tests, lint, universal APK and signature; on success replace only glass-ui-preview/anilife-glass-universal.apk and update release target. Preserve stable release; device performance and UI acceptance remain pending.
+AniLife authorized GPLv3 feature-branch test build with Morphe ambient renderer
+Source baseline: 71c774e80e2c728771ab5e219d9034c72bbb005b
+Directly port Morphe GPLv3 AmbientLightMath spatial renderer (copyright 2026 Morphe, NOTICE and license present in APK) with independent AniLife Media3 PixelCopy adapter, low-memory/secure-frame safety, and scene-based ambient sampling. Prior AniLife adjustments and Details glow preserved.
+Build only the universal mobile debug APK after unit tests, lint and signature validation; replace glass-ui-preview asset on success only. No stable release or main merge. Device equivalence remains unverified.
