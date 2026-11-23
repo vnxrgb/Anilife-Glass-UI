@@ -1237,6 +1237,7 @@ private fun DetailActions(
                 maxLines = 1,
             )
         }
+        }
         if (!device.isTv && watchedToggleAvailable(anilistId)) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 3.dp),
