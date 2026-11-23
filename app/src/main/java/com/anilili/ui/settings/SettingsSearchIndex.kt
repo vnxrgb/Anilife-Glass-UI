@@ -269,6 +269,7 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
         listOf(
             "Watch on Anilife.cc" to listOf("anilife", "website", "web", "watch"),
             "Discord server" to listOf("discord", "support", "community", "help"),
+            "Morphe attribution" to listOf("morphe", "credit", "attribution", "license", "gpl", "about", "website"),
         ),
     )
 }
