@@ -227,10 +227,25 @@ internal fun PlayerSeekBar(
                 strokePx = strokePx,
             )
             if (thumbPx > 0f) {
+                val thumbCenter = Offset(left + span * fraction.coerceIn(0f, 1f), centreY)
+                // A light-catching rim gives the seek knob the same neutral
+                // liquid-glass finish as the new control capsules. Its geometry
+                // and drag hit area are unchanged, so seeking remains exact.
                 drawCircle(
-                    color = played,
-                    radius = thumbPx,
-                    center = Offset(left + span * fraction.coerceIn(0f, 1f), centreY),
+                    color = Color.Black.copy(alpha = 0.28f),
+                    radius = thumbPx + with(density) { 2.dp.toPx() },
+                    center = thumbCenter,
+                )
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.60f),
+                    radius = thumbPx + with(density) { 0.9.dp.toPx() },
+                    center = thumbCenter,
+                )
+                drawCircle(color = played, radius = thumbPx * 0.86f, center = thumbCenter)
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.46f),
+                    radius = thumbPx * 0.32f,
+                    center = Offset(thumbCenter.x - thumbPx * 0.25f, thumbCenter.y - thumbPx * 0.24f),
                 )
             }
         }
