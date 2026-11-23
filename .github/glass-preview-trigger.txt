@@ -1,4 +1,6 @@
-AniLife authorized GPLv3 feature-branch test build with Morphe ambient renderer
-Source baseline: 71c774e80e2c728771ab5e219d9034c72bbb005b
-Directly port Morphe GPLv3 AmbientLightMath spatial renderer (copyright 2026 Morphe, NOTICE and license present in APK) with independent AniLife Media3 PixelCopy adapter, low-memory/secure-frame safety, and scene-based ambient sampling. Prior AniLife adjustments and Details glow preserved.
-Build only the universal mobile debug APK after unit tests, lint and signature validation; replace glass-ui-preview asset on success only. No stable release or main merge. Device equivalence remains unverified.
+Batch UI acceptance test — AniLife Morphe ambient smoothness + complete Schedule rounding + Details poster blend
+Source feature commit: de383a8ba97f29b003379d5e51c7ac9ad202b968
+- Morphe spatial light: 125ms capture pacing, reusable buffers, temporal smoothing and 155ms GPU crossfades rather than abrupt bitmap swaps.
+- Schedule: pill-shaped day strip and bottom date stepper, softer timeline cards and image corners, pill format/year labels, rounded calendar frame and date cells.
+- Details: alpha-masked banner into transparent ambient continuation behind Add to List / Watch buttons, extended softly fading blurred artwork backdrop, same TV layout preserved.
+Run mobile unit tests, lint, debug universal APK assembly, signature validation; publish preview APK only after success. Stable release unchanged. Device visual/performance testing is still required.
