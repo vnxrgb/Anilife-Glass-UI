@@ -1,0 +1,60 @@
+name: Retire migrated experimental releases
+
+on:
+  push:
+    branches: [feature/tv-polish]
+    paths:
+      - .github/workflows/retire-experimental-releases.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: retire-experimental-releases
+  cancel-in-progress: false
+
+jobs:
+  retire:
+    name: Remove old prereleases only after both standalone replacement APKs exist
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: vnxrgb/Anilumos
+    steps:
+      - name: Wait for verified mobile and TV APK-only releases in new repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 55); do
+            response="$(gh api repos/vnxrgb/anilumos-preview/releases?per_page=100)"
+            mobile="$(jq -r '[.[] | select(.prerelease and (.tag_name | startswith("mobile-beta-")) and ([.assets[].name] == ["AniLumos-MOBILE-BETA-debug.apk"]))] | length' <<< "$response")"
+            tv="$(jq -r '[.[] | select(.prerelease and (.tag_name | startswith("tv-alpha-")) and ([.assets[].name] == ["AniLumos-TV-ALPHA-debug.apk"]))] | length' <<< "$response")"
+            if (( mobile > 0 && tv > 0 )); then
+              echo "Confirmed standalone mobile and TV release APKs in vnxrgb/anilumos-preview"
+              exit 0
+            fi
+            echo "Preview APKs not both published yet (mobile=$mobile tv=$tv); check $attempt/55"
+            sleep 60
+          done
+          echo "::error::No confirmed mobile and TV APK-only replacements. Keeping old releases intact."
+          exit 1
+
+      - name: Retire only original experimental releases, never stable versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for tag in v1.0.3-beta.1 v1.0.2-alpha.2 anilumos-tv-preview; do
+            release="$(gh api "repos/$GH_REPO/releases/tags/$tag" 2>/dev/null)" || {
+              echo "$tag already absent; continuing"
+              continue
+            }
+            if [[ "$(jq -r '.prerelease' <<< "$release")" != "true" ]]; then
+              echo "::error::Refusing to remove $tag: not marked prerelease!"
+              exit 1
+            fi
+            echo "Removing migrated prerelease $tag from original repository"
+            gh release delete "$tag" --repo "$GH_REPO" --yes
+          done
+          echo "Stable v1.0.0, v1.0.1 and v1.0.2 releases are untouched." >> "$GITHUB_STEP_SUMMARY"
