@@ -8,6 +8,7 @@ on:
       - app/src/main/java/com/anilili/data/auth/**
       - app/src/main/java/com/anilili/ui/profile/**
       - app/src/main/java/com/anilili/ui/settings/**
+      - app/src/main/java/com/anilili/ui/pairing/**
       - app/build.gradle.kts
   workflow_dispatch:
 
