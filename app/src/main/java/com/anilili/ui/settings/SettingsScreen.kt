@@ -1975,7 +1975,7 @@ fun SettingsScreen(
         SettingsPicker.APP_LAYOUT -> MidnightChoicePicker(
             kicker = "Appearance",
             title = "App layout",
-            explanation = "Legacy keeps the familiar Anilife navigation. Cinema uses the same " +
+            explanation = "Legacy keeps the familiar Anilumos navigation. Cinema uses the same " +
                 "screens and theme with compact, icon-first navigation.",
             options = AppLayoutMode.entries,
             selected = appLayoutMode,
@@ -2147,7 +2147,7 @@ fun SettingsScreen(
                 item(key = "Open episodes in external player") {
                     MidnightSettingSwitchRow(
                         title = "Open episodes in external player",
-                        description = "Skip Anilife's player and open another installed video app",
+                        description = "Skip Anilumos's player and open another installed video app",
                         checked = openEpisodesInExternalPlayer,
                         onCheckedChange = SettingsStore::setOpenEpisodesInExternalPlayer,
                     )
@@ -2665,7 +2665,7 @@ fun SettingsScreen(
                     item {
                         MidnightInlineNotice(
                             "Discord's consent screen asks for more than this uses: it bundles " +
-                                "presence with friends-list and game-invite access. Anilife only " +
+                                "presence with friends-list and game-invite access. Anilumos only " +
                                 "ever sets your activity.",
                             tone = MidnightNoticeTone.INFO,
                         )
@@ -3040,7 +3040,7 @@ fun SettingsScreen(
                 item(key = "Startup animation") {
                     MidnightSettingSwitchRow(
                         title = "Startup animation",
-                        description = "Show the Anilife animation when the app opens",
+                        description = "Gently animate the Anilumos candle flame on the black splash screen",
                         checked = videoLaunchIntro,
                         onCheckedChange = SettingsStore::setVideoLaunchIntro,
                     )
@@ -3290,7 +3290,7 @@ fun SettingsScreen(
                 item(key = "Upload diagnostics now") {
                     MidnightSettingRow(
                         title = "Upload diagnostics now",
-                        description = "Send one redacted report to the private Anilife console",
+                        description = "Send one redacted report to the private Anilumos console",
                         enabled = !diagnosticsBusy,
                         busy = diagnosticsBusy,
                         onClick = {
@@ -3335,6 +3335,12 @@ fun SettingsScreen(
                         leading = { AboutBrandGlyph(R.drawable.ic_brand_discord) },
                         enabled = inviteUrl != null,
                         onClick = { inviteUrl?.let { openLink(context, it) } },
+                    )
+                }
+                item(key = "AniLife foundation") {
+                    MidnightSettingRow(
+                        title = "AniLife foundation",
+                        description = "Anilumos is built on the AniLife codebase. Credits to its original maintainers and contributors.",
                     )
                 }
                 item(key = "Morphe attribution") {
@@ -4258,11 +4264,11 @@ private fun AboutSignature() {
             .padding(start = 14.dp, end = 14.dp, top = 22.dp, bottom = 8.dp),
     ) {
         Text(
-            text = "Anilife is a community-driven anime platform built to make watching anime " +
+            text = "Anilumos is a community-driven anime platform built to make watching anime " +
                 "simple and enjoyable. It discovers episodes across multiple sources, remembers " +
                 "where you left off, and keeps your anime library synchronised with AniList and " +
                 "MyAnimeList.\n\nNo unnecessary ads, no account required. Just anime, the way it " +
-                "should be.\n\n♡ Built with passion by the Anilife Team",
+                "should be.\n\n♡ Anilumos is built on the AniLife codebase. Thanks to the original AniLife contributors.",
             style = MaterialTheme.typography.bodyMedium,
             color = Midnight.Text2,
         )

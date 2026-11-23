@@ -1,4 +1,0 @@
-AniLife UI preview: stronger fullscreen letterbox ambience and no automatic What's New tour
-Source revision: bf9758067fc490472a54f8ce4ed7abee6d8f15bb
-Increase fullscreen side glow saturation/opacity while keeping video content unobscured and preserving player ambient settings. Remove auto-start of What's New tour on Home (mobile and TV) and its root overlay; keep existing home functions.
-Run mobile unit tests, lint and APK build. Publish direct anilife-glass-universal.apk only on successful verification.

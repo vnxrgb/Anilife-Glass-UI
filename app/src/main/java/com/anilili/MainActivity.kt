@@ -388,11 +388,6 @@ class MainActivity : FragmentActivity() {
                                     } ?: false
                                 }
                             }
-                            val themeAccent by SettingsStore.themeAccent.collectAsState()
-                            val introResource = launchIntroResource(
-                                themeAccent,
-                                MaterialTheme.colorScheme.primary.toArgb(),
-                            )
                             AnimatedVisibility(
                                 visibleState = launchSplashState,
                                 modifier = Modifier.fillMaxSize(),
@@ -410,12 +405,9 @@ class MainActivity : FragmentActivity() {
                             ) {
                                 when (videoIntro) {
                                     // The window's own colour, which the mark's splash also opens on.
-                                    null -> Box(Modifier.fillMaxSize().background(ComposeColor(0xFF0B0B0F)))
-                                    true -> VideoLaunchSplash(
-                                        onFinished = { showLaunchSplash = false },
-                                        introResource = introResource,
-                                    )
-                                    false -> AppLaunchSplash(onFinished = { showLaunchSplash = false })
+                                    null -> Box(Modifier.fillMaxSize().background(ComposeColor.Black))
+                                    true -> AppLaunchSplash(onFinished = { showLaunchSplash = false }, animateFlame = true)
+                                    false -> AppLaunchSplash(onFinished = { showLaunchSplash = false }, animateFlame = false)
                                 }
                             }
                         }
