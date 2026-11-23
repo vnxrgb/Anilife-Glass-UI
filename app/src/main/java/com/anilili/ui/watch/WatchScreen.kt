@@ -2438,21 +2438,37 @@ private fun MobileWatchDetails(
             BulkDownloadStatus(modifier = Modifier.padding(horizontal = pad))
             if (!isMovie) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = pad, vertical = 14.dp),
+                    modifier = Modifier.fillMaxWidth().padding(start = pad, end = pad, top = 6.dp, bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Episodes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(
-                        "  ${data.episodes.size}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Episodes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            "  ${data.episodes.size}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    // Short seasons need just the layout toggle, not a full empty toolbar below.
+                    if (data.episodes.isNotEmpty() && data.episodes.size <= EPISODE_BROWSER_MIN_EPISODES) {
+                        EpisodeBrowserBar(
+                            blocks = blocks,
+                            selectedBlockIndex = blockIndex,
+                            onSelectBlock = { chosenBlockIndex = it },
+                            query = episodeQuery,
+                            onQueryChange = { episodeQuery = it },
+                            layout = episodeLayout,
+                            onToggleLayout = { SettingsStore.setEpisodeLayout(episodeLayout.toggled()) },
+                            showFilter = false,
+                        )
+                    }
                 }
             }
         }
         // Any series at all gets the layout toggle; only a long one also gets a range picker and a
         // filter field to go with it.
-        if (!isMovie && data.episodes.isNotEmpty()) {
+        if (!isMovie && data.episodes.size > EPISODE_BROWSER_MIN_EPISODES) {
             item {
                 EpisodeBrowserBar(
                     blocks = blocks,
