@@ -11,6 +11,9 @@ import com.anilili.ui.components.cinematicPrimaryButtonBorder
 import com.anilili.ui.components.cinematicPrimaryButtonColors
 import com.anilili.ui.components.cinematicSecondaryButtonColors
 import com.anilili.ui.components.cinematicSecondaryButtonBorder
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassSelectionColor
+import com.anilili.ui.components.glassRimColor
 import com.anilili.ui.theme.appCanvasFade
 import com.anilili.ui.theme.appCanvas
 import androidx.compose.animation.core.animateFloatAsState
