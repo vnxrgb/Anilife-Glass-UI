@@ -171,6 +171,7 @@ import com.anilili.ui.components.TvTopNavigationHeight
 import com.anilili.ui.components.UNAIRED_ALPHA
 import com.anilili.ui.components.WatchProgressBar
 import com.anilili.ui.components.WatchedToggleButton
+import com.anilili.ui.components.watchedToggleAvailable
 import com.anilili.ui.components.blockIndexOf
 import com.anilili.ui.components.openingEpisode
 import com.anilili.ui.components.chromeFade
@@ -192,7 +193,7 @@ import com.anilili.data.settings.GlassSection
 import com.anilili.ui.components.glassEnabled
 
 private enum class DetailTab(val label: String) {
-    HOME("Home"),
+    HOME("Overview"),
     EPISODES("Episodes"),
     RELATED("Related"),
 }
@@ -613,7 +614,7 @@ private fun DetailContent(
             // hero takes that height into itself instead, so the banner starts at the top edge
             // rather than below the bar; everything under it keeps the room it had.
             contentPadding = PaddingValues(
-                bottom = contentPadding.calculateBottomPadding() + 30.dp,
+                bottom = contentPadding.calculateBottomPadding() + 45.dp,
             ),
         ) {
             item {
@@ -932,10 +933,10 @@ private fun DetailHero(
 ) {
     val device = LocalAppDeviceProfile.current
     val banner = info.bannerImage ?: info.coverImage.best
-    val bannerHeight = topInset + if (device.isExpanded) 204.dp else if (device.isTablet) 168.dp else 154.dp
+    val bannerHeight = topInset + if (device.isExpanded) 192.dp else if (device.isTablet) 158.dp else 140.dp
     Box(
         Modifier.fillMaxWidth().height(
-            topInset + if (device.isExpanded) 270.dp else if (device.isTablet) 232.dp else 212.dp,
+            topInset + if (device.isExpanded) 258.dp else if (device.isTablet) 224.dp else 195.dp,
         ),
     ) {
         AsyncImage(
@@ -966,7 +967,7 @@ private fun DetailHero(
         ) {
             Box(
                 modifier = Modifier
-                    .width(if (device.isExpanded) 108.dp else if (device.isTablet) 94.dp else 84.dp)
+                    .width(if (device.isExpanded) 104.dp else if (device.isTablet) 90.dp else 78.dp)
                     .aspectRatio(2f / 3f)
                     .focusHighlight(RoundedCornerShape(18.dp))
                     .glassCard(RoundedCornerShape(18.dp))
@@ -1001,7 +1002,7 @@ private fun DetailHero(
                     alignment = Alignment.BottomStart,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(if (device.isExpanded) 74.dp else if (device.isTablet) 62.dp else 56.dp)
+                        .height(if (device.isExpanded) 70.dp else if (device.isTablet) 58.dp else 49.dp)
                         .padding(bottom = 4.dp),
                 ) {
                     ShrinkingTitle(
@@ -1030,7 +1031,8 @@ private fun DetailHero(
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
@@ -1130,10 +1132,14 @@ private fun DetailActions(
             saveEntry = saveEntry,
         )
     }
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(start = pad, end = pad, bottom = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 7.dp),
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(start = pad, end = pad, bottom = 8.dp),
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
         val controlFocus4 = rememberFocusFill()
         OutlinedButton(
             shape = RoundedCornerShape(50),
@@ -1164,24 +1170,29 @@ private fun DetailActions(
                 modifier = Modifier.size(18.dp),
             )
             Text(
-                listStatusLabel ?: if (saved) "In library" else "Add to list",
+                if (device.isTv) (listStatusLabel ?: if (saved) "In library" else "Add to list")
+                else if (saved || listStatusLabel != null) "In My List" else "Add to list",
                 Modifier.padding(start = 6.dp),
                 maxLines = 1,
             )
             // The chevron is the only thing distinguishing this from the toggle it replaced, and a
             // viewer who presses expecting a save still gets one, from the menu's own footer.
+            if (device.isTv) {
             Icon(
                 imageVector = Icons.Filled.ExpandMore,
                 contentDescription = null,
                 modifier = Modifier.padding(start = 2.dp).size(18.dp),
             )
+            }
         }
+        if (device.isTv) {
         WatchedToggleButton(
             anilistId = anilistId,
             totalEpisodes = totalEpisodes,
             markEntry = saveEntry,
             modifier = Modifier,
         )
+        }
         val controlFocus6 = rememberFocusFill()
         Button(
             shape = RoundedCornerShape(50),
@@ -1225,6 +1236,24 @@ private fun DetailActions(
                 modifier = Modifier.padding(start = 5.dp),
                 maxLines = 1,
             )
+        }
+        if (!device.isTv && watchedToggleAvailable(anilistId)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 3.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Mark as watched",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                WatchedToggleButton(
+                    anilistId = anilistId,
+                    totalEpisodes = totalEpisodes,
+                    markEntry = saveEntry,
+                )
+            }
         }
     }
 }
@@ -1328,7 +1357,7 @@ private fun QuickFacts(info: Media) {
     // Centred like the tabs above while the cards fit; a fourth (Duration) on a narrow phone scrolls.
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 7.dp),
+        contentPadding = PaddingValues(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 5.dp),
         horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
     ) {
         items(facts) { (value, label) ->
@@ -1336,14 +1365,14 @@ private fun QuickFacts(info: Media) {
             // wrapped, lost its second line to maxLines, and left "Not yet" at the card's left edge.
             Column(
                 modifier = Modifier
-                    .widthIn(min = 102.dp)
-                    .glassCard(RoundedCornerShape(18.dp))
-                    .padding(horizontal = 11.dp, vertical = 8.dp),
+                    .widthIn(min = 90.dp)
+                    .glassCard(RoundedCornerShape(16.dp))
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
                     value,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis,
