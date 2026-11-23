@@ -99,7 +99,7 @@ fun TvPairingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 48.dp, vertical = 32.dp),
+                .padding(horizontal = 48.dp, vertical = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -109,7 +109,7 @@ fun TvPairingScreen(
                 is TvPairingState.Waiting -> {
                     Heading("Sign in from your phone")
                     Body(
-                        "Open Anilife on your phone, go to your profile and choose " +
+                        "Open AniLumos on your phone, go to your profile and choose " +
                             "\"Link a TV\". This television will appear in the list.",
                     )
                     // QR contains only a LAN address; credentials still require the
