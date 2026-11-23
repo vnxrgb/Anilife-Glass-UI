@@ -2409,6 +2409,15 @@ private fun MobileWatchDetails(
             blocks.getOrNull(blockIndex)?.episodes.orEmpty()
         }
     }
+    // The episode grid and artwork fallback are not live playback state.
+    // Compute them once for the visible block rather than for each timeline
+    // tick, and never scan the whole episode list once per visible row.
+    val shownEpisodeRows = remember(shownEpisodes, device.episodeColumns) {
+        shownEpisodes.chunked(device.episodeColumns)
+    }
+    val episodeFallbackImage = remember(shownEpisodes, data.artworkUrl) {
+        episodeArtworkFallback(shownEpisodes, data.artworkUrl)
+    }
     LazyColumn(modifier = modifier) {
         item {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -2494,7 +2503,7 @@ private fun MobileWatchDetails(
         }
         when {
             shownEpisodes.isNotEmpty() && episodeLayout == EpisodeLayout.GRID -> items(
-                shownEpisodes.chunked(device.episodeColumns),
+                shownEpisodeRows,
                 key = { row -> row.first().pipeId },
             ) { row ->
                 Row(
@@ -2518,7 +2527,7 @@ private fun MobileWatchDetails(
                 val index = indexByPipeId[episode.pipeId] ?: -1
                 MobileEpisodeRow(
                     episode = episode,
-                    fallbackImage = episodeArtworkFallback(shownEpisodes, data.artworkUrl),
+                    fallbackImage = episodeFallbackImage,
                     blurred = blurEpisodeImages,
                     selected = index == data.currentIndex,
                     watchedFraction = episodeWatchFraction(resume, episode.number),
