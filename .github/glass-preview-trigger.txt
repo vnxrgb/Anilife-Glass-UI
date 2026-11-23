@@ -1,4 +1,4 @@
-AniLife rounded Liquid Glass UI mobile preview build request
-Source revision: ed9019aa560b1e7b7f27325e5cbe13a1d82eba3a
-Changes: shared mobile settings and server selection cards rounded to 22dp; Anikoto/SUB/dropdown and server filter actions pill-shaped; +85s/Skip Intro/Outro rounded; optional fullscreen side-letterbox video ambient glow in FIT mode.
-Preserve existing playback behavior and stable release. Run mobile unit tests, lint, assemble, APK signature verification. Publish one direct anilife-glass-universal.apk preview asset only if all pass.
+AniLife universal mobile APK preview rebuild after compile fix
+Source revision: 89411097c383e435d2837e9bd0cff73f2cd4557e
+Fixed PlayerSurface.kt missing androidx.compose.foundation.shape.CircleShape import at skip button (three unresolved references in previous build 45125808791).
+Includes rounded settings, server picker cards, watch page selector pills, skip controls, optional fullscreen ambient side glow. Run mobile tests, lint, assemble and publish one direct universal APK only after success.
