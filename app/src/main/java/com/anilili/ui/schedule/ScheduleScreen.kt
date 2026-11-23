@@ -380,7 +380,7 @@ private fun EmptyDayNotice() {
             modifier = Modifier
                 .padding(horizontal = LocalAppDeviceProfile.current.pagePadding)
                 .fillMaxWidth()
-                .glassCard(RoundedCornerShape(20.dp))
+                .glassCard(RoundedCornerShape(30.dp))
                 .padding(horizontal = 16.dp, vertical = 18.dp),
         )
     }
@@ -419,8 +419,8 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
                 modifier = Modifier
                     .width(if (device.isTv) 80.dp else 74.dp)
                     .height(if (device.isTv) 60.dp else 52.dp)
-                    .focusFill(fillFocus1, RoundedCornerShape(14.dp))
-                    .clip(RoundedCornerShape(14.dp))
+                    .focusFill(fillFocus1, CircleShape)
+                    .clip(CircleShape)
                     .background(
                         fillFocus1.background(if (active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                         else glassPanelColor()),
@@ -429,7 +429,7 @@ private fun DayTabs(today: LocalDate, selected: LocalDate, onSelect: (LocalDate)
                         width = 1.dp,
                         color = fillFocus1.content(if (active) glassRimColor()
                         else glassRimColor().copy(alpha = 0.66f)),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = CircleShape,
                     )
                     .clickable(onClickLabel = "Show schedule for ${date.format(dateFmt)}") { onSelect(date) }
                     .semantics { this.selected = active }
@@ -484,7 +484,7 @@ private fun DayStepper(
     val onToday = selected == today
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(26.dp),
+        shape = CircleShape,
         // Neutral glass rather than a solid accent banner that overwhelms
         // the schedule and looks like a second navigation bar.
         color = glassPanelColor(),
@@ -511,7 +511,7 @@ private fun DayStepper(
                     .weight(1f)
                     .fillMaxHeight()
                     .padding(vertical = 4.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(CircleShape)
                     .clickable(enabled = !onToday, onClickLabel = "Go to today") { onSelect(today) },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -668,8 +668,8 @@ private fun ScheduleCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = device.pagePadding + 26.dp, end = device.pagePadding, top = 5.dp, bottom = 6.dp)
-            .focusHighlight(RoundedCornerShape(20.dp))
-            .glassCard(RoundedCornerShape(20.dp))
+            .focusHighlight(RoundedCornerShape(30.dp))
+            .glassCard(RoundedCornerShape(30.dp))
             .clickable(onClickLabel = "Open ${media.title.preferred} episode ${item.episode}") {
                 onAnimeClick(media.id)
             }
@@ -681,7 +681,7 @@ private fun ScheduleCard(
             contentDescription = media.title.preferred,
             modifier = Modifier
                 .size(width = if (device.isTv) 60.dp else 54.dp, height = if (device.isTv) 78.dp else 74.dp)
-                .clip(RoundedCornerShape(14.dp)),
+                .clip(RoundedCornerShape(22.dp)),
             contentScale = ContentScale.Crop,
         )
         Column(
@@ -748,9 +748,9 @@ private fun ScheduleTag(label: String) {
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(CircleShape)
             .background(glassPanelColor())
-            .border(1.dp, glassRimColor().copy(alpha = 0.75f), RoundedCornerShape(6.dp))
-            .padding(horizontal = 8.dp, vertical = 3.dp),
+            .border(1.dp, glassRimColor().copy(alpha = 0.75f), CircleShape)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }
