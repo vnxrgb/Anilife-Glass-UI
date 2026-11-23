@@ -3321,19 +3321,6 @@ fun SettingsScreen(
             }
 
             settingsSection("about", openSectionId) {
-                item(key = "Watch on Anilife.cc") {
-                    MidnightSettingRow(
-                        title = "Watch on Anilife.cc",
-                        description = "Open the Anilife web app",
-                        leading = {
-                            Icon(
-                                imageVector = Icons.Outlined.Language,
-                                contentDescription = null,
-                            )
-                        },
-                        onClick = { openLink(context, "https://anilife.cc") },
-                    )
-                }
                 item(key = "Discord server") {
                     val inviteUrl = validatedDiscordInviteUrl(BuildConfig.DISCORD_INVITE_URL)
                     MidnightSettingRow(
