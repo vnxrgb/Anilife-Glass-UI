@@ -1148,8 +1148,8 @@ private fun HeroCard(
                     OutlinedButton(
                         onClick = { onWatch(media.id) },
                         // Neutral high-contrast action; keep the artwork free of theme-accent tint.
-                        colors = cinematicPrimaryButtonColors(onArtwork = true),
-                        border = cinematicPrimaryButtonBorder(onArtwork = true),
+                        colors = cinematicSecondaryButtonColors(onArtwork = true),
+                        border = cinematicSecondaryButtonBorder(onArtwork = true),
                         modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                         shape = RoundedCornerShape(50),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 9.dp),
@@ -1476,31 +1476,53 @@ private fun MediaRail(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                // The floating companion shortcut overlaps the far right of this
-                // header near the fold. Reserve its footprint for expandable rails.
-                .padding(
-                    start = device.pagePadding,
-                    end = device.pagePadding +
-                        if (!device.isTv && onToggleExpand != null) 70.dp else 0.dp,
-                ),
+                // Use consistent page gutters. The floating shortcut overlays cards,
+                // not the header; reserving 70dp here squeezed long titles.
+                .padding(horizontal = device.pagePadding),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             RailTitle(title, dragHandle, Modifier.weight(1f))
             if (onToggleExpand != null) {
-                val controlFocus6 = rememberFocusFill()
-                TextButton(
-                    colors = controlFocus6.buttonColors(ButtonDefaults.textButtonColors()),
-                    onClick = onToggleExpand,
-                    modifier = Modifier.focusFill(controlFocus6, RoundedCornerShape(50)),
+                // Two independent, equal-size targets rather than a label that switches
+                // between Grid and Rail. Highlight the *current* layout, and allow
+                // either button to select its own layout without changing other rows.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        if (isExpanded) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(if (isExpanded) "Rail" else "Grid", maxLines = 1)
+                    listOf(false to Icons.AutoMirrored.Filled.ViewList, true to Icons.Default.GridView)
+                        .forEach { (grid, glyph) ->
+                            val selected = isExpanded == grid
+                            val shape = RoundedCornerShape(14.dp)
+                            val focus = rememberFocusFill()
+                            IconButton(
+                                onClick = { if (!selected) onToggleExpand() },
+                                colors = focus.iconButtonColors(),
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(shape)
+                                    .background(
+                                        if (selected) glassSelectionColor()
+                                        else glassPanelColor().copy(alpha = 0.46f),
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (selected) glassRimColor()
+                                        else glassRimColor().copy(alpha = 0.36f),
+                                        shape,
+                                    )
+                                    .focusFill(focus, shape),
+                            ) {
+                                Icon(
+                                    glyph,
+                                    contentDescription = if (grid) "Show $title as grid" else "Show $title as rail",
+                                    tint = if (selected) MaterialTheme.colorScheme.onSurface
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(19.dp),
+                                )
+                            }
+                        }
                 }
             }
         }
