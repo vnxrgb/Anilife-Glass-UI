@@ -111,8 +111,13 @@ fun Modifier.dpadClickable(
         .onPreviewKeyEvent { event ->
         if (!enabled) return@onPreviewKeyEvent false
         if (event.key in ContextMenuKeys) {
-            // On the release, so the menu does not open under a button the viewer is still holding.
-            if (event.type == KeyEventType.KeyUp) onLongClick()
+            // A Menu key-up can land on a different card after focus moves.
+            // Require its key-down on this card before opening the menu.
+            when (event.type) {
+                KeyEventType.KeyDown -> tracker.onKeyDown(0L)
+                KeyEventType.KeyUp -> if (tracker.onKeyUp(0L) != null) onLongClick()
+                else -> return@onPreviewKeyEvent false
+            }
             return@onPreviewKeyEvent true
         }
         if (event.key !in DpadClickKeys) return@onPreviewKeyEvent false
