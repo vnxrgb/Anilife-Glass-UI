@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Compatibility alias for legacy emblem. The visible artwork is Anilumos. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/anilumos_mark" android:inset="0dp" />

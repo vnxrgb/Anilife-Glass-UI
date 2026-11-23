@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="546dp" android:height="130dp"
+    android:viewportWidth="546" android:viewportHeight="130">
+    <!-- Anilumos candle-flame A with a white wordmark. Transparent background. -->
+    <group android:translateX="8" android:translateY="8">
+        <path android:fillColor="@android:color/transparent" android:strokeColor="#546DF1BB" android:strokeWidth="16" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M28,85 L52,34 L80,85"/>
+        <path android:fillColor="@android:color/transparent" android:strokeColor="#6DF1BB" android:strokeWidth="7.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M28,85 L52,34 L80,85 M39,70 Q54,65 68,70"/>
+        <path android:fillColor="#FFFFC16B" android:pathData="M53,8 C58,17 66,22 60,30 C57,35 49,35 46,30 C42,23 50,18 53,8 Z"/>
+        <path android:fillColor="#FFFFEDCA" android:pathData="M52,20 C54,25 54,29 51,31 C49,29 49,25 52,20 Z"/>
+    </group>
+    <group android:translateX="128" android:translateY="99" android:scaleX="0.033" android:scaleY="-0.045">
+        <group android:translateX="0"><path android:fillColor="#FFFFFFFF" android:pathData="M1094 272H492L397 0H10L563 1493H1022L1575 0H1188ZM588 549H997L793 1143Z" /></group>
+        <group android:translateX="1585"><path android:fillColor="#FFFFFFFF" android:pathData="M188 1493H618L1161 469V1493H1526V0H1096L553 1024V0H188Z" /></group>
+        <group android:translateX="3299"><path android:fillColor="#FFFFFFFF" android:pathData="M188 1493H573V0H188Z" /></group>
+        <group android:translateX="4061"><path android:fillColor="#FFFFFFFF" android:pathData="M188 1493H573V291H1249V0H188Z" /></group>
+        <group android:translateX="5366"><path android:fillColor="#FFFFFFFF" android:pathData="M188 1493H573V598Q573 413 633.5 333.5Q694 254 831 254Q969 254 1029.5 333.5Q1090 413 1090 598V1493H1475V598Q1475 281 1316.0 126.0Q1157 -29 831 -29Q506 -29 347.0 126.0Q188 281 188 598Z" /></group>
+        <group android:translateX="7029"><path android:fillColor="#FFFFFFFF" android:pathData="M188 1493H678L1018 694L1360 1493H1849V0H1485V1092L1141 287H897L553 1092V0H188Z" /></group>
+        <group android:translateX="9067"><path android:fillColor="#FFFFFFFF" android:pathData="M870 1241Q694 1241 597.0 1111.0Q500 981 500 745Q500 510 597.0 380.0Q694 250 870 250Q1047 250 1144.0 380.0Q1241 510 1241 745Q1241 981 1144.0 1111.0Q1047 1241 870 1241ZM870 1520Q1230 1520 1434.0 1314.0Q1638 1108 1638 745Q1638 383 1434.0 177.0Q1230 -29 870 -29Q511 -29 306.5 177.0Q102 383 102 745Q102 1108 306.5 1314.0Q511 1520 870 1520Z" /></group>
+        <group android:translateX="10808"><path android:fillColor="#FFFFFFFF" android:pathData="M1227 1446V1130Q1104 1185 987.0 1213.0Q870 1241 766 1241Q628 1241 562.0 1203.0Q496 1165 496 1085Q496 1025 540.5 991.5Q585 958 702 934L866 901Q1115 851 1220.0 749.0Q1325 647 1325 459Q1325 212 1178.5 91.5Q1032 -29 731 -29Q589 -29 446.0 -2.0Q303 25 160 78V403Q303 327 436.5 288.5Q570 250 694 250Q820 250 887.0 292.0Q954 334 954 412Q954 482 908.5 520.0Q863 558 727 588L578 621Q354 669 250.5 774.0Q147 879 147 1057Q147 1280 291.0 1400.0Q435 1520 705 1520Q828 1520 958.0 1501.5Q1088 1483 1227 1446Z" /></group>
+    </group>
+</vector>
