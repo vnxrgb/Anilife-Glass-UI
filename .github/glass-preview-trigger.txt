@@ -1,9 +1,5 @@
-AniLife mobile preview — smoky neutral liquid glass + accurately aligned seek bar
-Source feature commit: 6c131f7005899d63d33202cbb7acce51752cbf83
-Visual polish to previous liquid-glass-native controls:
-- PlayerLiquidGlass translucent dark neutral body instead of milky silver-gray fills, thinner reflective rim and minimal white highlights.
-- PlayerControlsScaffold lighter full-width top/bottom scrims, preserving anime contrast while keeping glyphs legible.
-- PlayerSeekBar visible track/knob nudged down by 10dp inline / 7dp landscape within the same full 48dp gesture target. Drag maths, trim markers and buffered progress are unchanged.
-- New seek mapping regression test.
-Do not alter native Media3 PlayerView/SurfaceView, Morphe AmbientLightMath, MorpheAmbientRenderer, VideoAmbientWash, audio/subtitle track handling, playback services, inline/fullscreen callbacks, required GPL credit, mobile-only manifest or package ID.
-Run mobile unit tests, lint, universal APK assembly, verify debug signing, and publish preview APK only on successful verification. Preserve stable release. Real-device visual confirmation still necessary.
+AniLife mobile performance polish — preserve every existing feature
+Feature source commit: 71c4e7a30022547cba98096d9e6f8aa130cad677
+Changes are implementation optimizations only: PixelCopy bitmap allocation and pixel reads run off the UI dispatcher with cancellation-safe cleanup, Morphe fade row alpha precomputed identically, Home spotlight/row keys cached, episode filter/grid data cached without changing results.
+Do not change playback engine, Media3 video surface, ambient sampling cadence (125ms), Morphe spatial/color math, user-visible settings, watchlists, downloads, history, sources, subtitle and audio tracks, fullscreen/inline controls, the existing Glass UI, licenses or signing/application ID.
+Run mobile unit tests, lintMobileDebug, assembleMobileDebug, and APK signing verification. Update glass-ui-preview only on success. Stable release remains untouched. Device performance and functionality remain to be confirmed on actual hardware.
