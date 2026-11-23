@@ -30,8 +30,11 @@ import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Paint
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -191,6 +194,7 @@ internal fun Modifier.videoAmbientWash(
     var displayedLight by remember { mutableStateOf<ImageBitmap?>(null) }
     var previousLight by remember { mutableStateOf<ImageBitmap?>(null) }
     val blend = remember { Animatable(1f) }
+    val ambientLayerPaint = remember { Paint() }
     LaunchedEffect(palette.spatialLight) {
         val next = palette.spatialLight
         if (next == null) {
@@ -202,7 +206,9 @@ internal fun Modifier.videoAmbientWash(
             displayedLight = next
             blend.snapTo(if (previousLight == null) 1f else 0f)
             if (previousLight != null) {
-                blend.animateTo(1f, tween(155, easing = LinearEasing))
+                // A finished fade must precede the next 125ms video capture.
+                // Interrupting a 155ms fade every 125ms was creating visible pulses.
+                blend.animateTo(1f, tween(95, easing = LinearEasing))
                 previousLight = null
             }
         }
@@ -213,20 +219,35 @@ internal fun Modifier.videoAmbientWash(
             val sizePx = IntSize(size.width.toInt().coerceAtLeast(1), size.height.toInt().coerceAtLeast(1))
             val strength = intensity.coerceIn(0.2f, 1f)
             val fraction = blend.value
-            previousLight?.let { outgoing ->
+            val outgoing = previousLight
+            // Blend into a transparent offscreen layer using additive ("plus")
+            // compositing. Drawing two semi-transparent lights with SrcOver
+            // reduced their combined alpha in the middle of every crossfade:
+            // the resulting rapid dim/restore was the reported blinking.
+            // Plus produces a true weighted interpolation of premultiplied
+            // colors and alpha. Apply strength ONCE to the combined result.
+            ambientLayerPaint.alpha = strength
+            drawContext.canvas.saveLayer(size.toRect(), ambientLayerPaint)
+            try {
+                if (outgoing != null) {
+                    drawImage(
+                        image = outgoing,
+                        dstSize = sizePx,
+                        alpha = (1f - fraction).coerceIn(0f, 1f),
+                        blendMode = BlendMode.Plus,
+                        filterQuality = FilterQuality.Medium,
+                    )
+                }
                 drawImage(
-                    image = outgoing,
+                    image = target,
                     dstSize = sizePx,
-                    alpha = (1f - fraction) * strength,
+                    alpha = if (outgoing == null) 1f else fraction.coerceIn(0f, 1f),
+                    blendMode = BlendMode.Plus,
                     filterQuality = FilterQuality.Medium,
                 )
+            } finally {
+                drawContext.canvas.restore()
             }
-            drawImage(
-                image = target,
-                dstSize = sizePx,
-                alpha = fraction * strength,
-                filterQuality = FilterQuality.Medium,
-            )
             return@drawBehind
         }
         if (left.alpha <= 0f && right.alpha <= 0f && middle.alpha <= 0f) return@drawBehind
