@@ -91,8 +91,8 @@ internal fun MonthCalendar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = device.pagePadding, vertical = 8.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(28.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(28.dp))
             .padding(vertical = 6.dp)
             // One group for the whole grid, so a remote leaving it does not have to walk every
             // remaining cell on the way out.
@@ -193,7 +193,7 @@ private fun DayCell(
     modifier: Modifier = Modifier,
 ) {
     val device = LocalAppDeviceProfile.current
-    val shape = RoundedCornerShape(10.dp)
+    val shape = RoundedCornerShape(18.dp)
     val dimmed = if (inMonth) 1f else 0.45f
     val dayColor = when {
         selected -> MaterialTheme.colorScheme.onSurface
