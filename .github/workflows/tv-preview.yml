@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: anilumos-tv-preview
@@ -77,18 +77,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Publish TV prerelease APK (not stable)
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          tag="anilumos-tv-preview"
-          note="Experimental Android TV debug APK built from $GITHUB_SHA. TV unit tests, lint and compilation passed. Requires testing on an actual TV or emulator. This APK uses a debug signing key and must not replace a stable release."
-          if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --target "$GITHUB_SHA" --prerelease --title "AniLumos Android TV preview" --notes "$note"
-          fi
-          gh release upload "$tag" dist/Anilumos-TV-preview.apk dist/SHA256SUMS --clobber
-          gh release edit "$tag" --target "$GITHUB_SHA" --notes "$note"
-          echo "TV APK: https://github.com/$GH_REPO/releases/download/$tag/Anilumos-TV-preview.apk" >> "$GITHUB_STEP_SUMMARY"
+      # Permanent alpha releases are built and published only from
+      # https://github.com/vnxrgb/anilumos-preview/actions/workflows/tv-preview.yml
+      # Keep this branch's TV verification and temporary artifacts, but never
+      # publish experimental packages to the stable source repository.
