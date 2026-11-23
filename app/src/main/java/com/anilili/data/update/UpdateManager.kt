@@ -344,41 +344,11 @@ object UpdateManager {
     }
 
     /**
-     * Where the version is read from: the mirrored manifest, then the relays that back it up.
-     *
-     * Both carry the same signed event and both verify it, so the order is a latency choice and
-     * not a trust one — the mirror is one CDN request, while the relay scan waits on several
-     * sockets and routinely sits through timeouts.
-     *
-     * GitHub is no longer consulted. The release keeps its notes but carries no APK, so the call
-     * could only ever fail, and asking it first is what made every check pay for a doomed request.
+     * Look up AniLumos releases only. The old upstream AniLife/Nostr update feed
+     * cannot install packages signed for this app.
      */
-    private suspend fun fetchLatest(includeBeta: Boolean): UpdateInfo = coroutineScope {
-        val stable = async {
-            runCatching { NostrUpdateSource.fetchManifestFromMirror(AppGraph.httpClient, json) }
-                .recoverCatching { mirrorError ->
-                    DiagnosticsLog.throwable("Manifest mirror failed; falling back to Nostr relays", mirrorError)
-                    NostrUpdateSource.fetchManifest(AppGraph.httpClient, json)
-                }
-        }
-        if (!includeBeta) return@coroutineScope stable.await().getOrThrow()
-
-        val beta = async {
-            runCatching {
-                NostrUpdateSource.fetchManifest(
-                    AppGraph.httpClient,
-                    json,
-                    NostrUpdateSource.BETA_MANIFEST_D_TAG,
-                )
-            }.onFailure { DiagnosticsLog.throwable("Beta update check failed", it) }
-        }
-        val stableResult = stable.await()
-        val betaResult = beta.await()
-        newestUpdate(listOfNotNull(stableResult.getOrNull(), betaResult.getOrNull()))
-            ?: throw stableResult.exceptionOrNull()
-            ?: betaResult.exceptionOrNull()
-            ?: error("No update manifest was found")
-    }
+    private suspend fun fetchLatest(includeBeta: Boolean): UpdateInfo =
+        GithubUpdateSource.fetchLatest(AppGraph.httpClient, json, includeBeta)
 
     private fun downloadApk(context: Context, info: UpdateInfo): File {
         val policy = updateInstallerPolicy(Build.VERSION.SDK_INT)
@@ -403,7 +373,7 @@ object UpdateManager {
             )
         }
         dir.listFiles()?.forEach { it.delete() }
-        val file = File(dir, "Anilife-${info.version}.apk")
+        val file = File(dir, "Anilumos-${info.version}.apk")
         // No call timeout: the release APK takes longer than the API client's 45s cap on slow links.
         val client = AppGraph.httpClient.newBuilder()
             .cache(null)
