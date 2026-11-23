@@ -80,7 +80,7 @@ jobs:
           test -s "$apk"
           "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify --verbose "$apk"
           mkdir -p dist
-          cp "$apk" dist/anilife-glass-universal.apk
+          cp "$apk" dist/anilumos-universal.apk
           test "$(find dist -maxdepth 1 -type f -name '*.apk' | wc -l)" -eq 1
 
       - name: Publish direct APK as preview release asset
@@ -90,13 +90,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag="glass-ui-preview"
+          tag="anilumos-preview"
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --target "$GITHUB_SHA" --prerelease \
-              --title "Anilife Glass UI — universal Android preview" \
+              --title "Anilumos — universal Android preview" \
               --notes "One universal mobile debug APK; UI preview only. Playback and device performance still require testing."
           fi
-          gh release upload "$tag" dist/anilife-glass-universal.apk --clobber
+          gh release upload "$tag" dist/anilumos-universal.apk --clobber
           gh release edit "$tag" --target "$GITHUB_SHA" \
             --notes "Universal Android debug APK built from $GITHUB_SHA. Mobile unit tests and lint passed. This is a preview, not a stable signed release. Physical-device UI and playback tests remain."
-          echo "Direct APK: https://github.com/$GH_REPO/releases/download/$tag/anilife-glass-universal.apk" >> "$GITHUB_STEP_SUMMARY"
+          echo "Direct APK: https://github.com/$GH_REPO/releases/download/$tag/anilumos-universal.apk" >> "$GITHUB_STEP_SUMMARY"

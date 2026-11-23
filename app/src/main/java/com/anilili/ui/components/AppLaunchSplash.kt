@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.anilili.ui.adaptive.UnscaledUi
 
 const val LaunchSplashFadeMillis = 250
@@ -43,7 +44,7 @@ fun AppLaunchSplash(
                     color = Color.White,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
-                    letterSpacing = androidx.compose.ui.unit.TextUnit(2.2f, androidx.compose.ui.unit.TextUnitType.Sp),
+                    letterSpacing = 2.2.sp,
                 )
             }
         }
