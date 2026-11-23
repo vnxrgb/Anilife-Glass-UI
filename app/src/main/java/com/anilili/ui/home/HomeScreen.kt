@@ -928,8 +928,8 @@ private fun HeroPager(
                     .clip(RoundedCornerShape(50))
                     .background(Color.Black.copy(alpha = 0.29f))
                     .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(50))
-                    .padding(horizontal = 4.dp, vertical = if (device.isTv) 5.dp else 1.dp),
-                horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 5.dp else 2.dp),
+                    .padding(horizontal = if (device.isTv) 4.dp else 3.dp, vertical = if (device.isTv) 5.dp else 1.dp),
+                horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 5.dp else 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 visibleIndicators.forEach { i ->
@@ -938,7 +938,7 @@ private fun HeroPager(
                         modifier = Modifier
                             .then(
                                 if (device.isTv) Modifier else Modifier
-                                    .size(26.dp)
+                                    .size(21.dp)
                                     .clickable(
                                         onClickLabel = "Show featured anime ${i + 1} of ${items.size}",
                                         role = Role.Button,
@@ -949,7 +949,7 @@ private fun HeroPager(
                         Box(
                             Modifier
                                 .height(4.dp)
-                                .width(if (selected) 14.dp else 4.dp)
+                                .width(if (selected) 12.dp else 4.dp)
                                 .clip(CircleShape)
                                 .background(
                                     if (selected) MaterialTheme.colorScheme.primary
@@ -1497,7 +1497,7 @@ private fun MediaRail(
                     listOf(false to Icons.AutoMirrored.Filled.ViewList, true to Icons.Default.GridView)
                         .forEach { (grid, glyph) ->
                             val selected = isExpanded == grid
-                            val shape = RoundedCornerShape(14.dp)
+                            val shape = CircleShape
                             val focus = rememberFocusFill()
                             IconButton(
                                 onClick = { if (!selected) onToggleExpand() },
