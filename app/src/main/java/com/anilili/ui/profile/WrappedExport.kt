@@ -124,21 +124,23 @@ internal suspend fun shareWrappedImage(
         logo(56f,54f,66f)
         text("ANILUMOS",140f,96f,27f,true)
         text(stats.year.toString(),886f,96f,30f,true,gold)
-        text("WRAPPED",56f,213f,96f,true)
+        text("WRAPPED",56f,213f,112f,true,personalityColor)
         text("YOUR ANIME YEAR IN REVIEW",60f,264f,24f,true,muted)
-        panel(56f,310f,968f,270f,personalityColor)
-        text("TIME SPENT IN ANIME WORLDS",86f,370f,26f,true,muted)
-        text(watchTime,82f,500f,115f,true,white,900f)
-        text("Recorded watch time this year",86f,548f,26f,false,muted)
+        panel(56f,310f,520f,410f,personalityColor)
+        text("TIME SPENT IN",86f,369f,26f,true,muted)
+        text("ANIME WORLDS",86f,406f,26f,true,muted)
+        text(watchTime,82f,549f,106f,true,white,460f)
+        text("Recorded watch time",86f,613f,26f,false,muted,460f)
+        text("this year",86f,651f,26f,false,muted)
         val metrics = mutableListOf("Anime played" to titleCount.toString(),"Episodes completed" to stats.episodes.toString())
         if (stats.activeDays > 0) metrics += "Active days" to stats.activeDays.toString()
         if (stats.streak > 0) metrics += "Streak" to "${stats.streak} days"
-        val cell = (968f-16f*(metrics.size-1))/metrics.size
+        val metricHeight = (410f-12f*(metrics.size-1))/metrics.size
         metrics.forEachIndexed { i,(label,value) ->
-            val x=56f+i*(cell+16f)
-            panel(x,600f,cell,125f)
-            text(label,x+18f,642f,23f,false,muted,cell-36f)
-            text(value,x+18f,696f,43f,true,white,cell-36f)
+            val y=310f+i*(metricHeight+12f)
+            panel(592f,y,432f,metricHeight)
+            text(label,616f,y+31f,23f,false,muted,384f)
+            text(value,616f,y+metricHeight-14f,if (metrics.size > 2) 34f else 60f,true,white,384f)
         }
         text("TOP ANIME",56f,804f,36f,true)
         if (titles.isEmpty()) text("Your top anime will appear as you watch.",56f,880f,30f,false,muted)
@@ -157,12 +159,22 @@ internal suspend fun shareWrappedImage(
                 canvas.drawBitmap(poster,Rect(sx,sy,sx+sw,sy+sh),dest,paint); canvas.restore()
             }
             paint.color=Color.rgb(15,13,25); canvas.drawRoundRect(RectF(x+12f,y+12f,x+77f,y+70f),16f,16f,paint)
-            text("0${i+1}",x+22f,y+53f,32f,true,gold)
+            text("0${i+1}",x+22f,y+53f,32f,true,personalityColor)
             wrappedLines(title.title,x+2f,y+390f,28f,310f)
             text(title.time,x+2f,y+458f,24f,false,muted)
         }
         text("YOUR TOP GENRES",56f,1360f,28f,true,muted)
-        text(genres.take(3).joinToString("  /  ").ifBlank { "Still discovering" },56f,1414f,36f,true,white,968f)
+        val visibleGenres = genres.take(3)
+        if (visibleGenres.isEmpty()) {
+            text("Still discovering",56f,1414f,32f,true,muted)
+        } else {
+            val genreWidth = (968f-12f*(visibleGenres.size-1))/visibleGenres.size
+            visibleGenres.forEachIndexed { i,genre ->
+                val x=56f+i*(genreWidth+12f)
+                panel(x,1380f,genreWidth,60f,personalityColor)
+                text(genre,x+20f,1420f,29f,true,white,genreWidth-40f)
+            }
+        }
         panel(56f,1460f,968f,260f,personalityColor)
         text("YOUR VIEWING PERSONALITY",86f,1515f,25f,true,personalityColor)
         text(personality.symbol,86f,1600f,62f,true,personalityColor)
