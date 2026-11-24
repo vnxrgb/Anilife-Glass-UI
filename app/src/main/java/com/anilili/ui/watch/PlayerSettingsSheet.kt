@@ -781,6 +781,40 @@ private fun ColumnScope.SheetSections(
         MidnightHelper("Live colours on supported native video. Secure or unsupported video surfaces stay dark.")
     }
 
+    // Quick viewing tools reuse persisted settings and the existing window-brightness
+    // override. They do not adjust the system brightness for the rest of the phone.
+    val cinemaBrightness by SettingsStore.playerBrightness.collectAsState()
+    val cinemaClock by SettingsStore.playerClock.collectAsState()
+    val cinemaStatusBar by SettingsStore.playerStatusBar.collectAsState()
+    MidnightSectionLabel("Viewing tools")
+    MidnightSettingRow(
+        title = "Night cinema",
+        description = "Gentle glow and a dimmer video player for late-night watching",
+        onClick = {
+            SettingsStore.setPlayerAmbientGlow(true)
+            SettingsStore.setPlayerAmbientIntensity(0.50f)
+            SettingsStore.setPlayerBrightness(0.30f)
+        },
+    )
+    MidnightSettingRow(
+        title = "Restore device brightness",
+        description = if (cinemaBrightness < 0f) {
+            "Player already follows your device brightness"
+        } else {
+            "Stop overriding the brightness of the player window"
+        },
+        onClick = { SettingsStore.setPlayerBrightness(-1f) },
+    )
+    MidnightSettingSwitchRow(
+        title = "Distraction-free playback",
+        description = "Hide the player clock and status bar; controls still work normally",
+        checked = !cinemaClock && !cinemaStatusBar,
+        onCheckedChange = { distractionFree ->
+            SettingsStore.setPlayerClock(!distractionFree)
+            SettingsStore.setPlayerStatusBar(!distractionFree)
+        },
+    )
+
     MidnightSectionLabel("Playback")
     MidnightSettingSwitchRow(
         title = "Auto-play next episode",
