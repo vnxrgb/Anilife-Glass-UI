@@ -137,6 +137,9 @@ import com.anilili.data.library.HistoryEntry
 import com.anilili.data.library.LibraryStore
 import com.anilili.data.library.LocalWatchedStore
 import com.anilili.data.library.WatchedEntry
+import com.anilili.data.library.WatchActivityStore
+import com.anilili.data.library.activityStreak
+import java.time.LocalDate
 import com.anilili.data.library.WatchlistEntry
 import com.anilili.data.library.continueWatchingCaption
 import com.anilili.data.library.listKey
@@ -293,6 +296,7 @@ fun ProfileScreen(
     val malLoggedIn by MalAuthManager.loggedIn.collectAsState()
     val profileState by vm.profile.collectAsState()
     val history by LibraryStore.history.collectAsState()
+    val localActivity by WatchActivityStore.days.collectAsState()
     val historyByAnimeId = remember(history) { history.associateBy(HistoryEntry::anilistId) }
     val watchlist by LibraryStore.watchlist.collectAsState()
     val customLists by CustomListStore.lists.collectAsState()
@@ -756,6 +760,39 @@ fun ProfileScreen(
                             }
                         }
 
+                        if (!device.isTv) {
+                            item(key = "anilumos-wrapped") {
+                                val today = LocalDate.now()
+                                val startOfYear = today.withDayOfYear(1).toEpochDay()
+                                val yearlyDays = localActivity.filterKeys { it in startOfYear..today.toEpochDay() }
+                                val episodeCount = yearlyDays.values.sum()
+                                val activeDays = yearlyDays.size
+                                val streak = activityStreak(localActivity, today.toEpochDay())
+                                Column(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = device.pagePadding, vertical = 6.dp)
+                                        .glassCard(RoundedCornerShape(24.dp))
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(7.dp),
+                                ) {
+                                    Text(
+                                        "AniLumos Wrapped · ${today.year}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Text(
+                                        "$episodeCount episodes completed  ·  $activeDays active days  ·  $streak-day streak",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                    Text(
+                                        "Based on activity recorded on this device since tracking was enabled. Not a complete account history.",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                            }
+                        }
                         if (selectedViews.isEmpty() && shownCustomLists.isEmpty()) {
                             item { EmptyPanel("Choose a list above to show it here") }
                         }
