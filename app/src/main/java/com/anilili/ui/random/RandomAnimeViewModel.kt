@@ -75,21 +75,30 @@ class RandomAnimeViewModel(app: Application) : AndroidViewModel(app) {
             repo.discover(DiscoverFilters(genres = setOf(genre), hideWatched = WatchedFilter.STARTED), page).items
                 .filter { matchesMood(it, genre) }
         },
-        pageCount = 5,
+        pageCount = 8,
+        strictSkip = true,
+        sparsePages = true,
         skip = { WatchedTitles.hides(it, WatchedFilter.STARTED) },
         tasteSource = {
             Recommendations.forYou(limit = 60)?.items.orEmpty()
                 .filter { matchesMood(it, genre) }
         },
-        tasteEvery = 2,
+        tasteEvery = 3,
     )
 
     private fun matchesMood(media: Media, genre: String): Boolean {
         if (genre !in media.genres) return false
-        // Romance and comfort should not be dominated by combat-driven catalogue picks.
-        if (genre == "Romance" || genre == "Slice of Life") {
-            if (media.genres.any { it in setOf("Action", "Horror", "Thriller") }) return false
+        // Keep each mood coherent even when AniList attaches multiple genres.
+        val excluded = when (genre) {
+            "Romance" -> setOf("Action", "Horror", "Thriller")
+            "Slice of Life" -> setOf("Action", "Horror", "Thriller", "Psychological")
+            "Comedy" -> setOf("Horror", "Thriller", "Psychological")
+            "Drama" -> setOf("Ecchi")
+            "Sci-Fi" -> setOf("Ecchi")
+            "Sports" -> setOf("Horror")
+            else -> emptySet()
         }
+        if (media.genres.any { it in excluded }) return false
         return true
     }
 
@@ -171,6 +180,7 @@ class RandomAnimeViewModel(app: Application) : AndroidViewModel(app) {
     /** Swaps the deck, dropping the cards dealt from the old one and any draw still under way. */
     private fun useSource(next: DiceSource) {
         rollJob?.cancel()
+        rollJob = null
         source = next
         deck = when {
             next.isAnywhere -> anywhereDeck()
