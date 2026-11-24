@@ -107,6 +107,8 @@ fun FloatingNavigationBar(
     modifier: Modifier = Modifier,
     /** The content behind the bar, blurred through it on Android 12+; null keeps painted glass. */
     backdrop: HazeState? = null,
+    collapsed: Boolean = false,
+    compactRoutes: Set<String> = emptySet(),
 ) {
     BoxWithConstraints(
         modifier = modifier
@@ -115,34 +117,53 @@ fun FloatingNavigationBar(
             .padding(bottom = bottomInset.coerceAtLeast(0.dp) + FloatingNavBarMargin),
         contentAlignment = Alignment.BottomCenter,
     ) {
-        // RenderEffect arrived in Android 12; below it Haze only lays a flat scrim, which is worse
-        // than the painted glass, so older phones keep that.
+        val compact = collapsed && compactRoutes.size == 2
+        val fold by animateFloatAsState(
+            targetValue = if (compact) 1f else 0f,
+            animationSpec = spring(dampingRatio = .88f, stiffness = Spring.StiffnessMediumLow),
+            label = "dockFold",
+        )
+        val progress = fold.coerceIn(0f, 1f)
         val inner = (maxWidth - BarPadding * 2).coerceAtLeast(0.dp)
-        // Five stable, equal-width destinations. Selecting a tab must not displace
-        // its neighbours or change the capsule width.
-        val itemWidth = if (items.isEmpty()) ItemSize else inner / items.size
-        val showLabels = floatingNavShowsCaption(itemWidth)
+        val expandedItem = if (items.isEmpty()) ItemSize else inner / items.size
+        val compactItem = 58.dp.coerceAtMost(inner / 2)
+        val widths = items.map { item ->
+            val target = if (item.route in compactRoutes) compactItem else 0.dp
+            expandedItem + (target - expandedItem) * progress
+        }
+        val dockWidth = widths.fold(BarPadding * 2) { total, width -> total + width }
         Row(
-            // Full width, so the bar's edges stay put while the pill changes length per label;
-            // the spare room is shared between the icons instead.
             modifier = Modifier
-                .fillMaxWidth()
+                .width(dockWidth)
                 .height(FloatingNavBarExpandedHeight)
-                // Reduce the dark halo on OLED; the rim carries the depth.
                 .opticalGlass(BarShape, enabled = backdrop != null)
                 .padding(horizontal = BarPadding)
                 .selectableGroup(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            items.forEach { item ->
-                FloatingNavIcon(
-                    item = item,
-                    selected = item.route == selectedRoute,
-                    width = itemWidth,
-                    showLabel = showLabels,
-                    onClick = { onSelect(item.route) },
-                )
+            items.forEachIndexed { index, item ->
+                val keep = item.route in compactRoutes
+                val width = widths[index]
+                if (width > 0.dp) {
+                    Box(
+                        Modifier.width(width).fillMaxHeight().clip(BarShape)
+                            .graphicsLayer { alpha = if (keep) 1f else (1f - progress) },
+                    ) {
+                        if (keep || !compact) {
+                            FloatingNavIcon(
+                                item = item,
+                                selected = item.route == selectedRoute,
+                                width = width,
+                                showLabel = floatingNavShowsCaption(width),
+                                onClick = { onSelect(item.route) },
+                            )
+                        } else if (progress < .98f) {
+                            Icon(item.icon, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.align(Alignment.Center).size(IconSize))
+                        }
+                    }
+                }
             }
         }
     }
