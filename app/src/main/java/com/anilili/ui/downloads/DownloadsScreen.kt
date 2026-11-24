@@ -380,6 +380,46 @@ fun DownloadsScreen(
             return@Column
         }
 
+        // Smart Queue controls operate on the actual Media3 download state, preserving
+        // already-cached bytes. Avoid a second, conflicting queue implementation.
+        val runningDownloads = downloadIndex.filter { it.canPause }
+        val pausedDownloads = downloadIndex.filter { it.canResume && !it.stalled }
+        val recoverableDownloads = downloadIndex.filter { it.canRetry }
+        if (openSeries == null && (runningDownloads.isNotEmpty() ||
+                    pausedDownloads.isNotEmpty() || recoverableDownloads.isNotEmpty())) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = device.pagePadding, vertical = 6.dp)
+                    .glassCard(RoundedCornerShape(22.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text("Smart download queue", style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold)
+                Text(
+                    "${runningDownloads.size} active · ${pausedDownloads.size} paused · ${recoverableDownloads.size} need attention",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (runningDownloads.isNotEmpty()) {
+                        TextButton(onClick = {
+                            runningDownloads.forEach { EpisodeDownloads.pause(context, it.id) }
+                        }) { Text("Pause all") }
+                    }
+                    if (pausedDownloads.isNotEmpty()) {
+                        TextButton(onClick = {
+                            pausedDownloads.forEach { EpisodeDownloads.resume(context, it.id) }
+                        }) { Text("Resume all") }
+                    }
+                    if (recoverableDownloads.isNotEmpty()) {
+                        TextButton(onClick = {
+                            recoverableDownloads.forEach { EpisodeDownloads.retry(context, it.id) }
+                        }) { Text("Retry failed") }
+                    }
+                }
+            }
+        }
+
         if (openSeries == null) {
             // Measured rather than taken from the device profile's column count: the cards have to
             // come out the size My List draws its cards, and that is a width, not a number of
