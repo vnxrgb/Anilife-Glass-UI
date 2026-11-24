@@ -118,10 +118,7 @@ fun TvPairingScreen(
                     // TVs the first address can be a much longer IPv6 endpoint; QR encoding
                     // that address requires denser modules at the same physical display size.
                     // Keep every original address listed below for manual fallback.
-                    current.addresses.map { it.substringBefore("  (").trim() }
-                        .filter { it.isNotEmpty() }
-                        .minByOrNull { it.length }
-                        ?.let { address ->
+                    preferredTvQrAddress(current.addresses)?.let { address ->
                             TvPairingAddressQr(address)
                             Body("In AniLumos on your phone, tap Link a TV → Scan TV QR code. Compare the six-digit confirmation on both devices before signing in.")
                         }
@@ -309,3 +306,17 @@ private fun TvPairingAddressQr(address: String) {
         }
     }
 }
+
+/**
+ * Prefer a short IPv4 LAN endpoint when one exists. IPv6 link-local addresses can
+ * carry a zone identifier that is meaningful only on the TV and cannot reliably
+ * be copied to a phone. Preserve the full address list for manual fallback.
+ */
+internal fun preferredTvQrAddress(addresses: List<String>): String? =
+    addresses.asSequence()
+        .map { it.substringBefore("  (").trim() }
+        .filter { it.isNotEmpty() }
+        .sortedWith(compareBy<String> { if (it.substringBefore(':').matches(Regex("""\\d{1,3}(\\.\\d{1,3}){3}"""))) 0 else 1 }
+            .thenBy { it.length }
+            .thenBy { it })
+        .firstOrNull()
