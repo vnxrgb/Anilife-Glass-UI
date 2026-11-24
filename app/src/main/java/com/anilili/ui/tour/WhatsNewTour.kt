@@ -144,7 +144,7 @@ internal fun tourSteps(isTv: Boolean): List<TourStep> = listOf(
  */
 object WhatsNewTour {
     /** Change this for the next release's tour; every install then shows it once more. */
-    const val TOUR_ID = "home-2026-10"
+    const val TOUR_ID = "glass-discovery-2026-11-v1"
     private const val SEEN_FILE = "whats-new-seen"
 
     var active by mutableStateOf(false)
@@ -168,6 +168,13 @@ object WhatsNewTour {
         active = true
         DiagnosticsLog.event("WhatsNewTour started id=$TOUR_ID")
     }
+
+    fun reopen() {
+        step = 0
+        active = true
+    }
+
+    var requestedSettingsSection by mutableStateOf<String?>(null)
 
     internal fun next(count: Int) {
         if (step + 1 >= count) finish() else step++
@@ -444,3 +451,46 @@ private const val TOUR_START_DELAY_MS = 1_200L
 private const val TARGET_WAIT_MS = 1_200L
 private const val SCROLL_SETTLE_MS = 250L
 private const val FOCUS_DELAY_MS = 120L
+
+/** A compact, scrollable release guide with the same dialog and focus system as the app. */
+@Composable
+fun WhatsNewReleaseDialog(onOpen: (String) -> Unit) {
+    if (!WhatsNewTour.active) return
+    val isTv = LocalAppDeviceProfile.current.isTv
+    val entries = listOf(
+        Triple("New themes & glass", "Settings › Appearance", "appearance"),
+        Triple("AniLumos Wrapped", "My List › Wrapped", "more"),
+        Triple("Mood Discovery", "Home › Discover › Mood filters", "discover"),
+        Triple("Smart Resume", "Home › Continue Watching", "home"),
+        Triple("Personalized Calendar", "Schedule › Following only", "schedule"),
+        Triple("Anime Collections", "My List › Collections", "more"),
+        Triple("Episode Notes & Stream Health", "Anime details / episode player", "home"),
+        Triple("Smart Downloads", "Downloads › Queue", "downloads"),
+        Triple("Cinema lighting", "Settings › Player", "player"),
+        Triple("AniLumos Connect", if (isTv) "Settings › Accounts & sync › TV sign-in" else "Settings › Accounts & sync › Link a TV", "accounts"),
+    )
+    com.anilili.ui.dialogs.MidnightDialogHost(
+        onDismiss = WhatsNewTour::finish,
+        header = {
+            Text("What's new in AniLumos", style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text("Explore the new features and where to find them.",
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        },
+        footer = {
+            Button(onClick = WhatsNewTour::finish, modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(50)) { Text("Got it") }
+        },
+    ) {
+        entries.forEach { (title, location, destination) ->
+            com.anilili.ui.dialogs.MidnightSettingRow(
+                title = title,
+                description = location,
+                onClick = {
+                    WhatsNewTour.finish()
+                    onOpen(destination)
+                },
+            )
+        }
+    }
+}
