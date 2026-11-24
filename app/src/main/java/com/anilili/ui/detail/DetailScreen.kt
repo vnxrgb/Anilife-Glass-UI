@@ -616,35 +616,16 @@ private fun DetailContent(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // A softly tinted, unbroken glow from the poster. Do not draw a second
-        // full-size banner bitmap here: on pre-Android-12 devices Modifier.blur()
-        // cannot soften it, and its cropped colors become a hard brown/blue band
-        // behind the Quick Facts and countdown rows when the detail page scrolls.
-        // Drawing the ambient spill as a radial brush over the WHOLE viewport
-        // removes the rectangular artwork boundary on all supported Android APIs.
         if (!device.isTv) {
             val coverTint = remember(info.id, info.coverImage.color) {
                 info.coverImage.color?.let { hex ->
                     runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
                 }
             } ?: MaterialTheme.colorScheme.primary
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .drawBehind {
-                        if (size.width <= 0f || size.height <= 0f) return@drawBehind
-                        val reach = maxOf(size.width * 1.15f, size.height * 0.76f)
-                        drawRect(
-                            brush = Brush.radialGradient(
-                                0f to coverTint.copy(alpha = 0.12f),
-                                0.35f to coverTint.copy(alpha = 0.065f),
-                                0.67f to coverTint.copy(alpha = 0.020f),
-                                1f to Color.Transparent,
-                                center = Offset(size.width * 0.50f, size.height * 0.01f),
-                                radius = reach,
-                            ),
-                        )
-                    },
+            DetailAmbient(
+                artwork = info.bannerImage ?: info.coverImage.best,
+                fallback = coverTint,
+                modifier = Modifier.matchParentSize(),
             )
         }
         LazyColumn(
