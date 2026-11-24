@@ -189,6 +189,9 @@ fun SearchScreen(
     val appliedFilters by vm.appliedFilters.collectAsState()
     val aniListHidesAdultContent by vm.aniListHidesAdultContent.collectAsState()
     val resultTotal by vm.resultTotal.collectAsState()
+    val moodSelected by vm.selectedMood.collectAsState()
+    val moodPicks by vm.moodPicks.collectAsState()
+    val moodLoading by vm.moodLoading.collectAsState()
     val correction by vm.correction.collectAsState()
     val device = LocalAppDeviceProfile.current
     val gridState = rememberLazyGridState()
@@ -320,6 +323,8 @@ fun SearchScreen(
                 vm = vm,
                 options = options,
                 onOpenFilters = { showFilters = true },
+                moodSelected = moodSelected,
+                onMoodSelect = vm::selectMood,
                 tvFieldFocusTarget = tvFieldFocusTarget,
                 // A picked suggestion is the title itself, so it opens rather than searching for
                 // its own name — the whole saving is the trip through the results it skips.
@@ -387,6 +392,9 @@ fun SearchScreen(
                             results = current.data,
                             filters = appliedFilters,
                             resultTotal = resultTotal,
+                            moodSelected = moodSelected,
+                            moodPicks = moodPicks,
+                            moodLoading = moodLoading,
                             correction = correction,
                             onSearchInstead = vm::searchInstead,
                             onAcceptCorrection = vm::acceptCorrection,
@@ -453,6 +461,8 @@ private fun SearchTopBar(
     vm: SearchViewModel,
     options: DiscoverOptions,
     onOpenFilters: () -> Unit,
+    moodSelected: String?,
+    onMoodSelect: (String, String) -> Unit,
     tvFieldFocusTarget: TvFocusTarget?,
     onOpenTitle: (TitleSuggestion) -> Unit,
     /** Leave the fill to the frosted glass behind the bar instead of painting over it. */
@@ -654,8 +664,8 @@ private fun SearchTopBar(
                         )
                     }
 
-                    // Mood discovery is an explicit genre-based shortcut, not an unverified AI ranking.
-                    // A second tap restores the unfiltered genre selection.
+                    // Mood chips keep the original catalogue filtering, now complemented by
+                    // a taste-ranked row from the existing recommendation engine.
                     if (!device.isTv) {
                         Text(
                             "Discover by mood",
@@ -677,13 +687,12 @@ private fun SearchTopBar(
                             horizontalArrangement = Arrangement.spacedBy(7.dp),
                         ) {
                             items(moodGenres, key = { it.first }) { (mood, genre) ->
-                                val active = vm.filters.genres == setOf(genre)
+                                val active = moodSelected == mood
                                 FilterChip(
                                     shape = RoundedCornerShape(50),
                                     selected = active,
                                     onClick = {
-                                        if (active) vm.removeGenre(genre, excluded = false)
-                                        else vm.applyGenreFilter(genre)
+                                        onMoodSelect(mood, genre)
                                     },
                                     label = { Text(mood) },
                                     colors = cinematicFilterChipColors(),
@@ -1286,6 +1295,9 @@ private fun ResultsGrid(
     filters: DiscoverFilters,
     /** Total matches AniList reported, or 0 when it did not say. */
     resultTotal: Int,
+    moodSelected: String?,
+    moodPicks: List<Media>,
+    moodLoading: Boolean,
     /** The spelling the grid was corrected to or could be; see [SearchCorrection]. */
     correction: SearchCorrection?,
     onSearchInstead: () -> Unit,
@@ -1516,6 +1528,34 @@ private fun ResultsGrid(
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
+                                }
+                            }
+                        }
+                    }
+                    if (!device.isTv && moodSelected != null && filters.query.isBlank()) {
+                        item(span = { GridItemSpan(maxLineSpan) }, key = "mood-personalized") {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    "For you · $moodSelected",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                when {
+                                    moodLoading -> Text("Finding matches for your taste…",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    moodPicks.isEmpty() -> Text(
+                                        "Explore the matching catalogue below. Personalized picks appear after you watch and rate more anime.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        items(moodPicks, key = { "mood-" + it.id }) { media ->
+                                            Box(Modifier.widthIn(min = 135.dp, max = 165.dp)) {
+                                                AnimeCard(media = media, onClick = { onAnimeClick(media.id) })
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
