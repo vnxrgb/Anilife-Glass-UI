@@ -129,6 +129,7 @@ fun PageSearchField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth().heightIn(min = 56.dp)
+            .glassCard(RoundedCornerShape(28.dp))
             .semantics { contentDescription = if (value.isBlank()) placeholder else "$placeholder: $value" },
         placeholder = { Text(placeholder) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
@@ -148,8 +149,8 @@ fun PageSearchField(
         },
         shape = RoundedCornerShape(28.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = glassPanelColor(),
-            unfocusedContainerColor = glassPanelColor(),
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
             focusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f),
             unfocusedBorderColor = glassRimColor(),
         ),
