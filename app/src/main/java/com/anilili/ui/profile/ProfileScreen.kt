@@ -141,6 +141,7 @@ import com.anilili.data.library.WatchActivityStore
 import com.anilili.data.library.activityStreak
 import java.time.LocalDate
 import com.anilili.data.library.WatchlistEntry
+import com.anilili.data.library.resumeFor
 import com.anilili.data.library.continueWatchingCaption
 import com.anilili.data.library.listKey
 import com.anilili.data.model.MediaListEntry
@@ -1678,14 +1679,16 @@ private fun EpisodeDownloadCard(
     val episodeNumber = metadata.episodeNumber.trim().toDoubleOrNull()
     val watchedFraction = episodeNumber?.let { episodeWatchFraction(historyEntry, it) } ?: 0f
     val isWatched = watchedFraction >= 0.999f
-    val savedPositionMs = historyEntry
-        ?.takeIf { episodeNumber == it.episodeNumber }
-        ?.positionMs
-        ?.coerceAtLeast(0L)
-        ?: 0L
+    // One series may have multiple unfinished episodes: each needs its own resume clock.
+    val resumePoint = episodeNumber?.let { historyEntry?.resumeFor(it) }
+    val savedPositionMs = resumePoint?.positionMs?.coerceAtLeast(0L) ?: 0L
+    val remainingMs = resumePoint?.durationMs?.takeIf { it > savedPositionMs }
+        ?.minus(savedPositionMs)
     val hasResumePosition = !isWatched && savedPositionMs > 0L
     val playbackLabel = when {
         isWatched -> "Watched"
+        hasResumePosition && remainingMs != null ->
+            "Resume at ${formatPlaybackPosition(savedPositionMs)} · ${formatPlaybackPosition(remainingMs)} left"
         hasResumePosition -> "Resume at ${formatPlaybackPosition(savedPositionMs)}"
         else -> null
     }
