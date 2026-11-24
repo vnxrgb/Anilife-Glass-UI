@@ -22,13 +22,13 @@ enum class ThemeBackground(val storedValue: String, val label: String, val descr
 /**
  * The seed every colour in the scheme is generated from.
  *
- * [ANILIFE_GREEN] is the default shared with the logo and web client. [MONOCHROME] preserves the
+ * [ANILIFE_GREEN] retains its legacy stored key but uses the AniLumos brand purple. [MONOCHROME] preserves the
  * app's long-standing look as the Legacy Midnight preset. [WALLPAPER] is Material You: the seed
  * the system extracted from the wallpaper, and only exists on Android 12+.
  * [CUSTOM] is whatever the viewer mixed in the custom colour dialog.
  */
 enum class ThemeAccent(val storedValue: String, val label: String, val seed: Long?) {
-    ANILIFE_GREEN("anilife_green", "Anilumos green", 0xFF79D66C),
+    ANILIFE_GREEN("anilife_green", "Anilumos purple", 0xFF6D3DF2),
     MONOCHROME("monochrome", "Monochrome", null),
     WALLPAPER("wallpaper", "From wallpaper", null),
     /** The viewer's own colour, stored beside it as `theme_custom_seed`. */
