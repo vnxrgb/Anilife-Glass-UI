@@ -45,6 +45,9 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import com.anilili.data.settings.SettingsStore
+import com.anilili.data.settings.GlassMaterial
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -87,47 +90,45 @@ private val BarShape = RoundedCornerShape(50)
 // Built from the theme, so they are rebuilt only when the theme changes.
 @Composable
 private fun barGlass(): Brush {
-    val top = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.09f)
-    val middle = MaterialTheme.colorScheme.surfaceContainerHigh
-    val bottom = MaterialTheme.colorScheme.surfaceContainer
-    return remember(top, middle, bottom) {
-        Brush.verticalGradient(
-            0f to top.copy(alpha = 0.72f),
-            0.42f to middle.copy(alpha = 0.72f),
-            1f to bottom.copy(alpha = 0.79f),
-        )
-    }
+    val material by SettingsStore.glassMaterial.collectAsState()
+    val opacity by SettingsStore.glassOpacity.collectAsState()
+    val scheme = MaterialTheme.colorScheme
+    val alpha = if (opacity < 0) material.panelAlpha else (opacity / 100f).coerceIn(.15f, 1f)
+    val tint = if (material == GlassMaterial.SMOKED) scheme.surface else scheme.surfaceContainerHigh
+    return Brush.verticalGradient(
+        0f to tint.copy(alpha = alpha),
+        .45f to tint.copy(alpha = alpha * .94f),
+        1f to scheme.surface.copy(alpha = alpha),
+    )
 }
 
-/**
- * Live glass: what scrolls behind the bar, blurred and darkened enough that the idle icons keep
- * their contrast over a white poster. The tint is the painted glass's own middle colour.
- */
 @Composable
 private fun barBlur(): HazeStyle {
-    val background = MaterialTheme.colorScheme.surface
-    val tint = MaterialTheme.colorScheme.surfaceContainerHigh
-    return remember(background, tint) {
-        HazeStyle(
-            backgroundColor = background,
-            tint = HazeTint(tint.copy(alpha = 0.50f)),
-            blurRadius = 24.dp,
-            noiseFactor = 0.04f,
-        )
-    }
+    val material by SettingsStore.glassMaterial.collectAsState()
+    val opacity by SettingsStore.glassOpacity.collectAsState()
+    val blur by SettingsStore.glassBlur.collectAsState()
+    val scheme = MaterialTheme.colorScheme
+    val alpha = if (opacity < 0) material.panelAlpha else (opacity / 100f).coerceIn(.15f, 1f)
+    val tint = if (material == GlassMaterial.SMOKED) scheme.surface else scheme.surfaceContainerHigh
+    val radius = if (blur < 0) 24f * material.blurScale else blur * .48f
+    return HazeStyle(
+        backgroundColor = scheme.surface,
+        tint = HazeTint(tint.copy(alpha = alpha)),
+        blurRadius = radius.dp,
+        noiseFactor = if (material == GlassMaterial.FROSTED) .07f else .02f,
+    )
 }
 
 @Composable
 private fun barRim(): Brush {
-    val top = MaterialTheme.colorScheme.onSurface
-    val accent = MaterialTheme.colorScheme.primary
-    return remember(top, accent) {
-        Brush.verticalGradient(
-            0f to top.copy(alpha = 0.32f),
-            0.48f to top.copy(alpha = 0.24f),
-            1f to accent.copy(alpha = 0.34f),
-        )
-    }
+    val borders by SettingsStore.glassBorders.collectAsState()
+    val material by SettingsStore.glassMaterial.collectAsState()
+    val neutral = MaterialTheme.colorScheme.onSurface
+    val alpha = if (!borders) 0f else if (material == GlassMaterial.LIQUID) .34f else .19f
+    return Brush.verticalGradient(
+        0f to neutral.copy(alpha = alpha),
+        1f to neutral.copy(alpha = alpha * .5f),
+    )
 }
 
 /**
@@ -277,7 +278,7 @@ private fun FloatingNavIcon(
     )
     // Keep the selected halo neutral across artwork and themes.
     val halo = MaterialTheme.colorScheme.onSurface
-    val accent = MaterialTheme.colorScheme.primary
+    val accent = halo
     Box(
         modifier = Modifier
             .width(width)
@@ -303,7 +304,7 @@ private fun FloatingNavIcon(
                 1.dp,
                 Brush.verticalGradient(
                     0f to halo.copy(alpha = 0.40f * selectionAlpha),
-                    1f to accent.copy(alpha = 0.60f * selectionAlpha),
+                    1f to accent.copy(alpha = 0.24f * selectionAlpha),
                 ),
                 shape,
             )
