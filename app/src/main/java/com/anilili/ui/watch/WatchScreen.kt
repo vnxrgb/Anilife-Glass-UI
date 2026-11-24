@@ -64,6 +64,8 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -2379,6 +2381,55 @@ private fun MobileWatchDetails(
     // Every episode row asks the same question, so resolve the three state sources once per list
     // rather than once per row.
     val badgeContext = LocalContext.current
+    // Episode notes are local to this installation and never sent to streaming providers.
+    val noteKey = remember(data.anilistId, data.current.number) {
+        "${data.anilistId}:${data.current.number}"
+    }
+    val notePreferences = remember(badgeContext) {
+        badgeContext.getSharedPreferences("anilumos_episode_notes", Context.MODE_PRIVATE)
+    }
+    var savedEpisodeNote by remember(noteKey) {
+        mutableStateOf(notePreferences.getString(noteKey, "").orEmpty())
+    }
+    var editingEpisodeNote by remember(noteKey) { mutableStateOf(false) }
+    var noteDraft by remember(noteKey) { mutableStateOf(savedEpisodeNote) }
+    if (editingEpisodeNote) {
+        AlertDialog(
+            onDismissRequest = { editingEpisodeNote = false },
+            title = { Text("Episode notes") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "${data.seriesTitle} · Episode ${data.current.displayNumber}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    OutlinedTextField(
+                        value = noteDraft,
+                        onValueChange = { noteDraft = it.take(2000) },
+                        label = { Text("My notes") },
+                        minLines = 3,
+                        maxLines = 7,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text("Saved on this device only · ${noteDraft.length}/2000",
+                        style = MaterialTheme.typography.labelSmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val value = noteDraft.trim()
+                    notePreferences.edit().apply {
+                        if (value.isEmpty()) remove(noteKey) else putString(noteKey, value)
+                    }.apply()
+                    savedEpisodeNote = value
+                    editingEpisodeNote = false
+                }) { Text("Save note") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingEpisodeNote = false }) { Text("Cancel") }
+            },
+        )
+    }
     val downloadIndex by EpisodeDownloads.downloads(badgeContext).collectAsState()
     val exportStatuses by EpisodeExport.statuses(badgeContext).collectAsState()
     val exportedEpisodes by EpisodeExport.exported(badgeContext).collectAsState()
@@ -2434,6 +2485,15 @@ private fun MobileWatchDetails(
                     onDownload = onDownload,
                     modifier = Modifier.padding(start = pad, end = pad, top = 16.dp, bottom = 4.dp),
                 )
+                TextButton(
+                    onClick = {
+                        noteDraft = savedEpisodeNote
+                        editingEpisodeNote = true
+                    },
+                    modifier = Modifier.padding(horizontal = pad),
+                ) {
+                    Text(if (savedEpisodeNote.isBlank()) "Add episode note" else "View / edit episode note")
+                }
                 // Previous/Next pills removed: the player transport and the episode list below
                 // already cover episode navigation.
             }
