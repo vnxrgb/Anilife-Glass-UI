@@ -34,6 +34,7 @@ enum class ThemeAccent(val storedValue: String, val label: String, val seed: Lon
     /** The viewer's own colour, stored beside it as `theme_custom_seed`. */
     CUSTOM("custom", "Custom", null),
     PURPLE("purple", "Purple", 0xFF8B5CF6),
+    JADE("jade", "Jade green", 0xFF79D66C),
     NEON_GREEN("neon_green", "Neon green", 0xFF39FF14),
     BLOOD_RED("blood_red", "Blood red", 0xFFD1102B),
     OCEAN_BLUE("ocean_blue", "Ocean blue", 0xFF3B82F6),
@@ -119,6 +120,7 @@ enum class ThemePreset(
     CRIMSON_NIGHT("Crimson Night", ThemeBackground.AMOLED, ThemeAccent.BLOOD_RED, ThemeStyle.VIVID),
     TOXIC("Toxic", ThemeBackground.AMOLED, ThemeAccent.NEON_GREEN, ThemeStyle.VIBRANT),
     ROYAL("Royal", ThemeBackground.AMOLED, ThemeAccent.PURPLE, ThemeStyle.VIVID),
+    JADE("Jade", ThemeBackground.AMOLED, ThemeAccent.JADE, ThemeStyle.VIVID),
     DEEP_SEA("Deep Sea", ThemeBackground.AMOLED, ThemeAccent.OCEAN_BLUE, ThemeStyle.VIVID),
     CYBER("Cyber", ThemeBackground.AMOLED, ThemeAccent.CYAN, ThemeStyle.VIBRANT),
     SAKURA("Sakura", ThemeBackground.DARK, ThemeAccent.SAKURA_PINK, ThemeStyle.TONAL),
