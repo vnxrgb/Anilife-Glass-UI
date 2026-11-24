@@ -2087,7 +2087,7 @@ fun SettingsScreen(
             contentPadding = PaddingValues(
                 start = device.pagePadding,
                 end = device.pagePadding,
-                top = padding.calculateTopPadding(),
+                top = padding.calculateTopPadding() + 8.dp,
                 bottom = padding.calculateBottomPadding()
                     .coerceAtLeast(LocalAppChromeBottomInset.current) + 32.dp,
             ),
@@ -2116,11 +2116,11 @@ fun SettingsScreen(
                         )
                     }
                 }
-                val columns = if (device.isTv) 5 else 3
+                val columns = if (device.isTv) 5 else 2
                 items(sectionTiles.chunked(columns), key = { it.first().id }) { row ->
                     Row(
-                        Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         // Center an incomplete final phone row without stretching its cards.
                         val missing = columns - row.size
@@ -3444,7 +3444,7 @@ private fun SettingsSectionCard(
     val fillFocus1 = rememberFocusFill()
     Surface(
         modifier = modifier
-            .heightIn(min = if (LocalAppDeviceProfile.current.isTv) 88.dp else 86.dp)
+            .heightIn(min = if (LocalAppDeviceProfile.current.isTv) 88.dp else 96.dp)
             .focusFill(fillFocus1, RoundedCornerShape(22.dp))
             .glassCard(RoundedCornerShape(22.dp))
             .clickable(role = Role.Button, onClickLabel = "Open ${tile.title} settings", onClick = onClick),
@@ -3453,9 +3453,9 @@ private fun SettingsSectionCard(
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 5.dp),
+            Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(7.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             // A softly tinted emblem separates the glyph from the glass tile.
             // Accent stays with the icon; the pane itself adapts neutrally to the theme.
