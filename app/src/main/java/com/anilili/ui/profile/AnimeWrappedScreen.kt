@@ -1,6 +1,9 @@
 package com.anilili.ui.profile
 
-import android.content.Intent
+import android.widget.Toast
+import androidx.compose.ui.graphics.toArgb
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -65,7 +68,7 @@ internal fun wrappedStats(days: Map<Long, Int>, today: LocalDate): WrappedStats 
 @Composable
 internal fun WrappedSummaryCard(stats: WrappedStats, artwork: String?, onOpen: (() -> Unit)?, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(28.dp)
-    Box(modifier.fillMaxWidth().glassCard(shape).then(if (onOpen != null) Modifier.clickable(onClickLabel = "View Anime Wrapped", onClick = onOpen) else Modifier)) {
+    Box(modifier.fillMaxWidth().glassCard(shape).then(if (onOpen != null) Modifier.clickable(onClickLabel = "View AniLumos Wrapped", onClick = onOpen) else Modifier)) {
         if (!artwork.isNullOrBlank()) {
             AsyncImage(model = artwork, contentDescription = null, contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize().clip(shape))
@@ -76,7 +79,7 @@ internal fun WrappedSummaryCard(stats: WrappedStats, artwork: String?, onOpen: (
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Anime Wrapped", color = foreground, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("AniLumos Wrapped", color = foreground, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text("Your anime journey in ${stats.year}", color = foreground.copy(alpha = .78f), style = MaterialTheme.typography.bodySmall)
                 }
                 if (onOpen != null) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "View statistics", tint = foreground)
@@ -134,14 +137,39 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
     // History stores lifetime completions and last-touch time, not the year of each completion.
     // Label it honestly, rather than deriving fictitious yearly favourites or elapsed watch time.
     val localHistory = remember(history) { history.filter { !it.fromRemote && it.watchedEpisodes.isNotEmpty() }.sortedByDescending { it.watchedEpisodes.size } }
+    val personality = wrappedPersonality(stats, annualTime.size, genreTime.map { it.key })
+    val topTitles = annualTime.entries.sortedByDescending { it.value }.take(5).map { entry ->
+        val media = byId[entry.key]
+        val cached = history.firstOrNull { it.anilistId == entry.key }
+        WrappedTitle(media?.title?.preferred ?: cached?.title ?: "Anime #${entry.key}",
+            media?.coverImage?.best ?: cached?.cover, formatWrappedTime(entry.value))
+    }
+    val scope = rememberCoroutineScope()
+    val accent = MaterialTheme.colorScheme.primary.toArgb()
+    var exporting by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().glassAtmosphere()) {
-        PageTitleBar(title = "Anime Wrapped", subtitle = "${stats.year} · Your viewing activity",
+        PageTitleBar(title = "AniLumos Wrapped", subtitle = "${stats.year} · Your viewing activity",
             leading = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
-            trailing = { IconButton(onClick = {
-                val recap = "AniLumos Wrapped ${stats.year}: ${stats.episodes} recorded episodes, ${stats.activeDays} active days, ${stats.streak}-day current streak."
-                val intent = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, recap) }
-                context.startActivity(Intent.createChooser(intent, "Share Anime Wrapped"))
-            }) { Icon(Icons.Default.Share, contentDescription = "Share recap") } })
+            trailing = {
+                IconButton(enabled = !exporting, onClick = {
+                    exporting = true
+                    scope.launch {
+                        try {
+                            shareWrappedImage(context, stats, formatWrappedTime(totalMs), annualTime.size,
+                                topTitles, genreTime.map { it.key }, personality, accent)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            Toast.makeText(context, "Could not create recap image", Toast.LENGTH_SHORT).show()
+                        } finally {
+                            exporting = false
+                        }
+                    }
+                }) {
+                    if (exporting) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Default.Share, contentDescription = "Share recap image")
+                }
+            })
         LazyColumn(contentPadding = PaddingValues(start = device.pagePadding, end = device.pagePadding,
             top = 8.dp, bottom = LocalAppChromeBottomInset.current + 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -164,15 +192,20 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
                     Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(26.dp)).padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("Top anime this year", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        annualTime.entries.sortedByDescending { it.value }.take(5).forEachIndexed { index, entry ->
-                            val media = byId[entry.key]
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Text("${index + 1}", style = MaterialTheme.typography.titleMedium)
-                                AsyncImage(model = media?.coverImage?.best, contentDescription = null, contentScale = ContentScale.Crop,
-                                    modifier = Modifier.width(42.dp).aspectRatio(.70f).clip(RoundedCornerShape(10.dp)))
-                                Text(media?.title?.preferred ?: "Anime #${entry.key}", modifier = Modifier.weight(1f),
-                                    style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                Text(formatWrappedTime(entry.value), style = MaterialTheme.typography.labelMedium)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            topTitles.take(3).forEachIndexed { index, title ->
+                                Column(Modifier.weight(1f).glassCard(RoundedCornerShape(18.dp)).padding(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Box {
+                                        AsyncImage(model = title.artwork, contentDescription = title.title,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxWidth().aspectRatio(.70f).clip(RoundedCornerShape(14.dp)))
+                                        Text("#${index + 1}", color = Color.White, fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(4.dp).background(Color.Black.copy(alpha = .65f), RoundedCornerShape(10.dp)).padding(6.dp))
+                                    }
+                                    Text(title.title, style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    Text(title.time, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
                         }
                     }
@@ -231,6 +264,17 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
                                 }
                             }
                         }
+                    }
+                }
+            }
+            item {
+                Row(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(26.dp)).padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(personality.symbol, style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("Your viewing personality", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(personality.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(personality.description, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
