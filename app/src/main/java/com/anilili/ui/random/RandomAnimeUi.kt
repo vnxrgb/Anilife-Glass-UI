@@ -226,6 +226,8 @@ fun RandomAnimeDialog(
                     if (isTv) {
                         val sources = state.sources.filter { it.moodGenre == null }
                         if (sources.size > 1) SourceChips(sources, state.source.key, onSource, true)
+                        val moods = state.sources.filter { it.moodGenre != null }
+                        if (moods.isNotEmpty()) SourceChips(moods, state.source.key, onSource, true)
                     } else {
                         // Keep the existing list sources visible and give moods their own compact
                         // rail, rather than hiding them behind an arbitrarily long list of chips.
