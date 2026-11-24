@@ -284,13 +284,18 @@ private fun TvPairingAddressQr(address: String) {
             .background(Color.White)
             .semantics { contentDescription = "TV pairing address: $address" },
     ) {
-        val cell = size.minDimension / (qr.size + 8)
+        // Keep each QR module on whole physical pixels. Fractional rectangles can produce
+        // thin anti-aliased seams on scaled TV outputs and make phone scanning less reliable.
+        // Center the grid so the four-module white quiet zone remains on every side.
+        val cell = kotlin.math.floor(size.minDimension / (qr.size + 8)).coerceAtLeast(1f)
+        val grid = (qr.size + 8) * cell
+        val inset = kotlin.math.floor((size.minDimension - grid) / 2f)
         for (y in 0 until qr.size) {
             for (x in 0 until qr.size) {
                 if (qr.getModule(x, y)) {
                     drawRect(
                         color = Color.Black,
-                        topLeft = Offset((x + 4) * cell, (y + 4) * cell),
+                        topLeft = Offset(inset + (x + 4) * cell, inset + (y + 4) * cell),
                         size = Size(cell, cell),
                     )
                 }
