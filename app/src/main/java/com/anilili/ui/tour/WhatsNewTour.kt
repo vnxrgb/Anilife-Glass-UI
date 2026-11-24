@@ -491,6 +491,7 @@ fun WhatsNewReleaseDialog(onOpen: (String) -> Unit) {
             com.anilili.ui.dialogs.MidnightMediaHeader(
                 kicker = "WHAT'S NEW · ${index + 1} OF ${entries.size}",
                 title = title,
+                metadata = location,
                 onDismiss = (WhatsNewTour::finish).takeIf { showClose },
             )
         },
