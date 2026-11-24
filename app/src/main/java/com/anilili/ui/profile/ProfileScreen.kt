@@ -810,7 +810,7 @@ fun ProfileScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                         listOf("Weekend Queue", "Comfort Rewatches", "Movie Night")
                                             .forEach { preset ->
                                                 if (customLists.none { it.name.equals(preset, true) }) {
