@@ -92,6 +92,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -306,7 +307,14 @@ fun SearchScreen(
                                         radius = 24.dp,
                                     )
                                 } else {
-                                    Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.52f))
+                                    Modifier.background(
+                                        Brush.verticalGradient(listOf(
+                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
+                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.52f),
+                                            Color.Transparent,
+                                        )),
+                                    )
                                 },
                             )
                             .statusBarsPadding()
@@ -316,7 +324,7 @@ fun SearchScreen(
                 ),
         ) {
             SearchTopBar(
-                translucent = browseBackdrop != null,
+                translucent = headerFloats,
                 vm = vm,
                 options = options,
                 onOpenFilters = { showFilters = true },
@@ -328,7 +336,7 @@ fun SearchScreen(
                     onAnimeClick(suggestion.id)
                 },
             )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .22f))
+            if (!headerFloats) HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .22f))
         }
     }
 
@@ -611,16 +619,21 @@ private fun SearchTopBar(
                             )),
                             border = androidx.compose.foundation.BorderStroke(1.dp, glassRimColor()),
                             onClick = onOpenFilters,
-                            contentPadding = PaddingValues(horizontal = 15.dp),
+                            contentPadding = PaddingValues(0.dp),
                             modifier = Modifier
                                 .focusRequester(filterFocusRequester)
-                                .height(56.dp)
-                                .focusFill(controlFocus1, RoundedCornerShape(50)),
-                            shape = RoundedCornerShape(22.dp),
+                                .size(56.dp)
+                                .focusFill(controlFocus1, CircleShape),
+                            shape = CircleShape,
                         ) {
-                            Icon(Icons.Default.FilterList, contentDescription = "Open filters")
-                            if (vm.filters.activeCount > 0) {
-                                Text(" ${vm.filters.activeCount}", fontWeight = FontWeight.Bold)
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.FilterList, contentDescription = "Open filters (${vm.filters.activeCount} active)", modifier = Modifier.size(24.dp))
+                                if (vm.filters.activeCount > 0) {
+                                    Box(
+                                        Modifier.align(Alignment.TopEnd).size(7.dp)
+                                            .background(MaterialTheme.colorScheme.onSurface, CircleShape),
+                                    )
+                                }
                             }
                         }
                     }
