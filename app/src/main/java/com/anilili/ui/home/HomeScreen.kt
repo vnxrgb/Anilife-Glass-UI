@@ -53,7 +53,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -547,7 +546,7 @@ private fun HomeContent(
         // read across, so the card only has to be legible, not to tile. The grid an expanded rail
         // opens is what the column count is for, and it comes from the profile so Home lands on the
         // same poster grid Search and Browse use instead of inventing a second one.
-        val columns = if (device.isTv) 7 else device.posterColumns
+        val columns = if (device.isTv) 7 else device.homePosterColumns(available, gridSpacing)
         val cardWidth = if (device.isTv) {
             device.posterWidth
         } else {
@@ -826,7 +825,8 @@ private fun HeroPager(
     val device = LocalAppDeviceProfile.current
     val pagerState = rememberPagerState(pageCount = { items.size })
     val indicatorScope = rememberCoroutineScope()
-    val heroIds = items.map(Media::id)
+    // Keep the page identity stable during drag/animation recompositions.
+    val heroIds = remember(items) { items.map(Media::id) }
     var tvPage by remember(heroIds) { mutableIntStateOf(0) }
     var tvHeroHasFocus by remember(heroIds) { mutableStateOf(false) }
     val safeTvPage = tvPage.coerceIn(0, items.lastIndex)
@@ -867,7 +867,7 @@ private fun HeroPager(
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = if (device.isTv) device.pagePadding else 14.dp)
+            .padding(horizontal = if (device.isTv || device.isTablet) device.pagePadding else 14.dp)
             .height(heroHeight)
             .clip(if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(26.dp))
             .border(
@@ -1455,14 +1455,7 @@ private fun RailTitle(title: String, dragHandle: Modifier?, modifier: Modifier =
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        if (dragHandle != null) {
-            Icon(
-                Icons.Default.DragHandle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
-                modifier = Modifier.padding(horizontal = if (LocalAppDeviceProfile.current.isTv) 8.dp else 4.dp).size(if (LocalAppDeviceProfile.current.isTv) 22.dp else 18.dp),
-            )
-        }
+        // The title remains the hold-to-reorder target; no permanent decorative handle.
     }
 }
 
