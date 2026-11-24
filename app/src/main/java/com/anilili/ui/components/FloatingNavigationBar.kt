@@ -67,6 +67,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.anilili.ui.nav.Routes
 import com.anilili.ui.theme.LocalMidnightAccent
 import com.anilili.ui.theme.Midnight
 
@@ -132,24 +133,22 @@ fun FloatingNavigationBar(
             expandedItem + (target - expandedItem) * progress
         }
         val dockWidth = widths.fold(BarPadding * 2) { total, width -> total + width }
-        Row(
+        Layout(
             modifier = Modifier
                 .width(dockWidth)
                 .height(FloatingNavBarExpandedHeight)
                 .opticalGlass(BarShape, enabled = backdrop != null)
                 .padding(horizontal = BarPadding)
                 .selectableGroup(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            items.forEachIndexed { index, item ->
-                val keep = item.route in compactRoutes
-                val width = widths[index]
-                if (width > 0.dp) {
+            content = {
+                items.forEachIndexed { index, item ->
+                    val keep = item.route in compactRoutes
+                    val width = widths[index]
                     Box(
-                        Modifier.width(width).fillMaxHeight().clip(BarShape)
+                        Modifier.fillMaxHeight().clip(BarShape)
                             .graphicsLayer { alpha = if (keep) 1f else (1f - progress) },
                     ) {
-                        if (keep || !compact) {
+                        if (width > 0.dp && (keep || !compact)) {
                             FloatingNavIcon(
                                 item = item,
                                 selected = item.route == selectedRoute,
@@ -157,12 +156,33 @@ fun FloatingNavigationBar(
                                 showLabel = floatingNavShowsCaption(width),
                                 onClick = { onSelect(item.route) },
                             )
-                        } else if (progress < .98f) {
+                        } else if (width > 0.dp && progress < .98f) {
                             Icon(item.icon, contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.align(Alignment.Center).size(IconSize))
                         }
                     }
+                }
+            },
+        ) { measurables, constraints ->
+            val measured = measurables.mapIndexed { index, measurable ->
+                measurable.measure(Constraints.fixed(widths[index].roundToPx().coerceAtLeast(0), constraints.maxHeight))
+            }
+            val availableWidth = constraints.maxWidth
+            val expandedWidth = inner.toPx()
+            val compactWidth = (compactItem * 2).toPx()
+            layout(availableWidth, constraints.maxHeight) {
+                measured.forEachIndexed { index, placeable ->
+                    val expandedCenter = expandedWidth * (index + .5f) / items.size
+                    val route = items[index].route
+                    val compactCenter = when (route) {
+                        Routes.SEARCH -> compactWidth * .25f
+                        Routes.HOME -> compactWidth * .75f
+                        else -> compactWidth * .5f
+                    }
+                    val center = expandedCenter * (1f - progress) + compactCenter * progress
+                    placeable.place((center - placeable.width / 2f).roundToInt(), 0,
+                        zIndex = if (route in compactRoutes) 1f else 0f)
                 }
             }
         }
