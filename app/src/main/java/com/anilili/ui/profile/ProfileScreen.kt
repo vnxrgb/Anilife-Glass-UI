@@ -298,6 +298,11 @@ fun ProfileScreen(
     val profileState by vm.profile.collectAsState()
     val history by LibraryStore.history.collectAsState()
     val localActivity by WatchActivityStore.days.collectAsState()
+    var wrappedOpen by rememberSaveable { mutableStateOf(false) }
+    if (wrappedOpen && !device.isTv) {
+        AnimeWrappedScreen(localActivity, history, onBack = { wrappedOpen = false })
+        return
+    }
     val historyByAnimeId = remember(history) { history.associateBy(HistoryEntry::anilistId) }
     val watchlist by LibraryStore.watchlist.collectAsState()
     val customLists by CustomListStore.lists.collectAsState()
@@ -763,35 +768,14 @@ fun ProfileScreen(
 
                         if (!device.isTv) {
                             item(key = "anilumos-wrapped") {
-                                val today = LocalDate.now()
-                                val startOfYear = today.withDayOfYear(1).toEpochDay()
-                                val yearlyDays = localActivity.filterKeys { it in startOfYear..today.toEpochDay() }
-                                val episodeCount = yearlyDays.values.sum()
-                                val activeDays = yearlyDays.size
-                                val streak = activityStreak(localActivity, today.toEpochDay())
-                                Column(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = device.pagePadding, vertical = 6.dp)
-                                        .glassCard(RoundedCornerShape(24.dp))
-                                        .padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(7.dp),
-                                ) {
-                                    Text(
-                                        "AniLumos Wrapped · ${today.year}",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                    Text(
-                                        "$episodeCount episodes completed  ·  $activeDays active days  ·  $streak-day streak",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                    Text(
-                                        "Based on activity recorded on this device since tracking was enabled. Not a complete account history.",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
+                                val stats = wrappedStats(localActivity, LocalDate.now())
+                                val artwork = history.firstOrNull { !it.fromRemote && !it.cover.isNullOrBlank() }?.cover
+                                WrappedSummaryCard(
+                                    stats = stats,
+                                    artwork = artwork,
+                                    onOpen = { wrappedOpen = true },
+                                    modifier = Modifier.padding(horizontal = device.pagePadding, vertical = 6.dp),
+                                )
                             }
                         }
                         if (!device.isTv && listOf("Weekend Queue", "Comfort Rewatches", "Movie Night")
