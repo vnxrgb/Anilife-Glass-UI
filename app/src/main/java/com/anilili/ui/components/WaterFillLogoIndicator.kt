@@ -36,35 +36,11 @@ fun AnilumosBrandMark(
     modifier: Modifier = Modifier,
     flameAmount: Float = 0.5f,
 ) {
-    val accent = MaterialTheme.colorScheme.primary
-    Canvas(modifier.semantics { contentDescription = "Anilumos" }) {
-        val s = size.minDimension / 108f
-        withTransform({
-            translate(left = (size.width - 108f * s) / 2f, top = (size.height - 108f * s) / 2f)
-            scale(scaleX = s, scaleY = s, pivot = Offset.Zero)
-        }) {
-            val letter = Path().apply {
-                moveTo(28f, 88f); lineTo(52f, 34f); lineTo(80f, 88f)
-                moveTo(39f, 71f); quadraticTo(54f, 66f, 68f, 71f)
-            }
-            drawPath(letter, accent.copy(alpha = 0.10f), style = Stroke(width = 18f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-            drawPath(letter, accent.copy(alpha = 0.25f), style = Stroke(width = 12f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-            drawPath(letter, accent, style = Stroke(width = 7.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-            val flame = Path().apply {
-                moveTo(53f, 8f)
-                cubicTo(58f, 17f, 66f, 22f, 60f, 30f)
-                cubicTo(57f, 35f, 49f, 35f, 46f, 30f)
-                cubicTo(42f, 23f, 50f, 18f, 53f, 8f)
-                close()
-            }
-            val flicker = flameAmount.coerceIn(0f, 1f)
-            withTransform({ scale(0.96f + flicker * 0.08f, 0.96f + flicker * 0.08f, pivot = Offset(53f, 24f)) }) {
-                drawPath(flame, Color(0xFFFFBD62).copy(alpha = 0.13f), style = Stroke(width = 9f))
-                drawPath(flame, Color(0xFFFFC56B))
-                drawOval(Color(0xFFFFF4D2), topLeft = Offset(50f, 22f), size = androidx.compose.ui.geometry.Size(5f, 8f))
-            }
-        }
-    }
+    androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(com.anilili.R.drawable.anilumos_mark),
+        contentDescription = "Anilumos",
+        modifier = modifier,
+    )
 }
 
 /** Same reusable candle for the black splash and regular loading states. */
