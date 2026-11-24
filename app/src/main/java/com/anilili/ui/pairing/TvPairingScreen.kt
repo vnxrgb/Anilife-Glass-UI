@@ -316,7 +316,7 @@ internal fun preferredTvQrAddress(addresses: List<String>): String? =
     addresses.asSequence()
         .map { it.substringBefore("  (").trim() }
         .filter { it.isNotEmpty() }
-        .sortedWith(compareBy<String> { if (it.substringBefore(':').matches(Regex("""\\d{1,3}(\\.\\d{1,3}){3}"""))) 0 else 1 }
+        .sortedWith(compareBy<String> { if (it.substringBefore(':').matches(Regex("""[0-9]{1,3}([.][0-9]{1,3}){3}"""))) 0 else 1 }
             .thenBy { it.length }
             .thenBy { it })
         .firstOrNull()
