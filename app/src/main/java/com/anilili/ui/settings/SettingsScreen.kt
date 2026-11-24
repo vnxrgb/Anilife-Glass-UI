@@ -217,6 +217,7 @@ import com.anilili.ui.dialogs.MidnightStepperRow
 import com.anilili.ui.pairing.PhonePairingScreen
 import com.anilili.ui.profile.AniListProfile
 import com.anilili.ui.profile.LoginWebView
+import com.anilili.ui.profile.OAuthUnavailableDialog
 import com.anilili.ui.profile.MalImportProgress
 import com.anilili.ui.profile.MalImportStage
 import com.anilili.ui.profile.ProfileViewModel
@@ -975,6 +976,10 @@ fun SettingsScreen(
 
     when (loginService) {
         AccountService.ANILIST -> {
+            if (!AuthManager.isConfigured) {
+                OAuthUnavailableDialog("AniList") { loginService = null }
+                return
+            }
             LoginWebView(
                 authorizeUrl = remember(loginService) { AuthManager.authorizeUrl() },
                 isRedirect = AuthManager::isRedirect,
@@ -992,6 +997,10 @@ fun SettingsScreen(
             return
         }
         AccountService.MAL -> {
+            if (!MalAuthManager.isConfigured) {
+                OAuthUnavailableDialog("MyAnimeList") { loginService = null }
+                return
+            }
             LoginWebView(
                 authorizeUrl = remember(loginService) { MalAuthManager.authorizeUrl() },
                 isRedirect = MalAuthManager::isRedirect,
@@ -2760,33 +2769,13 @@ fun SettingsScreen(
                             label = "previewClearance",
                         )
                         var top by remember { mutableFloatStateOf(Float.MAX_VALUE) }
-                        var left by remember { mutableFloatStateOf(0f) }
-                        val backing = MaterialTheme.colorScheme.background
-                        val backdrop = LocalAppBackdrop.current
-                        val rootView = androidx.compose.ui.platform.LocalView.current.rootView
                         Box(
                             Modifier
                                 .fillMaxWidth()
                                 .onGloballyPositioned {
                                     top = it.positionInWindow().y
-                                    left = it.positionInWindow().x
                                 }
-                                .graphicsLayer { translationY = (clearance.toPx() - top).coerceAtLeast(0f) }
-                                // The backing reaches up over the gap it was pushed down by, so the
-                                // rows passing beneath do not show through behind the clock.
-                                .drawBehind {
-                                    val lift = (clearance.toPx() - top).coerceAtLeast(0f)
-                                    // The picture's slice, when there is one, lines up with where
-                                    // this box is drawn — its laid-out place plus the lift.
-                                    drawAppCanvas(
-                                        backdrop = backdrop,
-                                        colour = backing,
-                                        origin = Offset(left, top + lift),
-                                        window = androidx.compose.ui.unit.IntSize(rootView.width, rootView.height),
-                                        topLeft = Offset(0f, -lift),
-                                        rectSize = Size(size.width, size.height + lift),
-                                    )
-                                },
+                                .graphicsLayer { translationY = (clearance.toPx() - top).coerceAtLeast(0f) },
                         ) {
                             ThemePreview()
                         }
@@ -2924,6 +2913,9 @@ fun SettingsScreen(
                             onCheckedChange = SettingsStore::setAppIconMatchesTheme,
                         )
                     }
+                }
+                item(key = "Glass material") {
+                    GlassMaterialControls()
                 }
                 // Phones on Android 12+ only: below it nothing blurs, and a television never draws
                 // glass, so there would be nothing here to switch.
