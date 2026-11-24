@@ -92,6 +92,7 @@ import com.anilili.ui.components.ErrorBox
 import com.anilili.ui.components.LoadingBox
 import com.anilili.ui.components.LocalAppChromeBottomInset
 import com.anilili.ui.components.LocalTimeOfDayFormatter
+import com.anilili.ui.components.cinematicFilterChipColors
 import com.anilili.ui.components.PageTitleBar
 import com.anilili.ui.components.PullRefreshContainer
 import com.anilili.ui.components.ScrollAwareTopBar
@@ -235,18 +236,22 @@ fun ScheduleScreen(
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+                    .padding(horizontal = device.pagePadding, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 FilterChip(
                     selected = followingOnly,
                     onClick = { followingOnly = !followingOnly },
+                    shape = RoundedCornerShape(50),
+                    colors = cinematicFilterChipColors(),
                     label = { Text("Following only") },
                 )
-                if (followingOnly) {
+                if (followingOnly && visibleSchedule is UiState.Success) {
+                    val count = (visibleSchedule as UiState.Success).data.size
                     Text(
-                        "${(visibleSchedule as? UiState.Success)?.data?.size ?: 0} episodes today",
+                        "$count ${if (count == 1) "episode" else "episodes"}",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
