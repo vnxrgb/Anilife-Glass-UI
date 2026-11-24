@@ -46,6 +46,10 @@ fun PlayerPanelTheme(content: @Composable () -> Unit) {
             surface = PlayerPanelSurface,
             onSurface = Color.White,
             surfaceVariant = PlayerPanelRaised,
+            surfaceContainerLow = PlayerPanelSurface,
+            surfaceContainer = Color(0xFF161616),
+            surfaceContainerHigh = Color(0xFF202020),
+            surfaceContainerHighest = Color(0xFF303030),
             onSurfaceVariant = PlayerPanelMutedText,
             outline = PlayerPanelOutline,
             outlineVariant = PlayerPanelOutline,
@@ -68,7 +72,7 @@ val PlayerPanelSurface = Color(0xFF0C0C0C)
 val PlayerPanelShape = RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)
 
 /** A row or card inside a panel, one step up from it. */
-val PlayerPanelRaised = Color(0xFF252835)
+val PlayerPanelRaised = Color(0xFF252525)
 
 /** Chosen, but not where the cursor is — the fifth of white the anime page's tabs use. */
 val PlayerPanelSelected = Color.White.copy(alpha = 0.2f)
