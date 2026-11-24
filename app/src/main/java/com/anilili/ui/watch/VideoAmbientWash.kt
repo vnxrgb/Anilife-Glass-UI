@@ -38,6 +38,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Paint
 import androidx.media3.ui.PlayerView
@@ -229,6 +231,16 @@ internal fun Modifier.videoAmbientWash(
     var previousLight by remember { mutableStateOf<ImageBitmap?>(null) }
     val blend = remember { Animatable(1f) }
     val ambientLayerPaint = remember { Paint() }
+    // Convert the dark-oriented spatial bitmap into a bright, chromatic light field.
+    // Neutral shadows become near-white, while colored regions retain their hue.
+    val lightFieldFilter = remember {
+        ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
+            1.0f, -0.5f, -0.5f, 0f, 242f,
+            -0.5f, 1.0f, -0.5f, 0f, 242f,
+            -0.5f, -0.5f, 1.0f, 0f, 242f,
+            0f, 0f, 0f, 1f, 0f,
+        )))
+    }
     LaunchedEffect(palette.spatialLight) {
         val next = palette.spatialLight
         if (next == null) {
@@ -260,7 +272,8 @@ internal fun Modifier.videoAmbientWash(
             // the resulting rapid dim/restore was the reported blinking.
             // Plus produces a true weighted interpolation of premultiplied
             // colors and alpha. Apply strength ONCE to the combined result.
-            ambientLayerPaint.alpha = strength * if (lightPage) .48f else 1f
+            ambientLayerPaint.alpha = strength
+            ambientLayerPaint.colorFilter = if (lightPage) lightFieldFilter else null
             drawContext.canvas.saveLayer(size.toRect(), ambientLayerPaint)
             try {
                 if (outgoing != null) {
@@ -290,14 +303,28 @@ internal fun Modifier.videoAmbientWash(
         val w = size.width
         val h = size.height
         if (w <= 0f || h <= 0f) return@drawBehind
-        val strength = intensity.coerceIn(0.5f, 1f) * if (lightPage) .28f else 1f
+        val strength = intensity.coerceIn(0.5f, 1f) * if (lightPage) .72f else 1f
+        // Keep light-theme color visible without allowing dark video shadows to
+        // muddy the background. Preserve hue and scale chroma smoothly.
+        fun bloom(color: Color): Color {
+            if (!lightPage || color.alpha <= 0f) return color
+            val peak = maxOf(color.red, color.green, color.blue)
+            val low = minOf(color.red, color.green, color.blue)
+            val range = peak - low
+            val chroma = (range * 1.8f).coerceIn(0f, .55f)
+            fun channel(value: Float) = .98f - chroma * (peak - value) / range.coerceAtLeast(.001f)
+            return Color(channel(color.red), channel(color.green), channel(color.blue), color.alpha)
+        }
+        val leftBloom = bloom(left)
+        val rightBloom = bloom(right)
+        val middleBloom = bloom(middle)
         // Layer three broad, feathered colour blooms instead of a solid tinted slab.
         // The video itself is never blurred; only the watch-page background is painted.
         val reach = maxOf(w * 1.20f, h * 0.42f)
         val center = Color(
-            red = (left.red + middle.red + right.red) / 3f,
-            green = (left.green + middle.green + right.green) / 3f,
-            blue = (left.blue + middle.blue + right.blue) / 3f,
+            red = (leftBloom.red + middleBloom.red + rightBloom.red) / 3f,
+            green = (leftBloom.green + middleBloom.green + rightBloom.green) / 3f,
+            blue = (leftBloom.blue + middleBloom.blue + rightBloom.blue) / 3f,
         )
         drawRect(
             brush = Brush.verticalGradient(
@@ -312,9 +339,9 @@ internal fun Modifier.videoAmbientWash(
         drawRect(
             brush = Brush.radialGradient(
                 *arrayOf(
-                    0f to left.copy(alpha = 0.64f * strength),
-                    0.24f to left.copy(alpha = 0.36f * strength),
-                    0.52f to left.copy(alpha = 0.14f * strength),
+                    0f to leftBloom.copy(alpha = 0.64f * strength),
+                    0.24f to leftBloom.copy(alpha = 0.36f * strength),
+                    0.52f to leftBloom.copy(alpha = 0.14f * strength),
                     0.85f to Color.Transparent,
                     1f to Color.Transparent,
                 ),
@@ -325,9 +352,9 @@ internal fun Modifier.videoAmbientWash(
         drawRect(
             brush = Brush.radialGradient(
                 *arrayOf(
-                    0f to right.copy(alpha = 0.61f * strength),
-                    0.24f to right.copy(alpha = 0.33f * strength),
-                    0.52f to right.copy(alpha = 0.13f * strength),
+                    0f to rightBloom.copy(alpha = 0.61f * strength),
+                    0.24f to rightBloom.copy(alpha = 0.33f * strength),
+                    0.52f to rightBloom.copy(alpha = 0.13f * strength),
                     0.85f to Color.Transparent,
                     1f to Color.Transparent,
                 ),
@@ -338,8 +365,8 @@ internal fun Modifier.videoAmbientWash(
         drawRect(
             brush = Brush.radialGradient(
                 *arrayOf(
-                    0f to middle.copy(alpha = 0.42f * strength),
-                    0.38f to middle.copy(alpha = 0.20f * strength),
+                    0f to middleBloom.copy(alpha = 0.42f * strength),
+                    0.38f to middleBloom.copy(alpha = 0.20f * strength),
                     0.80f to Color.Transparent,
                     1f to Color.Transparent,
                 ),
