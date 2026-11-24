@@ -170,7 +170,7 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
                     else Icon(Icons.Default.Share, contentDescription = "Share recap image")
                 }
             })
-        LazyColumn(contentPadding = PaddingValues(start = device.pagePadding, end = device.pagePadding,
+        LazyColumn(modifier = Modifier.widthIn(max = 1000.dp).fillMaxWidth().align(Alignment.CenterHorizontally), contentPadding = PaddingValues(start = device.pagePadding, end = device.pagePadding,
             top = 8.dp, bottom = LocalAppChromeBottomInset.current + 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
