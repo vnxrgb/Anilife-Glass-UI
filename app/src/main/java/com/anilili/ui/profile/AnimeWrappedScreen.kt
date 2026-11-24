@@ -29,6 +29,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.anilili.data.library.HistoryEntry
+import com.anilili.data.library.WatchActivityStore
+import com.anilili.data.AppGraph
+import com.anilili.data.model.Media
+import com.anilili.ui.rethrowIfCancellation
 import com.anilili.data.library.activityStreak
 import com.anilili.ui.adaptive.LocalAppDeviceProfile
 import com.anilili.ui.components.PageTitleBar
@@ -101,6 +105,32 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
     val context = LocalContext.current
     val today = LocalDate.now()
     val stats = remember(days, today) { wrappedStats(days, today) }
+    val watchTime by WatchActivityStore.watchTime.collectAsState()
+    val annualTime = remember(watchTime, today) {
+        val totals = mutableMapOf<Int, Long>()
+        watchTime.filterKeys { it in today.withDayOfYear(1).toEpochDay()..today.toEpochDay() }
+            .values.forEach { titles -> titles.forEach { (id, ms) -> totals[id] = (totals[id] ?: 0L) + ms } }
+        totals.toMap()
+    }
+    val totalMs = annualTime.values.sum()
+    val ids = remember(annualTime.keys) { annualTime.keys.sorted() }
+    val metadata by produceState<List<Media>>(emptyList(), ids) {
+        value = try {
+            ids.chunked(50).flatMap { AppGraph.repository.mediaByIds(it) }
+        } catch (e: Exception) {
+            e.rethrowIfCancellation()
+            emptyList()
+        }
+    }
+    val byId = remember(metadata) { metadata.associateBy { it.id } }
+    val genreTime = remember(annualTime, metadata) {
+        val totals = mutableMapOf<String, Long>()
+        metadata.forEach { media ->
+            val ms = annualTime[media.id] ?: 0L
+            media.genres.distinct().forEach { genre -> totals[genre] = (totals[genre] ?: 0L) + ms }
+        }
+        totals.entries.sortedByDescending { it.value }.take(5)
+    }
     // History stores lifetime completions and last-touch time, not the year of each completion.
     // Label it honestly, rather than deriving fictitious yearly favourites or elapsed watch time.
     val localHistory = remember(history) { history.filter { !it.fromRemote && it.watchedEpisodes.isNotEmpty() }.sortedByDescending { it.watchedEpisodes.size } }
@@ -117,6 +147,50 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
                 WrappedSummaryCard(stats, localHistory.firstOrNull()?.cover, onOpen = null)
+            }
+            item {
+                Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(26.dp)).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Measured watch time", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(formatWrappedTime(totalMs), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text("${annualTime.size} anime played this year · Native playback only",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Recorded since watch-time tracking was enabled.", style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            if (annualTime.isNotEmpty()) {
+                item {
+                    Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(26.dp)).padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Top anime this year", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        annualTime.entries.sortedByDescending { it.value }.take(5).forEachIndexed { index, entry ->
+                            val media = byId[entry.key]
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text("${index + 1}", style = MaterialTheme.typography.titleMedium)
+                                AsyncImage(model = media?.coverImage?.best, contentDescription = null, contentScale = ContentScale.Crop,
+                                    modifier = Modifier.width(42.dp).aspectRatio(.70f).clip(RoundedCornerShape(10.dp)))
+                                Text(media?.title?.preferred ?: "Anime #${entry.key}", modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(formatWrappedTime(entry.value), style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+                }
+            }
+            if (genreTime.isNotEmpty()) {
+                item {
+                    Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(26.dp)).padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Favourite genres this year", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        genreTime.forEach { (genre, ms) ->
+                            Text("$genre · ${formatWrappedTime(ms)}", style = MaterialTheme.typography.bodyMedium)
+                            LinearProgressIndicator(progress = { (ms.toFloat() / totalMs.coerceAtLeast(1L)).coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(50)))
+                        }
+                        Text("Anime may belong to multiple genres; totals overlap.", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
             }
             item {
                 Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(26.dp)).padding(16.dp),
@@ -161,9 +235,14 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
                 }
             }
             item {
-                Text("Based on activity recorded on this device. Older history may be incomplete. Actual viewing time and yearly genre rankings are not recorded yet.",
+                Text("Based on activity recorded on this device. Older history may be incomplete. Watch time measures supported native playback from the tracking update onward; older time cannot be recovered.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
+}
+
+private fun formatWrappedTime(ms: Long): String {
+    val minutes = ms / 60_000L
+    return if (minutes >= 60) "${minutes / 60}h ${minutes % 60}m" else "${minutes}m"
 }
