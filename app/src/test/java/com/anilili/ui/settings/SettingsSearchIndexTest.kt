@@ -98,7 +98,9 @@ class SettingsSearchIndexTest {
         assertTrue(entries.any { it.title == "Overscan" })
         assertTrue(phone.none { it.title == "Interface size" || it.title == "Overscan" || it.title == "Spoken feedback" })
         // Drawn on both since the television's top menu learned to fade out.
-        assertTrue(phone.any { it.title == "Keep the bars on screen" })
+        assertTrue(phone.any { it.title == "Keep the header on screen" })
+        assertTrue(phone.none { it.title == "Keep the bars on screen" })
+        assertTrue(searchSettings("pin header", phone).any { it.title == "Keep the header on screen" })
         assertTrue(entries.any { it.title == "Keep the bars on screen" })
     }
 
@@ -150,7 +152,7 @@ class SettingsSearchIndexTest {
             val (sectionId, title) = match.destructured
             if (sectionId.isNotEmpty()) section = sectionId else rows += section to title
         }
-        val indexed = entries.map { it.sectionId to it.title }.toSet()
+        val indexed = (entries + settingsSearchEntries(isTv = false)).map { it.sectionId to it.title }.toSet()
         assertEquals(emptySet<Pair<String, String>>(), indexed - rows)
     }
 
@@ -165,7 +167,7 @@ class SettingsSearchIndexTest {
                 val (sectionId, key) = match.destructured
                 if (sectionId.isNotEmpty()) section = sectionId else keyedRows += section to key
             }
-        val indexed = entries.map { it.sectionId to it.title }.toSet()
+        val indexed = (entries + settingsSearchEntries(isTv = false)).map { it.sectionId to it.title }.toSet()
         assertEquals(emptySet<Pair<String, String>>(), indexed - keyedRows)
     }
 
