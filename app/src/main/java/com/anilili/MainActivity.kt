@@ -1374,7 +1374,7 @@ private fun AppTvTopNavigation(
             .alpha(chromeAlpha)
             .background(
                 androidx.compose.ui.graphics.Brush.verticalGradient(
-                    0f to MaterialTheme.colorScheme.background.copy(.74f),
+                    0f to com.anilili.ui.components.glassPanelColor(),
                     1f to ComposeColor.Transparent,
                 ),
             )
@@ -1747,7 +1747,7 @@ private fun AppNavigationRail(
         modifier = modifier
             .then(if (device.isTv && cinema) Modifier.width(railWidth) else Modifier)
             .onFocusChanged { expanded = it.hasFocus },
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = com.anilili.ui.components.glassPanelColor(),
         header = {
             if (!device.isTv || !cinema || expanded) {
                 Text(
