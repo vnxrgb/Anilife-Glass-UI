@@ -15,6 +15,7 @@ import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import com.anilili.data.settings.GlassSection
+import com.anilili.data.settings.GlassMaterial
 import com.anilili.data.settings.SettingsStore
 import com.anilili.ui.adaptive.LocalAppDeviceProfile
 
@@ -50,16 +51,26 @@ fun glassEnabled(section: GlassSection): Boolean {
  * Each state here holds only the one source it was made for, so there is no parent to filter out.
  */
 @OptIn(ExperimentalHazeApi::class)
-fun Modifier.backdropBlur(state: HazeState?, tint: Color, radius: Dp = 16.dp): Modifier =
-    if (state == null || !backdropBlurAvailable) {
+@Composable
+fun Modifier.backdropBlur(state: HazeState?, tint: Color, radius: Dp = 16.dp): Modifier {
+    val material by SettingsStore.glassMaterial.collectAsState()
+    val blur by SettingsStore.glassBlur.collectAsState()
+    val opacity by SettingsStore.glassOpacity.collectAsState()
+    val scale = if (blur < 0) material.blurScale else blur / 50f
+    val adjustedTint = tint.copy(alpha = if (opacity >= 0) (opacity / 100f).coerceIn(.15f, .95f) else when (material) {
+        GlassMaterial.LIQUID -> tint.alpha
+        GlassMaterial.FROSTED -> maxOf(tint.alpha, .55f)
+        GlassMaterial.SMOKED -> maxOf(tint.alpha, .75f)
+    })
+    return if (state == null || !backdropBlurAvailable) {
         this
     } else {
         hazeEffect(
             state,
             HazeStyle(
                 backgroundColor = Color.Black,
-                tint = HazeTint(tint),
-                blurRadius = radius,
+                tint = HazeTint(adjustedTint),
+                blurRadius = radius * scale.coerceIn(.05f, 2f),
                 noiseFactor = 0f,
             ),
         ) {
@@ -67,3 +78,5 @@ fun Modifier.backdropBlur(state: HazeState?, tint: Color, radius: Dp = 16.dp): M
             canDrawArea = { true }
         }
     }
+
+}
