@@ -17,8 +17,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun cinematicPrimaryButtonColors(onArtwork: Boolean = false) = ButtonDefaults.buttonColors(
     containerColor = if (onArtwork) Color.White
-        else MaterialTheme.colorScheme.primary,
-    contentColor = if (onArtwork) Color.Black else MaterialTheme.colorScheme.onPrimary,
+        else glassPanelColor(),
+    contentColor = if (onArtwork) Color.Black else MaterialTheme.colorScheme.onSurface,
     disabledContainerColor = if (onArtwork) Color.Black.copy(alpha = 0.27f)
         else glassPanelColor().copy(alpha = 0.40f),
     disabledContentColor = if (onArtwork) Color.White.copy(alpha = 0.44f)
@@ -29,7 +29,7 @@ fun cinematicPrimaryButtonColors(onArtwork: Boolean = false) = ButtonDefaults.bu
 fun cinematicPrimaryButtonBorder(onArtwork: Boolean = false) = BorderStroke(
     1.dp,
     if (onArtwork) Color.Transparent
-        else Color.Transparent,
+        else glassRimColor(),
 )
 
 @Composable
