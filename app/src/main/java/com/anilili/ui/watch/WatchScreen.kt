@@ -1593,6 +1593,7 @@ private fun WatchContent(
                 onRequestAllSources = onRequestAllSources,
                 onRetryMiruroSources = onRetryMiruroSources,
                 onSelectEpisode = onSelectEpisode,
+                openSourcePickerRequest = sourcePickerRequest,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -2399,6 +2400,7 @@ private fun MobileWatchDetails(
     onRequestAllSources: () -> Unit,
     onRetryMiruroSources: () -> Unit,
     onSelectEpisode: (Int) -> Unit,
+    openSourcePickerRequest: Int,
     modifier: Modifier = Modifier,
 ) {
     val device = LocalAppDeviceProfile.current
@@ -2532,6 +2534,7 @@ private fun MobileWatchDetails(
                 onRequestAllSources = onRequestAllSources,
                 onRetryMiruroSources = onRetryMiruroSources,
                 focusRequester = focusRequester,
+                openRequest = openSourcePickerRequest,
             )
             data.notice?.let { notice ->
                 Text(
