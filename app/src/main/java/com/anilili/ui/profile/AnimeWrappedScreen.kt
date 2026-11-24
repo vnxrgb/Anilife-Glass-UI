@@ -59,9 +59,9 @@ internal fun wrappedStats(days: Map<Long, Int>, today: LocalDate): WrappedStats 
 }
 
 @Composable
-internal fun WrappedSummaryCard(stats: WrappedStats, artwork: String?, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+internal fun WrappedSummaryCard(stats: WrappedStats, artwork: String?, onOpen: (() -> Unit)?, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(28.dp)
-    Box(modifier.fillMaxWidth().glassCard(shape).clickable(onClickLabel = "View Anime Wrapped", onClick = onOpen)) {
+    Box(modifier.fillMaxWidth().glassCard(shape).then(if (onOpen != null) Modifier.clickable(onClickLabel = "View Anime Wrapped", onClick = onOpen) else Modifier)) {
         if (!artwork.isNullOrBlank()) {
             AsyncImage(model = artwork, contentDescription = null, contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize().clip(shape))
@@ -75,7 +75,7 @@ internal fun WrappedSummaryCard(stats: WrappedStats, artwork: String?, onOpen: (
                     Text("Anime Wrapped", color = foreground, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text("Your anime journey in ${stats.year}", color = foreground.copy(alpha = .78f), style = MaterialTheme.typography.bodySmall)
                 }
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "View statistics", tint = foreground)
+                if (onOpen != null) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "View statistics", tint = foreground)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 WrappedMetric(stats.episodes.toString(), "Episodes", Modifier.weight(1f), foreground)
@@ -116,7 +116,7 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
             top = 8.dp, bottom = LocalAppChromeBottomInset.current + 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
-                WrappedSummaryCard(stats, localHistory.firstOrNull()?.cover, onOpen = {})
+                WrappedSummaryCard(stats, localHistory.firstOrNull()?.cover, onOpen = null)
             }
             item {
                 Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(26.dp)).padding(16.dp),
