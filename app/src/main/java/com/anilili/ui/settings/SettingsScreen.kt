@@ -2984,19 +2984,25 @@ fun SettingsScreen(
                         onClick = { openPicker = SettingsPicker.APP_LAYOUT },
                     )
                 }
-                // One switch on both: the phone's bars tuck away on a scroll, the television's top
-                // menu fades out a few seconds after the cursor leaves it.
-                item(key = "Keep the bars on screen") {
-                    MidnightSettingSwitchRow(
-                        title = if (device.isTv) "Keep the bars on screen" else "Keep the header on screen",
-                        description = if (device.isTv) {
-                            "Stop the top menu fading out while you browse"
-                        } else {
-                            "Keep the top header visible; the floating dock still compacts while scrolling"
-                        },
-                        checked = staticAppChrome,
-                        onCheckedChange = SettingsStore::setStaticAppChrome,
-                    )
+                // The mobile header preference is independent of the floating dock.
+                if (device.isTv) {
+                    item(key = "Keep the bars on screen") {
+                        MidnightSettingSwitchRow(
+                            title = "Keep the bars on screen",
+                            description = "Stop the top menu fading out while you browse",
+                            checked = staticAppChrome,
+                            onCheckedChange = SettingsStore::setStaticAppChrome,
+                        )
+                    }
+                } else {
+                    item(key = "Keep the header on screen") {
+                        MidnightSettingSwitchRow(
+                            title = "Keep the header on screen",
+                            description = "Keep the top header visible; the floating dock still compacts while scrolling",
+                            checked = staticAppChrome,
+                            onCheckedChange = SettingsStore::setStaticAppChrome,
+                        )
+                    }
                 }
                 item(key = "Search as you type") {
                     MidnightSettingSwitchRow(
