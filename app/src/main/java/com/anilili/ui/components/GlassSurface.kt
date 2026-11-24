@@ -5,6 +5,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.anilili.data.settings.SettingsStore
+import com.anilili.data.settings.GlassMaterial
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
@@ -30,8 +34,15 @@ fun Modifier.glassCard(
     tint: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
 ): Modifier {
     val scheme = MaterialTheme.colorScheme
-    val rim = scheme.onSurface.copy(alpha = 0.19f)
-    val highlight = scheme.onSurface.copy(alpha = 0.08f)
+    val material by SettingsStore.glassMaterial.collectAsState()
+    val opacity by SettingsStore.glassOpacity.collectAsState()
+    val borders by SettingsStore.glassBorders.collectAsState()
+    val custom = opacity >= 0
+    val defaultLiquid = material == GlassMaterial.LIQUID && !custom
+    val alpha = if (custom) (opacity / 100f).coerceIn(.15f, 1f) else material.panelAlpha
+    val fill = if (material == GlassMaterial.SMOKED) scheme.surface else tint
+    val rim = scheme.onSurface.copy(alpha = if (material == GlassMaterial.FROSTED) .23f else .19f)
+    val highlight = scheme.onSurface.copy(alpha = if (defaultLiquid) .08f else alpha * .12f)
     // Raised highlight across the top edge, deeper translucent glass toward the foot.
     // Each card is still a single paint operation: no per-poster RenderEffect allocations.
     return this
@@ -40,18 +51,23 @@ fun Modifier.glassCard(
         .background(
             Brush.verticalGradient(
                 0f to highlight,
-                0.16f to tint.copy(alpha = 0.70f),
-                0.72f to tint.copy(alpha = 0.51f),
-                1f to scheme.surface.copy(alpha = 0.40f),
+                0.16f to fill.copy(alpha = if (defaultLiquid) .70f else alpha),
+                0.72f to fill.copy(alpha = if (defaultLiquid) .51f else alpha * .91f),
+                1f to scheme.surface.copy(alpha = if (defaultLiquid) .40f else alpha * .85f),
             ),
         )
         // One rim avoids a double hairline at nested corners and saves overdraw on poster grids.
-        .border(1.dp, rim, shape)
+        .then(if (borders) Modifier.border(1.dp, rim, shape) else Modifier)
 }
 
 @Composable
-fun glassPanelColor(): Color =
-    MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.62f)
+fun glassPanelColor(): Color {
+    val material by SettingsStore.glassMaterial.collectAsState()
+    val opacity by SettingsStore.glassOpacity.collectAsState()
+    val scheme = MaterialTheme.colorScheme
+    return (if (material == GlassMaterial.SMOKED) scheme.surface else scheme.surfaceContainerHigh)
+        .copy(alpha = if (opacity < 0) material.panelAlpha else (opacity / 100f).coerceIn(.15f, 1f))
+}
 
 /** Consistent selected glass pill, independent of the user's accent hue. */
 @Composable
@@ -59,7 +75,10 @@ fun glassSelectionColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alph
 
 /** A neutral hairline for translucent panels on light artwork and OLED black. */
 @Composable
-fun glassRimColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.20f)
+fun glassRimColor(): Color {
+    val borders by SettingsStore.glassBorders.collectAsState()
+    return MaterialTheme.colorScheme.onSurface.copy(alpha = if (borders) .20f else 0f)
+}
 
 /**
  * Shared wallpaper-safe cinematic backdrop for handheld glass destinations.
@@ -74,7 +93,8 @@ fun Modifier.glassAtmosphere(): Modifier {
     val scheme = MaterialTheme.colorScheme
     val customWallpaper = hasAppBackdrop()
     // Keep custom wallpapers visible while allowing extra cinematic depth on the default canvas.
-    val strength = if (customWallpaper) 0.18f else 0.80f
+    val ambient by SettingsStore.glassAmbient.collectAsState()
+    val strength = ambient / 100f * if (customWallpaper) .225f else 1f
     val cool = scheme.primary
     val warm = scheme.tertiary
     return this.appCanvas().drawBehind {
