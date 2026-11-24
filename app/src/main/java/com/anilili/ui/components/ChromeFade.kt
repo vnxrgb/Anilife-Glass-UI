@@ -4,6 +4,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import com.anilili.data.settings.SettingsStore
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -59,7 +61,10 @@ val AppChromeFade = Brush.verticalGradient(
 @Composable
 fun Modifier.chromeFade(overHero: Boolean, backdrop: HazeState? = null): Modifier {
     val scheme = MaterialTheme.colorScheme
-    val backingColor = scheme.surfaceContainerHigh
+    val backingColor = glassPanelColor()
+    val material by SettingsStore.glassMaterial.collectAsState()
+    val blur by SettingsStore.glassBlur.collectAsState()
+    val radius = (if (blur < 0) 24f * material.blurScale else blur * .48f).dp
     val settled by animateFloatAsState(
         targetValue = if (overHero) 0f else 1f,
         animationSpec = tween(220),
@@ -81,8 +86,8 @@ fun Modifier.chromeFade(overHero: Boolean, backdrop: HazeState? = null): Modifie
             backdrop!!,
             HazeStyle(
                 backgroundColor = scheme.surface,
-                tint = HazeTint(backingColor.copy(alpha = 0.40f)),
-                blurRadius = 24.dp,
+                tint = HazeTint(backingColor),
+                blurRadius = radius,
                 noiseFactor = 0f,
             ),
         ) {
@@ -116,13 +121,17 @@ private val ChromeGlassMask = Brush.verticalGradient(
 @Composable
 fun Modifier.browseHeaderGlass(backdrop: HazeState?): Modifier {
     val scheme = MaterialTheme.colorScheme
+    val tint = glassPanelColor()
+    val material by SettingsStore.glassMaterial.collectAsState()
+    val blur by SettingsStore.glassBlur.collectAsState()
+    val radius = (if (blur < 0) 24f * material.blurScale else blur * .48f).dp
     return if (backdrop != null && backdropBlurAvailable) {
         this.hazeEffect(
             backdrop,
             HazeStyle(
                 backgroundColor = scheme.surface,
-                tint = HazeTint(scheme.surfaceContainerHigh.copy(alpha = 0.40f)),
-                blurRadius = 24.dp,
+                tint = HazeTint(tint),
+                blurRadius = radius,
                 noiseFactor = 0f,
             ),
         ) {
