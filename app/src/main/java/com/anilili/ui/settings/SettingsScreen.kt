@@ -2769,33 +2769,13 @@ fun SettingsScreen(
                             label = "previewClearance",
                         )
                         var top by remember { mutableFloatStateOf(Float.MAX_VALUE) }
-                        var left by remember { mutableFloatStateOf(0f) }
-                        val backing = MaterialTheme.colorScheme.background
-                        val backdrop = LocalAppBackdrop.current
-                        val rootView = androidx.compose.ui.platform.LocalView.current.rootView
                         Box(
                             Modifier
                                 .fillMaxWidth()
                                 .onGloballyPositioned {
                                     top = it.positionInWindow().y
-                                    left = it.positionInWindow().x
                                 }
-                                .graphicsLayer { translationY = (clearance.toPx() - top).coerceAtLeast(0f) }
-                                // The backing reaches up over the gap it was pushed down by, so the
-                                // rows passing beneath do not show through behind the clock.
-                                .drawBehind {
-                                    val lift = (clearance.toPx() - top).coerceAtLeast(0f)
-                                    // The picture's slice, when there is one, lines up with where
-                                    // this box is drawn — its laid-out place plus the lift.
-                                    drawAppCanvas(
-                                        backdrop = backdrop,
-                                        colour = backing,
-                                        origin = Offset(left, top + lift),
-                                        window = androidx.compose.ui.unit.IntSize(rootView.width, rootView.height),
-                                        topLeft = Offset(0f, -lift),
-                                        rectSize = Size(size.width, size.height + lift),
-                                    )
-                                },
+                                .graphicsLayer { translationY = (clearance.toPx() - top).coerceAtLeast(0f) },
                         ) {
                             ThemePreview()
                         }
