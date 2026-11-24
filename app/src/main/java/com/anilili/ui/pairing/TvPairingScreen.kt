@@ -190,7 +190,10 @@ fun TvPairingScreen(
                         primaryLabel = "Try again",
                         onPrimary = { vm.start(context) },
                         secondaryLabel = "Cancel",
-                        onSecondary = onCancel,
+                        onSecondary = {
+                            vm.cancel()
+                            onCancel()
+                        },
                     )
                     PairingDiagnosticsPanel(
                         modifier = Modifier.padding(top = 20.dp).fillMaxWidth(0.8f),
