@@ -78,11 +78,12 @@ fun PageFilterPill(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
+                .glassCard(RoundedCornerShape(50))
                 .focusFill(fillFocus1, RoundedCornerShape(50))
                 .clickable(role = Role.Button, onClickLabel = "Choose $label filter") { expanded = true }
                 .semantics { contentDescription = "Filter: $label" },
             shape = RoundedCornerShape(50),
-            color = fillFocus1.background(glassPanelColor()),
+            color = fillFocus1.background(androidx.compose.ui.graphics.Color.Transparent),
             border = BorderStroke(1.dp, glassRimColor()),
             contentColor = fillFocus1.content(LocalContentColor.current),
         ) {
@@ -148,11 +149,12 @@ fun PageSortControl(
         Surface(
             modifier = Modifier
                 .size(48.dp)
+                .glassCard(RoundedCornerShape(50))
                 .focusFill(fillFocus2, RoundedCornerShape(50))
                 .clickable(role = Role.Button, onClickLabel = contentDescription) { expanded = true }
                 .semantics { this.contentDescription = contentDescription },
             shape = RoundedCornerShape(50),
-            color = fillFocus2.background(glassPanelColor()),
+            color = fillFocus2.background(androidx.compose.ui.graphics.Color.Transparent),
             border = BorderStroke(1.dp, glassRimColor()),
             contentColor = fillFocus2.content(LocalContentColor.current),
         ) {
