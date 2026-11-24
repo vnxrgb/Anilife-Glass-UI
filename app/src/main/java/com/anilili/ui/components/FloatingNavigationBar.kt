@@ -122,10 +122,12 @@ fun FloatingNavigationBar(
         val compact = collapsed && compactRoutes.size == 2
         val fold by animateFloatAsState(
             targetValue = if (compact) 1f else 0f,
-            animationSpec = spring(dampingRatio = .88f, stiffness = Spring.StiffnessMediumLow),
+            animationSpec = spring(dampingRatio = 1f, stiffness = 180f, visibilityThreshold = .001f),
             label = "dockFold",
         )
         val progress = fold.coerceIn(0f, 1f)
+        val glassProgress = progress * progress * (3f - 2f * progress)
+        val disappearingAlpha = (1f - progress * 1.4f).coerceIn(0f, 1f)
         val inner = (maxWidth - BarPadding * 2).coerceAtLeast(0.dp)
         val expandedItem = if (items.isEmpty()) ItemSize else inner / items.size
         val compactItem = FloatingNavBarExpandedHeight.coerceAtMost(inner / 2)
@@ -142,7 +144,7 @@ fun FloatingNavigationBar(
             if (progress < 1f) {
                 Box(
                     Modifier.fillMaxWidth().fillMaxHeight()
-                        .graphicsLayer { alpha = 1f - progress }
+                        .graphicsLayer { alpha = 1f - glassProgress }
                         .opticalGlass(BarShape, enabled = backdrop != null),
                 )
             }
@@ -156,22 +158,24 @@ fun FloatingNavigationBar(
                         val width = widths[index]
                         Box(
                             Modifier.fillMaxHeight().clip(BarShape)
-                                .graphicsLayer { alpha = if (keep) 1f else (1f - progress) },
+                                .graphicsLayer { alpha = if (keep) 1f else disappearingAlpha },
                         ) {
                             if (keep && progress > 0f) {
                                 Box(
                                     Modifier.align(Alignment.Center)
                                         .size(compactItem)
-                                        .graphicsLayer { alpha = progress }
+                                        .graphicsLayer { alpha = glassProgress }
                                         .opticalGlass(CircleShape, enabled = backdrop != null),
                                 )
                             }
-                            if (width > 0.dp && (keep || !compact)) {
+                            if (width > 0.dp && (keep || disappearingAlpha > 0f)) {
                                 FloatingNavIcon(
                                     item = item,
                                     selected = item.route == selectedRoute,
                                     width = width,
-                                    showLabel = progress < .5f && floatingNavShowsCaption(width),
+                                    showLabel = floatingNavShowsCaption(expandedItem),
+                                    labelProgress = progress,
+                                    interactionEnabled = keep || !compact,
                                     onClick = { onSelect(item.route) },
                                     compactProgress = if (keep) progress else 0f,
                                 )
@@ -257,6 +261,8 @@ private fun FloatingNavIcon(
     showLabel: Boolean,
     onClick: () -> Unit,
     compactProgress: Float = 0f,
+    labelProgress: Float = 0f,
+    interactionEnabled: Boolean = true,
 ) {
     val iconColor = if (selected) MaterialTheme.colorScheme.onSurface
         else MaterialTheme.colorScheme.onSurfaceVariant
@@ -273,6 +279,7 @@ private fun FloatingNavIcon(
             .fillMaxHeight()
             .selectable(
                 selected = selected,
+                enabled = interactionEnabled,
                 role = Role.Tab,
                 onClick = onClick,
             )
@@ -301,7 +308,10 @@ private fun FloatingNavIcon(
                 tint = iconColor,
                 modifier = Modifier.size(IconSize + 4.dp * compactProgress),
             )
-            if (showLabel) {
+            if (showLabel && labelProgress < 1f) {
+                val captionFraction = (1f - labelProgress * 1.6f).coerceIn(0f, 1f)
+                Box(Modifier.height(13.dp * captionFraction).clip(shape)
+                    .graphicsLayer { alpha = captionFraction }) {
                 Text(
                     text = item.label,
                     color = iconColor,
@@ -310,6 +320,7 @@ private fun FloatingNavIcon(
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis,
                 )
+                }
             }
         }
     }
