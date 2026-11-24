@@ -358,8 +358,8 @@ fun DownloadsScreen(
                     Modifier
                         .fillMaxWidth()
                         .widthIn(max = 440.dp)
-                        .glassCard(RoundedCornerShape(24.dp))
-                        .padding(horizontal = 20.dp, vertical = if (device.isTv) 24.dp else 18.dp),
+                        .glassCard(RoundedCornerShape(if (device.isTv) 24.dp else 40.dp))
+                        .padding(horizontal = 24.dp, vertical = if (device.isTv) 24.dp else 22.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(
