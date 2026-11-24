@@ -1,5 +1,10 @@
 package com.anilili.ui.watch
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.anilili.data.settings.SettingsStore
+import com.anilili.data.settings.GlassMaterial
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,20 +29,29 @@ import androidx.compose.ui.unit.dp
  */
 internal enum class PlayerLiquidGlassTone { SOFT, DOCK, PRIMARY }
 
+@Composable
 internal fun Modifier.playerLiquidGlass(
     shape: Shape,
     tone: PlayerLiquidGlassTone = PlayerLiquidGlassTone.SOFT,
 ): Modifier {
-    val dark = when (tone) {
+    val material by SettingsStore.glassMaterial.collectAsState()
+    val opacity by SettingsStore.glassOpacity.collectAsState()
+    val borders by SettingsStore.glassBorders.collectAsState()
+    val baseDark = when (tone) {
         PlayerLiquidGlassTone.SOFT -> 0.32f
         PlayerLiquidGlassTone.DOCK -> 0.49f
         PlayerLiquidGlassTone.PRIMARY -> 0.38f
     }
-    val glint = when (tone) {
+    val dark = if (opacity >= 0) (opacity / 100f).coerceIn(.25f, .95f) else when (material) {
+        GlassMaterial.LIQUID -> baseDark
+        GlassMaterial.FROSTED -> (baseDark + .22f).coerceAtMost(.85f)
+        GlassMaterial.SMOKED -> (baseDark + .36f).coerceAtMost(.92f)
+    }
+    val glint = (when (tone) {
         PlayerLiquidGlassTone.SOFT -> 0.055f
         PlayerLiquidGlassTone.DOCK -> 0.075f
         PlayerLiquidGlassTone.PRIMARY -> 0.10f
-    }
+    }) * if (material == GlassMaterial.LIQUID) 1f else .45f
     return this
         .clip(shape)
         .background(
@@ -64,7 +78,7 @@ internal fun Modifier.playerLiquidGlass(
             )
             onDrawBehind { drawRect(brush = reflection) }
         }
-        .border(
+        .then(if (borders) Modifier.border(
             BorderStroke(
                 1.dp,
                 Brush.verticalGradient(
@@ -75,5 +89,5 @@ internal fun Modifier.playerLiquidGlass(
                 ),
             ),
             shape,
-        )
+        ) else Modifier)
 }
