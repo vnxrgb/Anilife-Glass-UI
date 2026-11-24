@@ -50,20 +50,11 @@ internal fun ThemePreview(modifier: Modifier = Modifier) {
     val colors = LocalAppColors.current
     val scheme = colors.scheme
     val shape = RoundedCornerShape(18.dp)
-    val onTv = LocalAppDeviceProfile.current.isTv
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
-            .then(
-                if (onTv) {
-                    Modifier.clip(shape)
-                        .background(scheme.surfaceContainerLow, shape)
-                        .border(1.dp, colors.line, shape)
-                } else {
-                    Modifier.glassCard(shape)
-                },
-            )
+            .glassCard(shape)
             .padding(14.dp)
             .clearAndSetSemantics { },
         verticalArrangement = Arrangement.spacedBy(12.dp),
