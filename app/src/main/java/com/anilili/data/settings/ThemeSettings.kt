@@ -41,7 +41,20 @@ enum class ThemeAccent(val storedValue: String, val label: String, val seed: Lon
     SAKURA_PINK("sakura_pink", "Sakura pink", 0xFFF472B6),
     SUNSET_ORANGE("sunset_orange", "Sunset orange", 0xFFF97316),
     GOLD("gold", "Gold", 0xFFFACC15),
-    EMERALD("emerald", "Emerald", 0xFF10B981);
+    EMERALD("emerald", "Emerald", 0xFF10B981),
+    GLACIER("glacier", "Glacier", 0xFFB9E4FA),
+    AURORA("aurora", "Aurora", 0xFF64E6C1),
+    ROSE_GOLD("rose_gold", "Rose Gold", 0xFFE8B49D),
+    NORDIC("nordic", "Nordic", 0xFF88C0D0),
+    MOCHA("mocha", "Mocha", 0xFFC9A68D),
+    LAVENDER_MIST("lavender_mist", "Lavender Mist", 0xFFD4C5F9),
+    GRAPHITE("graphite", "Graphite", 0xFFB0BEC5),
+    PEACH_FROST("peach_frost", "Peach Frost", 0xFFFFC8A2),
+    MATCHA("matcha", "Matcha", 0xFFB8CB91),
+    BLUE_HOUR("blue_hour", "Blue Hour", 0xFF8B9CF5),
+    CHAMPAGNE("champagne", "Champagne", 0xFFE6D4B2),
+    RETRO_WAVE("retro_wave", "Retro Wave", 0xFFF18BC9),
+    ;
 
     companion object {
         fun fromStored(value: String?): ThemeAccent =
@@ -112,6 +125,18 @@ enum class ThemePreset(
     EMBER("Ember", ThemeBackground.AMOLED, ThemeAccent.SUNSET_ORANGE, ThemeStyle.VIVID),
     GILDED("Gilded", ThemeBackground.AMOLED, ThemeAccent.GOLD, ThemeStyle.NEUTRAL),
     FOREST("Forest", ThemeBackground.DARK, ThemeAccent.EMERALD, ThemeStyle.TONAL),
+    GLACIER("Glacier", ThemeBackground.DARK, ThemeAccent.GLACIER, ThemeStyle.TONAL),
+    AURORA("Aurora", ThemeBackground.DARK, ThemeAccent.AURORA, ThemeStyle.VIBRANT),
+    ROSE_GOLD("Rose Gold", ThemeBackground.DARK, ThemeAccent.ROSE_GOLD, ThemeStyle.TONAL),
+    NORDIC("Nordic", ThemeBackground.DARK, ThemeAccent.NORDIC, ThemeStyle.NEUTRAL),
+    MOCHA("Mocha", ThemeBackground.DARK, ThemeAccent.MOCHA, ThemeStyle.TONAL),
+    LAVENDER_MIST("Lavender Mist", ThemeBackground.DARK, ThemeAccent.LAVENDER_MIST, ThemeStyle.TONAL),
+    GRAPHITE("Graphite", ThemeBackground.DARK, ThemeAccent.GRAPHITE, ThemeStyle.NEUTRAL),
+    PEACH_FROST("Peach Frost", ThemeBackground.DARK, ThemeAccent.PEACH_FROST, ThemeStyle.TONAL),
+    MATCHA("Matcha", ThemeBackground.DARK, ThemeAccent.MATCHA, ThemeStyle.TONAL),
+    BLUE_HOUR("Blue Hour", ThemeBackground.DARK, ThemeAccent.BLUE_HOUR, ThemeStyle.VIBRANT),
+    CHAMPAGNE("Champagne", ThemeBackground.DARK, ThemeAccent.CHAMPAGNE, ThemeStyle.NEUTRAL),
+    RETRO_WAVE("Retro Wave", ThemeBackground.DARK, ThemeAccent.RETRO_WAVE, ThemeStyle.VIBRANT),
     HIGH_CONTRAST(
         "High contrast", ThemeBackground.AMOLED, ThemeAccent.MONOCHROME, ThemeStyle.VIVID, ThemeContrast.HIGH,
     );
@@ -183,4 +208,14 @@ internal fun backdropUrlOf(source: AppBackdropSource, animeUrl: String?, imageUr
     AppBackdropSource.NONE -> null
     AppBackdropSource.ANIME -> animeUrl
     AppBackdropSource.IMAGE -> imageUrl
+}
+
+/** Glass material is independent of theme colour. Liquid preserves the existing appearance. */
+enum class GlassMaterial(val label: String, val panelAlpha: Float, val blurScale: Float) {
+    LIQUID("Liquid Glass", .62f, 1f),
+    FROSTED("Frosted Glass", .84f, 1.5f),
+    SMOKED("Smoked Glass", .90f, .75f);
+    companion object {
+        fun fromStored(value: String?): GlassMaterial = entries.firstOrNull { it.name == value } ?: LIQUID
+    }
 }
