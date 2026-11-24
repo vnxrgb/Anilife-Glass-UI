@@ -2040,7 +2040,7 @@ fun SettingsScreen(
         modifier = modifier.then(if (device.isTv) Modifier else Modifier.glassAtmosphere()),
         topBar = {
             if (device.isTv) return@Scaffold
-            ScrollAwareTopBar {
+            ScrollAwareTopBar(visible = true) {
                 PageTitleBar(
                     title = openSection?.title
                         ?: if (menuLanguage.usesSpanish()) "Ajustes" else "Settings",
@@ -2080,6 +2080,7 @@ fun SettingsScreen(
             },
         ) {
         SettingsList(
+            modifier = if (device.isTv) Modifier else Modifier.padding(top = padding.calculateTopPadding()),
             spotlight = spotlight,
             // Scroll padding, not layout padding: rows travel under the bars instead of the list
             // being shunted about by them.
@@ -2095,7 +2096,7 @@ fun SettingsScreen(
             contentPadding = PaddingValues(
                 start = device.pagePadding,
                 end = device.pagePadding,
-                top = padding.calculateTopPadding() + 8.dp,
+                top = if (device.isTv) padding.calculateTopPadding() + 8.dp else 8.dp,
                 bottom = padding.calculateBottomPadding()
                     .coerceAtLeast(LocalAppChromeBottomInset.current) + 32.dp,
             ),
@@ -2756,38 +2757,10 @@ fun SettingsScreen(
             }
 
             settingsSection("appearance", openSectionId) {
-                // A television shows it in the rail under the Appearance row instead (see
-                // TvSettingsTwoPane's openSectionPanel), where it stays in sight for every change and
-                // costs the rows none of their height. A phone scrolls back to it with a flick.
-                // Pinned on a phone, so every row below can be changed with its effect in view
-                // instead of a flick back up after each one. The backing is the page colour so the
-                // rows pass cleanly beneath it.
+                // Keep the preview in the measured list, never translate a sticky item
+                // over controls. TV has a separate preview pane.
                 if (!device.isTv) {
-                    stickyHeader(key = "Theme preview") {
-                        // A sticky header pins to the list's own top edge, and this list runs
-                        // behind the title bar and the clock. So it is pushed down by whatever is
-                        // at the top right now — the title bar, or just the status bar once the
-                        // title has tucked away — but only by as much of that as it would be under,
-                        // so it glides to a stop below the bar instead of jumping there.
-                        val chromeVisible = LocalAppChromeVisible.current
-                        val statusBar = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-                        val clearance by animateDpAsState(
-                            targetValue = if (chromeVisible) padding.calculateTopPadding() else statusBar,
-                            animationSpec = tween(220),
-                            label = "previewClearance",
-                        )
-                        var top by remember { mutableFloatStateOf(Float.MAX_VALUE) }
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .onGloballyPositioned {
-                                    top = it.positionInWindow().y
-                                }
-                                .graphicsLayer { translationY = (clearance.toPx() - top).coerceAtLeast(0f) },
-                        ) {
-                            ThemePreview()
-                        }
-                    }
+                    item(key = "Theme preview") { ThemePreview() }
                 }
                 item(key = "Theme presets") {
                     ThemePresetRow(
@@ -3398,6 +3371,7 @@ private fun LazyListScope.settingsSection(
  */
 @Composable
 private fun SettingsList(
+    modifier: Modifier = Modifier,
     spotlight: MidnightSettingSpotlight?,
     contentPadding: PaddingValues,
     content: LazyListScope.() -> Unit,
@@ -3419,7 +3393,7 @@ private fun SettingsList(
     ) {
         LazyColumn(
             state = state,
-            modifier = Modifier.fillMaxSize(),
+            modifier = modifier.fillMaxSize(),
             contentPadding = contentPadding,
         ) {
             indexedContent.emit(this)
