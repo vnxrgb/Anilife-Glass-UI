@@ -202,11 +202,6 @@ private fun FloatingNavIcon(
         animationSpec = tween(durationMillis = 260),
         label = "navSelectionWash",
     )
-    val glowAlpha by animateFloatAsState(
-        targetValue = if (selected) 0.26f else 0f,
-        animationSpec = tween(durationMillis = 320),
-        label = "navSelectionGlow",
-    )
     // Keep the selected halo neutral across artwork and themes.
     val halo = MaterialTheme.colorScheme.onSurface
     val accent = halo
@@ -222,15 +217,6 @@ private fun FloatingNavIcon(
                     1f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.45f * selectionAlpha),
                 ),
             )
-            .drawBehind {
-                if (glowAlpha > 0f) {
-                    drawCircle(
-                        color = halo.copy(alpha = glowAlpha * 0.45f),
-                        radius = size.minDimension * 0.42f,
-                        center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height * 0.82f),
-                    )
-                }
-            }
             .border(
                 1.dp,
                 Brush.verticalGradient(
