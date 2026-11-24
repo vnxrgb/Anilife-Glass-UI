@@ -247,7 +247,7 @@ internal fun Modifier.videoAmbientWash(
         val target = displayedLight ?: palette.spatialLight
         if (target != null) {
             val sizePx = IntSize(size.width.toInt().coerceAtLeast(1), size.height.toInt().coerceAtLeast(1))
-            val strength = intensity.coerceIn(0f, 1f) * .72f
+            val strength = intensity.coerceIn(0.2f, 1f)
             val fraction = blend.value
             val outgoing = previousLight
             // Blend into a transparent offscreen layer using additive ("plus")
@@ -285,10 +285,10 @@ internal fun Modifier.videoAmbientWash(
         val w = size.width
         val h = size.height
         if (w <= 0f || h <= 0f) return@drawBehind
-        val strength = intensity.coerceIn(0f, 1f) * .72f
+        val strength = intensity.coerceIn(0.5f, 1f)
         // Layer three broad, feathered colour blooms instead of a solid tinted slab.
         // The video itself is never blurred; only the watch-page background is painted.
-        val reach = maxOf(w * .85f, h * .30f)
+        val reach = maxOf(w * 1.20f, h * 0.42f)
         val center = Color(
             red = (left.red + middle.red + right.red) / 3f,
             green = (left.green + middle.green + right.green) / 3f,
@@ -301,7 +301,7 @@ internal fun Modifier.videoAmbientWash(
                 0.75f to Color.Transparent,
                 1f to Color.Transparent,
                 startY = 0f,
-                endY = maxOf(w * 1.25f, h * .45f),
+                endY = maxOf(w * 1.8f, h * 0.70f),
             ),
         )
         drawRect(
