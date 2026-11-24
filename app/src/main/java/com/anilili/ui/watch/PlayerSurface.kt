@@ -1864,7 +1864,8 @@ fun PlayerSurface(
                     // A focused TV dialog owns the remote. Rewind/Fast Forward must not
                     // seek the video behind Settings, subtitles, or the episode drawer.
                     if (settingsExpanded || captionsExpanded || captionAppearanceVisible ||
-                        openSubtitlesVisible || episodeDrawerExpanded
+                        openSubtitlesVisible || episodeDrawerExpanded ||
+                        nextEpisodeCardFocused || tvSkipActionFocused
                     ) return@onPreviewKeyEvent false
                     queueTvSeek(mediaSeekOffsetMs)
                     tvControlsVisible = true
@@ -1888,7 +1889,8 @@ fun PlayerSurface(
                     // A panel or the episode drawer holding the remote gets its digits untouched —
                     // a number pressed at a settings list must not move the picture behind it.
                     if (settingsExpanded || captionsExpanded || captionAppearanceVisible ||
-                        openSubtitlesVisible || episodeDrawerExpanded
+                        openSubtitlesVisible || episodeDrawerExpanded ||
+                        nextEpisodeCardFocused || tvSkipActionFocused
                     ) {
                         return@onPreviewKeyEvent false
                     }
