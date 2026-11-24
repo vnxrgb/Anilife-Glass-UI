@@ -38,26 +38,27 @@ fun Modifier.glassCard(
     val opacity by SettingsStore.glassOpacity.collectAsState()
     val borders by SettingsStore.glassBorders.collectAsState()
     val custom = opacity >= 0
-    val defaultLiquid = material == GlassMaterial.LIQUID && !custom
+    val liquid = material == GlassMaterial.LIQUID
     val alpha = if (custom) (opacity / 100f).coerceIn(.15f, 1f) else material.panelAlpha
     val fill = if (material == GlassMaterial.SMOKED) scheme.surface else tint
-    val rim = scheme.onSurface.copy(alpha = if (material == GlassMaterial.FROSTED) .23f else .19f)
-    val highlight = scheme.onSurface.copy(alpha = if (defaultLiquid) .08f else alpha * .12f)
+    val rim = scheme.onSurface.copy(alpha = if (liquid) .32f else .16f)
+    val highlight = scheme.onSurface.copy(alpha = if (liquid) .11f else .035f)
     // Raised highlight across the top edge, deeper translucent glass toward the foot.
     // Each card is still a single paint operation: no per-poster RenderEffect allocations.
     return this
-        .shadow(4.dp, shape, clip = false)
+        .shadow(if (liquid) 3.dp else 1.dp, shape, clip = false)
         .clip(shape)
         .background(
             Brush.verticalGradient(
-                0f to highlight,
-                0.16f to fill.copy(alpha = if (defaultLiquid) .70f else alpha),
-                0.72f to fill.copy(alpha = if (defaultLiquid) .51f else alpha * .91f),
-                1f to scheme.surface.copy(alpha = if (defaultLiquid) .40f else alpha * .85f),
+                0f to fill.copy(alpha = alpha),
+                0.18f to fill.copy(alpha = alpha * if (liquid) .82f else .98f),
+                0.75f to fill.copy(alpha = alpha * if (liquid) .74f else .95f),
+                1f to scheme.surface.copy(alpha = alpha),
             ),
         )
         // One rim avoids a double hairline at nested corners and saves overdraw on poster grids.
-        .then(if (borders) Modifier.border(1.dp, rim, shape) else Modifier)
+        .background(Brush.verticalGradient(0f to highlight, .20f to Color.Transparent, 1f to Color.Transparent))
+        .then(if (borders) Modifier.border(1.dp, Brush.verticalGradient(0f to rim, .55f to rim.copy(alpha = rim.alpha * .35f), 1f to rim.copy(alpha = rim.alpha * .65f)), shape) else Modifier)
 }
 
 @Composable
@@ -103,14 +104,14 @@ fun Modifier.glassAtmosphere(): Modifier {
         if (dimension <= 0f) return@drawBehind
         drawRect(
             Brush.radialGradient(
-                colors = listOf(cool.copy(alpha = 0.16f * strength), Color.Transparent),
+                colors = listOf(cool.copy(alpha = 0.09f * strength), Color.Transparent),
                 center = Offset(size.width * 0.88f, size.height * 0.21f),
                 radius = dimension * 0.64f,
             ),
         )
         drawRect(
             Brush.radialGradient(
-                colors = listOf(warm.copy(alpha = 0.13f * strength), Color.Transparent),
+                colors = listOf(warm.copy(alpha = 0.07f * strength), Color.Transparent),
                 center = Offset(size.width * 0.10f, size.height * 0.95f),
                 radius = dimension * 0.66f,
             ),
