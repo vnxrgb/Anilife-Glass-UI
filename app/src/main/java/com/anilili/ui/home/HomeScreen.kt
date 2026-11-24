@@ -53,7 +53,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -1456,14 +1455,7 @@ private fun RailTitle(title: String, dragHandle: Modifier?, modifier: Modifier =
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        if (dragHandle != null) {
-            Icon(
-                Icons.Default.DragHandle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
-                modifier = Modifier.padding(horizontal = if (LocalAppDeviceProfile.current.isTv) 8.dp else 4.dp).size(if (LocalAppDeviceProfile.current.isTv) 22.dp else 18.dp),
-            )
-        }
+        // The title remains the hold-to-reorder target; no permanent decorative handle.
     }
 }
 
