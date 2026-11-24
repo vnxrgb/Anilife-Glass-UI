@@ -64,6 +64,8 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -784,6 +786,10 @@ private fun WatchContent(
     // owns whether it is open — this only says "the viewer asked again", which is the one thing
     // the player knows and SourceSelectors cannot see from inside the dialog it manages.
     var sourcePickerRequest by remember(data.anilistId) { mutableIntStateOf(0) }
+    // Only suggest switching sources after native playback actually stalls.
+    var streamStalled by remember(data.anilistId, data.currentIndex, data.chosenStream?.url) {
+        mutableStateOf(false)
+    }
     val downloads by EpisodeDownloads.downloads(context).collectAsState()
     val exportedEpisodes by EpisodeExport.exported(context).collectAsState()
     val preparingIds by EpisodeDownloads.preparingIds.collectAsState()
@@ -1395,7 +1401,10 @@ private fun WatchContent(
                                 onAddToList = { listStatusDialogVisible = true },
                                 audioSwitch = playerAudioSwitch,
                                 onAudioSwitch = { onChangeSource(it.provider, it.variant.route) },
-                                onPlaybackActiveChanged = { playerHasPicture = it },
+                                onPlaybackActiveChanged = {
+                                    playerHasPicture = it
+                                    if (it) streamStalled = false
+                                },
                                 category = data.sourceVariant.route,
                                 fillerSkip = fillerSkip,
                             )
@@ -1449,7 +1458,10 @@ private fun WatchContent(
                         onNextEpisode = onNext,
                         onAutoAdvance = onAutoAdvance,
                         onError = onPlaybackError,
-                        onStalled = onPlaybackStalled,
+                        onStalled = { source, elapsed ->
+                            streamStalled = true
+                            onPlaybackStalled(source, elapsed)
+                        },
                         modifier = Modifier.fillMaxSize(),
                         onToggleFullscreen = onToggleFullscreen,
                         startPositionMs = data.startPositionMs,
@@ -1528,6 +1540,24 @@ private fun WatchContent(
                     }
                 }
             }
+            if (streamStalled && !device.isTv && data.chosenStream != null &&
+                !loadingOverlayVisible) {
+                Row(
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                        .padding(bottom = if (fullscreen) 94.dp else 12.dp)
+                        .background(Color.Black.copy(alpha = 0.86f), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Stream stalled", color = Color.White,
+                        style = MaterialTheme.typography.labelMedium)
+                    TextButton(onClick = {
+                        streamStalled = false
+                        sourcePickerRequest++
+                    }) { Text("Try another source") }
+                    TextButton(onClick = { streamStalled = false }) { Text("Dismiss") }
+                }
+            }
             if (
                 windowedBackArrowIsVisible(
                     fullscreen = fullscreen,
@@ -1563,6 +1593,7 @@ private fun WatchContent(
                 onRequestAllSources = onRequestAllSources,
                 onRetryMiruroSources = onRetryMiruroSources,
                 onSelectEpisode = onSelectEpisode,
+                openSourcePickerRequest = sourcePickerRequest,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -2369,6 +2400,7 @@ private fun MobileWatchDetails(
     onRequestAllSources: () -> Unit,
     onRetryMiruroSources: () -> Unit,
     onSelectEpisode: (Int) -> Unit,
+    openSourcePickerRequest: Int,
     modifier: Modifier = Modifier,
 ) {
     val device = LocalAppDeviceProfile.current
@@ -2379,6 +2411,55 @@ private fun MobileWatchDetails(
     // Every episode row asks the same question, so resolve the three state sources once per list
     // rather than once per row.
     val badgeContext = LocalContext.current
+    // Episode notes are local to this installation and never sent to streaming providers.
+    val noteKey = remember(data.anilistId, data.current.number) {
+        "${data.anilistId}:${data.current.number}"
+    }
+    val notePreferences = remember(badgeContext) {
+        badgeContext.getSharedPreferences("anilumos_episode_notes", Context.MODE_PRIVATE)
+    }
+    var savedEpisodeNote by remember(noteKey) {
+        mutableStateOf(notePreferences.getString(noteKey, "").orEmpty())
+    }
+    var editingEpisodeNote by remember(noteKey) { mutableStateOf(false) }
+    var noteDraft by remember(noteKey) { mutableStateOf(savedEpisodeNote) }
+    if (editingEpisodeNote) {
+        AlertDialog(
+            onDismissRequest = { editingEpisodeNote = false },
+            title = { Text("Episode notes") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "${data.seriesTitle} · Episode ${data.current.displayNumber}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    OutlinedTextField(
+                        value = noteDraft,
+                        onValueChange = { noteDraft = it.take(2000) },
+                        label = { Text("My notes") },
+                        minLines = 3,
+                        maxLines = 7,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text("Saved on this device only · ${noteDraft.length}/2000",
+                        style = MaterialTheme.typography.labelSmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val value = noteDraft.trim()
+                    notePreferences.edit().apply {
+                        if (value.isEmpty()) remove(noteKey) else putString(noteKey, value)
+                    }.apply()
+                    savedEpisodeNote = value
+                    editingEpisodeNote = false
+                }) { Text("Save note") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingEpisodeNote = false }) { Text("Cancel") }
+            },
+        )
+    }
     val downloadIndex by EpisodeDownloads.downloads(badgeContext).collectAsState()
     val exportStatuses by EpisodeExport.statuses(badgeContext).collectAsState()
     val exportedEpisodes by EpisodeExport.exported(badgeContext).collectAsState()
@@ -2434,6 +2515,15 @@ private fun MobileWatchDetails(
                     onDownload = onDownload,
                     modifier = Modifier.padding(start = pad, end = pad, top = 16.dp, bottom = 4.dp),
                 )
+                TextButton(
+                    onClick = {
+                        noteDraft = savedEpisodeNote
+                        editingEpisodeNote = true
+                    },
+                    modifier = Modifier.padding(horizontal = pad),
+                ) {
+                    Text(if (savedEpisodeNote.isBlank()) "Add episode note" else "View / edit episode note")
+                }
                 // Previous/Next pills removed: the player transport and the episode list below
                 // already cover episode navigation.
             }
@@ -2444,6 +2534,7 @@ private fun MobileWatchDetails(
                 onRequestAllSources = onRequestAllSources,
                 onRetryMiruroSources = onRetryMiruroSources,
                 focusRequester = focusRequester,
+                openRequest = openSourcePickerRequest,
             )
             data.notice?.let { notice ->
                 Text(
