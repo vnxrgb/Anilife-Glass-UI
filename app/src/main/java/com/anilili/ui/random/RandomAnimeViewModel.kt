@@ -73,15 +73,25 @@ class RandomAnimeViewModel(app: Application) : AndroidViewModel(app) {
     private fun moodDeck(genre: String): RandomAnimeDeck = RandomAnimeDeck(
         fetchPage = { page ->
             repo.discover(DiscoverFilters(genres = setOf(genre), hideWatched = WatchedFilter.STARTED), page).items
+                .filter { matchesMood(it, genre) }
         },
         pageCount = 5,
         skip = { WatchedTitles.hides(it, WatchedFilter.STARTED) },
         tasteSource = {
             Recommendations.forYou(limit = 60)?.items.orEmpty()
-                .filter { genre in it.genres }
+                .filter { matchesMood(it, genre) }
         },
         tasteEvery = 2,
     )
+
+    private fun matchesMood(media: Media, genre: String): Boolean {
+        if (genre !in media.genres) return false
+        // Romance and comfort should not be dominated by combat-driven catalogue picks.
+        if (genre == "Romance" || genre == "Slice of Life") {
+            if (media.genres.any { it in setOf("Action", "Horror", "Thriller") }) return false
+        }
+        return true
+    }
 
     private fun listDeck(ids: List<Int>): RandomAnimeDeck {
         val pages = ids.sorted().chunked(LIST_PAGE)
@@ -107,9 +117,11 @@ class RandomAnimeViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(rolling = true, failure = null) }
         rollJob = viewModelScope.launch {
             val pause = async { if (tumble) delay(MIN_TUMBLE_MS) }
-            val result = runCatching { deck.draw() }
+            val activeDeck = deck
+            val result = runCatching { activeDeck.draw() }
             pause.await()
             result.onFailure { it.rethrowIfCancellation() }
+            if (activeDeck !== deck) return@launch
             val pick = result.getOrNull()
             _state.update { current ->
                 if (pick != null) {
