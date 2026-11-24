@@ -606,7 +606,7 @@ fun ProfileScreen(
         modifier = modifier.then(if (device.isTv) Modifier else Modifier.glassAtmosphere()),
         topBar = {
             // A signed-in television names the page in its hero instead, over the account's art.
-            if (!(device.isTv && loggedIn)) ScrollAwareTopBar {
+            if (!(device.isTv && loggedIn)) ScrollAwareTopBar(visible = true) {
                 PageTitleBar(
                     title = "My List",
                     // The account pill is the phone's, and only once there is an account to show.
@@ -629,11 +629,11 @@ fun ProfileScreen(
         PullRefreshContainer(
             isRefreshing = isRefreshing,
             onRefresh = vm::refresh,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(top = if (device.isTv) 0.dp else padding.calculateTopPadding()),
             // The list reserves the bar as scroll padding rather than sitting below it, so this box
             // starts behind the bar and the puck needs telling; without it a pull on My List spun
             // underneath an opaque header and looked like nothing happened.
-            indicatorTopPadding = padding.calculateTopPadding(),
+            indicatorTopPadding = if (device.isTv) padding.calculateTopPadding() else 0.dp,
         ) {
             Box(Modifier.fillMaxSize()) {
                 // On TV the focused row comes to rest mid-screen, going up as well as down, as on Home.
@@ -642,12 +642,12 @@ fun ProfileScreen(
                         state = profileListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            top = padding.calculateTopPadding(),
+                            top = if (device.isTv) padding.calculateTopPadding() else 8.dp,
                             bottom = padding.calculateBottomPadding()
                                 .coerceAtLeast(LocalAppChromeBottomInset.current) +
                                 AppChromeListBottomGap + (if (device.isTv) 0.dp else 20.dp),
                         ),
-                        verticalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 7.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 12.dp),
                     ) {
                         if (device.isTv && !loggedIn) {
                             // Give the two provider buttons the whole first focus row. In the old
@@ -800,7 +800,7 @@ fun ProfileScreen(
                                             .filter { preset -> customLists.none { it.name.equals(preset, true) } }
                                             .forEach { preset ->
                                                 item(key = preset) {
-                                                    TextButton(onClick = { CustomListStore.create(preset) }) {
+                                                    androidx.compose.material3.OutlinedButton(onClick = { CustomListStore.create(preset) }, shape = RoundedCornerShape(50), colors = com.anilili.ui.components.cinematicSecondaryButtonColors(), border = com.anilili.ui.components.cinematicSecondaryButtonBorder()) {
                                                         Text("+ $preset", maxLines = 2)
                                                     }
                                                 }
@@ -1128,7 +1128,7 @@ private fun LibraryHeader(
     customChips: CustomListChips,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(if (LocalAppDeviceProfile.current.isTv) 12.dp else 8.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(if (LocalAppDeviceProfile.current.isTv) 12.dp else 10.dp)) {
         PageSearch(
             value = titleFilter,
             onValueChange = onTitleFilterChange,
