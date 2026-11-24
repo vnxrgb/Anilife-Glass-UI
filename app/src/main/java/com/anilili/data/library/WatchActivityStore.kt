@@ -21,6 +21,7 @@ import java.time.LocalDate
  */
 object WatchActivityStore {
     private const val KEY = "watch_activity_days"
+    private const val TIME_KEY = "watch_activity_time_v1"
     private const val KEEP_DAYS = 400L
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -29,9 +30,39 @@ object WatchActivityStore {
 
     private val _days = MutableStateFlow<Map<Long, Int>>(emptyMap())
     val days = _days.asStateFlow()
+    private val timeSerializer = MapSerializer(Long.serializer(), MapSerializer(Int.serializer(), Long.serializer()))
+    private val _watchTime = MutableStateFlow<Map<Long, Map<Int, Long>>>(emptyMap())
+    val watchTime = _watchTime.asStateFlow()
+    private var lastSampleEnd = 0L
+    private var pendingMs = 0L
+    /** Count measured elapsed playback, not media position or episode length. */
+    @Synchronized
+    fun recordPlayback(animeId: Int, elapsedMs: Long, sampleEnd: Long, today: LocalDate = LocalDate.now()) {
+        if (!::prefs.isInitialized || animeId == 0 || elapsedMs !in 1L..2_000L) return
+        // Multiple attached surfaces may observe the same playback service; count each wall-clock interval once.
+        val accepted = (sampleEnd - maxOf(sampleEnd - elapsedMs, lastSampleEnd)).coerceAtLeast(0L)
+        lastSampleEnd = maxOf(lastSampleEnd, sampleEnd)
+        if (accepted == 0L) return
+        val day = today.toEpochDay()
+        val titles = _watchTime.value[day].orEmpty()
+        _watchTime.value = (_watchTime.value + (day to (titles + (animeId to ((titles[animeId] ?: 0L) + accepted)))))
+            .filterKeys { it > day - 730L }
+        pendingMs += accepted
+        if (pendingMs >= 5_000L) flushPlayback()
+    }
+
+    @Synchronized
+    fun flushPlayback() {
+        if (!::prefs.isInitialized || pendingMs == 0L) return
+        prefs.edit().putString(TIME_KEY, json.encodeToString(timeSerializer, _watchTime.value)).apply()
+        pendingMs = 0L
+    }
 
     internal fun init(prefs: SharedPreferences) {
         this.prefs = prefs
+        _watchTime.value = runCatching {
+            prefs.getString(TIME_KEY, null)?.let { json.decodeFromString(timeSerializer, it) }
+        }.getOrNull().orEmpty()
         _days.value = runCatching {
             prefs.getString(KEY, null)?.let { json.decodeFromString(serializer, it) }
         }.getOrNull().orEmpty()
