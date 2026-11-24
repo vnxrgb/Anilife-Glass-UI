@@ -402,19 +402,25 @@ fun DownloadsScreen(
                 )
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (runningDownloads.isNotEmpty()) {
-                        TextButton(onClick = {
-                            runningDownloads.forEach { EpisodeDownloads.pause(context, it.id) }
-                        }) { Text("Pause all") }
+                        item(key = "pause-all") {
+                            TextButton(onClick = {
+                                runningDownloads.forEach { EpisodeDownloads.pause(context, it.id) }
+                            }) { Text("Pause all") }
+                        }
                     }
                     if (pausedDownloads.isNotEmpty()) {
-                        TextButton(onClick = {
-                            pausedDownloads.forEach { EpisodeDownloads.resume(context, it.id) }
-                        }) { Text("Resume all") }
+                        item(key = "resume-all") {
+                            TextButton(onClick = {
+                                pausedDownloads.forEach { EpisodeDownloads.resume(context, it.id) }
+                            }) { Text("Resume all") }
+                        }
                     }
                     if (recoverableDownloads.isNotEmpty()) {
-                        TextButton(onClick = {
-                            recoverableDownloads.forEach { EpisodeDownloads.retry(context, it.id) }
-                        }) { Text("Retry failed") }
+                        item(key = "retry-failed") {
+                            TextButton(onClick = {
+                                recoverableDownloads.forEach { EpisodeDownloads.retry(context, it.id) }
+                            }) { Text("Retry failed") }
+                        }
                     }
                 }
             }
