@@ -400,7 +400,7 @@ fun DownloadsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (runningDownloads.isNotEmpty()) {
                         TextButton(onClick = {
                             runningDownloads.forEach { EpisodeDownloads.pause(context, it.id) }
