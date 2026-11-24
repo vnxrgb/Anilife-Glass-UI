@@ -1140,6 +1140,28 @@ object SettingsStore {
     val themeAccent = _themeAccent.asStateFlow()
     private val _themeStyle = MutableStateFlow(ThemeStyle.VIVID)
     val themeStyle = _themeStyle.asStateFlow()
+    private val _glassMaterial = MutableStateFlow(GlassMaterial.LIQUID)
+    val glassMaterial = _glassMaterial.asStateFlow()
+    // Negative values use the selected material's defaults.
+    private val _glassOpacity = MutableStateFlow(-1)
+    val glassOpacity = _glassOpacity.asStateFlow()
+    private val _glassBlur = MutableStateFlow(-1)
+    val glassBlur = _glassBlur.asStateFlow()
+    private val _glassAmbient = MutableStateFlow(80)
+    val glassAmbient = _glassAmbient.asStateFlow()
+    private val _glassBorders = MutableStateFlow(true)
+    val glassBorders = _glassBorders.asStateFlow()
+    fun setGlassMaterial(value: GlassMaterial) {
+        _glassMaterial.value = value
+        _glassOpacity.value = -1
+        _glassBlur.value = -1
+        scope.launch { store.edit { it[GLASS_MATERIAL] = value.name; it[GLASS_OPACITY] = -1; it[GLASS_BLUR] = -1 } }
+    }
+    fun setGlassOpacity(value: Int) = save(GLASS_OPACITY, value.coerceIn(-1, 100), _glassOpacity)
+    fun setGlassBlur(value: Int) = save(GLASS_BLUR, value.coerceIn(-1, 100), _glassBlur)
+    fun setGlassAmbient(value: Int) = save(GLASS_AMBIENT, value.coerceIn(0, 100), _glassAmbient)
+    fun setGlassBorders(value: Boolean) = save(GLASS_BORDERS, value, _glassBorders)
+
     private val _themeContrast = MutableStateFlow(ThemeContrast.STANDARD)
     val themeContrast = _themeContrast.asStateFlow()
 
@@ -2123,6 +2145,11 @@ object SettingsStore {
         _themeBackground.value = ThemeBackground.fromStored(prefs[THEME_BACKGROUND])
         _themeAccent.value = ThemeAccent.fromStored(prefs[THEME_ACCENT])
         _themeStyle.value = ThemeStyle.fromStored(prefs[THEME_STYLE])
+        _glassMaterial.value = GlassMaterial.fromStored(prefs[GLASS_MATERIAL])
+        _glassOpacity.value = (prefs[GLASS_OPACITY] ?: -1).coerceIn(-1, 100)
+        _glassBlur.value = (prefs[GLASS_BLUR] ?: -1).coerceIn(-1, 100)
+        _glassAmbient.value = (prefs[GLASS_AMBIENT] ?: 80).coerceIn(0, 100)
+        _glassBorders.value = prefs[GLASS_BORDERS] ?: true
         _themeContrast.value = ThemeContrast.fromStored(prefs[THEME_CONTRAST])
         _playerAccent.value = prefs[PLAYER_ACCENT] ?: false
         _themeCustomSeed.value = prefs[THEME_CUSTOM_SEED] ?: DEFAULT_CUSTOM_SEED
@@ -2301,6 +2328,11 @@ object SettingsStore {
     private val THEME_BACKGROUND = stringPreferencesKey("theme_background")
     private val THEME_ACCENT = stringPreferencesKey("theme_accent")
     private val THEME_STYLE = stringPreferencesKey("theme_style")
+    private val GLASS_MATERIAL = stringPreferencesKey("glass_material")
+    private val GLASS_OPACITY = intPreferencesKey("glass_opacity")
+    private val GLASS_BLUR = intPreferencesKey("glass_blur")
+    private val GLASS_AMBIENT = intPreferencesKey("glass_ambient")
+    private val GLASS_BORDERS = booleanPreferencesKey("glass_borders")
     private val THEME_CONTRAST = stringPreferencesKey("theme_contrast")
     private val PLAYER_ACCENT = booleanPreferencesKey("player_accent")
     private val THEME_CUSTOM_SEED = intPreferencesKey("theme_custom_seed")
