@@ -824,7 +824,7 @@ private fun MiruroRoot(
     // Whatever state a scroll left behind, pinning has to put the bars back — otherwise turning the
     // setting on while mid-page leaves them hidden with nothing left that would restore them.
     LaunchedEffect(staticChrome) {
-        if (staticChrome) { chromeVisible = true; dockCollapsed = false }
+        if (staticChrome) chromeVisible = true
     }
     // A screen you have just arrived on starts with its chrome. Nothing restores it on a timer any
     // more, so without this a hidden bar would be inherited by the next destination — which lands
@@ -847,11 +847,12 @@ private fun MiruroRoot(
                 available: Offset,
                 source: NestedScrollSource,
             ): Offset {
-                if (deviceProfile.isTv || staticChrome || consumed.y == 0f) return Offset.Zero
+                if (deviceProfile.isTv || consumed.y == 0f) return Offset.Zero
                 if ((accumulated < 0f) != (consumed.y < 0f)) accumulated = 0f
                 accumulated += consumed.y
                 if (accumulated < -chromeHideThresholdPx) dockCollapsed = true
                 else if (accumulated > chromeHideThresholdPx) dockCollapsed = false
+                if (staticChrome) return Offset.Zero
                 if (accumulated < -chromeHideThresholdPx && chromeVisible) {
                     chromeVisible = false
                 } else if (accumulated > chromeHideThresholdPx && !chromeVisible) {
@@ -992,8 +993,8 @@ private fun MiruroRoot(
         NotificationPermissionEffect()
         UpdatePromptHost()
         Box(Modifier.fillMaxSize().nestedScroll(chromeScrollConnection)
-            .pointerInput(deviceProfile.isTv, staticChrome, chromeHideThresholdPx) {
-                if (deviceProfile.isTv || staticChrome) return@pointerInput
+            .pointerInput(deviceProfile.isTv, chromeHideThresholdPx) {
+                if (deviceProfile.isTv) return@pointerInput
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                     var last = down.position
@@ -1154,7 +1155,7 @@ private fun MiruroRoot(
                     selectedRoute = currentRoute,
                     onSelect = { route -> chromeVisible = true; dockCollapsed = false; nav.navigateTab(route) },
                     bottomInset = navBarInset,
-                    collapsed = dockCollapsed && !staticChrome && !com.anilili.ui.tour.WhatsNewTour.active,
+                    collapsed = dockCollapsed && !com.anilili.ui.tour.WhatsNewTour.active,
                     compactRoutes = setOf(Routes.HOME, Routes.SEARCH),
                     backdrop = navBackdrop,
                     modifier = Modifier.align(Alignment.BottomCenter),
