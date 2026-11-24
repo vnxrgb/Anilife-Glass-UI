@@ -1,5 +1,8 @@
 package com.anilili.ui.components
 
+import com.anilili.ui.tour.TourTarget
+import com.anilili.ui.tour.tourTarget
+
 import android.os.Build
 import dev.chrisbanes.haze.ExperimentalHazeApi
 import dev.chrisbanes.haze.HazeInputScale
@@ -230,6 +233,14 @@ private fun FloatingNavIcon(
                 role = Role.Tab,
                 onClick = onClick,
             )
+            .then(when (item.label.lowercase()) {
+                "home" -> Modifier.tourTarget(TourTarget.NAV_HOME)
+                "my list" -> Modifier.tourTarget(TourTarget.NAV_LIST)
+                "browse" -> Modifier.tourTarget(TourTarget.NAV_BROWSE)
+                "downloads" -> Modifier.tourTarget(TourTarget.NAV_DOWNLOADS)
+                "profile" -> Modifier.tourTarget(TourTarget.NAV_PROFILE)
+                else -> Modifier
+            })
             .semantics { contentDescription = item.label },
         contentAlignment = Alignment.Center,
     ) {

@@ -1192,6 +1192,7 @@ private fun MiruroRoot(
                             randomVm.ensurePick()
                             showRandomPick = true
                         }
+                        "browse" -> nav.navigateTab(Routes.SEARCH)
                         "more" -> nav.navigateTab(Routes.MORE)
                         "schedule" -> nav.navigateTab(Routes.SCHEDULE)
                         "downloads" -> nav.navigateTab(Routes.DOWNLOADS)
