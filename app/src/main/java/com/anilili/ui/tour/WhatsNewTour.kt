@@ -287,21 +287,24 @@ fun WhatsNewTourOverlay(onNavigate: (String) -> Unit = {}) {
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
-            .onGloballyPositioned { origin = it.positionInWindow() }
-            // Swallow every touch: the tour is the only thing on screen that answers.
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        event.changes.forEach { it.consume() }
-                        if (event.changes.none { it.pressed }) break
-                    }
-                }
-            },
+            .onGloballyPositioned { origin = it.positionInWindow() },
     ) {
         val corner = with(density) { 18.dp.toPx() }
         val ring = with(density) { 2.dp.toPx() }
-        Canvas(Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }) {
+        // A sibling behind TourCard blocks the underlying app, never the card's buttons.
+        Canvas(
+            Modifier.fillMaxSize()
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            event.changes.forEach { it.consume() }
+                            if (event.changes.none { it.pressed }) break
+                        }
+                    }
+                }
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        ) {
             drawRect(Color.Black.copy(alpha = SCRIM_ALPHA))
             if (holeAlpha > 0f) {
                 drawRoundRect(
