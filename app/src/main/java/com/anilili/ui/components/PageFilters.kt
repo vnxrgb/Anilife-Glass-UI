@@ -57,7 +57,7 @@ fun PageFilterRow(
 ) {
     Row(
         modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(7.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )
@@ -110,8 +110,8 @@ fun PageFilterPill(
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape = RoundedCornerShape(20.dp),
+            containerColor = glassPanelColor().let { it.copy(alpha = it.alpha.coerceAtLeast(.92f)) },
+            shape = RoundedCornerShape(24.dp),
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
@@ -147,7 +147,7 @@ fun PageSortControl(
         val fillFocus2 = rememberFocusFill()
         Surface(
             modifier = Modifier
-                .heightIn(min = 48.dp)
+                .size(48.dp)
                 .focusFill(fillFocus2, RoundedCornerShape(50))
                 .clickable(role = Role.Button, onClickLabel = contentDescription) { expanded = true }
                 .semantics { this.contentDescription = contentDescription },
@@ -156,18 +156,8 @@ fun PageSortControl(
             border = BorderStroke(1.dp, glassRimColor()),
             contentColor = fillFocus2.content(LocalContentColor.current),
         ) {
-            Row(
-                Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(20.dp), tint = fillFocus2.content(LocalContentColor.current))
-                Icon(
-                    Icons.Default.ExpandMore,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = fillFocus2.content(MaterialTheme.colorScheme.onSurfaceVariant),
-                )
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(22.dp), tint = fillFocus2.content(LocalContentColor.current))
             }
         }
         DropdownMenu(
