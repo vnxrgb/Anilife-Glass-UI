@@ -109,3 +109,34 @@ private val ChromeGlassMask = Brush.verticalGradient(
     0.86f to Color.Black,
     1f to Color.Transparent,
 )
+
+
+/** Browse shares the page canvas at rest; this masked glass is only drawn over scrolled posters. */
+@OptIn(ExperimentalHazeApi::class)
+@Composable
+fun Modifier.browseHeaderGlass(backdrop: HazeState?): Modifier {
+    val scheme = MaterialTheme.colorScheme
+    return if (backdrop != null && backdropBlurAvailable) {
+        this.hazeEffect(
+            backdrop,
+            HazeStyle(
+                backgroundColor = scheme.surface,
+                tint = HazeTint(scheme.surfaceContainerHigh.copy(alpha = 0.40f)),
+                blurRadius = 24.dp,
+                noiseFactor = 0f,
+            ),
+        ) {
+            mask = ChromeGlassMask
+            inputScale = HazeInputScale.Fixed(0.33f)
+            canDrawArea = { true }
+        }
+    } else {
+        this.background(
+            Brush.verticalGradient(
+                0f to scheme.surface.copy(alpha = 0.96f),
+                0.78f to scheme.surface.copy(alpha = 0.80f),
+                1f to Color.Transparent,
+            ),
+        )
+    }
+}
