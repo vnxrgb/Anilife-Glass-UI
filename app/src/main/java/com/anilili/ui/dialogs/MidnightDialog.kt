@@ -274,7 +274,7 @@ fun MidnightSheet(
             else glassPanelColor().copy(alpha = glassPanelColor().alpha.coerceAtLeast(.85f)),
         contentWindowInsets = { if (backdrop != null) WindowInsets(0) else BottomSheetDefaults.windowInsets },
         contentColor = MaterialTheme.colorScheme.onSurface,
-        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+        shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
         dragHandle = null,
         tonalElevation = 0.dp,
     ) {
@@ -408,7 +408,7 @@ fun MidnightModal(
             } else {
                 maxWidth
             }
-            val shape = RoundedCornerShape(24.dp)
+            val shape = RoundedCornerShape(30.dp)
             Column(
                 modifier = modifier
                     .align(Alignment.Center)
