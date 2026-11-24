@@ -149,11 +149,13 @@ import java.util.Locale
  */
 @Composable
 private fun QueueGlassAction(label: String, icon: ImageVector, onClick: () -> Unit) {
+    val focus = rememberFocusFill()
     OutlinedButton(
         onClick = onClick,
         shape = RoundedCornerShape(50),
-        colors = cinematicSecondaryButtonColors(),
+        colors = focus.buttonColors(cinematicSecondaryButtonColors()),
         border = cinematicSecondaryButtonBorder(),
+        modifier = Modifier.heightIn(min = 48.dp).focusFill(focus, RoundedCornerShape(50)),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(17.dp))
@@ -469,7 +471,7 @@ fun DownloadsScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().focusGroup(),
                     contentPadding = PaddingValues(
-                        bottom = LocalAppChromeBottomInset.current + AppChromeListBottomGap,
+                        bottom = LocalAppChromeBottomInset.current + AppChromeListBottomGap + 12.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
@@ -983,9 +985,9 @@ private fun EpisodeRow(
         shape = shape,
         colors = CardDefaults.cardColors(
             containerColor = if (selected) {
-                MaterialTheme.colorScheme.primaryContainer
+                glassSelectionColor()
             } else {
-                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.54f)
+                glassPanelColor()
             },
         ),
         modifier = Modifier
@@ -1266,7 +1268,8 @@ private fun DownloadSelectionBar(
         TextButton(
             colors = controlFocus12.buttonColors(ButtonDefaults.textButtonColors()),
             onClick = if (allVisibleSelected) onClearVisible else onSelectAll,
-            modifier = Modifier.focusFill(controlFocus12, RoundedCornerShape(20.dp)),
+            modifier = Modifier.focusFill(controlFocus12, RoundedCornerShape(50)),
+            shape = RoundedCornerShape(50),
         ) {
             Icon(Icons.Default.SelectAll, contentDescription = null, modifier = Modifier.size(18.dp))
             Text(
@@ -1279,9 +1282,10 @@ private fun DownloadSelectionBar(
         if (exportableCount > 0) {
             val controlFocus13 = rememberFocusFill()
             FilledTonalButton(
-                colors = controlFocus13.buttonColors(ButtonDefaults.filledTonalButtonColors()),
+                colors = controlFocus13.buttonColors(ButtonDefaults.filledTonalButtonColors(containerColor = glassPanelColor(), contentColor = MaterialTheme.colorScheme.onSurface)),
                 onClick = onExport,
-                modifier = Modifier.focusFill(controlFocus13, RoundedCornerShape(20.dp)),
+                modifier = Modifier.focusFill(controlFocus13, RoundedCornerShape(50)),
+                shape = RoundedCornerShape(50),
             ) {
                 Icon(Icons.Default.SaveAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                 Text("Save $exportableCount as MP4", modifier = Modifier.padding(start = 6.dp))
@@ -1296,7 +1300,8 @@ private fun DownloadSelectionBar(
                     contentColor = MaterialTheme.colorScheme.onError,
                 ),
             ),
-            modifier = Modifier.focusFill(controlFocus14, RoundedCornerShape(20.dp)),
+            modifier = Modifier.focusFill(controlFocus14, RoundedCornerShape(50)),
+            shape = RoundedCornerShape(50),
         ) {
             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
             Text("Remove", modifier = Modifier.padding(start = 6.dp))
