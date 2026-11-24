@@ -150,7 +150,7 @@ fun PageSearchField(
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = glassPanelColor(),
             unfocusedContainerColor = glassPanelColor(),
-            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.54f),
+            focusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.52f),
             unfocusedBorderColor = glassRimColor(),
         ),
         singleLine = true,
@@ -185,7 +185,7 @@ private fun PageSearchButton(
             .clickable(role = Role.Button, onClickLabel = "Search ${value.ifEmpty { placeholder }}", onClick = onClick),
         shape = shape,
         color = fillFocus1.background(glassPanelColor()),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)),
+        border = BorderStroke(1.dp, glassRimColor()),
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Row(
