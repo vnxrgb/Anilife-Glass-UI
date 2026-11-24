@@ -205,29 +205,10 @@ private fun FloatingNavIcon(
         animationSpec = tween(durationMillis = 260),
         label = "navSelectionWash",
     )
-    // Keep the selected halo neutral across artwork and themes.
-    val halo = MaterialTheme.colorScheme.onSurface
-    val accent = halo
     Box(
         modifier = Modifier
             .width(width)
             .fillMaxHeight()
-            .padding(vertical = 2.dp, horizontal = 2.dp)
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    0f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.19f * selectionAlpha),
-                    1f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.45f * selectionAlpha),
-                ),
-            )
-            .border(
-                1.dp,
-                Brush.verticalGradient(
-                    0f to halo.copy(alpha = 0.40f * selectionAlpha),
-                    1f to accent.copy(alpha = 0.24f * selectionAlpha),
-                ),
-                shape,
-            )
             .selectable(
                 selected = selected,
                 role = Role.Tab,
@@ -247,7 +228,10 @@ private fun FloatingNavIcon(
         androidx.compose.foundation.layout.Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
+                .clip(shape)
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = .11f * selectionAlpha))
+                .padding(vertical = 3.dp),
         ) {
             Icon(
                 imageVector = item.icon,

@@ -1043,6 +1043,7 @@ private fun MiruroRoot(
                             tvHomeRefresh = tvHomeRefresh,
                             tvDetailRefresh = tvDetailRefresh,
                             tabSwipe = tabSwipe,
+                            onMoodDiscovery = { randomVm.ensurePick(); showRandomPick = true },
                             modifier = Modifier
                                 .weight(1f)
                                 .swipeBetweenTabs(
@@ -1119,34 +1120,6 @@ private fun MiruroRoot(
                     backdrop = navBackdrop,
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
-            }
-            // Home's dice, over the capsule's right-hand end (or the corner, beside a rail). Home
-            // only: it is a way into the catalogue, and Home is where browsing starts. It stays put
-            // while the feed scrolls, either way: it used to step aside with the top bar on a
-            // downward scroll, which hid it exactly while someone was browsing for something to
-            // watch — and the capsule it sits on never hides, so it read as a button that vanished.
-            if (currentRoute == Routes.HOME && !deviceProfile.isTv && !chromeTakeover.active) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(
-                            end = if (hasPhoneBottomBar) RandomButtonEndInset else 20.dp,
-                            bottom = navBarInset + if (hasPhoneBottomBar) {
-                                PhoneNavigationBarHeight + RandomButtonGap
-                            } else {
-                                20.dp
-                            },
-                        )
-                        .tourTarget(TourTarget.DICE),
-                ) {
-                    RandomAnimeButton(
-                        onClick = {
-                            randomVm.ensurePick()
-                            showRandomPick = true
-                        },
-                        backdrop = navBackdrop,
-                    )
-                }
             }
             if (showRandomPick) {
                 val randomState by randomVm.state.collectAsState()
@@ -1878,6 +1851,7 @@ private fun AppNavHost(
     tvDetailRefresh: TvRefreshRequest? = null,
     /** Makes a swipe between tabs hand over sideways; every other navigation keeps the fade. */
     tabSwipe: TabSwipeState? = null,
+    onMoodDiscovery: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -1908,6 +1882,7 @@ private fun AppNavHost(
                         else nav.navigate(Routes.genreSearch(genre)) { launchSingleTop = true }
                     },
                     onNotificationsClick = { nav.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
+                    onMoodDiscovery = onMoodDiscovery,
                     tvPrimaryFocusTarget = tvHomePrimaryFocusTarget,
                     tvRefreshRequest = tvHomeRefresh,
                 )

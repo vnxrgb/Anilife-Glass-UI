@@ -53,6 +53,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Casino
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -194,6 +195,7 @@ fun HomeScreen(
     onScheduleClick: () -> Unit,
     onGenreClick: (String?) -> Unit,
     onNotificationsClick: () -> Unit,
+    onMoodDiscovery: () -> Unit = {},
     tvPrimaryFocusTarget: TvFocusTarget? = null,
     /** Raised by a hold on the television's Home tab; a phone refreshes by pulling instead. */
     tvRefreshRequest: TvRefreshRequest? = null,
@@ -319,6 +321,7 @@ fun HomeScreen(
                     onScheduleClick = onScheduleClick,
                     onGenreClick = onGenreClick,
                     backdrop = homeBackdrop,
+                    onMoodDiscovery = onMoodDiscovery,
                 )
             }
         },
@@ -407,15 +410,22 @@ private fun HomeTopChrome(
     onScheduleClick: () -> Unit,
     onGenreClick: (String?) -> Unit,
     backdrop: HazeState? = null,
+    onMoodDiscovery: () -> Unit,
 ) {
+    val device = LocalAppDeviceProfile.current
     Column(Modifier.fillMaxWidth().chromeFade(overHero, backdrop)) {
         TopAppBar(
             title = {
                 if (showWordmark) {
-                    AnililiWordmark(modifier = Modifier.height(36.dp))
+                    AnililiWordmark(modifier = Modifier.height(if (device.isTv) 36.dp else 30.dp))
                 }
             },
             actions = {
+                if (!device.isTv) {
+                    IconButton(onClick = onMoodDiscovery, modifier = Modifier.tourTarget(TourTarget.DICE)) {
+                        Icon(Icons.Default.Casino, contentDescription = "Mood discovery", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    }
+                }
                 val unread by com.anilili.data.reminder.NotificationCenter.unread.collectAsState()
                 val controlFocus1 = rememberFocusFill()
                 IconButton(
@@ -456,7 +466,7 @@ private fun HomeTopChrome(
         GenrePillRow(
             onGenreClick = onGenreClick,
             backdrop = backdrop,
-            modifier = Modifier.padding(bottom = 12.dp),
+            modifier = Modifier.padding(bottom = 8.dp),
         )
     }
 }
@@ -613,7 +623,7 @@ private fun HomeContent(
                     bottom = contentPadding.calculateBottomPadding() + chromeBottomInset +
                         AppChromeListBottomGap,
                 ),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
                     HeroPager(
@@ -749,7 +759,7 @@ private fun GenrePillRow(
     LazyRow(
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = device.pagePadding),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         item(key = "all") {
             GenrePill(label = "All", highlighted = true, onClick = { onGenreClick(null) })
@@ -773,35 +783,22 @@ private fun GenrePillRow(
 @Composable
 private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, backdrop: HazeState? = null) {
     val shape = RoundedCornerShape(50)
-    // Frosted on Android 12+: the blur does the separating the heavier smoke did, so the tint over
-    // it can be lighter and more of the spotlight's colour comes through.
-    val frosted = !highlighted && backdrop != null && backdropBlurAvailable
+    val scheme = MaterialTheme.colorScheme
     val fillFocus1 = rememberFocusFill()
+    val fill = if (highlighted) scheme.primaryContainer else scheme.surfaceContainerHigh.copy(alpha = .68f)
+    val foreground = if (highlighted) scheme.onPrimaryContainer else scheme.onSurface
     Text(
         label,
-        style = MaterialTheme.typography.labelLarge,
-        color = fillFocus1.content(Color.White.copy(alpha = if (highlighted) 1f else .92f)),
-        fontWeight = if (highlighted) FontWeight.Bold else FontWeight.SemiBold,
+        style = MaterialTheme.typography.labelMedium,
+        color = fillFocus1.content(foreground),
+        fontWeight = if (highlighted) FontWeight.SemiBold else FontWeight.Medium,
         modifier = Modifier
             .focusFill(fillFocus1, shape)
             .clip(shape)
-            .then(if (frosted) Modifier.backdropBlur(backdrop, tint = Color.Black.copy(alpha = .30f)) else Modifier)
-            .background(
-                fillFocus1.background(
-                    when {
-                        highlighted -> Color.White.copy(alpha = 0.23f)
-                        frosted -> Color.Transparent
-                        else -> Color.Black.copy(alpha = .52f)
-                    },
-                ),
-            )
-            .border(
-                1.dp,
-                if (highlighted) Color.White.copy(alpha = .38f) else Color.White.copy(alpha = .18f),
-                shape,
-            )
+            .background(fillFocus1.background(fill))
+            .border(.5.dp, if (highlighted) scheme.primary.copy(alpha = .35f) else scheme.outline.copy(alpha = .50f), shape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
     )
 }
 
@@ -1448,8 +1445,8 @@ private fun RailTitle(title: String, dragHandle: Modifier?, modifier: Modifier =
     ) {
         Text(
             title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
             // Keep long row names from stealing space from Grid/Rail controls on small phones.
             modifier = if (dragHandle != null) Modifier.weight(1f) else Modifier,
             maxLines = 1,
@@ -1592,7 +1589,7 @@ private fun MediaRail(
         } else {
             LazyRow(
                 modifier = Modifier.focusGroup(),
-                contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 12.dp),
+                contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 18.dp else 10.dp),
             ) {
                 items(media, key = { it.id }) { item ->
@@ -1736,7 +1733,7 @@ private fun ContinueRail(
         LazyRow(
             state = rememberContinueRailState(history.firstOrNull()?.anilistId),
             modifier = Modifier.focusGroup(),
-            contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 12.dp),
+            contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 18.dp else 10.dp),
         ) {
             itemsIndexed(history, key = { _, item -> item.anilistId }) { index, entry ->
@@ -1757,7 +1754,7 @@ private fun ContinueRail(
                     Box(
                         Modifier.fillMaxWidth()
                             .aspectRatio(if (device.isTv) 16f / 9f else 1.4f)
-                            .glassCard(RoundedCornerShape(20.dp)),
+                            .glassCard(RoundedCornerShape(18.dp)),
                     ) {
                         // Each card frosts its own thumbnail under its corner buttons: a source
                         // this small is cheap to record, and the buttons never need the feed.
@@ -1769,13 +1766,13 @@ private fun ContinueRail(
                         Box(
                             Modifier
                                 .align(Alignment.Center)
-                                .size(40.dp)
+                                .size(32.dp)
                                 .clip(CircleShape)
                                 .background(Color.Black.copy(alpha = 0.50f))
-                                .border(1.dp, Color.White.copy(alpha = 0.45f), CircleShape),
+                                .border(1.dp, Color.White.copy(alpha = 0.24f), CircleShape),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
                         }
                         // Overflow exposes Details, Remove and list-management actions.
                         // The rest of the thumbnail remains a direct Resume target.
@@ -1836,16 +1833,16 @@ private fun ContinueRail(
                         // A remote-synced entry may not yet have a real playback duration.
                         // Draw actual progress only, instead of fabricating a visible 3% strip.
                         if (entry.durationMs > 0L) {
-                            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.White.copy(.25f))) {
+                            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(2.dp).background(Color.White.copy(.25f))) {
                                 Box(
                                     Modifier.fillMaxWidth(entry.progressFraction.coerceIn(0f, 1f))
-                                        .height(4.dp)
+                                        .height(2.dp)
                                         .background(MaterialTheme.colorScheme.primary),
                                 )
                             }
                         }
                     }
-                    Text(entry.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
+                    Text(entry.title, maxLines = 2, minLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp))
                     Text("Episode ${entry.episodeLabel}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

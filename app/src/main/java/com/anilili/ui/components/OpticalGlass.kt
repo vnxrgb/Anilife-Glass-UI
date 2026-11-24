@@ -37,11 +37,11 @@ fun Modifier.opticalGlass(shape: CornerBasedShape, enabled: Boolean = true): Mod
         effects = {
             blur(10.dp.toPx())
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                lens(refractionHeight = 20.dp.toPx(), refractionAmount = 18.dp.toPx(),
+                lens(refractionHeight = 14.dp.toPx(), refractionAmount = 12.dp.toPx(),
                     depthEffect = true, chromaticAberration = true)
             }
         },
-        highlight = { Highlight(width = 0.8.dp) },
+        highlight = { Highlight(width = 0.4.dp) },
         onDrawSurface = { drawRect(tint.copy(alpha = if (light) .72f else .40f)) },
     )
 }
