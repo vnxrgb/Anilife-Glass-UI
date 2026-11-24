@@ -794,14 +794,15 @@ fun ProfileScreen(
                                 }
                             }
                         }
-                        if (!device.isTv) {
+                        if (!device.isTv && listOf("Weekend Queue", "Comfort Rewatches", "Movie Night")
+                                .any { starter -> customLists.none { it.name.equals(starter, ignoreCase = true) } }) {
                             item(key = "anilumos-collection-starters") {
                                 Column(
                                     modifier = Modifier.fillMaxWidth()
                                         .padding(horizontal = device.pagePadding, vertical = 4.dp)
                                         .glassCard(RoundedCornerShape(22.dp))
-                                        .padding(14.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
                                     Text("Anime collections", style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold)
