@@ -223,8 +223,23 @@ fun RandomAnimeDialog(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     DialogHeader(onDismiss)
-                    if (state.sources.size > 1) {
-                        SourceChips(state.sources, state.source.key, onSource, isTv)
+                    if (isTv) {
+                        val sources = state.sources.filter { it.moodGenre == null }
+                        if (sources.size > 1) SourceChips(sources, state.source.key, onSource, true)
+                    } else {
+                        // Keep the existing list sources visible and give moods their own compact
+                        // rail, rather than hiding them behind an arbitrarily long list of chips.
+                        SourceChips(state.sources.filter { it.moodGenre == null }, state.source.key, onSource, false)
+                        val moods = state.sources.filter { it.moodGenre != null }
+                        if (moods.isNotEmpty()) {
+                            Text(
+                                "Discover by mood",
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.72f),
+                            )
+                            SourceChips(moods, state.source.key, onSource, false)
+                        }
                     }
                     BoxWithConstraints(
                         modifier = Modifier
@@ -700,10 +715,10 @@ private fun DialogHeader(onDismiss: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "DISCOVER",
-            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.8.sp),
-            fontWeight = FontWeight.W800,
-            color = LocalMidnightAccent.current,
+            text = "Discover",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
             modifier = Modifier.weight(1f),
         )
         val closeFocus = rememberFocusFill()
@@ -764,15 +779,15 @@ private fun SourceChips(
                     FilterChipDefaults.filterChipColors(
                         containerColor = Color.Black.copy(alpha = 0.32f),
                         labelColor = Color.White.copy(alpha = 0.85f),
-                        selectedContainerColor = accent,
-                        selectedLabelColor = Color.Black,
+                        selectedContainerColor = if (isTv) accent else Color.White.copy(alpha = 0.20f),
+                        selectedLabelColor = if (isTv) Color.Black else Color.White,
                     ),
                 ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
                     selected = selected,
                     borderColor = Color.White.copy(alpha = 0.22f),
-                    selectedBorderColor = Color.Transparent,
+                    selectedBorderColor = if (isTv) Color.Transparent else Color.White.copy(alpha = 0.48f),
                 ),
                 modifier = Modifier.focusFill(focus, shape),
             )
