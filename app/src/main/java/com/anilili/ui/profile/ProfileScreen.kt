@@ -812,8 +812,9 @@ fun ProfileScreen(
                                     )
                                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                         listOf("Weekend Queue", "Comfort Rewatches", "Movie Night")
+                                            .filter { preset -> customLists.none { it.name.equals(preset, true) } }
                                             .forEach { preset ->
-                                                if (customLists.none { it.name.equals(preset, true) }) {
+                                                item(key = preset) {
                                                     TextButton(onClick = { CustomListStore.create(preset) }) {
                                                         Text("+ $preset", maxLines = 2)
                                                     }
