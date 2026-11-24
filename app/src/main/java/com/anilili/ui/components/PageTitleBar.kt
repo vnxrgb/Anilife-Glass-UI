@@ -16,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -45,7 +44,7 @@ fun PageTitleBar(
     trailing: (@Composable () -> Unit)? = null,
     /**
      * Transparent where the bar sits on frosted glass that already provides the fill. Null paints
-     * the app's canvas — its colour, or the background picture's slice behind the bar.
+     * the parent canvas on phones; TV retains its own canvas.
      */
     background: Color? = null,
 ) {
@@ -57,16 +56,9 @@ fun PageTitleBar(
                 when {
                     background != null -> Modifier.background(background)
                     device.isTv -> Modifier.appCanvas()
+                    // Handheld pages already paint their own canvas or glass backdrop.
+                    // Do not paint a second rectangular surface behind the title.
                     else -> Modifier
-                        // A translucent neutral glass header, not an opaque canvas slab.
-                        // The title remains readable while content moves underneath.
-                        .background(
-                            Brush.verticalGradient(
-                                0f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.77f),
-                                0.72f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f),
-                                1f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.24f),
-                            ),
-                        )
                 },
             )
             // Keep a soft canvas-backed header without drawing another rectangular border.
@@ -76,15 +68,15 @@ fun PageTitleBar(
                 // from the edge twice over and leave it visibly further right than every title.
                 start = if (leading != null) 4.dp else device.pagePadding,
                 end = device.pagePadding,
-                top = 6.dp,
-                bottom = 6.dp,
+                top = 8.dp,
+                bottom = 10.dp,
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         leading?.invoke()
         Column(
             Modifier.weight(1f).widthIn(min = 0.dp),
-            verticalArrangement = Arrangement.spacedBy(1.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             Text(
                 title,
