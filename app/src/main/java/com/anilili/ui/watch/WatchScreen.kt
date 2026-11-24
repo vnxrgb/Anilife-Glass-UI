@@ -442,7 +442,7 @@ fun WatchScreen(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(if (fullscreen || device.isTv) Color.Black else MaterialTheme.colorScheme.background)
             // The remote's Menu key reloads the episode list and the servers behind it. This screen
             // has no navigation bar to hold OK on and no gesture either — the window belongs to the
             // player — so the one button a television remote reliably carries for "something else

@@ -1,6 +1,8 @@
 package com.anilili.ui.watch
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.annotation.OptIn
@@ -213,6 +215,8 @@ internal fun Modifier.videoAmbientWash(
     palette: VideoAmbientPalette,
     intensity: Float = 0.75f,
 ): Modifier {
+    val page = MaterialTheme.colorScheme.background
+    val lightPage = page.luminance() > .5f
     val left by animateColorAsState(palette.left, tween(450), label = "ambientLeft")
     val right by animateColorAsState(palette.right, tween(450), label = "ambientRight")
     val middle by animateColorAsState(palette.center, tween(450), label = "ambientMiddle")
@@ -256,7 +260,7 @@ internal fun Modifier.videoAmbientWash(
             // the resulting rapid dim/restore was the reported blinking.
             // Plus produces a true weighted interpolation of premultiplied
             // colors and alpha. Apply strength ONCE to the combined result.
-            ambientLayerPaint.alpha = strength
+            ambientLayerPaint.alpha = strength * if (lightPage) .48f else 1f
             drawContext.canvas.saveLayer(size.toRect(), ambientLayerPaint)
             try {
                 if (outgoing != null) {
@@ -278,14 +282,15 @@ internal fun Modifier.videoAmbientWash(
             } finally {
                 drawContext.canvas.restore()
             }
-            return@drawBehind
+            if (!lightPage) return@drawBehind
+            // A pastel live-color bloom supplements the spatial field on light pages.
         }
         if (left.alpha <= 0f && right.alpha <= 0f && middle.alpha <= 0f) return@drawBehind
 
         val w = size.width
         val h = size.height
         if (w <= 0f || h <= 0f) return@drawBehind
-        val strength = intensity.coerceIn(0.5f, 1f)
+        val strength = intensity.coerceIn(0.5f, 1f) * if (lightPage) .28f else 1f
         // Layer three broad, feathered colour blooms instead of a solid tinted slab.
         // The video itself is never blurred; only the watch-page background is painted.
         val reach = maxOf(w * 1.20f, h * 0.42f)

@@ -388,7 +388,7 @@ private fun DetailScreenBody(
                                 }
                                 .focusFill(controlFocus1, RoundedCornerShape(24.dp)),
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = if (!device.isTv && chromeOverHero) Color.White else MaterialTheme.colorScheme.onSurface)
                         }
                     },
                     actions = {
@@ -400,7 +400,7 @@ private fun DetailScreenBody(
                             onClick = { shareAnimeLink(context, animeId, title) },
                             modifier = Modifier.focusFill(shareFocus, RoundedCornerShape(24.dp)),
                         ) {
-                            Icon(Icons.Default.Share, contentDescription = "Share link")
+                            Icon(Icons.Default.Share, contentDescription = "Share link", tint = if (!device.isTv && chromeOverHero) Color.White else MaterialTheme.colorScheme.onSurface)
                         }
                     },
                     // Same treatment as Home: the artwork runs to the top edge and the back arrow
