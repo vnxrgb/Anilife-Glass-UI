@@ -1,6 +1,7 @@
 package com.anilili.ui.tour
 
 import android.content.Context
+import com.anilili.ui.components.glassCard
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateRectAsState
@@ -144,7 +145,7 @@ internal fun tourSteps(isTv: Boolean): List<TourStep> = listOf(
  */
 object WhatsNewTour {
     /** Change this for the next release's tour; every install then shows it once more. */
-    const val TOUR_ID = "glass-discovery-2026-11-v1"
+    const val TOUR_ID = "glass-discovery-2026-11-v2"
     private const val SEEN_FILE = "whats-new-seen"
 
     var active by mutableStateOf(false)
@@ -175,6 +176,8 @@ object WhatsNewTour {
     }
 
     var requestedSettingsSection by mutableStateOf<String?>(null)
+
+    internal fun previous() { if (step > 0) step-- }
 
     internal fun next(count: Int) {
         if (step + 1 >= count) finish() else step++
@@ -452,45 +455,93 @@ private const val TARGET_WAIT_MS = 1_200L
 private const val SCROLL_SETTLE_MS = 250L
 private const val FOCUS_DELAY_MS = 120L
 
-/** A compact, scrollable release guide with the same dialog and focus system as the app. */
+/** Release-specific walkthrough; no account, playback or settings changes are made automatically. */
 @Composable
 fun WhatsNewReleaseDialog(onOpen: (String) -> Unit) {
     if (!WhatsNewTour.active) return
     val isTv = LocalAppDeviceProfile.current.isTv
-    val entries = listOf(
-        Triple("New themes & glass", "Settings › Appearance", "appearance"),
-        Triple("AniLumos Wrapped", "My List › Wrapped", "more"),
-        Triple("Mood Discovery", "Home › Discover › Mood filters", "discover"),
-        Triple("Smart Resume", "Home › Continue Watching", "home"),
-        Triple("Personalized Calendar", "Schedule › Following only", "schedule"),
-        Triple("Anime Collections", "My List › Collections", "more"),
-        Triple("Episode Notes & Stream Health", "Anime details / episode player", "home"),
-        Triple("Smart Downloads", "Downloads › Queue", "downloads"),
-        Triple("Cinema lighting", "Settings › Player", "player"),
-        Triple("AniLumos Connect", if (isTv) "Settings › Accounts & sync › TV sign-in" else "Settings › Accounts & sync › Link a TV", "accounts"),
-    )
+    val entries = remember(isTv) { listOf(
+        Triple("New themes & glass", "Settings › Appearance", "Choose Liquid, Frosted or Smoked glass and adjust its opacity, blur and borders."),
+        Triple("AniLumos Wrapped", "My List › Wrapped", "Explore your viewing statistics and personality. Share your recap where supported."),
+        Triple("Mood Discovery", "Home › Discover", "Open the dice or Discover and select a mood to find matching anime."),
+        Triple("Smart Resume", "Home › Continue Watching", "Pick up an unfinished episode where you left off."),
+        Triple("Personalized Calendar", "Schedule", "Choose Following only to see releases relevant to your list."),
+        Triple("Anime Collections", "My List › Collections", "Organize anime into queues and collections."),
+        Triple("Episode Notes", "Anime details / episode player", "Keep personal notes on episodes."),
+        Triple("Smart Download Queue", "Downloads", "Manage active, paused and failed downloads."),
+        Triple("Stream Health Assistant", "Episode player", "Look for recovery options when a stream has trouble."),
+        Triple("Cinema lighting", "Episode player", "Explore the lighting controls available in your player."),
+        Triple("AniLumos Connect", if (isTv) "My List › Sign in" else "Settings › Accounts & sync › Link a TV", if (isTv) "Use the TV sign-in card to pair with your phone." else "Scan the TV pairing code and confirm the connection.")
+    ) }
+    val index = WhatsNewTour.step.coerceIn(0, entries.lastIndex)
+    val (title, location, body) = entries[index]
+    val destination = when (index) {
+        0 -> "appearance"
+        1, 5 -> "more"
+        2 -> "discover"
+        3 -> "home"
+        4 -> "schedule"
+        7 -> "downloads"
+        10 -> if (isTv) "more" else "accounts"
+        else -> null
+    }
     com.anilili.ui.dialogs.MidnightDialogHost(
         onDismiss = WhatsNewTour::finish,
-        header = {
-            Text("What's new in AniLumos", style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            Text("Explore the new features and where to find them.",
-                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        header = { showClose ->
+            com.anilili.ui.dialogs.MidnightMediaHeader(
+                kicker = "WHAT'S NEW · ${index + 1} OF ${entries.size}",
+                title = title,
+                onDismiss = WhatsNewTour::finish.takeIf { showClose },
+            )
         },
         footer = {
-            Button(onClick = WhatsNewTour::finish, modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(50)) { Text("Got it") }
+            com.anilili.ui.dialogs.MidnightDialogFooter(
+                extraQuietText = "Back".takeIf { index > 0 },
+                onExtraQuiet = { WhatsNewTour.previous() },
+                quietText = "Skip",
+                onQuiet = WhatsNewTour::finish,
+            )
+            val focus = rememberFocusFill()
+            Button(
+                onClick = { WhatsNewTour.next(entries.size) },
+                modifier = Modifier.fillMaxWidth().focusFill(focus, RoundedCornerShape(50)),
+                colors = focus.buttonColors(ButtonDefaults.buttonColors()),
+                shape = RoundedCornerShape(50),
+            ) { Text(if (index == entries.lastIndex) "Done" else "Next") }
         },
     ) {
-        entries.forEach { (title, location, destination) ->
-            com.anilili.ui.dialogs.MidnightSettingRow(
-                title = title,
-                description = location,
-                onClick = {
+        Column(
+            Modifier.fillMaxWidth()
+                .then(Modifier.releaseGuideGlass())
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                repeat(entries.size) { position ->
+                    Box(Modifier.weight(1f).size(4.dp).background(
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = if (position <= index) .85f else .15f),
+                        RoundedCornerShape(50),
+                    ))
+                }
+            }
+            Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text("WHERE TO FIND IT", style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(location, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            if (destination != null) {
+                val focus = rememberFocusFill()
+                TextButton(onClick = {
                     WhatsNewTour.finish()
                     onOpen(destination)
-                },
-            )
+                }, modifier = Modifier.focusFill(focus, RoundedCornerShape(50)),
+                    colors = focus.buttonColors(ButtonDefaults.textButtonColors())) {
+                    Text("Explore now (exit tour)")
+                }
+            }
         }
     }
 }
+
+@Composable
+private fun Modifier.releaseGuideGlass(): Modifier =
+    this.glassCard(RoundedCornerShape(28.dp))
