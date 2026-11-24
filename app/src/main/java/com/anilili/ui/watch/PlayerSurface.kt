@@ -1861,6 +1861,11 @@ fun PlayerSurface(
                     else -> null
                 }
                 if (mediaSeekOffsetMs != null) {
+                    // A focused TV dialog owns the remote. Rewind/Fast Forward must not
+                    // seek the video behind Settings, subtitles, or the episode drawer.
+                    if (settingsExpanded || captionsExpanded || captionAppearanceVisible ||
+                        openSubtitlesVisible || episodeDrawerExpanded
+                    ) return@onPreviewKeyEvent false
                     queueTvSeek(mediaSeekOffsetMs)
                     tvControlsVisible = true
                     tvControlsInteraction++
