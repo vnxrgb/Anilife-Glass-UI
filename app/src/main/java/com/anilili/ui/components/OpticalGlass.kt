@@ -42,6 +42,6 @@ fun Modifier.opticalGlass(shape: CornerBasedShape, enabled: Boolean = true): Mod
             }
         },
         highlight = { Highlight(width = 0.4.dp) },
-        onDrawSurface = { drawRect(tint.copy(alpha = if (light) .72f else .40f)) },
+        onDrawSurface = { drawRect(tint.copy(alpha = if (light) .50f else .40f)) },
     )
 }

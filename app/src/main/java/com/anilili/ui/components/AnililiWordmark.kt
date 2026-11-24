@@ -26,7 +26,7 @@ fun AnililiWordmark(modifier: Modifier = Modifier) {
         AnilumosBrandMark(Modifier.fillMaxHeight().aspectRatio(1f))
         Text(
             text = "ANILUMOS",
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Black,
             maxLines = 1,

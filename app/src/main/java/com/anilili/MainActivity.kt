@@ -120,6 +120,10 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalContext
@@ -785,6 +789,7 @@ private fun MiruroRoot(
     val navigationTabs = if (cinema) cinemaPhoneTabs else phoneTabs
     val railTabs = if (cinema) cinemaTabs else Tab.entries
     var chromeVisible by remember { mutableStateOf(true) }
+    var dockCollapsed by remember { mutableStateOf(false) }
     val tvSearchRailFocusRequester = remember { FocusRequester() }
     // Redirect destinations, not plain requesters: both live on screens that are only composed on
     // some routes and only once their data lands, and a redirect to an absent one crashes the app.
@@ -819,14 +824,14 @@ private fun MiruroRoot(
     // Whatever state a scroll left behind, pinning has to put the bars back — otherwise turning the
     // setting on while mid-page leaves them hidden with nothing left that would restore them.
     LaunchedEffect(staticChrome) {
-        if (staticChrome) chromeVisible = true
+        if (staticChrome) { chromeVisible = true; dockCollapsed = false }
     }
     // A screen you have just arrived on starts with its chrome. Nothing restores it on a timer any
     // more, so without this a hidden bar would be inherited by the next destination — which lands
     // you on a page with no title, no search and no way to ask for them but a scroll it may not
     // even have.
-    LaunchedEffect(backStack?.destination?.route) { chromeVisible = true }
-    val revealChrome = remember { { chromeVisible = true } }
+    LaunchedEffect(backStack?.destination?.route) { chromeVisible = true; dockCollapsed = false }
+    val revealChrome = remember { { chromeVisible = true; dockCollapsed = false } }
     val chromeScrollConnection = remember(deviceProfile.isTv, chromeHideThresholdPx, staticChrome) {
         object : NestedScrollConnection {
             private var accumulated = 0f
@@ -845,6 +850,8 @@ private fun MiruroRoot(
                 if (deviceProfile.isTv || staticChrome || consumed.y == 0f) return Offset.Zero
                 if ((accumulated < 0f) != (consumed.y < 0f)) accumulated = 0f
                 accumulated += consumed.y
+                if (accumulated < -chromeHideThresholdPx) dockCollapsed = true
+                else if (accumulated > chromeHideThresholdPx) dockCollapsed = false
                 if (accumulated < -chromeHideThresholdPx && chromeVisible) {
                     chromeVisible = false
                 } else if (accumulated > chromeHideThresholdPx && !chromeVisible) {
@@ -984,7 +991,37 @@ private fun MiruroRoot(
     ) {
         NotificationPermissionEffect()
         UpdatePromptHost()
-        Box(Modifier.fillMaxSize().nestedScroll(chromeScrollConnection)) {
+        Box(Modifier.fillMaxSize().nestedScroll(chromeScrollConnection)
+            .pointerInput(deviceProfile.isTv, staticChrome, chromeHideThresholdPx) {
+                if (deviceProfile.isTv || staticChrome) return@pointerInput
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    var last = down.position
+                    var dx = 0f
+                    var dy = 0f
+                    var vertical = false
+                    var horizontal = false
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        val delta = change.position - last
+                        last = change.position
+                        if (!vertical && !horizontal) {
+                            dx += delta.x; dy += delta.y
+                            if (kotlin.math.abs(dx) > chromeHideThresholdPx && kotlin.math.abs(dx) > kotlin.math.abs(dy)) horizontal = true
+                            else if (kotlin.math.abs(dy) > chromeHideThresholdPx && kotlin.math.abs(dy) > kotlin.math.abs(dx)) {
+                                vertical = true
+                                dockCollapsed = dy < 0f
+                                dy = 0f
+                            }
+                        } else if (vertical) {
+                            if ((dy < 0f) != (delta.y < 0f)) dy = 0f
+                            dy += delta.y
+                            if (kotlin.math.abs(dy) > chromeHideThresholdPx) { dockCollapsed = dy < 0f; dy = 0f }
+                        }
+                    } while (change.pressed)
+                }
+            }) {
             val hasPhoneBottomBar = showPhoneNavigation && !deviceProfile.useNavigationRail
             // A sign-in page drawn over the tab keeps the layout beneath it as it was and only
             // loses the capsule, its blur and the tab swipe — see [AppChromeTakeover].
@@ -1115,9 +1152,9 @@ private fun MiruroRoot(
                 FloatingNavigationBar(
                     items = navItems,
                     selectedRoute = currentRoute,
-                    onSelect = { route -> chromeVisible = true; nav.navigateTab(route) },
+                    onSelect = { route -> chromeVisible = true; dockCollapsed = false; nav.navigateTab(route) },
                     bottomInset = navBarInset,
-                    collapsed = !chromeVisible && !staticChrome && !com.anilili.ui.tour.WhatsNewTour.active,
+                    collapsed = dockCollapsed && !staticChrome && !com.anilili.ui.tour.WhatsNewTour.active,
                     compactRoutes = setOf(Routes.HOME, Routes.SEARCH),
                     backdrop = navBackdrop,
                     modifier = Modifier.align(Alignment.BottomCenter),

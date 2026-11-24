@@ -67,6 +67,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.anilili.ui.nav.Routes
 import com.anilili.ui.theme.LocalMidnightAccent
 import com.anilili.ui.theme.Midnight
@@ -269,10 +270,10 @@ private fun FloatingNavIcon(
         androidx.compose.foundation.layout.Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 7.dp)
                 .clip(shape)
                 .background(MaterialTheme.colorScheme.onSurface.copy(alpha = .11f * selectionAlpha))
-                .padding(vertical = 3.dp),
+                .padding(vertical = 1.dp),
         ) {
             Icon(
                 imageVector = item.icon,
@@ -284,7 +285,7 @@ private fun FloatingNavIcon(
                 Text(
                     text = item.label,
                     color = iconColor,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                     maxLines = 1,
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis,

@@ -1053,7 +1053,7 @@ private fun HeroCard(
                         0.34f to Color.Black.copy(.08f),
                         0.58f to Color.Black.copy(.27f),
                         0.83f to Color.Black.copy(.67f),
-                        1f to canvas,
+                        1f to Color.Black.copy(.90f),
                     )
                 },
             )
@@ -1329,12 +1329,12 @@ private fun HeroPill(
     Row(
         modifier
             .clip(RoundedCornerShape(50))
-            .backdropBlur(backdrop, tint = Color.Black.copy(alpha = .22f), radius = 12.dp)
+            .backdropBlur(backdrop, tint = Color.Black.copy(alpha = .48f), radius = 12.dp)
             .background(Color.Black.copy(if (frosted) 0.05f else .42f))
             .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50))
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        content = content,
+        content = { androidx.compose.runtime.CompositionLocalProvider(LocalContentColor provides Color.White) { content() } },
     )
 }
 
@@ -1375,10 +1375,10 @@ private fun HeroMetaRow(media: Media, compact: Boolean = false) {
                         icon,
                         contentDescription = null,
                         modifier = Modifier.padding(end = 3.dp).size(15.dp),
-                        tint = cell.iconTint ?: LocalContentColor.current,
+                        tint = cell.iconTint ?: Color.White,
                     )
                 }
-                Text(cell.text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                Text(cell.text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = Color.White)
             }
         }
     }
