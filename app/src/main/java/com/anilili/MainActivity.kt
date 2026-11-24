@@ -1115,8 +1115,10 @@ private fun MiruroRoot(
                 FloatingNavigationBar(
                     items = navItems,
                     selectedRoute = currentRoute,
-                    onSelect = nav::navigateTab,
+                    onSelect = { route -> chromeVisible = true; nav.navigateTab(route) },
                     bottomInset = navBarInset,
+                    collapsed = !chromeVisible && !staticChrome && !com.anilili.ui.tour.WhatsNewTour.active,
+                    compactRoutes = setOf(Routes.HOME, Routes.SEARCH),
                     backdrop = navBackdrop,
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
