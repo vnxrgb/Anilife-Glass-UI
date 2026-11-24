@@ -2404,6 +2404,7 @@ object SettingsStore {
     // Boolean from an Int, and guessing from the JSON is how a String ends up under a Boolean key.
 
     private val BACKUP_BOOLEAN_KEYS = listOf(
+        GLASS_BORDERS,
         AUTOPLAY,
         BROWSE_HEADER_COLLAPSED,
         PLAY_ON_OPEN,
@@ -2451,6 +2452,9 @@ object SettingsStore {
     ) + GLASS_KEYS.values
 
     private val BACKUP_INT_KEYS = listOf(
+        GLASS_OPACITY,
+        GLASS_BLUR,
+        GLASS_AMBIENT,
         THEME_CUSTOM_SEED,
         SKIP_BUTTON_SECONDS,
         WATCHED_THRESHOLD_PERCENT,
@@ -2467,6 +2471,7 @@ object SettingsStore {
         listOf(DEFAULT_PLAYBACK_SPEED_KEY, HOLD_PLAYBACK_SPEED, PLAYER_BRIGHTNESS, PLAYER_AMBIENT_INTENSITY)
 
     private val BACKUP_STRING_KEYS = listOf(
+        GLASS_MATERIAL,
         APP_LAYOUT_MODE,
         DIAGNOSTIC_DETAIL,
         EPISODE_DRAWER_LAYOUT,
