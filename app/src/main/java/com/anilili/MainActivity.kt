@@ -1,6 +1,9 @@
 package com.anilili
 
 import com.anilili.ui.theme.appCanvas
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.anilili.ui.components.LocalOpticalBackdrop
 import com.anilili.ui.theme.canvasColor
 import android.Manifest
 import android.app.PictureInPictureParams
@@ -945,8 +948,10 @@ private fun MiruroRoot(
     val systemUses24Hour = rememberSystemUses24Hour()
     val clockFormat by SettingsStore.clockFormat.collectAsState()
     val chromeTakeover = remember { AppChromeTakeover() }
+    val opticalBackdrop = rememberLayerBackdrop()
     CompositionLocalProvider(
         LocalAppChromeTakeover provides chromeTakeover,
+        LocalOpticalBackdrop provides if (!deviceProfile.isTv && !inPictureInPicture) opticalBackdrop else null,
         LocalAppDeviceProfile provides deviceProfile,
         // Material pads chips, icon buttons, tabs and text buttons out to a 48dp touch target round
         // what it draws. That is for fingers; on a television it only put the focus ring — which
@@ -995,7 +1000,7 @@ private fun MiruroRoot(
                     (showBottomBar || currentRoute == Routes.DETAIL)
                 // The canvas is painted inside the capsule's blur source, so the glass frosts the
                 // background picture too rather than showing it sharp through a tint.
-                Box((if (showPhoneCapsule && navBackdrop != null) Modifier.fillMaxSize().hazeSource(navBackdrop) else Modifier.fillMaxSize()).appCanvas()) {
+                Box((if (showPhoneCapsule && navBackdrop != null) Modifier.fillMaxSize().hazeSource(navBackdrop) else Modifier.fillMaxSize()).then(if (showPhoneCapsule && !inPictureInPicture && Build.VERSION.SDK_INT >= 31) Modifier.layerBackdrop(opticalBackdrop) else Modifier).appCanvas()) {
                     Row(
                         Modifier
                             .fillMaxSize()
