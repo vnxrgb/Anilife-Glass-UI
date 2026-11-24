@@ -324,6 +324,9 @@ dependencies {
     // Permission-free QR scanning for the mobile-to-TV pairing address.
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     implementation(libs.haze)
+    // Experimental optical glass renderer (Apache-2.0).
+    implementation("io.github.kyant0:backdrop:1.0.6")
+    implementation("io.github.kyant0:shapes:1.2.0")
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.tvprovider)
