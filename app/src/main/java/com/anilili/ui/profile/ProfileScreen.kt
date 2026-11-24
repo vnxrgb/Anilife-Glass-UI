@@ -794,6 +794,35 @@ fun ProfileScreen(
                                 }
                             }
                         }
+                        if (!device.isTv) {
+                            item(key = "anilumos-collection-starters") {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .padding(horizontal = device.pagePadding, vertical = 4.dp)
+                                        .glassCard(RoundedCornerShape(22.dp))
+                                        .padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    Text("Anime collections", style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold)
+                                    Text(
+                                        "Build personal collections. Long-press an anime to add it to any list.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        listOf("Weekend Queue", "Comfort Rewatches", "Movie Night")
+                                            .forEach { preset ->
+                                                if (customLists.none { it.name.equals(preset, true) }) {
+                                                    TextButton(onClick = { CustomListStore.create(preset) }) {
+                                                        Text("+ $preset", maxLines = 2)
+                                                    }
+                                                }
+                                            }
+                                    }
+                                }
+                            }
+                        }
                         if (selectedViews.isEmpty() && shownCustomLists.isEmpty()) {
                             item { EmptyPanel("Choose a list above to show it here") }
                         }
