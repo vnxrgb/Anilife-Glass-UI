@@ -85,52 +85,6 @@ private val IconSize = 22.dp
 private val BarPadding = 3.dp
 private val BarShape = RoundedCornerShape(50)
 
-// A gentle top light keeps the glass character without a white sheen across the icons.
-// The nearly opaque center preserves contrast when bright artwork scrolls behind the bar.
-// Built from the theme, so they are rebuilt only when the theme changes.
-@Composable
-private fun barGlass(): Brush {
-    val material by SettingsStore.glassMaterial.collectAsState()
-    val opacity by SettingsStore.glassOpacity.collectAsState()
-    val scheme = MaterialTheme.colorScheme
-    val alpha = if (opacity < 0) material.panelAlpha else (opacity / 100f).coerceIn(.15f, 1f)
-    val tint = if (material == GlassMaterial.SMOKED) scheme.surface else scheme.surfaceContainerHigh
-    return Brush.verticalGradient(
-        0f to tint.copy(alpha = alpha),
-        .45f to tint.copy(alpha = alpha * .94f),
-        1f to scheme.surface.copy(alpha = alpha),
-    )
-}
-
-@Composable
-private fun barBlur(): HazeStyle {
-    val material by SettingsStore.glassMaterial.collectAsState()
-    val opacity by SettingsStore.glassOpacity.collectAsState()
-    val blur by SettingsStore.glassBlur.collectAsState()
-    val scheme = MaterialTheme.colorScheme
-    val alpha = if (opacity < 0) material.panelAlpha else (opacity / 100f).coerceIn(.15f, 1f)
-    val tint = if (material == GlassMaterial.SMOKED) scheme.surface else scheme.surfaceContainerHigh
-    val radius = if (blur < 0) 24f * material.blurScale else blur * .48f
-    return HazeStyle(
-        backgroundColor = scheme.surface,
-        tint = HazeTint(tint.copy(alpha = alpha)),
-        blurRadius = radius.dp,
-        noiseFactor = if (material == GlassMaterial.FROSTED) .07f else .02f,
-    )
-}
-
-@Composable
-private fun barRim(): Brush {
-    val borders by SettingsStore.glassBorders.collectAsState()
-    val material by SettingsStore.glassMaterial.collectAsState()
-    val neutral = MaterialTheme.colorScheme.onSurface
-    val alpha = if (!borders) 0f else if (material == GlassMaterial.LIQUID) .34f else .19f
-    return Brush.verticalGradient(
-        0f to neutral.copy(alpha = alpha),
-        1f to neutral.copy(alpha = alpha * .5f),
-    )
-}
-
 /**
  * A quiet, softly shaded glass surface. The current destination opens into a filled pill carrying
  * its name, so the page is named without a second row of text under every icon; the pill springs
@@ -160,7 +114,6 @@ fun FloatingNavigationBar(
     ) {
         // RenderEffect arrived in Android 12; below it Haze only lays a flat scrim, which is worse
         // than the painted glass, so older phones keep that.
-        val blurred = backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
         val inner = (maxWidth - BarPadding * 2).coerceAtLeast(0.dp)
         // Five stable, equal-width destinations. Selecting a tab must not displace
         // its neighbours or change the capsule width.
@@ -173,19 +126,7 @@ fun FloatingNavigationBar(
                 .fillMaxWidth()
                 .height(FloatingNavBarExpandedHeight)
                 // Reduce the dark halo on OLED; the rim carries the depth.
-                .shadow(5.dp, BarShape)
-                .clip(BarShape)
-                .then(
-                    if (blurred) {
-                        // A third of the resolution: the blur discards that detail anyway. On an
-                        // S25 it cut the GPU 90th percentile while scrolling from 10ms to 6ms
-                        // (painted glass: 4ms) with no visible difference.
-                        Modifier.hazeEffect(backdrop!!, barBlur()) { inputScale = HazeInputScale.Fixed(0.33f) }
-                    } else {
-                        Modifier.background(barGlass())
-                    },
-                )
-                .border(1.dp, barRim(), BarShape)
+                .opticalGlass(BarShape, enabled = backdrop != null)
                 .padding(horizontal = BarPadding)
                 .selectableGroup(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -218,20 +159,10 @@ fun FloatingNavDisc(
     backdrop: HazeState? = null,
     icon: @Composable () -> Unit,
 ) {
-    val blurred = backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     Box(
         modifier = modifier
             .size(FloatingNavDiscSize)
-            .shadow(5.dp, CircleShape)
-            .clip(CircleShape)
-            .then(
-                if (blurred) {
-                    Modifier.hazeEffect(backdrop!!, barBlur()) { inputScale = HazeInputScale.Fixed(0.33f) }
-                } else {
-                    Modifier.background(barGlass())
-                },
-            )
-            .border(1.dp, barRim(), CircleShape)
+            .opticalGlass(CircleShape, enabled = backdrop != null)
             .clickable(onClickLabel = contentDescription, role = Role.Button, onClick = onClick)
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
