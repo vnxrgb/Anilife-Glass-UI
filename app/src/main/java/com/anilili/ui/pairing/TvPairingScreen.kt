@@ -114,11 +114,17 @@ fun TvPairingScreen(
                     )
                     // QR contains only a LAN address; credentials still require the
                     // existing two-device six-digit confirmation.
-                    current.addresses.firstOrNull()?.let { formatted ->
-                        val address = formatted.substringBefore("  (").trim()
-                        TvPairingAddressQr(address)
-                        Body("In AniLumos on your phone, tap Link a TV → Scan TV QR code. Compare the six-digit confirmation on both devices before signing in.")
-                    }
+                    // Prefer the shortest usable LAN endpoint for the QR. On multi-interface
+                    // TVs the first address can be a much longer IPv6 endpoint; QR encoding
+                    // that address requires denser modules at the same physical display size.
+                    // Keep every original address listed below for manual fallback.
+                    current.addresses.map { it.substringBefore("  (").trim() }
+                        .filter { it.isNotEmpty() }
+                        .minByOrNull { it.length }
+                        ?.let { address ->
+                            TvPairingAddressQr(address)
+                            Body("In AniLumos on your phone, tap Link a TV → Scan TV QR code. Compare the six-digit confirmation on both devices before signing in.")
+                        }
                     if (current.addresses.isEmpty()) {
                         Body("This television has no network address — check its connection.")
                     } else {
