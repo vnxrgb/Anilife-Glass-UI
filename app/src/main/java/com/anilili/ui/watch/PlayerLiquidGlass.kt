@@ -34,60 +34,13 @@ internal fun Modifier.playerLiquidGlass(
     shape: Shape,
     tone: PlayerLiquidGlassTone = PlayerLiquidGlassTone.SOFT,
 ): Modifier {
-    val material by SettingsStore.glassMaterial.collectAsState()
-    val opacity by SettingsStore.glassOpacity.collectAsState()
-    val borders by SettingsStore.glassBorders.collectAsState()
-    val baseDark = when (tone) {
-        PlayerLiquidGlassTone.SOFT -> 0.32f
-        PlayerLiquidGlassTone.DOCK -> 0.49f
-        PlayerLiquidGlassTone.PRIMARY -> 0.38f
+    // Media3 is a separate surface. Use a readable neutral overlay, never capture or distort video.
+    val alpha = when (tone) {
+        PlayerLiquidGlassTone.SOFT -> .42f
+        PlayerLiquidGlassTone.DOCK -> .64f
+        PlayerLiquidGlassTone.PRIMARY -> .52f
     }
-    val dark = if (opacity >= 0) (opacity / 100f).coerceIn(.25f, .95f) else when (material) {
-        GlassMaterial.LIQUID -> baseDark
-        GlassMaterial.FROSTED -> (baseDark + .22f).coerceAtMost(.85f)
-        GlassMaterial.SMOKED -> (baseDark + .36f).coerceAtMost(.92f)
-    }
-    val glint = (when (tone) {
-        PlayerLiquidGlassTone.SOFT -> 0.055f
-        PlayerLiquidGlassTone.DOCK -> 0.075f
-        PlayerLiquidGlassTone.PRIMARY -> 0.10f
-    }) * if (material == GlassMaterial.LIQUID) 1f else .45f
-    return this
-        .clip(shape)
-        .background(
-            Brush.verticalGradient(
-                // Dark neutral glass, not a large silver/grey fill that veils
-                // bright anime frames or fights the Morphe lighting.
-                0f to Color.White.copy(alpha = glint),
-                0.18f to Color(0xFF101013).copy(alpha = dark * 0.60f),
-                0.74f to Color(0xFF09090D).copy(alpha = dark),
-                1f to Color(0xFF050507).copy(alpha = (dark + 0.08f).coerceAtMost(0.75f)),
-            ),
-            shape,
-        )
-        .drawWithCache {
-            // Cache the reflection shader until size changes; avoid recreating
-            // a gradient on each Media3 control redraw or time update.
-            val radius = maxOf(size.width * 0.95f, size.height * 1.55f, 1f)
-            val reflection = Brush.radialGradient(
-                0f to Color.White.copy(alpha = glint * 0.52f),
-                0.42f to Color.White.copy(alpha = glint * 0.10f),
-                1f to Color.Transparent,
-                center = Offset(size.width * 0.12f, 0f),
-                radius = radius,
-            )
-            onDrawBehind { drawRect(brush = reflection) }
-        }
-        .then(if (borders) Modifier.border(
-            BorderStroke(
-                1.dp,
-                Brush.verticalGradient(
-                    0f to Color.White.copy(alpha = 0.28f),
-                    0.35f to Color.White.copy(alpha = 0.13f),
-                    0.72f to Color.White.copy(alpha = 0.07f),
-                    1f to Color.White.copy(alpha = 0.15f),
-                ),
-            ),
-            shape,
-        ) else Modifier)
+    return clip(shape)
+        .background(Color.Black.copy(alpha = alpha), shape)
+        .border(0.5.dp, Color.White.copy(alpha = .18f), shape)
 }
