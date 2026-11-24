@@ -654,6 +654,44 @@ private fun SearchTopBar(
                         )
                     }
 
+                    // Mood discovery is an explicit genre-based shortcut, not an unverified AI ranking.
+                    // A second tap restores the unfiltered genre selection.
+                    if (!device.isTv) {
+                        Text(
+                            "Discover by mood",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 14.dp, bottom = 2.dp),
+                        )
+                        val moodGenres = listOf(
+                            "Adrenaline" to "Action",
+                            "Comfort" to "Slice of Life",
+                            "Emotional" to "Drama",
+                            "Laugh" to "Comedy",
+                            "Mind-bending" to "Sci-Fi",
+                            "Romance" to "Romance",
+                        )
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth().focusGroup(),
+                            contentPadding = PaddingValues(end = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(7.dp),
+                        ) {
+                            items(moodGenres, key = { it.first }) { (mood, genre) ->
+                                val active = vm.filters.genres == setOf(genre)
+                                FilterChip(
+                                    shape = RoundedCornerShape(50),
+                                    selected = active,
+                                    onClick = {
+                                        if (active) vm.removeGenre(genre, excluded = false)
+                                        else vm.applyGenreFilter(genre)
+                                    },
+                                    label = { Text(mood) },
+                                    colors = cinematicFilterChipColors(),
+                                )
+                            }
+                        }
+                    }
+
                     Text(
                         "Categories",
                         style = MaterialTheme.typography.labelLarge,
