@@ -63,58 +63,114 @@ internal suspend fun shareWrappedImage(
             }
             canvas.drawText(label, x, y, paint)
         }
-        fun panel(x: Float, y: Float, w: Float, h: Float, color: Int = accent) {
-            val rect = RectF(x, y, x+w, y+h)
+        val purple = Color.rgb(109,61,242)
+        val gold = Color.rgb(255,210,63)
+        val personalityColor = when (personality.title) {
+            "The Dedicated Fan" -> gold
+            "The Binge Master" -> Color.rgb(255,134,100)
+            "The Genre Explorer" -> Color.rgb(122,211,255)
+            "The Comfort Seeker" -> Color.rgb(144,222,184)
+            "The Action Fan" -> Color.rgb(255,108,136)
+            else -> Color.rgb(190,162,255)
+        }
+        fun artworkAccent(): Int {
+            val poster = posters.firstOrNull() ?: return purple
+            val bins = FloatArray(12)
+            val hsv = FloatArray(3)
+            for (y in 0 until poster.height step maxOf(1,poster.height/32)) {
+                for (x in 0 until poster.width step maxOf(1,poster.width/32)) {
+                    Color.colorToHSV(poster.getPixel(x,y),hsv)
+                    if (hsv[1] > .3f && hsv[2] > .25f) bins[(hsv[0]/30f).toInt().coerceIn(0,11)] += hsv[1]*hsv[2]
+                }
+            }
+            val bin = bins.indices.maxByOrNull { bins[it] } ?: return purple
+            return if (bins[bin] == 0f) purple else Color.HSVToColor(floatArrayOf(bin*30f+15f,.65f,.8f))
+        }
+        fun panel(x: Float,y: Float,w: Float,h: Float, color: Int = white) {
+            paint.shader = null
             paint.style = Paint.Style.FILL
-            paint.shader = LinearGradient(x,y,x+w,y+h,intArrayOf(tint(color,39),Color.rgb(25,31,45),Color.rgb(19,24,36)),null,Shader.TileMode.CLAMP)
-            canvas.drawRoundRect(rect,24f,24f,paint)
-            paint.shader = null; paint.style = Paint.Style.STROKE; paint.strokeWidth = 2f
-            paint.color = tint(white,38); canvas.drawRoundRect(rect,24f,24f,paint); paint.style = Paint.Style.FILL
+            paint.color = tint(color,20)
+            val rect = RectF(x,y,x+w,y+h)
+            canvas.drawRoundRect(rect,30f,30f,paint)
+            paint.style = Paint.Style.STROKE; paint.strokeWidth = 1.5f
+            paint.color = tint(color,66); canvas.drawRoundRect(rect,30f,30f,paint)
+            paint.style = Paint.Style.FILL
         }
-        paint.shader = LinearGradient(0f,0f,1080f,1920f,intArrayOf(Color.rgb(13,18,30),Color.rgb(23,31,45),Color.rgb(11,15,25)),null,Shader.TileMode.CLAMP)
+        fun logo(x: Float,y: Float,size: Float) {
+            canvas.save(); canvas.translate(x,y); canvas.scale(size/100f,size/100f)
+            paint.shader = null; paint.style = Paint.Style.FILL; paint.color = purple
+            canvas.drawRoundRect(RectF(0f,0f,100f,100f),22f,22f,paint)
+            paint.color = Color.WHITE; paint.style = Paint.Style.STROKE; paint.strokeWidth = 12f
+            paint.strokeCap = Paint.Cap.ROUND; paint.strokeJoin = Paint.Join.ROUND
+            canvas.drawPath(Path().apply { moveTo(28f,74f); lineTo(50f,26f); lineTo(72f,74f) },paint)
+            paint.style = Paint.Style.FILL; paint.color = gold; canvas.drawCircle(50f,64f,6.5f,paint)
+            canvas.restore()
+        }
+        fun wrappedLines(value: String,x: Float,y: Float,size: Float,width: Float) {
+            paint.typeface = Typeface.create("sans-serif",Typeface.BOLD); paint.textSize = size
+            val words = value.split(Regex("\\s+"))
+            var line = ""; var row = 0
+            for (word in words) {
+                val next = if (line.isEmpty()) word else "$line $word"
+                if (paint.measureText(next) > width && line.isNotEmpty() && row == 0) {
+                    text(line,x,y,size,true,white,width); row++; line = word
+                } else line = next
+            }
+            text(line,x,y+row*(size+7f),size,true,white,width)
+        }
+        canvas.drawColor(Color.rgb(13,12,23))
+        paint.shader = RadialGradient(920f,410f,1050f,intArrayOf(tint(artworkAccent(),100),Color.TRANSPARENT),null,Shader.TileMode.CLAMP)
         canvas.drawRect(0f,0f,1080f,1920f,paint); paint.shader = null
-        text("ANILUMOS  /  ${stats.year}",56f,90f,28f,true,accent)
-        text("AniLumos Wrapped",56f,174f,75f,true)
-        text("Your anime year in review",56f,228f,32f,false,muted)
-        val metrics = listOf("Watch time" to watchTime, "Episodes" to stats.episodes.toString(),
-            "Anime played" to titleCount.toString(), "Active days" to stats.activeDays.toString(),
-            "Current streak" to "${stats.streak} days", "Peak month" to
-                (if (stats.episodes > 0) java.time.Month.of(stats.months.indexOf(stats.months.maxOrNull() ?: 0)+1).name.lowercase().replaceFirstChar { it.uppercase() } else "—"))
-        metrics.forEachIndexed { i, (label,value) ->
-            val x=56f+(i%3)*328f; val y=278f+(i/3)*160f
-            panel(x,y,312f,144f); text(label,x+22f,y+44f,25f,false,muted,270f)
-            text(value,x+22f,y+106f,46f,true,white,270f)
+        logo(56f,54f,66f)
+        text("ANILUMOS",140f,96f,27f,true)
+        text(stats.year.toString(),886f,96f,30f,true,gold)
+        text("WRAPPED",56f,213f,96f,true)
+        text("YOUR ANIME YEAR IN REVIEW",60f,264f,24f,true,muted)
+        panel(56f,310f,968f,270f,personalityColor)
+        text("TIME SPENT IN ANIME WORLDS",86f,370f,26f,true,muted)
+        text(watchTime,82f,500f,115f,true,white,900f)
+        text("Recorded watch time this year",86f,548f,26f,false,muted)
+        val metrics = mutableListOf("Anime played" to titleCount.toString(),"Episodes completed" to stats.episodes.toString())
+        if (stats.activeDays > 0) metrics += "Active days" to stats.activeDays.toString()
+        if (stats.streak > 0) metrics += "Streak" to "${stats.streak} days"
+        val cell = (968f-16f*(metrics.size-1))/metrics.size
+        metrics.forEachIndexed { i,(label,value) ->
+            val x=56f+i*(cell+16f)
+            panel(x,600f,cell,125f)
+            text(label,x+18f,642f,23f,false,muted,cell-36f)
+            text(value,x+18f,696f,43f,true,white,cell-36f)
         }
-        text("Top anime this year",56f,655f,38f,true)
-        if (titles.isEmpty()) text("Your top anime will appear as you watch.",56f,720f,30f,false,muted)
-        titles.take(3).forEachIndexed { i, title ->
-            val x=56f+i*328f; val y=685f
-            panel(x,y,312f,440f)
+        text("TOP ANIME",56f,804f,36f,true)
+        if (titles.isEmpty()) text("Your top anime will appear as you watch.",56f,880f,30f,false,muted)
+        titles.take(3).forEachIndexed { i,title ->
+            val x=56f+i*328f; val y=833f
+            val dest=RectF(x,y,x+312f,y+350f)
+            panel(x,y,312f,350f)
             val poster=posters[i]
             if (poster != null) {
-                val dest=RectF(x+12f,y+12f,x+300f,y+332f)
                 val scale=maxOf(dest.width()/poster.width,dest.height()/poster.height)
-                val sw=(dest.width()/scale).toInt().coerceAtLeast(1); val sh=(dest.height()/scale).toInt().coerceAtLeast(1)
+                val sw=(dest.width()/scale).toInt().coerceIn(1,poster.width)
+                val sh=(dest.height()/scale).toInt().coerceIn(1,poster.height)
                 val sx=(poster.width-sw)/2; val sy=(poster.height-sh)/2
-                val clip=Path().apply { addRoundRect(dest,18f,18f,Path.Direction.CW) }
-                canvas.save(); canvas.clipPath(clip)
+                canvas.save(); canvas.clipPath(Path().apply { addRoundRect(dest,24f,24f,Path.Direction.CW) })
                 paint.shader=null; paint.color=Color.WHITE
                 canvas.drawBitmap(poster,Rect(sx,sy,sx+sw,sy+sh),dest,paint); canvas.restore()
             }
-            text("#${i+1}  ${title.title}",x+18f,y+376f,27f,true,white,276f)
-            text(title.time,x+18f,y+415f,25f,false,muted,276f)
+            paint.color=Color.rgb(15,13,25); canvas.drawRoundRect(RectF(x+12f,y+12f,x+77f,y+70f),16f,16f,paint)
+            text("0${i+1}",x+22f,y+53f,32f,true,gold)
+            wrappedLines(title.title,x+2f,y+390f,28f,310f)
+            text(title.time,x+2f,y+458f,24f,false,muted)
         }
-        text("Top genres",56f,1190f,38f,true)
-        panel(56f,1220f,968f,120f)
-        text(genres.take(3).joinToString("   ·   ").ifBlank { "Not enough recorded activity yet" },80f,1294f,34f,true,white,920f)
-        text("Your viewing personality",56f,1400f,38f,true)
-        panel(56f,1430f,968f,230f)
-        text(personality.symbol,82f,1520f,62f,true,accent)
-        text(personality.title,170f,1518f,49f,true,white,820f)
-        text(personality.description,82f,1594f,29f,false,muted,910f)
-        text("Generated by AniLumos",56f,1760f,34f,true)
-        text("Recorded on this device • measured native playback",56f,1810f,25f,false,muted)
-        text("Older viewing history may be incomplete.",56f,1852f,25f,false,muted)
+        text("YOUR TOP GENRES",56f,1360f,28f,true,muted)
+        text(genres.take(3).joinToString("  /  ").ifBlank { "Still discovering" },56f,1414f,36f,true,white,968f)
+        panel(56f,1460f,968f,260f,personalityColor)
+        text("YOUR VIEWING PERSONALITY",86f,1515f,25f,true,personalityColor)
+        text(personality.symbol,86f,1600f,62f,true,personalityColor)
+        text(personality.title,170f,1598f,48f,true,white,820f)
+        text(personality.description,86f,1674f,28f,false,muted,910f)
+        logo(56f,1775f,60f)
+        text("Made with AniLumos",132f,1812f,27f,true)
+        text("Recorded on this device. Older viewing history may be incomplete.",56f,1870f,24f,false,muted,968f)
         File(directory,"AniLumos-Wrapped-${stats.year}-${System.currentTimeMillis()}.png").also { output ->
             output.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG,100,it)) }
             bitmap.recycle()
