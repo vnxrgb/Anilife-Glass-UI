@@ -92,7 +92,6 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -151,7 +150,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.HazeState
 import com.anilili.data.settings.GlassSection
-import com.anilili.ui.components.backdropBlur
+import com.anilili.ui.components.browseHeaderGlass
 import com.anilili.ui.components.glassEnabled
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.runtime.key
@@ -299,23 +298,12 @@ fun SearchScreen(
                         // what slides, and the grid reserves it along with the rest.
                         Modifier
                             .pointerInput(Unit) { detectTapGestures { } }
+                            // At rest the header and results share the same canvas, with no
+                            // rectangular scrim. Once cards scroll underneath, fade only the
+                            // backing (not the text or controls) toward a transparent bottom edge.
                             .then(
-                                if (browseBackdrop != null) {
-                                    Modifier.backdropBlur(
-                                        browseBackdrop,
-                                        tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .38f),
-                                        radius = 24.dp,
-                                    )
-                                } else {
-                                    Modifier.background(
-                                        Brush.verticalGradient(listOf(
-                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
-                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.52f),
-                                            Color.Transparent,
-                                        )),
-                                    )
-                                },
+                                if (headerRoomOnScreen) Modifier
+                                else Modifier.browseHeaderGlass(browseBackdrop),
                             )
                             .statusBarsPadding()
                     } else {
