@@ -786,6 +786,10 @@ private fun WatchContent(
     // owns whether it is open — this only says "the viewer asked again", which is the one thing
     // the player knows and SourceSelectors cannot see from inside the dialog it manages.
     var sourcePickerRequest by remember(data.anilistId) { mutableIntStateOf(0) }
+    // Only suggest switching sources after native playback actually stalls.
+    var streamStalled by remember(data.anilistId, data.currentIndex, data.chosenStream?.url) {
+        mutableStateOf(false)
+    }
     val downloads by EpisodeDownloads.downloads(context).collectAsState()
     val exportedEpisodes by EpisodeExport.exported(context).collectAsState()
     val preparingIds by EpisodeDownloads.preparingIds.collectAsState()
@@ -1397,7 +1401,10 @@ private fun WatchContent(
                                 onAddToList = { listStatusDialogVisible = true },
                                 audioSwitch = playerAudioSwitch,
                                 onAudioSwitch = { onChangeSource(it.provider, it.variant.route) },
-                                onPlaybackActiveChanged = { playerHasPicture = it },
+                                onPlaybackActiveChanged = {
+                                    playerHasPicture = it
+                                    if (it) streamStalled = false
+                                },
                                 category = data.sourceVariant.route,
                                 fillerSkip = fillerSkip,
                             )
@@ -1451,7 +1458,10 @@ private fun WatchContent(
                         onNextEpisode = onNext,
                         onAutoAdvance = onAutoAdvance,
                         onError = onPlaybackError,
-                        onStalled = onPlaybackStalled,
+                        onStalled = { source, elapsed ->
+                            streamStalled = true
+                            onPlaybackStalled(source, elapsed)
+                        },
                         modifier = Modifier.fillMaxSize(),
                         onToggleFullscreen = onToggleFullscreen,
                         startPositionMs = data.startPositionMs,
@@ -1528,6 +1538,24 @@ private fun WatchContent(
                             textAlign = TextAlign.Center,
                         )
                     }
+                }
+            }
+            if (streamStalled && !device.isTv && data.chosenStream != null &&
+                !loadingOverlayVisible) {
+                Row(
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                        .padding(bottom = if (fullscreen) 94.dp else 12.dp)
+                        .background(Color.Black.copy(alpha = 0.86f), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Stream stalled", color = Color.White,
+                        style = MaterialTheme.typography.labelMedium)
+                    TextButton(onClick = {
+                        streamStalled = false
+                        sourcePickerRequest++
+                    }) { Text("Try another source") }
+                    TextButton(onClick = { streamStalled = false }) { Text("Dismiss") }
                 }
             }
             if (
