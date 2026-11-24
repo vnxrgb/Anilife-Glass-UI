@@ -35,4 +35,18 @@ class ManualPairingAddressTest {
         assertNull(parseManualAddress("192.168.1.50:0"))
         assertNull(parseManualAddress("192.168.1.50:70000"))
     }
+    @Test
+    fun `TV QR prefers IPv4 over shorter IPv6 link local endpoint`() {
+        assertEquals(
+            "192.168.1.25:47001",
+            preferredTvQrAddress(listOf("[fe80::1]:47001  (wlan0)", "192.168.1.25:47001  (eth0)")),
+        )
+    }
+
+    @Test
+    fun `TV QR falls back to IPv6 and ignores empty endpoints`() {
+        assertEquals("[fe80::1]:47001", preferredTvQrAddress(listOf("", "[fe80::1]:47001  (wlan0)")))
+        assertNull(preferredTvQrAddress(listOf("", "   ")))
+    }
+
 }
