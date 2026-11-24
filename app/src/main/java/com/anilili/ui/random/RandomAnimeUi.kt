@@ -700,7 +700,7 @@ private fun DialogHeader(onDismiss: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "RANDOM PICK",
+            text = "DISCOVER",
             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.8.sp),
             fontWeight = FontWeight.W800,
             color = LocalMidnightAccent.current,
@@ -754,7 +754,7 @@ private fun SourceChips(
                 onClick = { onSource(source.key) },
                 label = {
                     Text(
-                        text = if (source.isAnywhere) source.label else "${source.label} · ${source.ids.size}",
+                        text = if (source.isAnywhere || source.moodGenre != null) source.label else "${source.label} · ${source.ids.size}",
                         maxLines = 1,
                         fontWeight = if (selected) FontWeight.W700 else FontWeight.Medium,
                     )
