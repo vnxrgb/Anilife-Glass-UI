@@ -30,6 +30,8 @@ class RandomAnimeDeck(
     private val skip: (Media) -> Boolean = { false },
     private val tasteSource: (suspend () -> List<Media>)? = null,
     private val tasteEvery: Int = 3,
+    private val strictSkip: Boolean = false,
+    private val sparsePages: Boolean = false,
 ) {
     private val lock = Mutex()
     private var pageCount = pageCount.coerceAtLeast(1)
@@ -58,7 +60,7 @@ class RandomAnimeDeck(
             }
         }
         dealt++
-        repeat(MAX_FETCHES_PER_DRAW) {
+        repeat(if (sparsePages) pageCount.coerceAtMost(8) else MAX_FETCHES_PER_DRAW) {
             if (pile.isEmpty()) refill()
             pile.removeFirstOrNull()?.let { media ->
                 shownIds += media.id
@@ -95,6 +97,10 @@ class RandomAnimeDeck(
         }
         val page = (1..pageCount).filterNot { it in dealtPages }.random(random)
         val items = fetchPage(page)
+        if (items.isEmpty() && sparsePages) {
+            dealtPages += page
+            return
+        }
         if (items.isEmpty()) {
             // The pool has shrunk below this page since it was measured. Everything past it is
             // empty too, so the range stops short of it from now on.
@@ -105,7 +111,8 @@ class RandomAnimeDeck(
         }
         dealtPages += page
         val fresh = items.filterNot { it.id in shownIds }
-        val wanted = fresh.filterNot(skip).ifEmpty { fresh }
+        val eligible = fresh.filterNot(skip)
+        val wanted = if (strictSkip) eligible else eligible.ifEmpty { fresh }
         pile.addAll(wanted.shuffled(random))
         // Going round again can shuffle the card just thrown back on top. A short pool — one of
         // the viewer's own lists — goes round often, and dealing the same title twice running
