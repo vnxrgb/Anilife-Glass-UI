@@ -2988,11 +2988,11 @@ fun SettingsScreen(
                 // menu fades out a few seconds after the cursor leaves it.
                 item(key = "Keep the bars on screen") {
                     MidnightSettingSwitchRow(
-                        title = "Keep the bars on screen",
+                        title = if (device.isTv) "Keep the bars on screen" else "Keep the header on screen",
                         description = if (device.isTv) {
                             "Stop the top menu fading out while you browse"
                         } else {
-                            "Stop the top bar and bottom menu tucking away as you scroll"
+                            "Keep the top header visible; the floating dock still compacts while scrolling"
                         },
                         checked = staticAppChrome,
                         onCheckedChange = SettingsStore::setStaticAppChrome,
