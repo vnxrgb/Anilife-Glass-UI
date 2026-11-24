@@ -149,6 +149,8 @@ android {
     flavorDimensions += "form"
     productFlavors {
         create("mobile") {
+            // Optical renderer dependencies require API 23 or newer.
+            minSdk = 23
             dimension = "form"
             isDefault = true
         }
