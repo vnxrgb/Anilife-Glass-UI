@@ -33,6 +33,10 @@ data class DiceSource(
             DiceSource("mood:laugh", "Laugh", moodGenre = "Comedy"),
             DiceSource("mood:mind", "Mind-bending", moodGenre = "Sci-Fi"),
             DiceSource("mood:romance", "Romance", moodGenre = "Romance"),
+            DiceSource("mood:mystery", "Mystery", moodGenre = "Mystery"),
+            DiceSource("mood:fantasy", "Escape", moodGenre = "Fantasy"),
+            DiceSource("mood:thrill", "Suspense", moodGenre = "Thriller"),
+            DiceSource("mood:sports", "Motivated", moodGenre = "Sports"),
         )
     }
 }
