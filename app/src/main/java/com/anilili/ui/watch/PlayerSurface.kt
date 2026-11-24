@@ -116,6 +116,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.anilili.R
 import com.anilili.data.ProviderCatalog
 import com.anilili.data.library.HistoryEntry
+import com.anilili.data.library.WatchActivityStore
 import com.anilili.data.model.EpisodeItem
 import com.anilili.data.model.SkipTimes
 import com.anilili.data.model.StreamItem
@@ -1108,6 +1109,35 @@ fun PlayerSurface(
         pendingTvSeekTargetMs = null
         activeController.seekTo(targetMs)
         DiagnosticsLog.event("PlayerSurface TV seek committed targetMs=$targetMs")
+    }
+    // Measure elapsed real playback independently of resume positions and seeks.
+    LaunchedEffect(controller, animeId, episode, activeStream.url) {
+        val activeController = controller ?: return@LaunchedEffect
+        var previousTime = SystemClock.elapsedRealtime()
+        var previousPosition = activeController.currentPosition
+        var previouslyPlaying = false
+        try {
+            while (isActive) {
+                delay(500)
+                val now = SystemClock.elapsedRealtime()
+                val position = activeController.currentPosition
+                val playing = activeController.isPlaying &&
+                    activeController.currentMediaItem?.mediaId == activeStream.url
+                val elapsed = now - previousTime
+                val advance = position - previousPosition
+                val expected = elapsed * activeController.playbackParameters.speed
+                // Discard discontinuities and intervals that straddle pauses/buffering.
+                if (playing && previouslyPlaying && advance > 0 &&
+                    kotlin.math.abs(advance - expected) <= 350f) {
+                    WatchActivityStore.recordPlayback(animeId, elapsed, now)
+                }
+                previouslyPlaying = playing
+                previousTime = now
+                previousPosition = position
+            }
+        } finally {
+            WatchActivityStore.flushPlayback()
+        }
     }
     LaunchedEffect(controller) {
         val activeController = controller ?: return@LaunchedEffect
