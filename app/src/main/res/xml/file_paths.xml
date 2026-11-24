@@ -4,4 +4,5 @@
     <cache-path name="diagnostics" path="diagnostics/" />
     <files-path name="download-subtitles" path="episode-download-subtitles/" />
     <cache-path name="imported-subtitles" path="external-subtitles/" />
+    <cache-path name="wrapped" path="wrapped/" />
 </paths>
