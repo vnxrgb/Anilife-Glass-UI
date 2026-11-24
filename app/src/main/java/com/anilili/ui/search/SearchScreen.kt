@@ -533,7 +533,7 @@ private fun SearchTopBar(
                         .padding(bottom = 6.dp),
                 ) {
                     Row(
-                        Modifier.fillMaxWidth().padding(top = 10.dp),
+                        Modifier.fillMaxWidth().padding(top = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -583,7 +583,7 @@ private fun SearchTopBar(
                                         }
                                     }
                                 },
-                                shape = RoundedCornerShape(24.dp),
+                                shape = RoundedCornerShape(28.dp),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(onSearch = {
@@ -659,11 +659,11 @@ private fun SearchTopBar(
                         "Categories",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 14.dp, bottom = 2.dp),
+                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
                     LazyRow(
                         modifier = Modifier.fillMaxWidth().focusGroup(),
-                        contentPadding = PaddingValues(end = 16.dp),
+                        contentPadding = PaddingValues(end = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(7.dp),
                     ) {
                         item(key = "season") {
