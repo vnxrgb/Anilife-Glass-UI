@@ -521,6 +521,14 @@ fun SettingsScreen(
         spotlightRow = spotlight
     }
 
+    val releaseSection = com.anilili.ui.tour.WhatsNewTour.requestedSettingsSection
+    LaunchedEffect(releaseSection) {
+        if (releaseSection != null) {
+            goToSection(releaseSection)
+            com.anilili.ui.tour.WhatsNewTour.requestedSettingsSection = null
+        }
+    }
+
     // The floating navigation capsule covers the bottom of the window, so a marked row scrolled up
     // from below has to ask to clear it or it arrives half behind the glass.
     val chromeInset = LocalAppChromeBottomInset.current
@@ -3315,6 +3323,13 @@ fun SettingsScreen(
             }
 
             settingsSection("about", openSectionId) {
+                item(key = "What's new") {
+                    MidnightSettingRow(
+                        title = "What's new",
+                        description = "Explore new features and where to find them",
+                        onClick = com.anilili.ui.tour.WhatsNewTour::reopen,
+                    )
+                }
                 item(key = "Discord server") {
                     val inviteUrl = validatedDiscordInviteUrl(BuildConfig.DISCORD_INVITE_URL)
                     MidnightSettingRow(
