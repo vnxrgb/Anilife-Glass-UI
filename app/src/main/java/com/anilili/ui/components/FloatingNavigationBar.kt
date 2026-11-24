@@ -128,62 +128,81 @@ fun FloatingNavigationBar(
         val progress = fold.coerceIn(0f, 1f)
         val inner = (maxWidth - BarPadding * 2).coerceAtLeast(0.dp)
         val expandedItem = if (items.isEmpty()) ItemSize else inner / items.size
-        val compactItem = 58.dp.coerceAtMost(inner / 2)
+        val compactItem = FloatingNavBarExpandedHeight.coerceAtMost(inner / 2)
         val widths = items.map { item ->
             val target = if (item.route in compactRoutes) compactItem else 0.dp
             expandedItem + (target - expandedItem) * progress
         }
-        val dockWidth = widths.fold(BarPadding * 2) { total, width -> total + width }
-        Layout(
-            modifier = Modifier
-                .width(dockWidth)
-                .height(FloatingNavBarExpandedHeight)
-                .opticalGlass(BarShape, enabled = backdrop != null)
-                .padding(horizontal = BarPadding)
-                .selectableGroup(),
-            content = {
-                items.forEachIndexed { index, item ->
-                    val keep = item.route in compactRoutes
-                    val width = widths[index]
-                    Box(
-                        Modifier.fillMaxHeight().clip(BarShape)
-                            .graphicsLayer { alpha = if (keep) 1f else (1f - progress) },
-                    ) {
-                        if (width > 0.dp && (keep || !compact)) {
-                            FloatingNavIcon(
-                                item = item,
-                                selected = item.route == selectedRoute,
-                                width = width,
-                                showLabel = floatingNavShowsCaption(width),
-                                onClick = { onSelect(item.route) },
-                            )
-                        } else if (width > 0.dp && progress < .98f) {
-                            Icon(item.icon, contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.align(Alignment.Center).size(IconSize))
+        // Keep the layout full-width: only the glass surfaces fold, not the
+        // coordinate system. The retained destinations travel to opposite edges.
+        Box(
+            modifier = Modifier.fillMaxWidth().height(FloatingNavBarExpandedHeight),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (progress < 1f) {
+                Box(
+                    Modifier.fillMaxWidth().fillMaxHeight()
+                        .graphicsLayer { alpha = 1f - progress }
+                        .opticalGlass(BarShape, enabled = backdrop != null),
+                )
+            }
+            Layout(
+                modifier = Modifier.fillMaxWidth().fillMaxHeight()
+                    .padding(horizontal = BarPadding)
+                    .selectableGroup(),
+                content = {
+                    items.forEachIndexed { index, item ->
+                        val keep = item.route in compactRoutes
+                        val width = widths[index]
+                        Box(
+                            Modifier.fillMaxHeight().clip(BarShape)
+                                .graphicsLayer { alpha = if (keep) 1f else (1f - progress) },
+                        ) {
+                            if (keep && progress > 0f) {
+                                Box(
+                                    Modifier.align(Alignment.Center)
+                                        .size(compactItem)
+                                        .graphicsLayer { alpha = progress }
+                                        .opticalGlass(CircleShape, enabled = backdrop != null),
+                                )
+                            }
+                            if (width > 0.dp && (keep || !compact)) {
+                                FloatingNavIcon(
+                                    item = item,
+                                    selected = item.route == selectedRoute,
+                                    width = width,
+                                    showLabel = progress < .5f && floatingNavShowsCaption(width),
+                                    onClick = { onSelect(item.route) },
+                                    compactProgress = if (keep) progress else 0f,
+                                )
+                            } else if (width > 0.dp && progress < .98f) {
+                                Icon(item.icon, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.align(Alignment.Center).size(IconSize))
+                            }
                         }
                     }
+                },
+            ) { measurables, constraints ->
+                val measured = measurables.mapIndexed { index, measurable ->
+                    measurable.measure(Constraints.fixed(widths[index].roundToPx().coerceAtLeast(0), constraints.maxHeight))
                 }
-            },
-        ) { measurables, constraints ->
-            val measured = measurables.mapIndexed { index, measurable ->
-                measurable.measure(Constraints.fixed(widths[index].roundToPx().coerceAtLeast(0), constraints.maxHeight))
-            }
-            val availableWidth = constraints.maxWidth
-            val expandedWidth = inner.toPx()
-            val compactWidth = (compactItem * 2).toPx()
-            layout(availableWidth, constraints.maxHeight) {
-                measured.forEachIndexed { index, placeable ->
-                    val expandedCenter = expandedWidth * (index + .5f) / items.size
-                    val route = items[index].route
-                    val compactCenter = when (route) {
-                        Routes.SEARCH -> compactWidth * .25f
-                        Routes.HOME -> compactWidth * .75f
-                        else -> compactWidth * .5f
+                val availableWidth = constraints.maxWidth
+                val edgeInset = 16.dp.toPx().coerceAtMost((availableWidth - compactItem.toPx() * 2).coerceAtLeast(0f) / 2f)
+                val discCenter = compactItem.toPx() / 2f + edgeInset
+                layout(availableWidth, constraints.maxHeight) {
+                    measured.forEachIndexed { index, placeable ->
+                        val expandedCenter = availableWidth * (index + .5f) / items.size
+                        val route = items[index].route
+                        val compactCenter = when (route) {
+                            Routes.HOME -> discCenter
+                            Routes.SEARCH -> availableWidth - discCenter
+                            else -> availableWidth * .5f
+                        }
+                        val center = expandedCenter * (1f - progress) + compactCenter * progress
+                        placeable.place((center - placeable.width / 2f).roundToInt(), 0,
+                            zIndex = if (route in compactRoutes) 1f else 0f)
                     }
-                    val center = expandedCenter * (1f - progress) + compactCenter * progress
-                    placeable.place((center - placeable.width / 2f).roundToInt(), 0,
-                        zIndex = if (route in compactRoutes) 1f else 0f)
                 }
             }
         }
@@ -237,6 +256,7 @@ private fun FloatingNavIcon(
     width: Dp,
     showLabel: Boolean,
     onClick: () -> Unit,
+    compactProgress: Float = 0f,
 ) {
     val iconColor = if (selected) MaterialTheme.colorScheme.onSurface
         else MaterialTheme.colorScheme.onSurfaceVariant
@@ -272,14 +292,14 @@ private fun FloatingNavIcon(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 7.dp)
                 .clip(shape)
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = .11f * selectionAlpha))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = .11f * selectionAlpha * (1f - compactProgress)))
                 .padding(vertical = 1.dp),
         ) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = null,
                 tint = iconColor,
-                modifier = Modifier.size(IconSize),
+                modifier = Modifier.size(IconSize + 4.dp * compactProgress),
             )
             if (showLabel) {
                 Text(
