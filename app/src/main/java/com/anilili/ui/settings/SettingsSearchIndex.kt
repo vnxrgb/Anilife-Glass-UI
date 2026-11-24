@@ -266,7 +266,8 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
     )
     section(
         "about", "About",
-        listOf(            "Discord server" to listOf("discord", "support", "community", "help"),
+        listOf(            "What's new" to listOf("release", "features", "changelog", "guide"),
+            "Discord server" to listOf("discord", "support", "community", "help"),
             "Morphe attribution" to listOf("morphe", "credit", "attribution", "license", "gpl", "about", "website"),
         ),
     )
