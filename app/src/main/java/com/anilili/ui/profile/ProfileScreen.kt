@@ -137,7 +137,11 @@ import com.anilili.data.library.HistoryEntry
 import com.anilili.data.library.LibraryStore
 import com.anilili.data.library.LocalWatchedStore
 import com.anilili.data.library.WatchedEntry
+import com.anilili.data.library.WatchActivityStore
+import com.anilili.data.library.activityStreak
+import java.time.LocalDate
 import com.anilili.data.library.WatchlistEntry
+import com.anilili.data.library.resumeFor
 import com.anilili.data.library.continueWatchingCaption
 import com.anilili.data.library.listKey
 import com.anilili.data.model.MediaListEntry
@@ -293,6 +297,12 @@ fun ProfileScreen(
     val malLoggedIn by MalAuthManager.loggedIn.collectAsState()
     val profileState by vm.profile.collectAsState()
     val history by LibraryStore.history.collectAsState()
+    val localActivity by WatchActivityStore.days.collectAsState()
+    var wrappedOpen by rememberSaveable { mutableStateOf(false) }
+    if (wrappedOpen) {
+        AnimeWrappedScreen(localActivity, history, onBack = { wrappedOpen = false })
+        return
+    }
     val historyByAnimeId = remember(history) { history.associateBy(HistoryEntry::anilistId) }
     val watchlist by LibraryStore.watchlist.collectAsState()
     val customLists by CustomListStore.lists.collectAsState()
@@ -359,6 +369,10 @@ fun ProfileScreen(
 
     when (loginService) {
         AccountService.ANILIST -> {
+            if (!AuthManager.isConfigured) {
+                OAuthUnavailableDialog("AniList") { loginService = null }
+                return
+            }
             LoginWebView(
                 authorizeUrl = remember { AuthManager.authorizeUrl() },
                 isRedirect = AuthManager::isRedirect,
@@ -376,6 +390,10 @@ fun ProfileScreen(
             return
         }
         AccountService.MAL -> {
+            if (!MalAuthManager.isConfigured) {
+                OAuthUnavailableDialog("MyAnimeList") { loginService = null }
+                return
+            }
             LoginWebView(
                 authorizeUrl = remember { MalAuthManager.authorizeUrl() },
                 isRedirect = MalAuthManager::isRedirect,
@@ -748,6 +766,49 @@ fun ProfileScreen(
                             }
                         }
 
+                        if (true) {
+                            item(key = "anilumos-wrapped") {
+                                val stats = wrappedStats(localActivity, LocalDate.now())
+                                val artwork = history.firstOrNull { !it.fromRemote && !it.cover.isNullOrBlank() }?.cover
+                                WrappedSummaryCard(
+                                    stats = stats,
+                                    artwork = artwork,
+                                    onOpen = { wrappedOpen = true },
+                                    modifier = Modifier.padding(horizontal = device.pagePadding, vertical = 6.dp),
+                                )
+                            }
+                        }
+                        if (listOf("Weekend Queue", "Comfort Rewatches", "Movie Night")
+                                .any { starter -> customLists.none { it.name.equals(starter, ignoreCase = true) } }) {
+                            item(key = "anilumos-collection-starters") {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .padding(horizontal = device.pagePadding, vertical = 4.dp)
+                                        .glassCard(RoundedCornerShape(22.dp))
+                                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text("Anime collections", style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold)
+                                    Text(
+                                        "Build personal collections. Long-press an anime to add it to any list.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        listOf("Weekend Queue", "Comfort Rewatches", "Movie Night")
+                                            .filter { preset -> customLists.none { it.name.equals(preset, true) } }
+                                            .forEach { preset ->
+                                                item(key = preset) {
+                                                    TextButton(onClick = { CustomListStore.create(preset) }) {
+                                                        Text("+ $preset", maxLines = 2)
+                                                    }
+                                                }
+                                            }
+                                    }
+                                }
+                            }
+                        }
                         if (selectedViews.isEmpty() && shownCustomLists.isEmpty()) {
                             item { EmptyPanel("Choose a list above to show it here") }
                         }
@@ -1633,14 +1694,16 @@ private fun EpisodeDownloadCard(
     val episodeNumber = metadata.episodeNumber.trim().toDoubleOrNull()
     val watchedFraction = episodeNumber?.let { episodeWatchFraction(historyEntry, it) } ?: 0f
     val isWatched = watchedFraction >= 0.999f
-    val savedPositionMs = historyEntry
-        ?.takeIf { episodeNumber == it.episodeNumber }
-        ?.positionMs
-        ?.coerceAtLeast(0L)
-        ?: 0L
+    // One series may have multiple unfinished episodes: each needs its own resume clock.
+    val resumePoint = episodeNumber?.let { historyEntry?.resumeFor(it) }
+    val savedPositionMs = resumePoint?.positionMs?.coerceAtLeast(0L) ?: 0L
+    val remainingMs = resumePoint?.durationMs?.takeIf { it > savedPositionMs }
+        ?.minus(savedPositionMs)
     val hasResumePosition = !isWatched && savedPositionMs > 0L
     val playbackLabel = when {
         isWatched -> "Watched"
+        hasResumePosition && remainingMs != null ->
+            "Resume at ${formatPlaybackPosition(savedPositionMs)} · ${formatPlaybackPosition(remainingMs)} left"
         hasResumePosition -> "Resume at ${formatPlaybackPosition(savedPositionMs)}"
         else -> null
     }
