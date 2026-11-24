@@ -1172,6 +1172,28 @@ private fun MiruroRoot(
             // Over the app and its bars, the dice included, since it points at them; under the
             // profile screens, which it waits for anyway.
             // Last, so the first-run setup and the profile switcher draw over everything else.
+            if (currentRoute == Routes.HOME && !inPictureInPicture && !showRandomPick && !chromeTakeover.active) {
+                com.anilili.ui.tour.StartWhatsNewTourWhenSettled()
+            }
+            if (!inPictureInPicture) {
+                com.anilili.ui.tour.WhatsNewReleaseDialog { destination ->
+                    when (destination) {
+                        "appearance", "accounts", "player" -> {
+                            com.anilili.ui.tour.WhatsNewTour.requestedSettingsSection = destination
+                            nav.navigateTab(Routes.SETTINGS)
+                        }
+                        "discover" -> {
+                            nav.navigateTab(Routes.HOME)
+                            randomVm.ensurePick()
+                            showRandomPick = true
+                        }
+                        "more" -> nav.navigateTab(Routes.MORE)
+                        "schedule" -> nav.navigateTab(Routes.SCHEDULE)
+                        "downloads" -> nav.navigateTab(Routes.DOWNLOADS)
+                        else -> nav.navigateTab(Routes.HOME)
+                    }
+                }
+            }
             com.anilili.ui.profiles.ProfilesHost()
         }
     }
