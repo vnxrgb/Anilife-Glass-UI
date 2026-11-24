@@ -2033,7 +2033,7 @@ object SettingsStore {
 
     private fun JsonObject.primitive(name: String): JsonPrimitive? = this[name] as? JsonPrimitive
 
-    private fun save(key: Preferences.Key<Boolean>, value: Boolean, state: MutableStateFlow<Boolean>) {
+    private fun <T> save(key: Preferences.Key<T>, value: T, state: MutableStateFlow<T>) {
         state.value = value
         scope.launch { store.edit { it[key] = value } }
     }
