@@ -148,7 +148,7 @@ class SettingsSearchIndexTest {
         val body = source.substring(source.indexOf("""settingsSection(""""))
         var section = ""
         val rows = mutableSetOf<Pair<String, String>>()
-        Regex("""settingsSection\("([a-z]+)"|title = "([^"]+)"""").findAll(body).forEach { match ->
+        Regex("""settingsSection\("([a-z]+)"|(?:title|label) = "([^"]+)"""").findAll(body).forEach { match ->
             val (sectionId, title) = match.destructured
             if (sectionId.isNotEmpty()) section = sectionId else rows += section to title
         }
