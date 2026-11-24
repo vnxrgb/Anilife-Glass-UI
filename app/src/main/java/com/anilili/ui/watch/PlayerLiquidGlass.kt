@@ -36,11 +36,11 @@ internal fun Modifier.playerLiquidGlass(
 ): Modifier {
     // Media3 is a separate surface. Use a readable neutral overlay, never capture or distort video.
     val alpha = when (tone) {
-        PlayerLiquidGlassTone.SOFT -> .42f
-        PlayerLiquidGlassTone.DOCK -> .64f
-        PlayerLiquidGlassTone.PRIMARY -> .52f
+        PlayerLiquidGlassTone.SOFT -> .32f
+        PlayerLiquidGlassTone.DOCK -> .38f
+        PlayerLiquidGlassTone.PRIMARY -> .44f
     }
     return clip(shape)
         .background(Color.Black.copy(alpha = alpha), shape)
-        .border(0.5.dp, Color.White.copy(alpha = .18f), shape)
+        .border(0.5.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = .30f), Color.White.copy(alpha = .10f))), shape)
 }

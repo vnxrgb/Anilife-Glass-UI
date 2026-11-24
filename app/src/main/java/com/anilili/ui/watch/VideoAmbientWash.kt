@@ -365,6 +365,7 @@ internal fun FullscreenSideAmbient(
 ) {
     val left by animateColorAsState(palette.left, tween(450), label = "fullscreenAmbientLeft")
     val right by animateColorAsState(palette.right, tween(450), label = "fullscreenAmbientRight")
+    val middle by animateColorAsState(palette.center, tween(450), label = "fullscreenAmbientMiddle")
     if (!enabled || videoAspectRatio <= 0f) return
     Canvas(modifier) {
         val w = size.width
@@ -374,6 +375,7 @@ internal fun FullscreenSideAmbient(
         val side = (w - pictureWidth) / 2f
         if (side <= 2f) return@Canvas
         val power = intensity.coerceIn(0f, 1f)
+        if (left.alpha == 0f && right.alpha == 0f) return@Canvas
         if (power <= 0f) return@Canvas
         // Fullscreen ambience should feel like the colours of the picture are
         // spreading into the letterboxes, not like a thin tinted border.
@@ -386,15 +388,15 @@ internal fun FullscreenSideAmbient(
         )
         val leftGlow = lifted(left)
         val rightGlow = lifted(right)
-        val middleGlow = lifted(palette.center)
+        val middleGlow = lifted(middle)
         val reach = maxOf(h * 0.62f, side * 2.4f)
         clipRect(left = 0f, top = 0f, right = side, bottom = h) {
             // A low-intensity floor prevents large black dead zones at the outer edge.
             drawRect(
                 brush = Brush.horizontalGradient(
-                    0f to leftGlow.copy(alpha = 0.20f * power),
-                    0.40f to leftGlow.copy(alpha = 0.39f * power),
-                    1f to leftGlow.copy(alpha = 0.79f * power),
+                    0f to leftGlow.copy(alpha = 0.16f * power),
+                    0.48f to leftGlow.copy(alpha = 0.44f * power),
+                    1f to leftGlow.copy(alpha = 0.91f * power),
                     startX = 0f, endX = side,
                 ),
                 size = Size(side, h),
@@ -414,9 +416,9 @@ internal fun FullscreenSideAmbient(
         clipRect(left = w - side, top = 0f, right = w, bottom = h) {
             drawRect(
                 brush = Brush.horizontalGradient(
-                    0f to rightGlow.copy(alpha = 0.79f * power),
-                    0.60f to rightGlow.copy(alpha = 0.39f * power),
-                    1f to rightGlow.copy(alpha = 0.20f * power),
+                    0f to rightGlow.copy(alpha = 0.91f * power),
+                    0.52f to rightGlow.copy(alpha = 0.44f * power),
+                    1f to rightGlow.copy(alpha = 0.16f * power),
                     startX = w - side, endX = w,
                 ),
                 topLeft = Offset(w - side, 0f),
