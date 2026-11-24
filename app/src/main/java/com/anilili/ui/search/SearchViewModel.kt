@@ -7,8 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.anilili.data.AppGraph
 import com.anilili.data.auth.AuthManager
-import com.anilili.data.library.SearchHistoryStore
-import com.anilili.data.recs.Recommendations
+import com.anilili.data.library.SearchHistoryStore
 import com.anilili.data.model.DiscoverFilters
 import com.anilili.data.model.DiscoverOptions
 import com.anilili.data.MIN_SUGGESTION_CHARS
@@ -174,45 +173,6 @@ class SearchViewModel : ViewModel() {
      */
     private val _resultTotal = MutableStateFlow(0)
     val resultTotal = _resultTotal.asStateFlow()
-
-    // The catalogue query stays available; this row is personalized by the existing taste model.
-    private val _selectedMood = MutableStateFlow<String?>(null)
-    val selectedMood = _selectedMood.asStateFlow()
-    private val _moodPicks = MutableStateFlow<List<Media>>(emptyList())
-    val moodPicks = _moodPicks.asStateFlow()
-    private val _moodLoading = MutableStateFlow(false)
-    val moodLoading = _moodLoading.asStateFlow()
-    private var moodJob: Job? = null
-
-    fun selectMood(name: String, genre: String) {
-        if (_selectedMood.value == name) {
-            _selectedMood.value = null
-            moodJob?.cancel()
-            _moodPicks.value = emptyList()
-            _moodLoading.value = false
-            removeGenre(genre, excluded = false)
-            return
-        }
-        _selectedMood.value = name
-        _moodPicks.value = emptyList()
-        moodJob?.cancel()
-        applyGenreFilter(genre)
-        moodJob = viewModelScope.launch {
-            _moodLoading.value = true
-            try {
-                val personalized = Recommendations.forYou(limit = 80)?.items.orEmpty()
-                _moodPicks.value = personalized.filter { media ->
-                    media.genres.any { it.equals(genre, ignoreCase = true) }
-                }.take(12)
-            } catch (e: Exception) {
-                e.rethrowIfCancellation()
-                // Catalogue genre filtering still works even without personalized recommendations.
-                _moodPicks.value = emptyList()
-            } finally {
-                _moodLoading.value = false
-            }
-        }
-    }
 
     private val _options = MutableStateFlow(DiscoverOptions(genres = DEFAULT_GENRES))
     val options = _options.asStateFlow()
@@ -503,10 +463,7 @@ class SearchViewModel : ViewModel() {
         selectStudio(StudioNode(id = studioId, name = name, isAnimationStudio = true))
     }
 
-    fun clearFilters() {
-        _selectedMood.value = null
-        _moodPicks.value = emptyList()
-        moodJob?.cancel()
+    fun clearFilters() {
         studioLookupJob?.cancel()
         studioQuery = ""
         _studioSuggestions.value = emptyList()
@@ -514,10 +471,7 @@ class SearchViewModel : ViewModel() {
         update(DiscoverFilters(query = filters.query))
     }
 
-    fun clearAll() {
-        _selectedMood.value = null
-        _moodPicks.value = emptyList()
-        moodJob?.cancel()
+    fun clearAll() {
         studioLookupJob?.cancel()
         studioQuery = ""
         _studioSuggestions.value = emptyList()
