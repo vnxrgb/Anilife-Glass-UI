@@ -2895,9 +2895,6 @@ fun SettingsScreen(
                         )
                     }
                 }
-                item(key = "Glass material") {
-                    GlassMaterialControls()
-                }
                 // Phones on Android 12+ only: below it nothing blurs, and a television never draws
                 // glass, so there would be nothing here to switch.
                 if (!device.isTv && backdropBlurAvailable) {
