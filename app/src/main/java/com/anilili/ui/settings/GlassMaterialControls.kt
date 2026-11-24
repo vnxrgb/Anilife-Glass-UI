@@ -25,16 +25,16 @@ internal fun GlassMaterialControls() {
     val borders by SettingsStore.glassBorders.collectAsState()
     Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(28.dp)).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Glass appearance", style = MaterialTheme.typography.titleLarge)
-        Text("Choose a material for your interface. Colour themes remain independent.",
+        Text("Optical glass", style = MaterialTheme.typography.titleLarge)
+        Text("Experimental optical glass is used in floating navigation. Other controls retain readable neutral surfaces.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         GlassMaterial.entries.forEach { option ->
             com.anilili.ui.dialogs.MidnightSettingRow(
                 title = option.label,
                 description = when (option) {
-                    GlassMaterial.LIQUID -> "Clear surfaces and reflective edges"
-                    GlassMaterial.FROSTED -> "Soft, diffused background blur"
-                    GlassMaterial.SMOKED -> "Deep, subdued tinted surfaces"
+                    GlassMaterial.LIQUID -> "Optical refraction on supported devices"
+                    GlassMaterial.FROSTED -> "Soft blur preference for compatible surfaces"
+                    GlassMaterial.SMOKED -> "Dark tint preference for compatible surfaces"
                 },
                 value = if (option == material) "Selected" else null,
                 onClick = { SettingsStore.setGlassMaterial(option) },
@@ -43,7 +43,7 @@ internal fun GlassMaterialControls() {
         HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = .12f))
         GlassAdjustment("Glass opacity", if (opacity < 0) (material.panelAlpha * 100).toInt() else opacity, SettingsStore::setGlassOpacity)
         GlassAdjustment("Backdrop blur", if (blur < 0) (material.blurScale * 50).toInt() else blur, SettingsStore::setGlassBlur)
-        GlassAdjustment("Interface ambient colour", ambient, SettingsStore::setGlassAmbient)
+        // Previous artificial interface blooms have been removed. Video ambient lighting is independent.
         com.anilili.ui.dialogs.MidnightSettingSwitchRow(
             title = "Glass borders", checked = borders, onCheckedChange = SettingsStore::setGlassBorders,
         )
