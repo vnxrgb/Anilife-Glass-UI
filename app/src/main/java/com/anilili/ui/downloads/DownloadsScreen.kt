@@ -1,6 +1,10 @@
 package com.anilili.ui.downloads
 
 import com.anilili.ui.components.glassCard
+import com.anilili.ui.components.cinematicSecondaryButtonColors
+import com.anilili.ui.components.cinematicSecondaryButtonBorder
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.anilili.ui.components.glassPanelColor
 import com.anilili.ui.components.glassSelectionColor
 
@@ -143,6 +147,21 @@ import java.util.Locale
  * It is a top-level destination reached from the navigation bar, so the only thing there is ever a
  * back arrow for is the series a viewer has opened — leaving Downloads is the navigation bar's job.
  */
+@Composable
+private fun QueueGlassAction(label: String, icon: ImageVector, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        colors = cinematicSecondaryButtonColors(),
+        border = cinematicSecondaryButtonBorder(),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(17.dp))
+        Spacer(Modifier.width(7.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+    }
+}
+
 @Composable
 fun DownloadsScreen(
     onPlayDownload: (String) -> Unit,
@@ -339,8 +358,8 @@ fun DownloadsScreen(
                     Modifier
                         .fillMaxWidth()
                         .widthIn(max = 440.dp)
-                        .glassCard(RoundedCornerShape(24.dp))
-                        .padding(horizontal = 20.dp, vertical = if (device.isTv) 24.dp else 18.dp),
+                        .glassCard(RoundedCornerShape(if (device.isTv) 24.dp else 40.dp))
+                        .padding(horizontal = 24.dp, vertical = if (device.isTv) 24.dp else 22.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(
@@ -378,6 +397,64 @@ fun DownloadsScreen(
                 }
             }
             return@Column
+        }
+
+        // Queue controls share the app's neutral glass action hierarchy.
+        val runningDownloads = downloadIndex.filter { it.canPause }
+        val pausedDownloads = downloadIndex.filter { it.canResume && !it.stalled }
+        val recoverableDownloads = downloadIndex.filter { it.canRetry }
+        if (openSeries == null && (runningDownloads.isNotEmpty() ||
+                    pausedDownloads.isNotEmpty() || recoverableDownloads.isNotEmpty())) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = device.pagePadding, vertical = 4.dp)
+                    .glassCard(RoundedCornerShape(24.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Download queue", style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.Download, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(19.dp))
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        runningDownloads.size to "Active",
+                        pausedDownloads.size to "Paused",
+                        recoverableDownloads.size to "Need attention",
+                    ).forEach { (count, label) ->
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(count.toString(), style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold)
+                            Text(label, style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (runningDownloads.isNotEmpty()) {
+                        item(key = "pause-all") {
+                            QueueGlassAction("Pause all", Icons.Default.Pause) {
+                                runningDownloads.forEach { EpisodeDownloads.pause(context, it.id) }
+                            }
+                        }
+                    }
+                    if (pausedDownloads.isNotEmpty()) {
+                        item(key = "resume-all") {
+                            QueueGlassAction("Resume all", Icons.Default.PlayArrow) {
+                                pausedDownloads.forEach { EpisodeDownloads.resume(context, it.id) }
+                            }
+                        }
+                    }
+                    if (recoverableDownloads.isNotEmpty()) {
+                        item(key = "retry-failed") {
+                            QueueGlassAction("Retry failed", Icons.Default.Refresh) {
+                                recoverableDownloads.forEach { EpisodeDownloads.retry(context, it.id) }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         if (openSeries == null) {
