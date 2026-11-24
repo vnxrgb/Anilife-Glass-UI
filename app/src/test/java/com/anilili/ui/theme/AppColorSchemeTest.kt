@@ -17,12 +17,21 @@ class AppColorSchemeTest {
     private fun colors(spec: ThemeSpec) = appColors(spec, wallpaperSeed = null)
 
     @Test
-    fun `the default matches the black and green Anilife brand`() {
+    fun `the default matches the black and purple AniLumos brand`() {
         val scheme = colors(ThemeSpec()).scheme
         assertEquals(Color.Black, scheme.background)
         assertEquals(Color.Black, scheme.surface)
         assertEquals(Color(ThemeAccent.ANILIFE_GREEN.seed!!), scheme.primary)
-        assertTrue(scheme.onPrimary.luminance() < 0.1f)
+        assertTrue(scheme.onPrimary.luminance() > 0.9f)
+    }
+
+    @Test
+    fun `light presets have bright surfaces and dark readable text`() {
+        ThemePreset.entries.filter { it.background == ThemeBackground.LIGHT }.forEach { preset ->
+            val scheme = colors(ThemeSpec(preset.background, preset.accent, preset.style)).scheme
+            assertTrue(scheme.background.luminance() > .7f)
+            assertTrue(scheme.onSurface.luminance() < .2f)
+        }
     }
 
     @Test

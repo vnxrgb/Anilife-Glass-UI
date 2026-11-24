@@ -11,7 +11,9 @@ package com.anilili.data.settings
 /** The canvas: what shows where nothing else is drawn. */
 enum class ThemeBackground(val storedValue: String, val label: String, val description: String) {
     AMOLED("amoled", "AMOLED black", "Pure black; OLED screens switch those pixels off"),
-    DARK("dark", "Dark", "Material's dark grey, a little softer in a lit room");
+    DARK("dark", "Dark", "Material's dark grey, a little softer in a lit room"),
+    LIGHT("light", "Light", "Bright surfaces and dark text"),
+    SYSTEM("system", "Follow system", "Match Android light or dark appearance");
 
     companion object {
         fun fromStored(value: String?): ThemeBackground =
@@ -139,6 +141,12 @@ enum class ThemePreset(
     BLUE_HOUR("Blue Hour", ThemeBackground.DARK, ThemeAccent.BLUE_HOUR, ThemeStyle.VIBRANT),
     CHAMPAGNE("Champagne", ThemeBackground.DARK, ThemeAccent.CHAMPAGNE, ThemeStyle.NEUTRAL),
     RETRO_WAVE("Retro Wave", ThemeBackground.DARK, ThemeAccent.RETRO_WAVE, ThemeStyle.VIBRANT),
+    ANILUMOS_LIGHT("AniLumos Light", ThemeBackground.LIGHT, ThemeAccent.ANILIFE_GREEN, ThemeStyle.VIVID),
+    PORCELAIN("Porcelain", ThemeBackground.LIGHT, ThemeAccent.MONOCHROME, ThemeStyle.NEUTRAL),
+    IVORY("Ivory", ThemeBackground.LIGHT, ThemeAccent.CHAMPAGNE, ThemeStyle.TONAL),
+    ARCTIC("Arctic", ThemeBackground.LIGHT, ThemeAccent.OCEAN_BLUE, ThemeStyle.TONAL),
+    BLOOM("Bloom", ThemeBackground.LIGHT, ThemeAccent.SAKURA_PINK, ThemeStyle.TONAL),
+    MINT("Mint", ThemeBackground.LIGHT, ThemeAccent.EMERALD, ThemeStyle.TONAL),
     HIGH_CONTRAST(
         "High contrast", ThemeBackground.AMOLED, ThemeAccent.MONOCHROME, ThemeStyle.VIVID, ThemeContrast.HIGH,
     );

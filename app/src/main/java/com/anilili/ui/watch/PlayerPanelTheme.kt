@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import com.anilili.ui.theme.LocalAppColors
 import com.anilili.ui.theme.LocalMidnightAccent
@@ -30,6 +31,12 @@ import com.anilili.ui.theme.LocalMidnightAccent
 fun PlayerPanelTheme(content: @Composable () -> Unit) {
     val base = MaterialTheme.colorScheme
     val colors = LocalAppColors.current
+    if (base.background.luminance() > .5f) {
+        CompositionLocalProvider(LocalMidnightAccent provides base.primary) {
+            MaterialTheme(colorScheme = base, content = content)
+        }
+        return
+    }
     CompositionLocalProvider(LocalMidnightAccent provides colors.playerAccent) {
     MaterialTheme(
         colorScheme = base.copy(

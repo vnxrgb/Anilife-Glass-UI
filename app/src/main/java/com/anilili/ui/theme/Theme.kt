@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.anilili.data.settings.SettingsStore
+import com.anilili.data.settings.ThemeBackground
 import com.anilili.ui.adaptive.rememberIsTelevision
 
 /**
@@ -23,7 +24,7 @@ import com.anilili.ui.adaptive.rememberIsTelevision
  */
 @Composable
 fun MiruroTheme(
-    @Suppress("UNUSED_PARAMETER") darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
     // The same question the device profile asks, rather than the ui mode alone: a box detected as a
@@ -37,7 +38,10 @@ fun MiruroTheme(
     val contrast by SettingsStore.themeContrast.collectAsState()
     val playerAccent by SettingsStore.playerAccent.collectAsState()
     val customSeed by SettingsStore.themeCustomSeed.collectAsState()
-    val spec = ThemeSpec(background, accent, style, contrast, playerAccent, customSeed)
+    val resolvedBackground = if (background == ThemeBackground.SYSTEM) {
+        if (darkTheme) ThemeBackground.AMOLED else ThemeBackground.LIGHT
+    } else background
+    val spec = ThemeSpec(resolvedBackground, accent, style, contrast, playerAccent, customSeed)
     val seed = remember(isTv) { if (wallpaperAccentAvailable(isTv)) wallpaperSeed(context) else null }
     val colors = remember(spec, seed) { appColors(spec, seed) }
     CompositionLocalProvider(

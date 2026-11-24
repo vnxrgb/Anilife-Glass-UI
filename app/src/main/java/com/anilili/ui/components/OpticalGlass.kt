@@ -29,7 +29,8 @@ fun Modifier.opticalGlass(shape: CornerBasedShape, enabled: Boolean = true): Mod
         return clip(shape).background(surface, shape)
             .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = .12f), shape)
     }
-    val tint = if (surface.luminance() > .5f) Color.White else Color.Black
+    val light = surface.luminance() > .5f
+    val tint = if (light) Color.White else Color.Black
     return drawBackdrop(
         backdrop = source,
         shape = { shape },
@@ -41,6 +42,6 @@ fun Modifier.opticalGlass(shape: CornerBasedShape, enabled: Boolean = true): Mod
             }
         },
         highlight = { Highlight(width = 0.8.dp) },
-        onDrawSurface = { drawRect(tint.copy(alpha = .40f)) },
+        onDrawSurface = { drawRect(tint.copy(alpha = if (light) .72f else .40f)) },
     )
 }

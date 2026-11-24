@@ -22,6 +22,8 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.SystemBarStyle
+import androidx.core.view.WindowCompat
+import androidx.compose.ui.graphics.luminance
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -318,7 +320,14 @@ class MainActivity : FragmentActivity() {
                 // The window shows through during transitions and before first draw, so it follows
                 // the Appearance canvas rather than staying the AMOLED black it starts as.
                 val canvas = MaterialTheme.colorScheme.background.toArgb()
-                SideEffect { window.decorView.setBackgroundColor(canvas) }
+                val lightCanvas = MaterialTheme.colorScheme.background.luminance() > .5f
+                SideEffect {
+                    window.decorView.setBackgroundColor(canvas)
+                    WindowCompat.getInsetsController(window, window.decorView).apply {
+                        isAppearanceLightStatusBars = lightCanvas
+                        isAppearanceLightNavigationBars = lightCanvas
+                    }
+                }
                 // Outside everything that measures, so the viewer's chosen interface size and
                 // overscan reach every screen from one place (the size reaches dialogs and popups too).
                 AppUiScale { AppOverscan {
@@ -408,7 +417,7 @@ class MainActivity : FragmentActivity() {
                             ) {
                                 when (videoIntro) {
                                     // The window's own colour, which the mark's splash also opens on.
-                                    null -> Box(Modifier.fillMaxSize().background(ComposeColor.Black))
+                                    null -> Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
                                     true -> AppLaunchSplash(onFinished = { showLaunchSplash = false }, animateFlame = true)
                                     false -> AppLaunchSplash(onFinished = { showLaunchSplash = false }, animateFlame = false)
                                 }

@@ -4,6 +4,8 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -58,20 +60,21 @@ internal fun DetailAmbient(artwork: String?, fallback: Color, modifier: Modifier
         }
     }
     val tint by animateColorAsState(target, tween(650), label = "detailArtworkAmbient")
+    val strength = if (MaterialTheme.colorScheme.background.luminance() > .5f) .55f else 1f
     Box(modifier.drawBehind {
         if (size.width <= 0f || size.height <= 0f) return@drawBehind
         val reach = maxOf(size.width * 1.25f, size.height * .92f)
         drawRect(Brush.radialGradient(
-            0f to tint.copy(alpha = .30f),
-            .40f to tint.copy(alpha = .19f),
-            .76f to tint.copy(alpha = .085f),
+            0f to tint.copy(alpha = .30f * strength),
+            .40f to tint.copy(alpha = .19f * strength),
+            .76f to tint.copy(alpha = .085f * strength),
             1f to Color.Transparent,
             center = Offset(size.width * .52f, size.height * .12f),
             radius = reach,
         ))
         drawRect(Brush.radialGradient(
-            0f to tint.copy(alpha = .12f),
-            .55f to tint.copy(alpha = .055f),
+            0f to tint.copy(alpha = .12f * strength),
+            .55f to tint.copy(alpha = .055f * strength),
             1f to Color.Transparent,
             center = Offset(size.width * .88f, size.height * .82f),
             radius = maxOf(size.width, size.height * .55f),

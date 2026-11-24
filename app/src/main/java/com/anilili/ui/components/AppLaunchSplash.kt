@@ -19,7 +19,7 @@ import com.anilili.ui.adaptive.UnscaledUi
 
 const val LaunchSplashFadeMillis = 250
 
-/** Always-black Anilumos launch screen; only the A glow follows the app theme. */
+/** Theme-aware AniLumos launch screen with the same branded animation. */
 @Composable
 fun AppLaunchSplash(
     onFinished: () -> Unit,
@@ -27,7 +27,7 @@ fun AppLaunchSplash(
     animateFlame: Boolean = true,
 ) {
     val latestOnFinished = rememberUpdatedState(onFinished)
-    Box(modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+    Box(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
         UnscaledUi {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -41,7 +41,7 @@ fun AppLaunchSplash(
                 )
                 Text(
                     "ANILUMOS",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 2.2.sp,
