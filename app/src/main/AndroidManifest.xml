@@ -150,6 +150,12 @@
             android:theme="@style/Theme.MiruroNative" />
 
         <service
+            android:name=".data.wasm.ProviderSandboxService"
+            android:exported="false"
+            android:isolatedProcess="true"
+            android:process=":wasm_sandbox" />
+
+        <service
             android:name=".playback.PlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback">

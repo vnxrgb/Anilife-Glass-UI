@@ -65,7 +65,7 @@ class MiruroApp : Application(), ImageLoaderFactory {
         // engine down with it -- a blank page and no load events, which looks exactly like a
         // network failure. (The rule predates the OkHttp pipe, when GeckoView started :gpu, :tab*
         // and :crashhelper of its own; it still holds for the same reason.)
-        if (!isMainProcess()) return
+        if ((Process.myUid() % 100000 in 90000..99999) || !isMainProcess()) return
         DiagnosticsLog.init(this)
         // Install before any other app work so initialization failures are captured synchronously.
         CrashReporter.init(this)
