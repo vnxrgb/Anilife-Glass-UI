@@ -57,6 +57,7 @@ val kartoonsAccountTokens = infrastructureValue("KARTOONS_ACCOUNT_TOKENS", "kart
 val kartoonsTokensMirrorUrl = infrastructureValue("KARTOONS_TOKENS_MIRROR_URL", "kartoonsTokensMirrorUrl")
 val riftFirebaseApiKey = infrastructureValue("RIFT_FIREBASE_API_KEY", "riftFirebaseApiKey")
 val anitakuEndpoint = infrastructureValue("ANITAKU_ENDPOINT", "anitakuEndpoint")
+val anivexaProviderEndpoint = infrastructureValue("ANIVEXA_PROVIDER_ENDPOINT", "anivexaProviderEndpoint")
 val anitakuTestCatalog = infrastructureValue("ANITAKU_TEST_CATALOG", "anitakuTestCatalog")
 
 val keystoreProperties = Properties().apply {
@@ -89,6 +90,7 @@ android {
         buildConfigField("String", "RIFT_FIREBASE_API_KEY", buildConfigString(riftFirebaseApiKey))
         // Opt-in only; use a public authorized endpoint and verified episode IDs, never credentials.
         buildConfigField("String", "ANITAKU_ENDPOINT", buildConfigString(anitakuEndpoint))
+        buildConfigField("String", "ANIVEXA_PROVIDER_ENDPOINT", buildConfigString(anivexaProviderEndpoint))
         buildConfigField("String", "ANITAKU_TEST_CATALOG", buildConfigString(anitakuTestCatalog))
         // Register a free API consumer at opensubtitles.com and provide its key through the
         // private Gradle user properties or OPEN_SUBTITLES_API_KEY. Never put it in this repo.
