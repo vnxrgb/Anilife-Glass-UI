@@ -12,3 +12,5 @@ This branch adds the first fail-closed boundary, not a working WebAssembly runti
 References: https://github.com/sanilili/desktoprepo1/blob/main/crates/core/src/plugin.rs and https://github.com/anilifecommunity/kotlindesktop/blob/main/creating-extension.md .
 
 Second batch: dedicated HTTP gateway with public-address DNS validation, no inherited proxy/cookies/account auth, explicit header allowlist, response limits, request quotas and fail-closed redirects. Not wired to guest execution yet. Android CI runs on this branch. Redirect compatibility and total invocation budget still need integration tests.
+
+Third batch: native Wasmtime component compilation/instantiation probe, JNI entry point and separate host/Android ARM64 CI proof. Empty import linker deliberately denies all host capabilities; real provider execution, WIT adapters and IPC remain disabled. Native library is not packaged until compile proof and isolation tests pass. Fixed Kotlin DNS interface compilation error from Android CI 45614322682.

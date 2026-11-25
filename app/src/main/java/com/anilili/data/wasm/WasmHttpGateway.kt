@@ -14,8 +14,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 internal class WasmHttpGateway(private val approvedHosts: Set<String>) {
     private val client = OkHttpClient.Builder()
         .proxy(Proxy.NO_PROXY)
-        .dns(Dns { host ->
-            Dns.SYSTEM.lookup(host).also { addresses ->
+        .dns(object : Dns {
+            override fun lookup(hostname: String): List<InetAddress> = Dns.SYSTEM.lookup(hostname).also { addresses ->
                 if (addresses.isEmpty() || addresses.any { !PublicAddress.allowed(it) })
                     throw java.net.UnknownHostException("Non-public provider address")
             }

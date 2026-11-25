@@ -1,0 +1,13 @@
+[package]
+name = "anilumos-wasm-runtime"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow = "1"
+wasmtime = { version = "49", default-features = false, features = ["component-model", "cranelift", "runtime", "std"] }
+jni = "0.21"
