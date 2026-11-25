@@ -5,6 +5,9 @@ stays marked **Unreleased** until its GitHub release is published.
 
 ## [Unreleased]
 
+- Franchise Watch Order with release, chronological and community-curated routes where available.
+- Franchise progress tracking, optional entries and a theme-aware guide with source credits.
+
 ## [0.1.3] - 2026-11-15
 
 ### Changed

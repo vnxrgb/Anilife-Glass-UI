@@ -20,8 +20,8 @@ val diagnosticBuildSha = providers.environmentVariable("GITHUB_SHA").orNull
             isIgnoreExitValue = true
         }.standardOutput.asText.get().trim()
     }.getOrDefault("unknown").ifBlank { "unknown" }
-val appVersionCode = 16
-val appVersionName = "2.0.1"
+val appVersionCode = 17
+val appVersionName = "2.0.2"
 
 tasks.named<CyclonedxDirectTask>("cyclonedxDirectBom") {
     componentName = "Anilumos"
@@ -321,6 +321,7 @@ dependencies {
     implementation(libs.okhttp.dnsoverhttps)
     implementation(libs.okio)
     implementation(libs.kotlinx.serialization.json)
+    implementation("org.yaml:snakeyaml:2.4")
     implementation(libs.coil.compose)
     implementation(libs.qrcodegen)
     // Permission-free QR scanning for the mobile-to-TV pairing address.
