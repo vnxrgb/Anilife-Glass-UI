@@ -7,7 +7,7 @@ import org.junit.Test
 
 class SkipWindowFallbackTest {
     @Test fun fillsMissingOutroWithoutOverwritingIntro() {
-        val primary = SkipTimes(introStart = 10.0, introEnd = 90.0, introSkipId = "primary")
+        val primary = SkipTimes(introStart = 10.0, introEnd = 90.0, outroStart = null, outroEnd = null, introSkipId = "primary")
         val fallback = SkipTimes(introStart = 20.0, introEnd = 100.0, outroStart = 1200.0, outroEnd = 1290.0, outroSkipId = "fallback")
         val result = mergeSkipWindows(primary, fallback)!!
         assertEquals(10.0, result.introStart!!, 0.0)
@@ -18,8 +18,8 @@ class SkipWindowFallbackTest {
 
     @Test fun replacesIncompleteWindowAsAUnit() {
         val result = mergeSkipWindows(
-            SkipTimes(introStart = 10.0),
-            SkipTimes(introStart = 20.0, introEnd = 100.0)
+            SkipTimes(introStart = 10.0, introEnd = null, outroStart = null, outroEnd = null),
+            SkipTimes(introStart = 20.0, introEnd = 100.0, outroStart = null, outroEnd = null)
         )!!
         assertEquals(20.0, result.introStart!!, 0.0)
         assertEquals(100.0, result.introEnd!!, 0.0)
