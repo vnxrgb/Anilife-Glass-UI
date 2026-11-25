@@ -1,0 +1,106 @@
+name: Safe upstream provider candidate
+
+on:
+  push:
+    branches: [feature/native-providers]
+    paths:
+      - '.github/provider-sync-request.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upstream-provider-candidate
+  cancel-in-progress: false
+
+env:
+  ANIVEXA_PROVIDER_ENDPOINT: https://anivexa-api-mlgw.onrender.com
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
+
+jobs:
+  candidate:
+    if: github.ref == 'refs/heads/feature/native-providers'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate reviewed upstream range and apply only permitted changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags https://github.com/anilifecommunity/android-and-tv.git main
+          python3 - <<'PY'
+          import json, re, subprocess
+          from pathlib import Path
+          def git(*args):
+              return subprocess.check_output(["git", *args])
+          request = json.loads(Path(".github/provider-sync-request.json").read_text())
+          base, head = request["base"], request["head"]
+          approved = request["paths"]
+          assert all(re.fullmatch(r"[0-9a-f]{40}", s) for s in (base, head))
+          assert base != head and isinstance(approved, list) and approved
+          subprocess.run(["git","merge-base","--is-ancestor",base,head],check=True)
+          subprocess.run(["git","merge-base","--is-ancestor",head,"FETCH_HEAD"],check=True)
+          changed = set(git("diff","--no-renames","--name-only","-z",base,head).decode().split("\0")) - {""}
+          remote = r"app/src/main/java/com/anilili/data/remote/"
+          tests = r"app/src/test/java/com/anilili/data/(?:remote/)?"
+          allowed = re.compile(r"(?:" + remote + r"[A-Za-z0-9_]+(?:Provider|Extractor|Resolver|Parsers)\.kt|" + tests + r"[A-Za-z0-9_]+(?:Provider|Extractor|Parser|Resolver)[A-Za-z0-9_]*Test\.kt)")
+          protected = re.compile(r"(?:Anitaku|Anivexa|AllAnime|NativeProvider|Miruro|ProviderCatalog|Wasm|WebView)",re.I)
+          assert len(set(approved)) == len(approved)
+          for path in approved:
+              if not isinstance(path,str) or path not in changed or not allowed.fullmatch(path) or protected.search(path):
+                  raise SystemExit("Protected, unreviewed, or unsupported path: " + str(path))
+              for ref in (base,head):
+                  row = git("ls-tree",ref,"--",path).decode()
+                  if row and not row.startswith("100644 blob "):
+                      raise SystemExit("Non-regular source file: "+path)
+              if not git("ls-tree",head,"--",path):
+                  raise SystemExit("Provider deletion requires manual review: "+path)
+          patch=git("diff","--no-renames","--binary",base,head,"--",*approved)
+          Path("/tmp/provider-candidate.patch").write_bytes(patch)
+          subprocess.run(["git","apply","--3way","--index","/tmp/provider-candidate.patch"],check=True)
+          actual=set(git("diff","--cached","--name-only","-z").decode().split("\0"))-{""}
+          if not actual or not actual.issubset(set(approved)):
+              raise SystemExit("Empty patch or unexpected changed paths")
+          print("Prepared reviewed candidate:", head, sorted(actual))
+          PY
+          git diff --cached --check
+          git diff --cached --stat
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+        with:
+          cache-read-only: true
+      - name: Mobile tests, lint and APK
+        run: ./gradlew :app:testMobileDebugUnitTest :app:lintMobileDebug :app:assembleMobileDebug --max-workers=2 --no-configuration-cache --console=plain
+      - name: Stage candidate patch and APK
+        run: |
+          set -euo pipefail
+          apk=app/build/outputs/apk/mobile/debug/Anilumos-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify --verbose "$apk"
+          mkdir -p dist
+          cp "$apk" dist/anilumos-upstream-candidate.apk
+          git diff --cached --binary > dist/provider-candidate.patch
+          cp .github/provider-sync-request.json dist/
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: reviewed-provider-candidate
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Preserve reports when blocked
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: provider-candidate-reports
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-*.html
+          if-no-files-found: ignore
+          retention-days: 7
