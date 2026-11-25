@@ -517,6 +517,7 @@ class AnivexaClient(
     private val hentaiHaven = HentaiHavenProvider(providerClient, cache)
     private val hStream = HStreamProvider(providerClient, json, cache)
     private val onePace = OnePaceProvider(providerClient, json, cache)
+    private val anitaku by lazy { AnitakuIntegration.config?.let { AnitakuProvider(client, json, it.endpoint) } }
     private val rift = RiftProvider(context, providerClient, json)
 
     /**
@@ -693,6 +694,7 @@ class AnivexaClient(
         // Japanese title costs a semaphore lane and a full search round trip to learn nothing.
         @Suppress("NAME_SHADOWING")
         val providers = ProviderCatalog.providersForCountry(providers, media.countryOfOrigin)
+            .filter { it != AnitakuIntegration.PROVIDER || AnitakuIntegration.config?.containsTitle(anilistId) == true }
         val aired = media.nextAiringEpisode?.episode?.minus(1)?.takeIf { it > 0 }
         val count = when {
             media.status == "RELEASING" && aired != null -> aired
@@ -738,7 +740,7 @@ class AnivexaClient(
                         // page load.
                         val startedAt = SystemClock.elapsedRealtime()
                         val remembered =
-                            if (refresh) null
+                            if (refresh || provider == AnitakuIntegration.PROVIDER) null
                             else rememberedAvailability(provider, anilistId, storedAvailability)
                         val availability = remembered?.availability ?: withCatalogLane(providerTimeoutMs) {
                             providerAvailability(provider, media, count)
@@ -871,6 +873,12 @@ class AnivexaClient(
             ?: error("Invalid native provider episode id: $episodeId")
         // Before the media lookup, which asks AniList about an id AniList has never heard of.
         if (request.provider == OnePaceProvider.PROVIDER) return onePace.sources(request.audio, request.episode)
+        if (request.provider == AnitakuIntegration.PROVIDER) {
+            if (AnitakuIntegration.config?.permits(request.anilistId, request.audio, request.episode) != true) {
+                throw IOException("Native test provider is disabled or episode is not in its configured catalog")
+            }
+            return checkNotNull(anitaku).sources(request.anilistId, request.audio, request.episode)
+        }
         seedMedia?.let { mediaCache[request.anilistId] = it }
         val media = media(request.anilistId)
         return when (request.provider) {
@@ -1170,6 +1178,8 @@ class AnivexaClient(
 
 
     private suspend fun providerAvailability(provider: String, media: Media, count: Int): EpisodeAvailability = when (provider) {
+        AnitakuIntegration.PROVIDER -> AnitakuIntegration.config?.availability(media.id)
+            ?: EpisodeAvailability(emptySet(), emptySet())
         "animepahe" -> pahe.episodeAvailability(media)
         "anidbapp" -> withAniDbPostId(media) {
             runInterruptible(Dispatchers.IO) { aniDbApp.episodeAvailability(media, count) }
