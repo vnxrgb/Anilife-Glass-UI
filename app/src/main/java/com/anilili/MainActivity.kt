@@ -54,6 +54,12 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -1101,6 +1107,7 @@ private fun MiruroRoot(
                                 currentRoute = currentRoute,
                                 menuLanguage = menuLanguage,
                                 tabs = railTabs,
+                                compactTabs = navigationTabs,
                                 cinema = cinema,
                                 onNavigate = nav::navigateTab,
                                 searchRailFocusRequester = tvSearchRailFocusRequester,
@@ -1780,11 +1787,87 @@ private fun AppNavigationRail(
     currentRoute: String?,
     menuLanguage: MenuLanguage,
     tabs: List<Tab>,
+    compactTabs: List<Tab>,
     cinema: Boolean,
     onNavigate: (String) -> Unit,
     searchRailFocusRequester: FocusRequester,
     searchFieldFocusTarget: TvFocusTarget,
     modifier: Modifier = Modifier,
+) {
+    val device = LocalAppDeviceProfile.current
+    if (!device.isTv) {
+        BoxWithConstraints(modifier) {
+            if (maxHeight < 520.dp) {
+                CompactLandscapeRail(currentRoute, menuLanguage, compactTabs, cinema, onNavigate)
+            } else {
+                StandardNavigationRail(currentRoute, menuLanguage, tabs, cinema, onNavigate,
+                    searchRailFocusRequester, searchFieldFocusTarget, Modifier.fillMaxHeight())
+            }
+        }
+        return
+    }
+    StandardNavigationRail(currentRoute, menuLanguage, tabs, cinema, onNavigate,
+        searchRailFocusRequester, searchFieldFocusTarget, modifier)
+}
+
+@Composable
+private fun CompactLandscapeRail(
+    currentRoute: String?,
+    menuLanguage: MenuLanguage,
+    tabs: List<Tab>,
+    cinema: Boolean,
+    onNavigate: (String) -> Unit,
+) {
+    val statusInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val shape = RoundedCornerShape(30.dp)
+    BoxWithConstraints(
+        Modifier.fillMaxHeight().width(68.dp)
+            .padding(top = statusInset + 4.dp, bottom = 4.dp, start = 6.dp, end = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        val itemHeight = ((maxHeight - 12.dp) / tabs.size.coerceAtLeast(1)).coerceIn(44.dp, 58.dp)
+        Column(
+            Modifier.fillMaxWidth().clip(shape)
+                .background(com.anilili.ui.components.glassPanelColor())
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .65f), shape)
+                .verticalScroll(rememberScrollState()).padding(vertical = 6.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            tabs.forEach { tab ->
+                val selected = currentRoute == tab.route
+                val label = tab.navigationLabel(menuLanguage, cinema)
+                Box(
+                    Modifier.fillMaxWidth().height(itemHeight).clip(CircleShape)
+                        .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = .15f) else ComposeColor.Transparent)
+                        .selectable(selected = selected, role = Role.Tab, onClick = { onNavigate(tab.route) }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center) {
+                        Icon(tab.navigationIcon(cinema), contentDescription = label,
+                            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(23.dp))
+                        if (itemHeight >= 52.dp) Text(label,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StandardNavigationRail(
+    currentRoute: String?,
+    menuLanguage: MenuLanguage,
+    tabs: List<Tab>,
+    cinema: Boolean,
+    onNavigate: (String) -> Unit,
+    searchRailFocusRequester: FocusRequester,
+    searchFieldFocusTarget: TvFocusTarget,
+    modifier: Modifier,
 ) {
     val device = LocalAppDeviceProfile.current
     var expanded by remember { mutableStateOf(false) }

@@ -1,1 +1,1 @@
-Mobile preview: HD hero artwork and window status restoration, complete detail repository import.
+Signed mobile preview: compact landscape navigation and split Discover layout.

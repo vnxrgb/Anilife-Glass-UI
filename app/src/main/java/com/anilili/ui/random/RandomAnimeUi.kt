@@ -18,6 +18,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -218,7 +224,10 @@ fun RandomAnimeDialog(
                     // Televisions crop their edges; keep the close button and hint inside what shows.
                     .then(if (isTv) Modifier.padding(horizontal = 48.dp, vertical = 27.dp) else Modifier),
             ) {
-                Column(
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                if (!isTv && maxWidth > maxHeight && maxHeight < 520.dp) {
+                    LandscapeDiscover(state, swipe, onSkip, onOpen, onSource, onDismiss)
+                } else Column(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
@@ -258,6 +267,76 @@ fun RandomAnimeDialog(
                     }
                     SwipeHint(isTv)
                 }
+                }
+            }
+        }
+    }
+}
+
+/** A full-height poster beside scrollable controls and readable metadata on short wide displays. */
+@Composable
+private fun LandscapeDiscover(
+    state: RandomAnimeState,
+    swipe: SwipeState,
+    onSkip: () -> Unit,
+    onOpen: (Int) -> Unit,
+    onSource: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val pick = state.pick
+    Row(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        BoxWithConstraints(Modifier.weight(.40f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+            val cardHeight = min(maxHeight - 12.dp, min(maxWidth - 12.dp, MaxCardWidth) * CardAspect)
+                .coerceAtLeast(1.dp)
+            CardStack(state, swipe, onSkip, onOpen,
+                modifier = Modifier.size(width = cardHeight / CardAspect, height = cardHeight),
+                posterOnly = true)
+        }
+        Column(Modifier.weight(.60f).fillMaxHeight()) {
+            DialogHeader(onDismiss)
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(bottom = 4.dp)) {
+                SourceChips(state.sources.filter { it.moodGenre == null }, state.source.key, onSource, false)
+                val moods = state.sources.filter { it.moodGenre != null }
+                if (moods.isNotEmpty()) {
+                    Text("Discover by mood", modifier = Modifier.padding(start = 20.dp, top = 2.dp),
+                        color = Color.White.copy(alpha = .72f), style = MaterialTheme.typography.labelMedium)
+                    SourceChips(moods, state.source.key, onSource, false)
+                }
+                if (pick != null) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
+                        Text(pick.title.preferred, color = Color.White,
+                            style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        PickFacts(pick, Modifier.padding(top = 4.dp))
+                        if (pick.genres.isNotEmpty()) GenreChips(pick.genres.take(3), Modifier.padding(top = 6.dp))
+                        plainSynopsis(pick.description)?.let {
+                            Text(it, color = Color.White.copy(alpha = .82f),
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(top = 6.dp))
+                        }
+                    }
+                }
+            }
+            // Fixed action row is always reachable, even when the list of moods or synopsis scrolls.
+            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedButton(
+                    onClick = { if (pick == null) onSkip() else scope.launch { swipe.leanAndThrow(-1, onSkip) } },
+                    enabled = pick != null || state.failure != null,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White,
+                        containerColor = Color.White.copy(alpha = .12f)),
+                ) { Text("Skip") }
+                OutlinedButton(
+                    onClick = { pick?.let { media -> scope.launch { swipe.leanAndThrow(1) { onOpen(media.id) } } } },
+                    enabled = pick != null,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Black,
+                        containerColor = Color.White.copy(alpha = .90f)),
+                ) { Text("Watch") }
             }
         }
     }
@@ -270,6 +349,7 @@ private fun CardStack(
     onSkip: () -> Unit,
     onOpen: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    posterOnly: Boolean = false,
 ) {
     val pick = state.pick
     val scope = rememberCoroutineScope()
@@ -378,6 +458,7 @@ private fun CardStack(
             LaunchedEffect(Unit) { appear.animateTo(1f, tween(260)) }
             AnimeCard(
                 media = state.upNext,
+                posterOnly = posterOnly,
                 rolling = state.rolling,
                 failure = null,
                 modifier = Modifier
@@ -393,6 +474,7 @@ private fun CardStack(
         }
         AnimeCard(
             media = pick,
+            posterOnly = posterOnly,
             rolling = state.rolling,
             failure = state.failure?.withCode(),
             swipe = swipe,
@@ -504,6 +586,7 @@ private fun AnimeCard(
     modifier: Modifier = Modifier,
     swipe: SwipeState? = null,
     ringed: Boolean = false,
+    posterOnly: Boolean = false,
 ) {
     val shape = RoundedCornerShape(18.dp)
     Box(
@@ -543,7 +626,7 @@ private fun AnimeCard(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
-        Box(Modifier.fillMaxSize().background(CardScrim))
+        if (!posterOnly) Box(Modifier.fillMaxSize().background(CardScrim))
         if (swipe != null) {
             // Read in the draw phase only, so a drag repaints the card without recomposing it.
             Box(
@@ -567,7 +650,7 @@ private fun AnimeCard(
                 modifier = Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 30.dp),
             )
         }
-        CardInfo(media, Modifier.align(Alignment.BottomStart))
+        if (!posterOnly) CardInfo(media, Modifier.align(Alignment.BottomStart))
     }
 }
 
