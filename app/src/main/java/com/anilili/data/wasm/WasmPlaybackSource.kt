@@ -25,6 +25,7 @@ internal class WasmPlaybackSource private constructor(
     fun mediaSource(): MediaSource = factory.createMediaSource(item)
 
     companion object {
+        const val MEDIA_ID_PREFIX = "wasm-protected:"
         internal fun fromValidated(
             provider: ApprovedWasmProvider, raw: JSONArray, dub: Boolean,
         ): List<WasmPlaybackSource> {
@@ -70,7 +71,7 @@ internal class WasmPlaybackSource private constructor(
                         "mp4" -> MimeTypes.VIDEO_MP4
                         else -> continue
                     }
-                    val item = MediaItem.Builder().setUri(stream.getString("url")).setMimeType(mime)
+                    val item = MediaItem.Builder().setMediaId(MEDIA_ID_PREFIX + provider.id + ":" + java.util.UUID.randomUUID()).setUri(stream.getString("url")).setMimeType(mime)
                         .setSubtitleConfigurations(tracks).build()
                     results.add(WasmPlaybackSource(provider.id, server.getString("name"),
                         if (stream.isNull("quality")) null else stream.optString("quality"), skip, item, factory))

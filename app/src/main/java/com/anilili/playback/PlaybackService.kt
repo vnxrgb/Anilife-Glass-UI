@@ -20,6 +20,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
+import com.anilili.data.wasm.WasmPlaybackSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
@@ -678,6 +679,10 @@ class PlaybackService : MediaSessionService() {
 
     private fun switchPlaybackPlayer(from: Player, to: Player, sessionPlayer: Player) {
         if (activePlayer === to) return
+        // A protected source must not be reconstructed from its URL by a Cast receiver.
+        if (to === castRoute?.player && (0 until from.mediaItemCount).any {
+                from.getMediaItemAt(it).mediaId.startsWith(WasmPlaybackSource.MEDIA_ID_PREFIX)
+            }) return
         val outgoing = List(from.mediaItemCount) { from.getMediaItemAt(it) }
         val toRemote = to === castRoute?.player
         // A receiver fetches these URLs itself and carries none of our headers, so the queue it is
@@ -976,6 +981,27 @@ class PlaybackService : MediaSessionService() {
          */
         @Volatile
         var episodeNavigator: ((direction: Int) -> Unit)? = null
+
+        /**
+         * Debug-only local entry for a validated WASM source. Retains the normal ExoPlayer,
+         * session, controls and ambient surface, but uses the source's private MediaSource factory.
+         * Must be called on the player application looper; never reconstruct from a URL.
+         */
+        @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+        internal fun playProtectedWasm(source: WasmPlaybackSource, startPositionMs: Long = 0): Boolean {
+            if (!com.anilili.BuildConfig.DEBUG) return false
+            val local = activePlayer as? ExoPlayer ?: return false
+            if (android.os.Looper.myLooper() != local.applicationLooper) return false
+            return runCatching {
+                local.stop()
+                local.clearMediaItems()
+                finishUncachedPlaybackRecovery()
+                local.setMediaSource(source.mediaSource(), startPositionMs.coerceAtLeast(0L))
+                local.prepare()
+                local.playWhenReady = true
+                true
+            }.getOrDefault(false)
+        }
 
         /** Used when switching explicitly from native playback to a provider WebView. */
         fun stopActivePlayback() {
