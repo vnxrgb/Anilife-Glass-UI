@@ -19,11 +19,30 @@ pub struct ProviderMetadata {
     pub hosts: Vec<String>,
 }
 
+// Standard WASI HTTP types are available, but all direct requests fail closed.
+// Provider network access remains exclusively through the authenticated custom broker.
+struct DenyDirectHttp;
+impl wasmtime_wasi_http::WasiHttpHooks for DenyDirectHttp {
+    fn send_request(
+        &mut self,
+        _request: http::Request<wasmtime_wasi_http::WasiBody>,
+        _options: Option<wasmtime_wasi_http::RequestOptions>,
+        _completion: Box<dyn std::future::Future<Output = wasmtime_wasi_http::Result<()>> + Send>,
+    ) -> Box<dyn std::future::Future<Output = wasmtime_wasi_http::Result<(
+        http::Response<wasmtime_wasi_http::WasiBody>,
+        Box<dyn std::future::Future<Output = wasmtime_wasi_http::Result<()>> + Send>,
+    )>> + Send> {
+        Box::new(async { Err(wasmtime_wasi_http::Error::HttpRequestDenied) })
+    }
+}
+
 struct DeniedHost {
     broker: Option<Box<dyn HttpBroker + Send>>,
     cache: std::collections::HashMap<String, (String, std::time::Instant)>,
     limits: wasmtime::StoreLimits,
     wasi: wasmtime_wasi::WasiCtx,
+    http: wasmtime_wasi_http::WasiHttpCtx,
+    http_hooks: DenyDirectHttp,
     table: wasmtime::component::ResourceTable,
 }
 
@@ -45,6 +64,14 @@ impl DeniedHost {
 impl wasmtime_wasi::WasiView for DeniedHost {
     fn ctx(&mut self) -> wasmtime_wasi::WasiCtxView<'_> {
         wasmtime_wasi::WasiCtxView { ctx: &mut self.wasi, table: &mut self.table }
+    }
+}
+
+impl wasmtime_wasi_http::WasiHttpView for DeniedHost {
+    fn http(&mut self) -> wasmtime_wasi_http::WasiHttpCtxView<'_> {
+        wasmtime_wasi_http::WasiHttpCtxView {
+            ctx: &mut self.http, table: &mut self.table, hooks: &mut self.http_hooks,
+        }
     }
 }
 
@@ -87,6 +114,8 @@ fn store(engine: &Engine) -> Result<Store<DeniedHost>> {
         broker: None,
         cache: std::collections::HashMap::new(),
         wasi: wasmtime_wasi::WasiCtx::builder().build(),
+        http: wasmtime_wasi_http::WasiHttpCtx::new(),
+        http_hooks: DenyDirectHttp,
         table: wasmtime::component::ResourceTable::new(),
         limits: StoreLimitsBuilder::new().memory_size(64 << 20).instances(32).memories(4).tables(16).build(),
     });
@@ -103,6 +132,7 @@ pub fn inspect(bytes: &[u8], community: bool) -> Result<ProviderMetadata> {
     let mut store = store(&engine)?;
     let mut linker = Linker::new(&engine);
     wasmtime_wasi::p2::add_to_linker_sync(&mut linker)?;
+    wasmtime_wasi_http::p2::add_only_http_to_linker_sync(&mut linker)?;
     let result = if community {
         legacy::Provider::add_to_linker::<_, wasmtime::component::HasSelf<_>>(&mut linker, |s| s)?;
         let instance = legacy::Provider::instantiate(&mut store, &component, &linker)?;
@@ -179,6 +209,7 @@ pub fn resolve(bytes: &[u8], community: bool, query: EpisodeQuery, broker: Box<d
     let mut store = store(&engine)?;
     let mut linker = Linker::new(&engine);
     wasmtime_wasi::p2::add_to_linker_sync(&mut linker)?;
+    wasmtime_wasi_http::p2::add_only_http_to_linker_sync(&mut linker)?;
     let result: Vec<Server> = if community {
         legacy::Provider::add_to_linker::<_, wasmtime::component::HasSelf<_>>(&mut linker, |s| s)?;
         let instance = legacy::Provider::instantiate(&mut store, &component, &linker)?;
