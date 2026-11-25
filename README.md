@@ -18,26 +18,56 @@
 
 AniLumos builds on AniLife with its own visual identity, a redesigned interface and an emphasis on discovery, playback and everyday usability.
 
-## Features
+## What makes AniLumos different?
 
-| Feature | What's included |
+AniLumos is built on [AniLife](https://github.com/anilifecommunity/android-and-tv). The following separates additions made in this fork from enhancements to features already provided by upstream.
+
+### New AniLumos features
+
+| Feature | What's different |
 | --- | --- |
-| **Glass UI** | Redesigned translucent navigation, cards, menus and controls, with glass material presets and light/dark themes. |
-| **New branding** | Updated AniLumos logo, launcher icons, splash screen and theme-specific artwork. |
-| **Discover** | Mood-based anime discovery, swipeable recommendations and a responsive landscape layout. |
-| **Recommendations** | Improved personalised anime suggestions and community metadata. |
-| **AniLumos Wrapped** | Anime viewing highlights and shareable artwork-based summaries. |
-| **Cinematic player** | Ambient Cinema lighting, rounded playback controls, fullscreen and picture-in-picture support. |
-| **Skip intro and outro** | Timed, dismissing skip controls when episode timestamps are available. |
-| **Filler episodes** | Episode classification badges and optional filler filtering/skipping where metadata is available. |
-| **Franchise Watch Order** | Release, chronological and community-curated viewing orders where available, with completion tracking and timeline or list views. |
-| **Accounts and library** | AniList, MyAnimeList and Simkl integration, Discord Rich Presence, watch history and downloads. |
-| **Adaptive layout** | Phone and tablet layouts, improved landscape navigation and readable status bars. |
-| **Updates and diagnostics** | Direct in-app updates, metadata diagnostics and an in-app introduction to new features. |
+| **Optical Glass UI** | Translucent navigation, cards, dialogs and controls, with customizable glass material presets. |
+| **Ambient Cinema** | Video-reactive ambient lighting using adapted Morphe code, integrated into the built-in player. |
+| **Ambient Home & details** | Artwork-driven background colors and transitions on Home and anime details. |
+| **Mood Discovery** | Choose a mood and swipe through matching anime suggestions. |
+| **AniLumos Wrapped** | Viewing statistics and artwork-based shareable summaries. |
+| **Curated franchise guides** | Dedicated Franchise Watch Order screen with chronological, recommended and alternative routes where available, timeline/list views, completion tracking and next unfinished anime. |
+| **Metadata diagnostics** | Inspect metadata availability and troubleshoot community service failures. |
 
-Anime search, browsing, streaming sources, subtitles and external-player support are retained from AniLife. Availability of community metadata and connected services depends on the provider and title.
+### Improved AniLife features
 
-I've also set up a way to track streaming-provider changes from upstream. Those changes still need review and a new app release before they reach installed versions. More on that [here](docs/UPSTREAM_PROVIDER_SYNC.md).
+| Feature | What's different |
+| --- | --- |
+| **Personalized recommendations** | Hybrid ranking combines viewing preferences with AniList and additional community metadata. |
+| **Skip intro/outro** | Redesigned timed, dismissing skip buttons and additional timestamp sources where available. |
+| **Episode classifications** | Expands basic filler flags to canon, mixed, anime canon and recap labels, plus optional filler filtering and skipping. |
+| **Player controls** | Rounded glass playback controls, refined seekbar layout and panels. |
+| **Navigation and screens** | Floating glass navigation, redesigned Home, details, search, settings and dialogs. |
+| **Appearance and accessibility** | Glass material choices, custom background readability and artwork-aware status bar contrast. |
+| **Adaptive layouts** | Improved phone/tablet landscape navigation and discovery layouts. |
+| **Guided tour** | Expanded the existing What's New walkthrough to cover AniLumos additions. |
+| **In-app updates** | Uses AniLumos's own GitHub stable releases and verifies downloaded APKs before installation. |
+
+### Additional integrations
+
+| Source | Purpose |
+| --- | --- |
+| [Anime Watch Order API](https://github.com/Bas1874/Anime-Watch-Order-Api) | Community watch-order routes, based on the r/anime wiki. |
+| [Anime Metadata DB](https://github.com/michael-freling/anime-metadata-db) | Chronological and alternative franchise routes (ODbL / DbCL). |
+| [Tenrai](https://tenrai.org/) | Community recommendations and episode flags. |
+| [TheIntroDB](https://theintrodb.org/) | Additional segment timestamps. |
+| [IntroDB](https://introdb.app/) | Additional segment timestamps. |
+| [FillerLists](https://fillerlists.com/data) | Episode classifications. |
+| [AniFillerPedia](https://anifillerpedia.wiki/) | Additional episode classifications. |
+| [Morphe](https://morphe.software) | Adapted ambient-lighting code. |
+
+AniSkip and the original recommendation and franchise-list foundations already existed in AniLife. Availability of curated routes, timestamps and classifications varies by anime and service.
+
+### Core features inherited from AniLife
+
+AniList, MyAnimeList and Simkl accounts; Discord Rich Presence; downloads and offline playback; watch history and Continue Watching; anime search, browsing, genres, airing schedule and notifications; subtitles, external players, picture-in-picture, gestures and screen lock; profile PINs; and phone/tablet layout foundations.
+
+Stable AniLumos releases are for Android phones and tablets; TV previews are experimental. AniLumos has its own branding, application ID, signed releases, website and Orion Store listing. See [upstream provider sync documentation](docs/UPSTREAM_PROVIDER_SYNC.md) for how upstream changes are tracked and reviewed.
 
 ## Screenshots
 
