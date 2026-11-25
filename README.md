@@ -40,15 +40,23 @@ I've also set up a way to track streaming-provider changes from upstream. Those 
 
 ## Screenshots
 
-The existing screenshots show earlier app builds and may not reflect the latest v2.0.0 interface.
+A look at AniLumos v2.0.0 on Android.
 
 <p align="center">
-  <a href="docs/store/screenshots/01-home.jpg"><img src="docs/store/screenshots/01-home.jpg" width="18%" alt="Home screen"></a>
-  <a href="docs/store/screenshots/02-my-list.jpg"><img src="docs/store/screenshots/02-my-list.jpg" width="18%" alt="My List"></a>
-  <a href="docs/store/screenshots/03-browse.jpg"><img src="docs/store/screenshots/03-browse.jpg" width="18%" alt="Browse"></a>
-  <a href="docs/store/screenshots/04-anime-details.jpg"><img src="docs/store/screenshots/04-anime-details.jpg" width="18%" alt="Anime details"></a>
-  <a href="docs/store/screenshots/05-episode-playback.jpg"><img src="docs/store/screenshots/05-episode-playback.jpg" width="18%" alt="Video player"></a>
+  <a href="docs/store/screenshots/01-home.jpg"><img src="docs/store/screenshots/01-home.jpg" width="23%" alt="Home and Glass UI"></a>
+  <a href="docs/store/screenshots/02-anime-details.jpg"><img src="docs/store/screenshots/02-anime-details.jpg" width="23%" alt="Anime details"></a>
+  <a href="docs/store/screenshots/03-player.jpg"><img src="docs/store/screenshots/03-player.jpg" width="23%" alt="Ambient player and Skip Intro"></a>
+  <a href="docs/store/screenshots/04-discover.jpg"><img src="docs/store/screenshots/04-discover.jpg" width="23%" alt="Mood-based Discover"></a>
 </p>
+<p align="center">Home and Glass UI · Anime details · Ambient player and Skip Intro · Mood-based Discover</p>
+
+<p align="center">
+  <a href="docs/store/screenshots/05-notifications.jpg"><img src="docs/store/screenshots/05-notifications.jpg" width="23%" alt="Notifications"></a>
+  <a href="docs/store/screenshots/06-schedule.jpg"><img src="docs/store/screenshots/06-schedule.jpg" width="23%" alt="Airing schedule"></a>
+  <a href="docs/store/screenshots/07-accounts.jpg"><img src="docs/store/screenshots/07-accounts.jpg" width="23%" alt="Accounts and integrations"></a>
+  <a href="docs/store/screenshots/08-appearance.jpg"><img src="docs/store/screenshots/08-appearance.jpg" width="23%" alt="Appearance and themes"></a>
+</p>
+<p align="center">Notifications · Airing schedule · Accounts and integrations · Appearance and themes</p>
 
 ## Download
 
