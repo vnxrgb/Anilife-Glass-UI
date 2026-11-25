@@ -31,11 +31,13 @@ data class DiceSource(
             DiceSource("mood:adrenaline", "Adrenaline", moodGenre = "Action"),
             DiceSource("mood:emotional", "Emotional", moodGenre = "Drama"),
             DiceSource("mood:laugh", "Laugh", moodGenre = "Comedy"),
-            DiceSource("mood:mind", "Mind-bending", moodGenre = "Sci-Fi"),
+            DiceSource("mood:mind", "Mind-bending", moodGenre = "Psychological"),
             DiceSource("mood:romance", "Romance", moodGenre = "Romance"),
             DiceSource("mood:mystery", "Mystery", moodGenre = "Mystery"),
             DiceSource("mood:fantasy", "Escape", moodGenre = "Fantasy"),
             DiceSource("mood:thrill", "Suspense", moodGenre = "Thriller"),
+            DiceSource("mood:adventure", "Adventure", moodGenre = "Adventure"),
+            DiceSource("mood:dark", "Dark", moodGenre = "Horror"),
             DiceSource("mood:sports", "Motivated", moodGenre = "Sports"),
         )
     }

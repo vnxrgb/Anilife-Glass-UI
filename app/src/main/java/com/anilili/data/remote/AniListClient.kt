@@ -335,7 +335,7 @@ class AniListClient(
                   averageScore_greater: ${'$'}minimumScore,
                   sort: ${'$'}sort,
                   isAdult: ${'$'}isAdult
-                ) { $mediaListFields }
+                ) { $mediaListFields tags { name rank isMediaSpoiler isGeneralSpoiler } }
               }
             }
         """.trimIndent()

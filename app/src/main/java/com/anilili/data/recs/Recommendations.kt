@@ -126,45 +126,87 @@ object Recommendations {
         .filterNot { it.fromRemote }
         .map { PlayedTitle(it.anilistId, it.watchedEpisodes.size, it.updatedAt) }
 
-    /** "For you": the whole list's taste, blended. Null when there is nothing to go on yet. */
-    suspend fun forYou(limit: Int = 30): RecommendationRow? {
-        val graph = graph() ?: return null
-        val signals = TasteEngine.signals(TasteStore.ratings.value, played(), TasteStore.feedback.value)
-        val picks = withContext(Dispatchers.Default) {
-            TasteEngine.recommend(graph, signals, known(), hideAdult = SettingsStore.hideAdultContent.value, limit = limit)
+    private suspend fun <T> safe(default: T, block: suspend () -> T): T = try {
+        block()
+    } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+    catch (e: Exception) { DiagnosticsLog.throwable("Recommendation source unavailable", e); default }
+
+    private fun seeds(signals: List<TasteSignal>, graph: NeighbourGraph?): List<TasteSignal> =
+        signals.filter { it.weight >= .35 && it.anilistId > 0 }
+            .sortedByDescending { it.weight }
+            .distinctBy { graph?.rootOf(it.anilistId) ?: it.anilistId }.take(2)
+
+    /** The local graph remains the strongest signal. Live lists add independent community evidence. */
+    private suspend fun hybrid(
+        graph: NeighbourGraph?, local: List<Recommendation>, seeds: List<TasteSignal>, excluded: Set<Int>, limit: Int,
+        negatives: List<TasteSignal> = emptyList(),
+    ): List<Media> {
+        fun root(id: Int) = graph?.rootOf(id) ?: id
+        val excludedRoots = (excluded + seeds.map { it.anilistId }).map(::root).toSet()
+        val hideAdult = SettingsStore.hideAdultContent.value
+        val ranks = mutableListOf(local.map { root(it.anilistId) } to 1.6)
+        val available = mutableMapOf<Int, Media>()
+        val penalties = mutableMapOf<Int, Double>()
+        if (graph != null) negatives.filter { it.weight < 0 }.forEach { signal ->
+            graph.forEachNeighbour(signal.anilistId) { id, strength ->
+                val key = root(id)
+                penalties[key] = (penalties[key] ?: 0.0) + (-signal.weight * strength / 100.0)
+            }
         }
-        if (picks.isEmpty()) return null
-        return RecommendationRow(cards(picks.map { it.anilistId }))
+        for (seed in seeds) {
+            // Only selected public title IDs are sent. Full history and feedback remain on device.
+            val a = safe(emptyList<Media>()) { AppGraph.repository.communityAniListRecommendations(seed.anilistId) }
+            val b = safe(emptyList<Media>()) { AppGraph.repository.communityJikanRecommendations(seed.anilistId) }
+            for ((items, weight) in listOf(a to 1.0, b to .8)) {
+                val eligible = items.filter { it.id > 0 && it.status != "NOT_YET_RELEASED" &&
+                    it.status != "CANCELLED" && (!hideAdult || !it.isAdult) }
+                eligible.forEach { available[it.id] = it }
+                ranks += eligible.map { root(it.id) }.distinct() to (weight * seed.weight.coerceIn(.35, 2.0))
+            }
+        }
+        val blocked = excludedRoots + penalties.filterValues { it >= .65 }.keys
+        val ids = HybridRanking.rank(ranks, blocked, limit * 2)
+            .filterNot { graph?.isUnreleased(it) == true || (hideAdult && graph?.isAdult(it) == true) }
+        val missing = ids.filterNot { it in available }
+        safe(emptyList<Media>()) { cards(missing) }.forEach { available[it.id] = it }
+        return ids.mapNotNull { available[it] }.filter { it.status != "NOT_YET_RELEASED" &&
+            it.status != "CANCELLED" && (!hideAdult || !it.isAdult) }.take(limit)
+    }
+
+    suspend fun forYou(limit: Int = 30): RecommendationRow? {
+        val graph = safe<NeighbourGraph?>(null) { graph() }
+        val signals = TasteEngine.signals(TasteStore.ratings.value, played(), TasteStore.feedback.value)
+        val excluded = known() + signals.map { it.anilistId }
+        val local = if (graph == null) emptyList() else withContext(Dispatchers.Default) {
+            TasteEngine.recommend(graph, signals, excluded, hideAdult = SettingsStore.hideAdultContent.value, limit = limit * 2)
+        }
+        return RecommendationRow(hybrid(graph, local, seeds(signals, graph), excluded, limit, signals))
             .takeIf { it.items.isNotEmpty() }
     }
 
-    /** "Because you watched X", for the latest title the viewer clearly liked. */
     suspend fun becauseYouWatched(limit: Int = 24): RecommendationRow? {
-        val graph = graph() ?: return null
-        val seed = TasteEngine.featuredSeed(graph, TasteStore.ratings.value, played()) ?: return null
-        val picks = withContext(Dispatchers.Default) {
-            TasteEngine.because(graph, seed, known(), hideAdult = SettingsStore.hideAdultContent.value, limit = limit)
+        val graph = safe<NeighbourGraph?>(null) { graph() }
+        val ratings = TasteStore.ratings.value
+        val played = played()
+        val signals = TasteEngine.signals(ratings, played, TasteStore.feedback.value)
+        val liked = signals.filter { it.weight > 0 }.map { it.anilistId }.toSet()
+        val seed = graph?.let { TasteEngine.featuredSeed(it, ratings, played) }
+            ?: ratings.filter { it.status.uppercase() in setOf("COMPLETED", "REPEATING") && it.anilistId in liked }
+                .maxByOrNull { it.updatedAtMs }?.anilistId
+            ?: played.filter { it.episodesWatched >= 3 && it.anilistId in liked }
+                .maxByOrNull { it.updatedAtMs }?.anilistId
+            ?: return null
+        val excluded = known() + seed
+        val local = if (graph == null) emptyList() else withContext(Dispatchers.Default) {
+            TasteEngine.because(graph, seed, excluded, hideAdult = SettingsStore.hideAdultContent.value, limit = limit * 2)
         }
-        if (picks.isEmpty()) return null
-        val cards = cards(listOf(seed) + picks.map { it.anilistId })
-        val seedMedia = cards.firstOrNull { it.id == seed } ?: return null
-        val items = cards.filter { it.id != seed }
-        return RecommendationRow(items, seedMedia).takeIf { items.isNotEmpty() }
+        val seedMedia = safe<Media?>(null) { AppGraph.repository.animeInfo(seed) } ?: return null
+        val items = hybrid(graph, local, listOf(TasteSignal(seed, 1.0)), excluded, limit, signals)
+        return RecommendationRow(items, seedMedia).takeIf { it.items.isNotEmpty() }
     }
 
-    /**
-     * A small random handful of the viewer's recommendations, for the dice to mix in. Taken from
-     * well down the list rather than the top, so a roll still surprises.
-     */
-    suspend fun diceCandidates(count: Int = 12): List<Media> {
-        val graph = graph() ?: return emptyList()
-        val signals = TasteEngine.signals(TasteStore.ratings.value, played(), TasteStore.feedback.value)
-        val picks = withContext(Dispatchers.Default) {
-            TasteEngine.recommend(graph, signals, known(), hideAdult = SettingsStore.hideAdultContent.value, limit = DICE_POOL)
-        }
-        if (picks.isEmpty()) return emptyList()
-        return cards(picks.shuffled().take(count).map { it.anilistId })
-    }
+    suspend fun diceCandidates(count: Int = 12): List<Media> =
+        forYou(limit = DICE_POOL)?.items.orEmpty().shuffled().take(count)
 
     /** AniList cards for [ids], in [ids]' order; one request per 50, cached a day. */
     private suspend fun cards(ids: List<Int>): List<Media> {

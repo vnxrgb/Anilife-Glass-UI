@@ -143,6 +143,20 @@ class JikanClient(
         else -> null
     }
 
+    /** MAL community recommendations, ranked by votes, then mapped to AniList by exact MAL ID. */
+    internal fun recommendationIds(malId: Int): List<Int> {
+        require(malId > 0)
+        val root = publicJson("https://api.jikan.moe/v4/anime/$malId/recommendations") as? JsonObject
+            ?: return emptyList()
+        val rows = root["data"] as? JsonArray ?: error("Jikan recommendations data missing")
+        return rows.mapNotNull { item ->
+            val row = item as? JsonObject ?: return@mapNotNull null
+            val entry = row["entry"] as? JsonObject ?: return@mapNotNull null
+            val id = entry["mal_id"]?.jsonPrimitive?.intOrNull?.takeIf { it > 0 && it != malId } ?: return@mapNotNull null
+            id to (row["votes"]?.jsonPrimitive?.intOrNull ?: 0)
+        }.sortedByDescending { it.second }.map { it.first }.distinct().take(24)
+    }
+
     private fun publicJson(url: String): JsonElement? {
         val request = Request.Builder().url(url).header("Accept", "application/json")
             .header("User-Agent", "AniLumos Android (https://github.com/vnxrgb/Anilumos)").build()

@@ -72,8 +72,8 @@ class RandomAnimeViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun moodDeck(genre: String): RandomAnimeDeck = RandomAnimeDeck(
         fetchPage = { page ->
-            repo.discover(DiscoverFilters(genres = setOf(genre), hideWatched = WatchedFilter.STARTED), page).items
-                .filter { matchesMood(it, genre) }
+            repo.discover(DiscoverFilters(genres = setOf(genre), excludedGenres = MoodPolicy.excludedGenres(genre), hideWatched = WatchedFilter.STARTED), page).items
+                .filter { MoodPolicy.matches(it, genre) }
         },
         pageCount = 8,
         strictSkip = true,
@@ -81,26 +81,10 @@ class RandomAnimeViewModel(app: Application) : AndroidViewModel(app) {
         skip = { WatchedTitles.hides(it, WatchedFilter.STARTED) },
         tasteSource = {
             Recommendations.forYou(limit = 60)?.items.orEmpty()
-                .filter { matchesMood(it, genre) }
+                .filter { MoodPolicy.matches(it, genre) }
         },
         tasteEvery = 3,
     )
-
-    private fun matchesMood(media: Media, genre: String): Boolean {
-        if (genre !in media.genres) return false
-        // Keep each mood coherent even when AniList attaches multiple genres.
-        val excluded = when (genre) {
-            "Romance" -> setOf("Action", "Horror", "Thriller")
-            "Slice of Life" -> setOf("Action", "Horror", "Thriller", "Psychological")
-            "Comedy" -> setOf("Horror", "Thriller", "Psychological")
-            "Drama" -> setOf("Ecchi")
-            "Sci-Fi" -> setOf("Ecchi")
-            "Sports" -> setOf("Horror")
-            else -> emptySet()
-        }
-        if (media.genres.any { it in excluded }) return false
-        return true
-    }
 
     private fun listDeck(ids: List<Int>): RandomAnimeDeck {
         val pages = ids.sorted().chunked(LIST_PAGE)

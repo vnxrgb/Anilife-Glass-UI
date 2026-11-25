@@ -2214,13 +2214,15 @@ class MiruroRepository(
      * Cached for as long as the info record, and empty on failure: the Recommended tab still has
      * the series entries to show, so a refused AniList request must not turn into an error there.
      */
-    suspend fun animeRecommendations(id: Int): List<Media> {
+    /** Existing AniList mirror/live path, kept independent of Jikan for partial failures. */
+    suspend fun communityAniListRecommendations(id: Int): List<Media> {
         // Catalogue-native entries (hanime) use negative ids and have no AniList record.
         if (id < 0) return emptyList()
         val hideAdult = hideAdult
         // The generator stores AniList's recommendations with each title, refreshed daily; they
         // change slowly enough that the day-old list is the same list, and it costs AniList nothing.
-        runCatching { konoha.details(id)?.recommendations }.getOrNull()
+        runCatching { konoha.details(id)?.recommendations }
+            .onFailure { it.rethrowIfCancellation() }.getOrNull()
             ?.takeIf { it.isNotEmpty() }
             ?.let { fromTree -> return if (hideAdult) fromTree.filterNot { it.isAdult } else fromTree }
         val recommended = runCatching {
@@ -2239,6 +2241,40 @@ class MiruroRepository(
             }
             .getOrDefault(emptyList())
         return if (hideAdult) recommended.filterNot { it.isAdult } else recommended
+    }
+
+    /** Cache mapped recommendations independently so a failed source cannot poison the other. */
+    suspend fun communityJikanRecommendations(id: Int): List<Media> {
+        if (id <= 0) return emptyList()
+        return try {
+            val malId = malIdFor(id) ?: return emptyList()
+            cache.getOrFetch(
+                key = "jikan-recommendations:v1:$malId",
+                serializer = ListSerializer(Media.serializer()),
+                ttlMs = INFO_TTL,
+                cacheIf = { it.isNotEmpty() },
+            ) {
+                val ids = withContext(Dispatchers.IO) { jikan.recommendationIds(malId) }
+                if (ids.isEmpty()) emptyList() else {
+                    val byMal = aniList.mediaByMalIds(ids).groupBy { it.idMal }
+                    ids.mapNotNull { byMal[it]?.singleOrNull() }
+                }
+            }.filter { it.id != id && (!hideAdult || !it.isAdult) && it.status != "NOT_YET_RELEASED" }
+        } catch (error: Exception) {
+            error.rethrowIfCancellation()
+            DiagnosticsLog.throwable("Jikan recommendations failed id=$id", error)
+            emptyList()
+        }
+    }
+
+    suspend fun animeRecommendations(id: Int): List<Media> {
+        val a = communityAniListRecommendations(id)
+        val b = communityJikanRecommendations(id)
+        val all = (a + b).associateBy { it.id }
+        val ranks = com.anilili.data.recs.HybridRanking.rank(
+            listOf(a.map { it.id } to 1.0, b.map { it.id } to .8), setOf(id), 30
+        )
+        return ranks.mapNotNull { all[it] }.filter { it.status != "NOT_YET_RELEASED" && (!hideAdult || !it.isAdult) }
     }
 
     /** Walks AniList's PREQUEL/SEQUEL chain so every season is reachable from one detail page. */
