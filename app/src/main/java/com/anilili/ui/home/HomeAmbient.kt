@@ -72,8 +72,8 @@ internal fun HomeAmbient(artwork: String, listState: LazyListState, modifier: Mo
         val fade = if (listState.firstVisibleItemIndex != 0) 0f
             else (1f - listState.firstVisibleItemScrollOffset / 360.dp.toPx()).coerceIn(0f, 1f)
         if (fade <= 0f) return@drawBehind
-        val strength = fade * if (light) .18f else .32f
-        val y = size.height * .48f - listState.firstVisibleItemScrollOffset * .45f
+        val strength = fade * if (light) .26f else .44f
+        val y = size.height * .60f - listState.firstVisibleItemScrollOffset * .45f
         drawRect(Brush.radialGradient(
             0f to a.copy(alpha = a.alpha * strength),
             .55f to a.copy(alpha = a.alpha * strength * .55f),

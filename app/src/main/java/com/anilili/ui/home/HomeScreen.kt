@@ -303,9 +303,8 @@ fun HomeScreen(
     val homeGlass = glassEnabled(GlassSection.HOME)
     val homeBackdrop = if (homeGlass) remember { HazeState() } else null
     val chromeOverHero by remember(hasSpotlight, device.isTv) {
-        // On phone the hero now starts BELOW the wordmark and genre chips; no artwork
-        // passes underneath the header. Keep the old edge-to-edge treatment on TV.
-        derivedStateOf { device.isTv && hasSpotlight && homeListState.firstVisibleItemIndex == 0 }
+        derivedStateOf { hasSpotlight && homeListState.firstVisibleItemIndex == 0 &&
+            homeListState.firstVisibleItemScrollOffset < 120 }
     }
 
     Scaffold(
@@ -316,6 +315,7 @@ fun HomeScreen(
                 HomeTopChrome(
                     showWordmark = !device.useNavigationRail,
                     overHero = chromeOverHero,
+                    showGenres = !hasSpotlight || device.isTv,
                     onNotificationsClick = onNotificationsClick,
                     onSearchClick = onSearchClick,
                     onScheduleClick = onScheduleClick,
@@ -368,6 +368,7 @@ fun HomeScreen(
                     history = history,
                     onAnimeClick = onAnimeClick,
                     onWatchNow = onWatchNow,
+                    onGenreClick = onGenreClick,
                     onResume = onResume,
                     onOpenDetails = onOpenDetails,
                     listState = homeListState,
@@ -406,6 +407,7 @@ fun HomeScreen(
 private fun HomeTopChrome(
     showWordmark: Boolean,
     overHero: Boolean,
+    showGenres: Boolean,
     onNotificationsClick: () -> Unit,
     onSearchClick: () -> Unit,
     onScheduleClick: () -> Unit,
@@ -414,17 +416,18 @@ private fun HomeTopChrome(
     onMoodDiscovery: () -> Unit,
 ) {
     val device = LocalAppDeviceProfile.current
+    val foreground = if (overHero) Color.White else MaterialTheme.colorScheme.onSurface
     Column(Modifier.fillMaxWidth().chromeFade(overHero, backdrop)) {
         TopAppBar(
             title = {
                 if (showWordmark) {
-                    AnililiWordmark(modifier = Modifier.height(if (device.isTv) 36.dp else 30.dp))
+                    AnililiWordmark(modifier = Modifier.height(if (device.isTv) 36.dp else 30.dp), textColor = foreground)
                 }
             },
             actions = {
                 if (!device.isTv) {
                     IconButton(onClick = onMoodDiscovery, modifier = Modifier.tourTarget(TourTarget.DICE)) {
-                        Icon(Icons.Default.Casino, contentDescription = "Mood discovery", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                        Icon(Icons.Default.Casino, contentDescription = "Mood discovery", tint = if (overHero) foreground else MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                     }
                 }
                 val unread by com.anilili.data.reminder.NotificationCenter.unread.collectAsState()
@@ -462,9 +465,9 @@ private fun HomeTopChrome(
                     Icon(Icons.Default.DateRange, contentDescription = "Airing schedule")
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = foreground, actionIconContentColor = foreground),
         )
-        GenrePillRow(
+        if (showGenres) GenrePillRow(
             onGenreClick = onGenreClick,
             backdrop = backdrop,
             modifier = Modifier.padding(bottom = 8.dp),
@@ -530,6 +533,7 @@ private fun HomeContent(
     history: List<HistoryEntry>,
     onAnimeClick: (Int) -> Unit,
     onWatchNow: (Int) -> Unit,
+    onGenreClick: (String?) -> Unit,
     onResume: (HistoryEntry) -> Unit,
     onOpenDetails: (HistoryEntry) -> Unit,
     listState: LazyListState = rememberLazyListState(),
@@ -632,13 +636,14 @@ private fun HomeContent(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = if (device.isTv && spotlight.isNotEmpty()) 0.dp else topOverlay,
+                    top = if (spotlight.isNotEmpty()) 0.dp else topOverlay,
                     bottom = contentPadding.calculateBottomPadding() + chromeBottomInset +
                         AppChromeListBottomGap,
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
+                    Column {
                     HeroPager(
                         items = spotlight,
                         onActiveMediaChanged = { activeHeroId = it },
@@ -648,15 +653,18 @@ private fun HomeContent(
                             val previous = history.firstOrNull { it.anilistId == id }
                             if (previous != null) onResume(previous) else onWatchNow(id)
                         },
-                        // Header clearance is owned by the scrolling list on phones.
-                        // Adding it to the hero inflated the artwork and misaligned its CTAs.
-                        topInset = if (device.isTv) topOverlay else 0.dp,
+                        // Artwork continues underneath the transparent wordmark header.
+                        topInset = topOverlay,
                         onMoveDown = if (showContinue) {
                             { runCatching { continueFocusRequester.requestFocus() }.isSuccess }
                         } else {
                             null
                         },
                     )
+                    if (!device.isTv && spotlight.isNotEmpty()) {
+                        GenrePillRow(onGenreClick = onGenreClick, modifier = Modifier.padding(top = 4.dp, bottom = 4.dp))
+                    }
+                    }
                 }
                 // In the viewer's order (Settings → Arrange Home). Every catalogue list is a rail:
                 // three of them used to share one strip of tabs and a grid underneath, which meant
@@ -851,7 +859,7 @@ private fun HeroPager(
         // A phone needs a distinct artwork zone above the title and actions. The old 244dp
         // forced long titles, metadata, genre chips, buttons and dots into one crowded block.
         // Keep the hero stable as slides change so page indicators never jump.
-        else -> 410.dp
+        else -> 378.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -941,10 +949,10 @@ private fun HeroPager(
             Row(
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 6.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(Color.Black.copy(alpha = 0.29f))
-                    .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(50))
+                    .padding(bottom = if (device.isTv) 6.dp else 12.dp)
+                    .then(if (device.isTv) Modifier.clip(RoundedCornerShape(50))
+                        .background(Color.Black.copy(alpha = .29f))
+                        .border(1.dp, Color.White.copy(alpha = .16f), RoundedCornerShape(50)) else Modifier)
                     .padding(horizontal = if (device.isTv) 4.dp else 3.dp, vertical = if (device.isTv) 5.dp else 1.dp),
                 horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 5.dp else 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -969,8 +977,8 @@ private fun HeroPager(
                                 .width(if (selected) 12.dp else 4.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    if (selected) MaterialTheme.colorScheme.primary
-                                    else Color.White.copy(alpha = 0.57f),
+                                    if (device.isTv) { if (selected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = .57f) }
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = if (selected) .88f else .28f),
                                 ),
                         )
                     }
@@ -1061,7 +1069,8 @@ private fun HeroCard(
                 .drawWithContent {
                     drawContent()
                     drawRect(Brush.verticalGradient(
-                        0f to Color.Black, .92f to Color.Black, 1f to Color.Transparent
+                        0f to Color.Black, .70f to Color.Black, .82f to Color.Black.copy(alpha = .82f),
+                        .93f to Color.Black.copy(alpha = .30f), 1f to Color.Transparent
                     ), blendMode = BlendMode.DstIn)
                 })
             .then(if (heroArt != null) Modifier.hazeSource(heroArt) else Modifier)) {
@@ -1071,11 +1080,12 @@ private fun HeroCard(
                     Brush.verticalGradient(
                         // The centre of a light poster is often white: retain the artwork
                         // while giving the logo, genre pill and CTA rows a stable contrast bed.
-                        0.0f to Color.Black.copy(.25f),
-                        0.34f to Color.Black.copy(.08f),
-                        0.58f to Color.Black.copy(.27f),
-                        0.83f to Color.Black.copy(.67f),
-                        1f to Color.Black.copy(.90f),
+                        0.0f to Color.Black.copy(.26f),
+                        0.30f to Color.Black.copy(.06f),
+                        0.50f to Color.Black.copy(.20f),
+                        0.68f to Color.Black.copy(.54f),
+                        0.84f to Color.Black.copy(.68f),
+                        1f to Color.Black.copy(.35f),
                     )
                 },
             )
@@ -1121,7 +1131,7 @@ private fun HeroCard(
                 .padding(horizontal = device.pagePadding)
                 .padding(
                     top = if (device.isTv) 16.dp else 8.dp,
-                    bottom = if (device.isTv) 26.dp else if (pageCount > 1) 49.dp else 32.dp,
+                    bottom = if (device.isTv) 26.dp else 86.dp,
                 ),
             horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
@@ -1136,7 +1146,7 @@ private fun HeroCard(
                 alignment = if (device.isTv) Alignment.Center else Alignment.CenterStart,
                 modifier = Modifier
                     .padding(top = if (device.isTv) 10.dp else 0.dp)
-                    .fillMaxWidth(if (device.isExpanded) 0.6f else 1f)
+                    .fillMaxWidth(if (device.isTv || device.isExpanded) 0.6f else .78f)
                     .height(if (device.isTv) 88.dp else if (device.isExpanded) 68.dp else 64.dp),
             ) {
                 ShrinkingTitle(
@@ -1167,39 +1177,46 @@ private fun HeroCard(
             if (!device.isTv) {
                 // Restrained single-line metadata takes the place of a third frosted genre row.
                 HeroMetaRow(media, compact = true)
+                val synopsis = remember(media.description) {
+                    media.description.orEmpty().replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim()
+                }
+                if (synopsis.isNotBlank()) Text(synopsis, color = Color.White.copy(alpha = .9f),
+                    style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 6.dp).fillMaxWidth(.86f))
                 // The hero is a destination as well as artwork. Keep the actionable
                 // call-to-action visible instead of relying on an undocumented poster tap.
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.padding(top = 12.dp, bottom = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedButton(
                         onClick = { onWatch(media.id) },
                         // Shared glass hierarchy: brighter primary over the dark artwork scrim.
                         colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.White.copy(alpha = .24f),
-                            contentColor = Color.White,
+                            containerColor = Color.White.copy(alpha = .88f),
+                            contentColor = Color(0xFF20212A),
                         ),
-                        border = androidx.compose.foundation.BorderStroke(.8.dp, Color.White.copy(alpha = .48f)),
-                        modifier = Modifier.weight(1.25f).heightIn(min = 48.dp),
+                        border = androidx.compose.foundation.BorderStroke(.6.dp, Color.White.copy(alpha = .58f)),
+                        modifier = Modifier.heightIn(min = 44.dp),
                         shape = RoundedCornerShape(50),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 9.dp),
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(19.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("Watch Now", fontWeight = FontWeight.SemiBold, maxLines = 1)
                     }
                     OutlinedButton(
-                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                        modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape)
+                            .backdropBlur(heroArt, tint = Color.White.copy(alpha = .13f), radius = 9.dp),
                         onClick = { onAnimeClick(media.id) },
                         colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.White.copy(alpha = .11f),
+                            containerColor = Color.White.copy(alpha = .10f),
                             contentColor = Color.White,
                         ),
                         border = cinematicSecondaryButtonBorder(onArtwork = true),
                         shape = RoundedCornerShape(50),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     ) {
                         Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(5.dp))
@@ -1376,7 +1393,10 @@ private fun HeroMetaRow(media: Media, compact: Boolean = false) {
         media.format?.let { add(HeroMetaCell(icon = null, text = heroFormatLabel(it))) }
         // For an airing show the CC count is what's actually out, not the season's planned total.
         val airedEpisodes = media.nextAiringEpisode?.episode?.minus(1) ?: media.episodes
-        if (!compact) {
+        if (compact) {
+            media.seasonYear?.let { add(HeroMetaCell(null, it.toString())) }
+            airedEpisodes?.takeIf { it > 0 }?.let { add(HeroMetaCell(null, "$it EP")) }
+        } else {
             airedEpisodes?.takeIf { it > 0 }?.let { add(HeroMetaCell(Icons.Default.ClosedCaption, "$it")) }
         }
         media.averageScore?.takeIf { it > 0 }?.let {
