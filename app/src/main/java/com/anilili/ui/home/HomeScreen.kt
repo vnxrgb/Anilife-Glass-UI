@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -1149,7 +1150,7 @@ private fun HeroCard(
                 .padding(horizontal = device.pagePadding)
                 .padding(
                     top = if (device.isTv) 16.dp else 8.dp,
-                    bottom = if (device.isTv) 26.dp else 86.dp,
+                    bottom = if (device.isTv) 26.dp else if (pageCount > 1) 64.dp else 40.dp,
                 ),
             horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
@@ -1204,17 +1205,22 @@ private fun HeroCard(
                 // The hero is a destination as well as artwork. Keep the actionable
                 // call-to-action visible instead of relying on an undocumented poster tap.
                 Row(
-                    modifier = Modifier.padding(top = 12.dp, bottom = 2.dp),
+                    // Cap the group on wide screens; on compact phones split the available width.
+                    // Both pills get exactly half of the same measured row, not their label width.
+                    modifier = Modifier.padding(top = 12.dp, bottom = 2.dp)
+                        .widthIn(max = 286.dp).fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     HomeHeroAction(
                         label = "Watch Now", icon = Icons.Default.PlayArrow,
                         primary = true, backdrop = heroArt, onClick = { onWatch(media.id) },
+                        modifier = Modifier.weight(1f),
                     )
                     HomeHeroAction(
                         label = "Details", icon = Icons.Default.Info,
                         primary = false, backdrop = heroArt, onClick = { onAnimeClick(media.id) },
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
@@ -1232,24 +1238,28 @@ private fun HomeHeroAction(
     primary: Boolean,
     backdrop: HazeState?,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val shape = CircleShape
     val foreground = if (primary) Color(0xFF20212A) else Color.White
-    Box(Modifier.heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
+    Box(modifier.heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
         Row(
-            Modifier.heightIn(min = 44.dp)
+            Modifier.fillMaxWidth().heightIn(min = 44.dp)
                 .clip(shape)
                 .then(if (!primary) Modifier.backdropBlur(backdrop, tint = Color.White.copy(alpha = .13f), radius = 9.dp) else Modifier)
-                .background(Color.White.copy(alpha = if (primary) .88f else .16f), shape)
+                // Lower on the fading artwork, the secondary action needs a dark glass base
+                // to keep its white label legible even on a pale poster or light theme.
+                .background(if (primary) Color.White.copy(alpha = .88f) else Color.Black.copy(alpha = .28f), shape)
                 .border(.6.dp, Color.White.copy(alpha = if (primary) .58f else .28f), shape)
                 .clickable(role = Role.Button, onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = foreground)
             Text(label, style = MaterialTheme.typography.labelLarge,
-                color = foreground, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                color = foreground, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
         }
     }
 }

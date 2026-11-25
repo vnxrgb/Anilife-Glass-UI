@@ -1,1 +1,1 @@
-Signed mobile preview: shared status bar contrast on Home and anime details; restore status bar after playback.
+Signed mobile preview: equal compact hero button widths and reduced gap above category chips.
