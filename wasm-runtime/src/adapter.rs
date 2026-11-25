@@ -20,6 +20,7 @@ pub struct ProviderMetadata {
 }
 
 struct DeniedHost {
+    broker: Option<Box<dyn HttpBroker + Send>>,
     limits: wasmtime::StoreLimits,
     wasi: wasmtime_wasi::WasiCtx,
     table: wasmtime::component::ResourceTable,
@@ -33,8 +34,10 @@ impl wasmtime_wasi::WasiView for DeniedHost {
 
 impl modern::anilili::provider::types::Host for DeniedHost {}
 impl modern::anilili::provider::host::Host for DeniedHost {
-    fn http(&mut self, _: modern::anilili::provider::host::Request) -> std::result::Result<modern::anilili::provider::host::Response, String> {
-        Err("network broker unavailable".into())
+    fn http(&mut self, req: modern::anilili::provider::host::Request) -> std::result::Result<modern::anilili::provider::host::Response, String> {
+        let broker = self.broker.as_mut().ok_or("network broker unavailable")?;
+        let r = broker.fetch(HttpRequest { method: req.method, url: req.url, headers: req.headers, body: req.body })?;
+        Ok(modern::anilili::provider::host::Response { status: r.status, headers: r.headers, body: r.body })
     }
     fn browser_fetch(&mut self, _: String, _: modern::anilili::provider::host::Request) -> std::result::Result<modern::anilili::provider::host::Response, String> {
         Err("browser access disabled".into())
@@ -46,8 +49,10 @@ impl modern::anilili::provider::host::Host for DeniedHost {
 
 impl legacy::anilili::provider::types::Host for DeniedHost {}
 impl legacy::anilili::provider::host::Host for DeniedHost {
-    fn http(&mut self, _: legacy::anilili::provider::types::Request) -> std::result::Result<legacy::anilili::provider::types::Response, String> {
-        Err("network broker unavailable".into())
+    fn http(&mut self, req: legacy::anilili::provider::types::Request) -> std::result::Result<legacy::anilili::provider::types::Response, String> {
+        let broker = self.broker.as_mut().ok_or("network broker unavailable")?;
+        let r = broker.fetch(HttpRequest { method: req.method, url: req.url, headers: req.headers, body: req.body })?;
+        Ok(legacy::anilili::provider::types::Response { status: r.status, headers: r.headers, body: r.body })
     }
     fn browser_fetch(&mut self, _: String, _: legacy::anilili::provider::types::Request) -> std::result::Result<legacy::anilili::provider::types::Response, String> {
         Err("browser access disabled".into())
@@ -59,6 +64,7 @@ impl legacy::anilili::provider::host::Host for DeniedHost {
 
 fn store(engine: &Engine) -> Result<Store<DeniedHost>> {
     let mut store = Store::new(engine, DeniedHost {
+        broker: None,
         wasi: wasmtime_wasi::WasiCtx::builder().build(),
         table: wasmtime::component::ResourceTable::new(),
         limits: StoreLimitsBuilder::new().memory_size(64 << 20).instances(32).memories(4).tables(16).build(),
@@ -88,5 +94,88 @@ pub fn inspect(bytes: &[u8], community: bool) -> Result<ProviderMetadata> {
         ProviderMetadata { name: info.name, id: Some(info.id), version: Some(info.version), hosts: info.hosts }
     };
     anyhow::ensure!(result.name.len() <= 128 && result.hosts.len() <= 64 && result.hosts.iter().all(|h| h.len() <= 253), "oversized metadata");
+    Ok(result)
+}
+
+pub struct HttpRequest {
+    pub method: String,
+    pub url: String,
+    pub headers: Vec<(String, String)>,
+    pub body: Option<Vec<u8>>,
+}
+pub struct HttpReply {
+    pub status: u16,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
+}
+/// A trusted external implementation must enforce all destination, credential and time limits.
+pub trait HttpBroker {
+    fn fetch(&mut self, request: HttpRequest) -> std::result::Result<HttpReply, String>;
+}
+
+#[derive(serde::Deserialize)]
+pub struct EpisodeQuery {
+    pub anilist_id: u32,
+    pub mal_id: Option<u32>,
+    pub titles: Vec<String>,
+    pub episode: f64,
+    pub dub: bool,
+}
+#[derive(serde::Serialize)]
+pub struct Stream {
+    pub url: String,
+    pub format: String,
+    pub quality: Option<String>,
+    pub height: Option<u32>,
+}
+#[derive(serde::Serialize)]
+pub struct Subtitle {
+    pub url: String,
+    pub label: String,
+    pub language: String,
+}
+#[derive(serde::Serialize)]
+pub struct Server {
+    pub name: String,
+    pub dub: bool,
+    pub headers: Vec<(String, String)>,
+    pub streams: Vec<Stream>,
+    pub subtitles: Vec<Subtitle>,
+    pub skip_intro: Option<(f64, f64)>,
+    pub skip_outro: Option<(f64, f64)>,
+    pub thumbnails: Option<String>,
+}
+/// Executes one reviewed component with an explicit per-invocation broker.
+/// Results are untrusted and must be checked by the Android host before playback.
+pub fn resolve(bytes: &[u8], community: bool, query: EpisodeQuery, broker: Box<dyn HttpBroker + Send>) -> Result<Vec<Server>> {
+    anyhow::ensure!(bytes.len() <= 64 << 20 && bytes.starts_with(b"\0asm\x0d\0\x01\0"), "invalid component");
+    anyhow::ensure!(query.episode.is_finite() && query.episode > 0.0 && query.titles.len() <= 32 && query.titles.iter().all(|t| t.len() <= 512), "invalid query");
+    let engine = super::engine()?;
+    let component = Component::new(&engine, bytes)?;
+    let mut store = store(&engine)?;
+    let mut linker = Linker::new(&engine);
+    wasmtime_wasi::p2::add_to_linker_sync(&mut linker)?;
+    let result: Vec<Server> = if community {
+        legacy::Provider::add_to_linker::<_, wasmtime::component::HasSelf<_>>(&mut linker, |s| s)?;
+        let instance = legacy::Provider::instantiate(&mut store, &component, &linker)?;
+        store.data_mut().broker = Some(broker);
+        let title = legacy::anilili::provider::types::Query { anilist_id: query.anilist_id, mal_id: query.mal_id, titles: query.titles, episode: query.episode, dub: query.dub };
+        instance.call_servers(&mut store, &title)?.map_err(|e| anyhow::anyhow!(e))?.into_iter().take(32).map(|s| Server {
+            name: s.name, dub: s.dub, headers: s.headers,
+            streams: s.streams.into_iter().take(32).map(|st| Stream { url: st.url, format: st.format, quality: st.quality, height: None }).collect(),
+            subtitles: vec![], skip_intro: None, skip_outro: None, thumbnails: None,
+        }).collect()
+    } else {
+        modern::Provider::add_to_linker::<_, wasmtime::component::HasSelf<_>>(&mut linker, |s| s)?;
+        let instance = modern::Provider::instantiate(&mut store, &component, &linker)?;
+        store.data_mut().broker = Some(broker);
+        let title = modern::anilili::provider::types::Title { anilist_id: query.anilist_id, mal_id: query.mal_id, titles: query.titles, episode: query.episode, dub: query.dub };
+        instance.call_servers(&mut store, &title)?.map_err(|e| anyhow::anyhow!(e))?.into_iter().take(32).map(|s| Server {
+            name: s.name, dub: s.dub, headers: s.headers,
+            streams: s.streams.into_iter().take(32).map(|st| Stream { url: st.url, format: st.format, quality: st.quality, height: st.height }).collect(),
+            subtitles: s.subtitles.into_iter().take(32).map(|st| Subtitle { url: st.url, label: st.label, language: st.language }).collect(),
+            skip_intro: s.skip_intro, skip_outro: s.skip_outro, thumbnails: s.thumbnails,
+        }).collect()
+    };
     Ok(result)
 }
