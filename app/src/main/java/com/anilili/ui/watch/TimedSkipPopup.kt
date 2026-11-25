@@ -1,12 +1,12 @@
 package com.anilili.ui.watch
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.State
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import kotlinx.coroutines.delay
 
 /**
  * How long "Skip Recap" and "Skip Intro" show by themselves once the playhead enters their window.
@@ -18,9 +18,7 @@ import kotlinx.coroutines.delay
  * picture for a minute and a half with no way to dismiss it. So the button pops up for this long,
  * the way the streaming services do it, and after that it shows only with the controls.
  */
-internal const val TIMED_SKIP_POPUP_MS = 10_000L
-
-private const val TIMED_SKIP_POPUP_TICK_MS = 250L
+internal const val TIMED_SKIP_POPUP_MS = 6_000L
 
 /**
  * Whether a timed skip is still within its pop-up after the playhead entered its window
@@ -30,22 +28,23 @@ private const val TIMED_SKIP_POPUP_TICK_MS = 250L
  * while a stream loads or a resume seek lands, and a wall clock had used up the pop-up before the
  * first frame. Leaving the window re-arms it, so seeking back into an opening offers the button again.
  */
+internal class TimedSkipPopup(private val remaining: State<Float>, private val inWindow: Boolean) {
+    val fraction: Float get() = if (inWindow) remaining.value else 0f
+    val showing: Boolean get() = fraction > 0f
+}
+
 @Composable
-internal fun rememberTimedSkipPopup(inWindow: Boolean, playing: Boolean, startMs: Long?, endMs: Long?): Boolean {
-    // Kept out of snapshot state so the countdown does not recompose the player four times a second.
-    val remainingMs = remember(startMs, endMs) { longArrayOf(TIMED_SKIP_POPUP_MS) }
-    var showing by remember(startMs, endMs) { mutableStateOf(true) }
-    LaunchedEffect(inWindow, playing, remainingMs) {
+internal fun rememberTimedSkipPopup(inWindow: Boolean, playing: Boolean, startMs: Long?, endMs: Long?): TimedSkipPopup {
+    val progress = remember(startMs, endMs) { Animatable(1f) }
+    LaunchedEffect(inWindow, playing, progress) {
         if (!inWindow) {
-            remainingMs[0] = TIMED_SKIP_POPUP_MS
-            showing = true
-            return@LaunchedEffect
+            progress.snapTo(1f)
+        } else if (playing && progress.value > 0f) {
+            progress.animateTo(0f, tween(
+                durationMillis = (TIMED_SKIP_POPUP_MS * progress.value).toInt().coerceAtLeast(1),
+                easing = LinearEasing,
+            ))
         }
-        while (playing && remainingMs[0] > 0L) {
-            delay(TIMED_SKIP_POPUP_TICK_MS)
-            remainingMs[0] -= TIMED_SKIP_POPUP_TICK_MS
-        }
-        if (remainingMs[0] <= 0L) showing = false
     }
-    return inWindow && showing
+    return TimedSkipPopup(progress.asState(), inWindow)
 }

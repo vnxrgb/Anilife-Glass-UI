@@ -46,6 +46,6 @@ internal class IndexedSettingsContent : LazyListScope {
         content: @Composable LazyItemScope.() -> Unit,
     ) {
         keys += key
-        declarations += { stickyHeader(key, contentType, content) }
+        declarations += { this.stickyHeader(key, contentType) { _ -> content() } }
     }
 }

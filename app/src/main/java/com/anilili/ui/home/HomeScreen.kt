@@ -29,6 +29,7 @@ import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import com.anilili.ui.components.ArtworkStatusBarScrim
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -41,6 +42,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -53,7 +55,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.Casino
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -87,6 +89,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -195,6 +198,8 @@ fun HomeScreen(
     onScheduleClick: () -> Unit,
     onGenreClick: (String?) -> Unit,
     onNotificationsClick: () -> Unit,
+    onMoodDiscovery: () -> Unit = {},
+    onHeroUnderBarsChanged: (Boolean) -> Unit = {},
     tvPrimaryFocusTarget: TvFocusTarget? = null,
     /** Raised by a hold on the television's Home tab; a phone refreshes by pulling instead. */
     tvRefreshRequest: TvRefreshRequest? = null,
@@ -301,11 +306,18 @@ fun HomeScreen(
     // glass switched off, which takes the recording away along with the blur.
     val homeGlass = glassEnabled(GlassSection.HOME)
     val homeBackdrop = if (homeGlass) remember { HazeState() } else null
-    val chromeOverHero by remember(hasSpotlight, device.isTv) {
-        // On phone the hero now starts BELOW the wordmark and genre chips; no artwork
-        // passes underneath the header. Keep the old edge-to-edge treatment on TV.
-        derivedStateOf { device.isTv && hasSpotlight && homeListState.firstVisibleItemIndex == 0 }
+    // The first list item also contains the genre chips and the fading artwork tail.
+    // Keep white status/header icons while the sharp artwork still sits under them,
+    // then restore the normal light/dark canvas policy before the pale tail reaches the top.
+    val fadeClearancePx = with(LocalDensity.current) { 168.dp.roundToPx() }
+    val chromeOverHero by remember(hasSpotlight, fadeClearancePx) {
+        derivedStateOf {
+            val heroSize = homeListState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == 0 }?.size
+            hasSpotlight && homeListState.firstVisibleItemIndex == 0 &&
+                (heroSize == null || homeListState.firstVisibleItemScrollOffset < (heroSize - fadeClearancePx).coerceAtLeast(0))
+        }
     }
+    SideEffect { onHeroUnderBarsChanged(chromeOverHero) }
 
     Scaffold(
         modifier = modifier.then(if (device.isTv) Modifier.appCanvas() else Modifier.glassAtmosphere()),
@@ -315,11 +327,13 @@ fun HomeScreen(
                 HomeTopChrome(
                     showWordmark = !device.useNavigationRail,
                     overHero = chromeOverHero,
+                    showGenres = !hasSpotlight || device.isTv,
                     onNotificationsClick = onNotificationsClick,
                     onSearchClick = onSearchClick,
                     onScheduleClick = onScheduleClick,
                     onGenreClick = onGenreClick,
                     backdrop = homeBackdrop,
+                    onMoodDiscovery = onMoodDiscovery,
                 )
             }
         },
@@ -365,8 +379,11 @@ fun HomeScreen(
                     exhausted = exhausted,
                     history = history,
                     onAnimeClick = onAnimeClick,
+                    onWatchNow = onWatchNow,
+                    onGenreClick = onGenreClick,
                     onResume = onResume,
                     onOpenDetails = onOpenDetails,
+                    artworkUnderStatusBar = chromeOverHero,
                     listState = homeListState,
                     contentPadding = padding,
                 )
@@ -403,20 +420,29 @@ fun HomeScreen(
 private fun HomeTopChrome(
     showWordmark: Boolean,
     overHero: Boolean,
+    showGenres: Boolean,
     onNotificationsClick: () -> Unit,
     onSearchClick: () -> Unit,
     onScheduleClick: () -> Unit,
     onGenreClick: (String?) -> Unit,
     backdrop: HazeState? = null,
+    onMoodDiscovery: () -> Unit,
 ) {
+    val device = LocalAppDeviceProfile.current
+    val foreground = if (overHero) Color.White else MaterialTheme.colorScheme.onSurface
     Column(Modifier.fillMaxWidth().chromeFade(overHero, backdrop)) {
         TopAppBar(
             title = {
                 if (showWordmark) {
-                    AnililiWordmark(modifier = Modifier.height(36.dp))
+                    AnililiWordmark(modifier = Modifier.height(if (device.isTv) 36.dp else 30.dp), textColor = foreground)
                 }
             },
             actions = {
+                if (!device.isTv) {
+                    IconButton(onClick = onMoodDiscovery, modifier = Modifier.tourTarget(TourTarget.DICE)) {
+                        Icon(Icons.Default.Casino, contentDescription = "Mood discovery", tint = if (overHero) foreground else MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    }
+                }
                 val unread by com.anilili.data.reminder.NotificationCenter.unread.collectAsState()
                 val controlFocus1 = rememberFocusFill()
                 IconButton(
@@ -452,12 +478,12 @@ private fun HomeTopChrome(
                     Icon(Icons.Default.DateRange, contentDescription = "Airing schedule")
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = foreground, actionIconContentColor = foreground),
         )
-        GenrePillRow(
+        if (showGenres) GenrePillRow(
             onGenreClick = onGenreClick,
             backdrop = backdrop,
-            modifier = Modifier.padding(bottom = 12.dp),
+            modifier = Modifier.padding(bottom = 8.dp),
         )
     }
 }
@@ -519,8 +545,11 @@ private fun HomeContent(
     exhausted: Set<HomeSection>,
     history: List<HistoryEntry>,
     onAnimeClick: (Int) -> Unit,
+    onWatchNow: (Int) -> Unit,
+    onGenreClick: (String?) -> Unit,
     onResume: (HistoryEntry) -> Unit,
     onOpenDetails: (HistoryEntry) -> Unit,
+    artworkUnderStatusBar: Boolean = false,
     listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
@@ -547,7 +576,7 @@ private fun HomeContent(
         // read across, so the card only has to be legible, not to tile. The grid an expanded rail
         // opens is what the column count is for, and it comes from the profile so Home lands on the
         // same poster grid Search and Browse use instead of inventing a second one.
-        val columns = if (device.isTv) 7 else device.posterColumns
+        val columns = if (device.isTv) 7 else device.homePosterColumns(available, gridSpacing)
         val cardWidth = if (device.isTv) {
             device.posterWidth
         } else {
@@ -559,6 +588,23 @@ private fun HomeContent(
         // is only reserved when there is no spotlight to run underneath — without that, a feed that
         // came back without one would open with its first row already behind the wordmark.
         val spotlight = remember(data.spotlight) { data.spotlight.take(6) }
+        val ambientEnabled by SettingsStore.homeAmbientGlow.collectAsState()
+        val spotlightIds = remember(spotlight) { spotlight.map(Media::id) }
+        var activeHeroId by remember(spotlightIds) { mutableStateOf(spotlight.firstOrNull()?.id) }
+        val activeHero = spotlight.firstOrNull { it.id == activeHeroId } ?: spotlight.firstOrNull()
+        val portraitHero = !device.isTablet && !device.isExpanded && !device.isTv
+        val hdArt = remember(spotlightIds, portraitHero) { mutableStateMapOf<Int, String?>() }
+        LaunchedEffect(activeHero?.id, portraitHero) {
+            val media = activeHero ?: return@LaunchedEffect
+            if (device.isTv || hdArt.containsKey(media.id)) return@LaunchedEffect
+            hdArt[media.id] = try { AppGraph.repository.hdHeroArtwork(media, portraitHero) }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (_: Exception) { null }
+        }
+        val ambientArtwork = activeHero?.let {
+            hdArt[it.id] ?: if (device.isTablet || device.isExpanded) it.wideHeroArtwork() ?: it.coverImage.best
+            else it.coverImage.best ?: it.wideHeroArtwork()
+        }
         val topOverlay = contentPadding.calculateTopPadding()
 
         // The rows drawn right now, each with its LazyColumn key: shown, and with something in
@@ -606,36 +652,43 @@ private fun HomeContent(
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
+            if (!device.isTv && ambientEnabled && ambientArtwork != null) {
+                HomeAmbient(artwork = ambientArtwork, listState = listState, modifier = Modifier.fillMaxSize())
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = if (device.isTv && spotlight.isNotEmpty()) 0.dp else topOverlay,
+                    top = if (spotlight.isNotEmpty()) 0.dp else topOverlay,
                     bottom = contentPadding.calculateBottomPadding() + chromeBottomInset +
                         AppChromeListBottomGap,
                 ),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
+                    Column {
                     HeroPager(
                         items = spotlight,
+                        hdArtwork = hdArt,
+                        onActiveMediaChanged = { activeHeroId = it },
                         onAnimeClick = onAnimeClick,
                         onWatch = { id ->
-                            // Resume immediately when this hero is already in Continue
-                            // Watching. A first-time title still opens Details to choose
-                            // its first available episode/source safely.
+                            // Reuse the app's Watch Now route; never invent an episode or source.
                             val previous = history.firstOrNull { it.anilistId == id }
-                            if (previous != null) onResume(previous) else onAnimeClick(id)
+                            if (previous != null) onResume(previous) else onWatchNow(id)
                         },
-                        // Header clearance is owned by the scrolling list on phones.
-                        // Adding it to the hero inflated the artwork and misaligned its CTAs.
-                        topInset = if (device.isTv) topOverlay else 0.dp,
+                        // Artwork continues underneath the transparent wordmark header.
+                        topInset = topOverlay,
                         onMoveDown = if (showContinue) {
                             { runCatching { continueFocusRequester.requestFocus() }.isSuccess }
                         } else {
                             null
                         },
                     )
+                    if (!device.isTv && spotlight.isNotEmpty()) {
+                        GenrePillRow(onGenreClick = onGenreClick, modifier = Modifier.padding(top = 4.dp, bottom = 4.dp))
+                    }
+                    }
                 }
                 // In the viewer's order (Settings → Arrange Home). Every catalogue list is a rail:
                 // three of them used to share one strip of tabs and a grid underneath, which meant
@@ -731,6 +784,11 @@ private fun HomeContent(
                     }
                 }
             }
+            // Remains in place even if the scroll-aware app header slides away.
+            // Only paint the actual status inset, never an opaque full header.
+            if (artworkUnderStatusBar) {
+                ArtworkStatusBarScrim(Modifier.align(Alignment.TopCenter))
+            }
         }
     }
 }
@@ -750,7 +808,7 @@ private fun GenrePillRow(
     LazyRow(
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = device.pagePadding),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         item(key = "all") {
             GenrePill(label = "All", highlighted = true, onClick = { onGenreClick(null) })
@@ -774,35 +832,22 @@ private fun GenrePillRow(
 @Composable
 private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, backdrop: HazeState? = null) {
     val shape = RoundedCornerShape(50)
-    // Frosted on Android 12+: the blur does the separating the heavier smoke did, so the tint over
-    // it can be lighter and more of the spotlight's colour comes through.
-    val frosted = !highlighted && backdrop != null && backdropBlurAvailable
+    val scheme = MaterialTheme.colorScheme
     val fillFocus1 = rememberFocusFill()
+    val fill = if (highlighted) scheme.primaryContainer else scheme.surfaceContainerHigh.copy(alpha = .68f)
+    val foreground = if (highlighted) scheme.onPrimaryContainer else scheme.onSurface
     Text(
         label,
-        style = MaterialTheme.typography.labelLarge,
-        color = fillFocus1.content(Color.White.copy(alpha = if (highlighted) 1f else .92f)),
-        fontWeight = if (highlighted) FontWeight.Bold else FontWeight.SemiBold,
+        style = MaterialTheme.typography.labelMedium,
+        color = fillFocus1.content(foreground),
+        fontWeight = if (highlighted) FontWeight.SemiBold else FontWeight.Medium,
         modifier = Modifier
             .focusFill(fillFocus1, shape)
             .clip(shape)
-            .then(if (frosted) Modifier.backdropBlur(backdrop, tint = Color.Black.copy(alpha = .30f)) else Modifier)
-            .background(
-                fillFocus1.background(
-                    when {
-                        highlighted -> Color.White.copy(alpha = 0.23f)
-                        frosted -> Color.Transparent
-                        else -> Color.Black.copy(alpha = .52f)
-                    },
-                ),
-            )
-            .border(
-                1.dp,
-                if (highlighted) Color.White.copy(alpha = .38f) else Color.White.copy(alpha = .18f),
-                shape,
-            )
+            .background(fillFocus1.background(fill))
+            .border(.5.dp, if (highlighted) scheme.primary.copy(alpha = .35f) else scheme.outline.copy(alpha = .50f), shape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
     )
 }
 
@@ -817,6 +862,8 @@ private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, 
 @Composable
 private fun HeroPager(
     items: List<Media>,
+    hdArtwork: Map<Int, String?> = emptyMap(),
+    onActiveMediaChanged: (Int) -> Unit = {},
     onAnimeClick: (Int) -> Unit,
     onWatch: (Int) -> Unit,
     onMoveDown: (() -> Boolean)?,
@@ -826,19 +873,23 @@ private fun HeroPager(
     val device = LocalAppDeviceProfile.current
     val pagerState = rememberPagerState(pageCount = { items.size })
     val indicatorScope = rememberCoroutineScope()
-    val heroIds = items.map(Media::id)
+    // Keep the page identity stable during drag/animation recompositions.
+    val heroIds = remember(items) { items.map(Media::id) }
     var tvPage by remember(heroIds) { mutableIntStateOf(0) }
     var tvHeroHasFocus by remember(heroIds) { mutableStateOf(false) }
     val safeTvPage = tvPage.coerceIn(0, items.lastIndex)
+    val activePage = if (device.isTv) safeTvPage else pagerState.settledPage.coerceIn(0, items.lastIndex)
+    val activeId = items[activePage].id
+    LaunchedEffect(activeId) { onActiveMediaChanged(activeId) }
     val pagerIsDragged by pagerState.interactionSource.collectIsDraggedAsState()
     val heroHeight = topInset + when {
         device.isTv -> 420.dp
-        device.isExpanded -> 336.dp
-        device.isTablet -> 294.dp
+        device.isExpanded -> 370.dp
+        device.isTablet -> 340.dp
         // A phone needs a distinct artwork zone above the title and actions. The old 244dp
         // forced long titles, metadata, genre chips, buttons and dots into one crowded block.
         // Keep the hero stable as slides change so page indicators never jump.
-        else -> 314.dp
+        else -> 378.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -867,14 +918,11 @@ private fun HeroPager(
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = if (device.isTv) device.pagePadding else 14.dp)
+            .then(if (device.isTv) Modifier.padding(horizontal = device.pagePadding) else Modifier)
             .height(heroHeight)
-            .clip(if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(26.dp))
-            .border(
-                1.dp,
-                Color.White.copy(alpha = if (device.isTv) 0.10f else 0.24f),
-                if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(26.dp),
-            ),
+            .then(if (device.isTv) Modifier.clip(RoundedCornerShape(18.dp))
+                .border(1.dp, Color.White.copy(alpha = .10f), RoundedCornerShape(18.dp))
+                else Modifier.clipToBounds()),
     ) {
         if (device.isTv) {
             val page = safeTvPage
@@ -905,6 +953,7 @@ private fun HeroPager(
             ) { page ->
                 HeroCard(
                     media = items[page],
+                    hdArtwork = hdArtwork[items[page].id],
                     logo = heroLogos[items[page].id],
                     pageIndex = page,
                     pageCount = items.size,
@@ -931,10 +980,10 @@ private fun HeroPager(
             Row(
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 6.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(Color.Black.copy(alpha = 0.29f))
-                    .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(50))
+                    .padding(bottom = if (device.isTv) 6.dp else 12.dp)
+                    .then(if (device.isTv) Modifier.clip(RoundedCornerShape(50))
+                        .background(Color.Black.copy(alpha = .29f))
+                        .border(1.dp, Color.White.copy(alpha = .16f), RoundedCornerShape(50)) else Modifier)
                     .padding(horizontal = if (device.isTv) 4.dp else 3.dp, vertical = if (device.isTv) 5.dp else 1.dp),
                 horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 5.dp else 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -959,8 +1008,8 @@ private fun HeroPager(
                                 .width(if (selected) 12.dp else 4.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    if (selected) MaterialTheme.colorScheme.primary
-                                    else Color.White.copy(alpha = 0.57f),
+                                    if (device.isTv) { if (selected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = .57f) }
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = if (selected) .88f else .28f),
                                 ),
                         )
                     }
@@ -984,6 +1033,7 @@ internal fun heroVisibleIndicatorIndices(page: Int, pageCount: Int, maxDots: Int
 @Composable
 private fun HeroCard(
     media: Media,
+    hdArtwork: String? = null,
     logo: String?,
     pageIndex: Int,
     pageCount: Int,
@@ -1045,18 +1095,29 @@ private fun HeroCard(
                 role = Role.Button,
             ) { onAnimeClick(media.id) },
     ) {
-        Box(Modifier.fillMaxSize().then(if (heroArt != null) Modifier.hazeSource(heroArt) else Modifier)) {
-            HeroBackdrop(media, topInset)
+        Box(Modifier.fillMaxSize()
+            .then(if (device.isTv) Modifier else Modifier
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    drawRect(Brush.verticalGradient(
+                        0f to Color.Black, .70f to Color.Black, .82f to Color.Black.copy(alpha = .82f),
+                        .93f to Color.Black.copy(alpha = .30f), 1f to Color.Transparent
+                    ), blendMode = BlendMode.DstIn)
+                })
+            .then(if (heroArt != null) Modifier.hazeSource(heroArt) else Modifier)) {
+            HeroBackdrop(media, topInset, hdArtwork = hdArtwork)
             Box(
                 Modifier.fillMaxSize().appCanvasFade { canvas ->
                     Brush.verticalGradient(
                         // The centre of a light poster is often white: retain the artwork
                         // while giving the logo, genre pill and CTA rows a stable contrast bed.
-                        0.0f to Color.Black.copy(.25f),
-                        0.34f to Color.Black.copy(.08f),
-                        0.58f to Color.Black.copy(.27f),
-                        0.83f to Color.Black.copy(.67f),
-                        1f to canvas,
+                        0.0f to Color.Black.copy(.26f),
+                        0.30f to Color.Black.copy(.06f),
+                        0.50f to Color.Black.copy(.20f),
+                        0.68f to Color.Black.copy(.54f),
+                        0.84f to Color.Black.copy(.68f),
+                        1f to Color.Black.copy(.35f),
                     )
                 },
             )
@@ -1102,7 +1163,7 @@ private fun HeroCard(
                 .padding(horizontal = device.pagePadding)
                 .padding(
                     top = if (device.isTv) 16.dp else 8.dp,
-                    bottom = if (device.isTv) 26.dp else if (pageCount > 1) 35.dp else 15.dp,
+                    bottom = if (device.isTv) 26.dp else if (pageCount > 1) 64.dp else 40.dp,
                 ),
             horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
@@ -1117,8 +1178,8 @@ private fun HeroCard(
                 alignment = if (device.isTv) Alignment.Center else Alignment.CenterStart,
                 modifier = Modifier
                     .padding(top = if (device.isTv) 10.dp else 0.dp)
-                    .fillMaxWidth(if (device.isExpanded) 0.6f else 1f)
-                    .height(if (device.isTv) 88.dp else if (device.isExpanded) 68.dp else 54.dp),
+                    .fillMaxWidth(if (device.isTv || device.isExpanded) 0.6f else .78f)
+                    .height(if (device.isTv) 88.dp else if (device.isExpanded) 68.dp else 64.dp),
             ) {
                 ShrinkingTitle(
                     text = media.title.preferred,
@@ -1148,40 +1209,70 @@ private fun HeroCard(
             if (!device.isTv) {
                 // Restrained single-line metadata takes the place of a third frosted genre row.
                 HeroMetaRow(media, compact = true)
+                val synopsis = remember(media.description) {
+                    media.description.orEmpty().replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim()
+                }
+                if (synopsis.isNotBlank()) Text(synopsis, color = Color.White.copy(alpha = .9f),
+                    style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 6.dp).fillMaxWidth(.86f))
                 // The hero is a destination as well as artwork. Keep the actionable
                 // call-to-action visible instead of relying on an undocumented poster tap.
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    // Cap the group on wide screens; on compact phones split the available width.
+                    // Both pills get exactly half of the same measured row, not their label width.
+                    modifier = Modifier.padding(top = 12.dp, bottom = 2.dp)
+                        .widthIn(max = 286.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    OutlinedButton(
-                        onClick = { onWatch(media.id) },
-                        // Neutral high-contrast action; keep the artwork free of theme-accent tint.
-                        colors = cinematicSecondaryButtonColors(onArtwork = true),
-                        border = cinematicSecondaryButtonBorder(onArtwork = true),
-                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-                        shape = RoundedCornerShape(50),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 9.dp),
-                    ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(19.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Watch now", fontWeight = FontWeight.Bold, maxLines = 1)
-                    }
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-                        onClick = { onAnimeClick(media.id) },
-                        colors = cinematicSecondaryButtonColors(onArtwork = true),
-                        border = cinematicSecondaryButtonBorder(onArtwork = true),
-                        shape = RoundedCornerShape(50),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-                    ) {
-                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(5.dp))
-                        Text("Details", maxLines = 1)
-                    }
+                    HomeHeroAction(
+                        label = "Watch Now", icon = Icons.Default.PlayArrow,
+                        primary = true, backdrop = heroArt, onClick = { onWatch(media.id) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    HomeHeroAction(
+                        label = "Details", icon = Icons.Default.Info,
+                        primary = false, backdrop = heroArt, onClick = { onAnimeClick(media.id) },
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
+        }
+    }
+}
+
+/** Shared measured glass surface: identical touch targets, rim, text baseline and padding.
+ * Blur is inside the same painted pill, rather than decorating Material's larger touch bounds.
+ */
+@Composable
+private fun HomeHeroAction(
+    label: String,
+    icon: ImageVector,
+    primary: Boolean,
+    backdrop: HazeState?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = CircleShape
+    val foreground = if (primary) Color(0xFF20212A) else Color.White
+    Box(modifier.heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 44.dp)
+                .clip(shape)
+                .then(if (!primary) Modifier.backdropBlur(backdrop, tint = Color.White.copy(alpha = .13f), radius = 9.dp) else Modifier)
+                // Lower on the fading artwork, the secondary action needs a dark glass base
+                // to keep its white label legible even on a pale poster or light theme.
+                .background(if (primary) Color.White.copy(alpha = .88f) else Color.Black.copy(alpha = .28f), shape)
+                .border(.6.dp, Color.White.copy(alpha = if (primary) .58f else .28f), shape)
+                .clickable(role = Role.Button, onClick = onClick)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = foreground)
+            Text(label, style = MaterialTheme.typography.labelLarge,
+                color = foreground, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -1228,13 +1319,17 @@ private val HERO_BANNER_FADE = Brush.verticalGradient(
  * the sharp band still on top of it.
  */
 @Composable
-private fun HeroBackdrop(media: Media, topInset: Dp, modifier: Modifier = Modifier) {
+private fun HeroBackdrop(media: Media, topInset: Dp, modifier: Modifier = Modifier, hdArtwork: String? = null) {
     val device = LocalAppDeviceProfile.current
-    val cover = media.coverImage.best
-    if (!device.isTv && !device.isTablet && !device.isExpanded && cover != null) {
+    val portrait = !device.isTv && !device.isTablet && !device.isExpanded
+    var hdFailed by remember(hdArtwork) { mutableStateOf(false) }
+    val enhanced = hdArtwork.takeUnless { hdFailed }
+    val cover = if (portrait) enhanced ?: media.coverImage.best else media.coverImage.best
+    if (portrait && cover != null) {
         AsyncImage(
             model = cover,
             contentDescription = null,
+            onError = { if (enhanced != null) hdFailed = true },
             modifier = modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
             // Centred, so the crop takes an even slice off the top and the bottom rather than
@@ -1246,7 +1341,7 @@ private fun HeroBackdrop(media: Media, topInset: Dp, modifier: Modifier = Modifi
     // Never the trailer frame: YouTube's hqdefault is 480x360, so a hero magnifies it several times
     // over into an unrecognisable close-up — the television dropped it for that reason. A large box
     // with no banner falls back to covering with the cover, which is what it did before.
-    val banner = media.wideHeroArtwork()
+    val banner = enhanced ?: media.wideHeroArtwork()
     if (banner == null) {
         AsyncImage(
             model = cover,
@@ -1262,6 +1357,7 @@ private fun HeroBackdrop(media: Media, topInset: Dp, modifier: Modifier = Modifi
         AsyncImage(
             model = banner,
             contentDescription = null,
+            onError = { if (enhanced != null) hdFailed = true },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 // Under the chrome rather than behind it. Starting at the top would put the band's
@@ -1332,12 +1428,12 @@ private fun HeroPill(
     Row(
         modifier
             .clip(RoundedCornerShape(50))
-            .backdropBlur(backdrop, tint = Color.Black.copy(alpha = .22f), radius = 12.dp)
+            .backdropBlur(backdrop, tint = Color.Black.copy(alpha = .48f), radius = 12.dp)
             .background(Color.Black.copy(if (frosted) 0.05f else .42f))
             .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(50))
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        content = content,
+        content = { androidx.compose.runtime.CompositionLocalProvider(LocalContentColor provides Color.White) { content() } },
     )
 }
 
@@ -1351,7 +1447,10 @@ private fun HeroMetaRow(media: Media, compact: Boolean = false) {
         media.format?.let { add(HeroMetaCell(icon = null, text = heroFormatLabel(it))) }
         // For an airing show the CC count is what's actually out, not the season's planned total.
         val airedEpisodes = media.nextAiringEpisode?.episode?.minus(1) ?: media.episodes
-        if (!compact) {
+        if (compact) {
+            media.seasonYear?.let { add(HeroMetaCell(null, it.toString())) }
+            airedEpisodes?.takeIf { it > 0 }?.let { add(HeroMetaCell(null, "$it EP")) }
+        } else {
             airedEpisodes?.takeIf { it > 0 }?.let { add(HeroMetaCell(Icons.Default.ClosedCaption, "$it")) }
         }
         media.averageScore?.takeIf { it > 0 }?.let {
@@ -1378,10 +1477,10 @@ private fun HeroMetaRow(media: Media, compact: Boolean = false) {
                         icon,
                         contentDescription = null,
                         modifier = Modifier.padding(end = 3.dp).size(15.dp),
-                        tint = cell.iconTint ?: LocalContentColor.current,
+                        tint = cell.iconTint ?: Color.White,
                     )
                 }
-                Text(cell.text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                Text(cell.text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = Color.White)
             }
         }
     }
@@ -1448,21 +1547,14 @@ private fun RailTitle(title: String, dragHandle: Modifier?, modifier: Modifier =
     ) {
         Text(
             title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
             // Keep long row names from stealing space from Grid/Rail controls on small phones.
             modifier = if (dragHandle != null) Modifier.weight(1f) else Modifier,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        if (dragHandle != null) {
-            Icon(
-                Icons.Default.DragHandle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .7f),
-                modifier = Modifier.padding(horizontal = if (LocalAppDeviceProfile.current.isTv) 8.dp else 4.dp).size(if (LocalAppDeviceProfile.current.isTv) 22.dp else 18.dp),
-            )
-        }
+        // The title remains the hold-to-reorder target; no permanent decorative handle.
     }
 }
 
@@ -1599,7 +1691,7 @@ private fun MediaRail(
         } else {
             LazyRow(
                 modifier = Modifier.focusGroup(),
-                contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 12.dp),
+                contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 18.dp else 10.dp),
             ) {
                 items(media, key = { it.id }) { item ->
@@ -1743,7 +1835,7 @@ private fun ContinueRail(
         LazyRow(
             state = rememberContinueRailState(history.firstOrNull()?.anilistId),
             modifier = Modifier.focusGroup(),
-            contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 12.dp),
+            contentPadding = PaddingValues(horizontal = device.pagePadding, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 18.dp else 10.dp),
         ) {
             itemsIndexed(history, key = { _, item -> item.anilistId }) { index, entry ->
@@ -1764,7 +1856,7 @@ private fun ContinueRail(
                     Box(
                         Modifier.fillMaxWidth()
                             .aspectRatio(if (device.isTv) 16f / 9f else 1.4f)
-                            .glassCard(RoundedCornerShape(20.dp)),
+                            .glassCard(RoundedCornerShape(18.dp)),
                     ) {
                         // Each card frosts its own thumbnail under its corner buttons: a source
                         // this small is cheap to record, and the buttons never need the feed.
@@ -1776,13 +1868,13 @@ private fun ContinueRail(
                         Box(
                             Modifier
                                 .align(Alignment.Center)
-                                .size(40.dp)
+                                .size(32.dp)
                                 .clip(CircleShape)
                                 .background(Color.Black.copy(alpha = 0.50f))
-                                .border(1.dp, Color.White.copy(alpha = 0.45f), CircleShape),
+                                .border(1.dp, Color.White.copy(alpha = 0.24f), CircleShape),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
                         }
                         // Overflow exposes Details, Remove and list-management actions.
                         // The rest of the thumbnail remains a direct Resume target.
@@ -1843,16 +1935,16 @@ private fun ContinueRail(
                         // A remote-synced entry may not yet have a real playback duration.
                         // Draw actual progress only, instead of fabricating a visible 3% strip.
                         if (entry.durationMs > 0L) {
-                            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.White.copy(.25f))) {
+                            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(2.dp).background(Color.White.copy(.25f))) {
                                 Box(
                                     Modifier.fillMaxWidth(entry.progressFraction.coerceIn(0f, 1f))
-                                        .height(4.dp)
+                                        .height(2.dp)
                                         .background(MaterialTheme.colorScheme.primary),
                                 )
                             }
                         }
                     }
-                    Text(entry.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
+                    Text(entry.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp))
                     Text("Episode ${entry.episodeLabel}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

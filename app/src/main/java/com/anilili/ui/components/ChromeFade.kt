@@ -4,6 +4,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import com.anilili.data.settings.SettingsStore
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -59,7 +61,8 @@ val AppChromeFade = Brush.verticalGradient(
 @Composable
 fun Modifier.chromeFade(overHero: Boolean, backdrop: HazeState? = null): Modifier {
     val scheme = MaterialTheme.colorScheme
-    val backingColor = scheme.surfaceContainerHigh
+    val backingColor = scheme.surface
+    val radius = 12.dp
     val settled by animateFloatAsState(
         targetValue = if (overHero) 0f else 1f,
         animationSpec = tween(220),
@@ -81,8 +84,8 @@ fun Modifier.chromeFade(overHero: Boolean, backdrop: HazeState? = null): Modifie
             backdrop!!,
             HazeStyle(
                 backgroundColor = scheme.surface,
-                tint = HazeTint(backingColor.copy(alpha = 0.40f)),
-                blurRadius = 24.dp,
+                tint = HazeTint(backingColor.copy(alpha = .55f)),
+                blurRadius = radius,
                 noiseFactor = 0f,
             ),
         ) {
@@ -109,3 +112,36 @@ private val ChromeGlassMask = Brush.verticalGradient(
     0.86f to Color.Black,
     1f to Color.Transparent,
 )
+
+
+/** Browse shares the page canvas at rest; this masked glass is only drawn over scrolled posters. */
+@OptIn(ExperimentalHazeApi::class)
+@Composable
+fun Modifier.browseHeaderGlass(backdrop: HazeState?): Modifier {
+    val scheme = MaterialTheme.colorScheme
+    val tint = scheme.surface.copy(alpha = .55f)
+    val radius = 12.dp
+    return if (backdrop != null && backdropBlurAvailable) {
+        this.hazeEffect(
+            backdrop,
+            HazeStyle(
+                backgroundColor = scheme.surface,
+                tint = HazeTint(tint),
+                blurRadius = radius,
+                noiseFactor = 0f,
+            ),
+        ) {
+            mask = ChromeGlassMask
+            inputScale = HazeInputScale.Fixed(0.33f)
+            canDrawArea = { true }
+        }
+    } else {
+        this.background(
+            Brush.verticalGradient(
+                0f to scheme.surface.copy(alpha = 0.96f),
+                0.78f to scheme.surface.copy(alpha = 0.80f),
+                1f to Color.Transparent,
+            ),
+        )
+    }
+}

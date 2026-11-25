@@ -5,6 +5,10 @@ import com.anilili.data.model.AiringSchedule
 import com.anilili.data.model.Category
 import com.anilili.data.model.SubtitleItem
 import com.anilili.data.model.EpisodeItem
+import com.anilili.data.model.EpisodeClassificationRecord
+import com.anilili.data.model.withMetadataSource
+import com.anilili.data.model.EpisodeClassification
+import com.anilili.data.model.withClassification
 import com.anilili.data.model.EpisodeMetadata
 import com.anilili.data.model.EpisodesResult
 import com.anilili.data.model.alignMetadataToSeason
@@ -97,6 +101,7 @@ import kotlin.math.roundToLong
 import android.os.SystemClock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.SetSerializer
 import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
@@ -1286,6 +1291,21 @@ class MiruroRepository(
         return tmdb.backdrops(media, hint).firstOrNull()
     }
 
+    /** Mobile artwork: prefer a full-size portrait or landscape image with an exact title mapping.
+     * Do not force a narrow AniList banner to cover the whole screen when better fanart exists.
+     */
+    suspend fun hdHeroArtwork(media: Media, portrait: Boolean): String? {
+        if (media.id <= 0 || media.isAdult) return null
+        val tvdb = runCatching { aniZip.heroArtwork(media.id, portrait) }
+            .onFailure { it.rethrowIfCancellation(); DiagnosticsLog.throwable("HD hero artwork failed id=${media.id}", it) }
+            .getOrDefault(emptyList())
+        tvdb.firstOrNull()?.let { return it }
+        if (portrait) return null
+        val hint = withContext(Dispatchers.IO) { konoha.tmdbRefFor(media.id) }
+        return tmdb.backdrops(media, hint).firstOrNull()
+            ?.replace("https://image.tmdb.org/t/p/w1280/", "https://image.tmdb.org/t/p/original/")
+    }
+
     suspend fun discoverOptions(): DiscoverOptions {
         val adultHidden = hideAdult
         return cache.getOrFetch(
@@ -1788,8 +1808,8 @@ class MiruroRepository(
     }
 
     /**
-     * Filler episode numbers for a title: the published filler index first, MAL via Jikan for any
-     * title the index has never answered. Empty with neither. Throws when Jikan fails.
+     * Filler episode numbers for a title: the published filler index first, MAL via Tenrai for any
+     * title the index has never answered. Empty with neither. Throws when Tenrai fails.
      */
     /**
      * When each of [anilistId]'s episodes that aired in the last
@@ -1807,31 +1827,56 @@ class MiruroRepository(
             .associate { it.episode to it.airingAt }
     }
 
-    suspend fun fillerEpisodes(anilistId: Int?, malId: Int?): Set<Int> {
-        if (anilistId != null && anilistId > 0) {
-            val index = runCatching { konoha.fillerIndex() }
+    suspend fun fillerEpisodes(anilistId: Int?, malId: Int?): Set<Int> =
+        episodeClassifications(anilistId, malId).filterValues { it.classification == EpisodeClassification.FILLER }.keys
+
+    /** Use the mirror during a slow live lookup; enrich from the cached live result on later opens. */
+    suspend fun episodeClassifications(anilistId: Int?, malId: Int?): Map<Int, EpisodeClassificationRecord> {
+        val mirrored: Map<Int, EpisodeClassificationRecord> = if (anilistId != null && anilistId > 0) {
+            val numbers = runCatching { konoha.fillerIndex() }
                 .onFailure { it.rethrowIfCancellation(); DiagnosticsLog.throwable("Filler index failed", it) }
+                .getOrNull()?.get(anilistId) ?: emptySet<Int>()
+            numbers.associateWith { EpisodeClassificationRecord(EpisodeClassification.FILLER, "Metadata mirror") }
+        } else emptyMap()
+        val live: Map<Int, EpisodeClassificationRecord> = withTimeoutOrNull(2_000L) {
+            runCatching { malEpisodeClassifications(malId) }
+                .onFailure { it.rethrowIfCancellation(); DiagnosticsLog.throwable("Classification lookup failed", it) }
                 .getOrNull()
-            index?.get(anilistId)?.let { return it }
-        }
-        return malFillerEpisodes(malId)
+        } ?: emptyMap()
+        return mirrored + live
     }
 
-    /** MAL filler episode numbers via Jikan; cached a week, empty with no MAL id. Throws on failure. */
-    private suspend fun malFillerEpisodes(malId: Int?): Set<Int> {
-        if (malId == null || malId <= 0) return emptySet()
-        // Every caller waits at most a few seconds, and Naruto's list is three Jikan pages while One
-        // Piece's is twelve — so a fetch tied to the caller was cancelled by its timeout every time,
-        // nothing was ever cached, and the next visit started from page one again. The fetch runs
-        // on its own scope instead: the caller stops waiting, the fetch finishes and is cached for
-        // the next open. One fetch per title at a time.
+    private suspend fun malEpisodeClassifications(malId: Int?): Map<Int, EpisodeClassificationRecord> {
+        if (malId == null || malId <= 0) return emptyMap()
         val fetch = fillerFetches.getOrPut(malId) {
             fillerScope.async(start = CoroutineStart.LAZY) {
                 cache.getOrFetch(
-                    key = "filler:$malId",
-                    serializer = SetSerializer(Int.serializer()),
+                    key = "episode-classifications:v4:$malId",
+                    serializer = MapSerializer(Int.serializer(), EpisodeClassificationRecord.serializer()),
                     ttlMs = OPTIONS_TTL,
-                ) { jikan.fillerEpisodes(malId) }
+                    cacheIf = { it.isNotEmpty() },
+                ) {
+                    var failure: Exception? = null
+                    fun attempt(block: () -> Map<Int, EpisodeClassification>?): Map<Int, EpisodeClassification>? =
+                        try { block() } catch (error: Exception) {
+                            error.rethrowIfCancellation()
+                            failure = error
+                            null
+                        }
+                    // A slow full-series Tenrai lookup must not prevent the richer services
+                    // from being attempted. Prefer their explicit canon/mixed classifications.
+                    val lists = attempt { jikan.fillerListsEpisodes(malId) }
+                    val pedia = if (lists.isNullOrEmpty()) attempt { jikan.aniFillerPediaEpisodes(malId) } else null
+                    val primary = if (!lists.isNullOrEmpty() || !pedia.isNullOrEmpty()) null
+                        else attempt { jikan.episodeClassifications(malId) }
+                    if (primary == null && lists == null && pedia == null) failure?.let { throw it }
+                    // Explicit map defaults avoid the repository's Any?.orEmpty() string helper.
+                    buildMap<Int, EpisodeClassificationRecord> {
+                        if (primary != null) putAll(primary.mapValues { EpisodeClassificationRecord(it.value, "Tenrai") })
+                        if (pedia != null) putAll(pedia.mapValues { EpisodeClassificationRecord(it.value, "AniFillerPedia") })
+                        if (lists != null) putAll(lists.mapValues { EpisodeClassificationRecord(it.value, "FillerLists") })
+                    }
+                }
             }.also { deferred -> deferred.invokeOnCompletion { fillerFetches.remove(malId, deferred) } }
         }
         fetch.start()
@@ -1839,7 +1884,7 @@ class MiruroRepository(
     }
 
     private val fillerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val fillerFetches = ConcurrentHashMap<Int, Deferred<Set<Int>>>()
+    private val fillerFetches = ConcurrentHashMap<Int, Deferred<Map<Int, EpisodeClassificationRecord>>>()
 
     /** Community intro/outro markers via AniSkip; cached when known, with service failures exposed. */
     suspend fun skipTimes(
@@ -1854,16 +1899,69 @@ class MiruroRepository(
         return cache.getOrFetch(
             // v3: entries now carry recap windows and the segment ids voting needs, so a v2 row
             // would decode into timings a viewer cannot report.
-            key = "aniskip:v3:$malId:${episode.toInt()}:$durationMs",
+            key = "aniskip:v8:$malId:${episode.toInt()}:$durationMs",
             serializer = SkipTimes.serializer().nullable,
             ttlMs = OPTIONS_TTL,
             cacheIf = { it != null },
         ) {
             withContext(Dispatchers.IO) {
                 val number = episode.toInt()
-                mirroredSkipTimes(anilistId, malId, number, episodeLengthSeconds)
-                    ?: aniSkip.skipTimes(malId, number, episodeLengthSeconds)
-                    ?: redirectedSkipTimes(malId, number, episodeLengthSeconds)
+                var failure: Exception? = null
+                var resolved = try {
+                    mirroredSkipTimes(anilistId, malId, number, episodeLengthSeconds)?.withMetadataSource("AniSkip mirror")
+                } catch (error: Exception) {
+                    error.rethrowIfCancellation()
+                    failure = error
+                    null
+                }
+                if (!hasCompleteSkipWindows(resolved)) {
+                    try {
+                        resolved = mergeSkipWindows(resolved, aniSkip.skipTimes(malId, number, episodeLengthSeconds)?.withMetadataSource("AniSkip"))
+                    } catch (error: Exception) {
+                        error.rethrowIfCancellation()
+                        failure = error
+                    }
+                }
+                if (!hasCompleteSkipWindows(resolved)) {
+                    try {
+                        resolved = mergeSkipWindows(resolved, redirectedSkipTimes(malId, number, episodeLengthSeconds)?.withMetadataSource("AniSkip remapped"))
+                    } catch (error: Exception) {
+                        error.rethrowIfCancellation()
+                        failure = error
+                    }
+                }
+                if (!hasCompleteSkipWindows(resolved) && episodeLengthSeconds > 0) {
+                    val mapped = try {
+                        aniZip.episodeReference(anilistId, number)
+                    } catch (error: Exception) {
+                        error.rethrowIfCancellation()
+                        failure = error
+                        null
+                    }
+                    val tvdbId = mapped?.tvdbId
+                    if (mapped != null && tvdbId != null && tvdbId > 0) {
+                        try {
+                            resolved = mergeSkipWindows(resolved, aniSkip.theIntroDbTimes(tvdbId, mapped.season, mapped.episode, episodeLengthSeconds)?.withMetadataSource("TheIntroDB"))
+                        } catch (error: Exception) {
+                            error.rethrowIfCancellation()
+                            failure = error
+                        }
+                    }
+                    // IMDb numbering is independent of TVDB. Match the actual episode's title
+                    // and original air date rather than guessing a season or absolute offset.
+                    if (!hasCompleteSkipWindows(resolved) && mapped != null) {
+                        try {
+                            val imdb = aniZip.imdbEpisodeReference(mapped)
+                            if (imdb != null) resolved = mergeSkipWindows(resolved,
+                                aniSkip.introDbTimes(imdb.imdbId, imdb.season, imdb.episode, episodeLengthSeconds)?.withMetadataSource("IntroDB"))
+                        } catch (error: Exception) {
+                            error.rethrowIfCancellation()
+                            failure = error
+                        }
+                    }
+                }
+                if (resolved == null) failure?.let { throw it }
+                resolved
             }
         }
     }
@@ -2132,13 +2230,15 @@ class MiruroRepository(
      * Cached for as long as the info record, and empty on failure: the Recommended tab still has
      * the series entries to show, so a refused AniList request must not turn into an error there.
      */
-    suspend fun animeRecommendations(id: Int): List<Media> {
+    /** Existing AniList mirror/live path, kept independent of Tenrai for partial failures. */
+    suspend fun communityAniListRecommendations(id: Int): List<Media> {
         // Catalogue-native entries (hanime) use negative ids and have no AniList record.
         if (id < 0) return emptyList()
         val hideAdult = hideAdult
         // The generator stores AniList's recommendations with each title, refreshed daily; they
         // change slowly enough that the day-old list is the same list, and it costs AniList nothing.
-        runCatching { konoha.details(id)?.recommendations }.getOrNull()
+        runCatching { konoha.details(id)?.recommendations }
+            .onFailure { it.rethrowIfCancellation() }.getOrNull()
             ?.takeIf { it.isNotEmpty() }
             ?.let { fromTree -> return if (hideAdult) fromTree.filterNot { it.isAdult } else fromTree }
         val recommended = runCatching {
@@ -2157,6 +2257,40 @@ class MiruroRepository(
             }
             .getOrDefault(emptyList())
         return if (hideAdult) recommended.filterNot { it.isAdult } else recommended
+    }
+
+    /** Cache mapped recommendations independently so a failed source cannot poison the other. */
+    suspend fun communityTenraiRecommendations(id: Int): List<Media> {
+        if (id <= 0) return emptyList()
+        return try {
+            val malId = malIdFor(id) ?: return emptyList()
+            cache.getOrFetch(
+                key = "tenrai-recommendations:v1:$malId",
+                serializer = ListSerializer(Media.serializer()),
+                ttlMs = INFO_TTL,
+                cacheIf = { it.isNotEmpty() },
+            ) {
+                val ids = withContext(Dispatchers.IO) { jikan.recommendationIds(malId) }
+                if (ids.isEmpty()) emptyList() else {
+                    val byMal = aniList.mediaByMalIds(ids).groupBy { it.idMal }
+                    ids.mapNotNull { byMal[it]?.singleOrNull() }
+                }
+            }.filter { it.id != id && (!hideAdult || !it.isAdult) && it.status != "NOT_YET_RELEASED" }
+        } catch (error: Exception) {
+            error.rethrowIfCancellation()
+            DiagnosticsLog.throwable("Tenrai recommendations failed id=$id", error)
+            emptyList()
+        }
+    }
+
+    suspend fun animeRecommendations(id: Int): List<Media> {
+        val a = communityAniListRecommendations(id)
+        val b = communityTenraiRecommendations(id)
+        val all = (a + b).associateBy { it.id }
+        val ranks = com.anilili.data.recs.HybridRanking.rank(
+            listOf(a.map { it.id } to 1.0, b.map { it.id } to .8), setOf(id), 30
+        )
+        return ranks.mapNotNull { all[it] }.filter { it.status != "NOT_YET_RELEASED" && (!hideAdult || !it.isAdult) }
     }
 
     /** Walks AniList's PREQUEL/SEQUEL chain so every season is reachable from one detail page. */
@@ -2337,18 +2471,19 @@ class MiruroRepository(
 
     /**
      * Applies MAL filler flags to every provider's episode list. Providers rarely carry filler
-     * data themselves; Jikan is authoritative and cached, and a timeout keeps a slow first
+     * data themselves; Tenrai supplies explicit flags and cached, and a timeout keeps a slow first
      * fetch from delaying episode loading.
      */
     private suspend fun EpisodesResult.withFillerMarks(anilistId: Int): EpisodesResult {
         if (isEmpty) return this
-        val fillers = kotlinx.coroutines.withTimeoutOrNull(FILLER_FETCH_TIMEOUT_MS) {
-            runCatching { fillerEpisodes(anilistId, animeInfo(anilistId)?.idMal) }.getOrDefault(emptySet())
+        val classifications = kotlinx.coroutines.withTimeoutOrNull(FILLER_FETCH_TIMEOUT_MS) {
+            runCatching { episodeClassifications(anilistId, animeInfo(anilistId)?.idMal) }
+                .onFailure(Throwable::rethrowIfCancellation).getOrDefault(emptyMap())
         } ?: return this
-        if (fillers.isEmpty()) return this
+        if (classifications.isEmpty()) return this
         fun mark(episodes: List<EpisodeItem>): List<EpisodeItem> = episodes.map { episode ->
-            val isFiller = episode.number % 1.0 == 0.0 && episode.number.toInt() in fillers
-            if (isFiller && !episode.filler) episode.copy(filler = true) else episode
+            if (episode.number % 1.0 != 0.0) episode
+            else classifications[episode.number.toInt()]?.let { episode.withClassification(it.classification, it.source) } ?: episode
         }
         return EpisodesResult(providers.map { it.copy(sub = mark(it.sub), dub = mark(it.dub)) })
     }
@@ -3118,3 +3253,33 @@ internal fun discoverCacheKey(filters: DiscoverFilters, hideAdult: Boolean): Str
         sort,
     ).joinToString("|")
 }
+
+/** Keep each complete segment and its voting ID together; never splice unrelated boundaries. */
+internal fun mergeSkipWindows(primary: SkipTimes?, fallback: SkipTimes?): SkipTimes? {
+    if (primary == null) return fallback
+    if (fallback == null) return primary
+    val intro = validSkipWindow(primary.introStart ?: 0.0, primary.introEnd)
+    val outro = validSkipWindow(primary.outroStart, primary.outroEnd)
+    val recap = validSkipWindow(primary.recapStart, primary.recapEnd)
+    return primary.copy(
+        introStart = if (intro) primary.introStart else fallback.introStart,
+        introEnd = if (intro) primary.introEnd else fallback.introEnd,
+        introSkipId = if (intro) primary.introSkipId else fallback.introSkipId,
+        introSource = if (intro) primary.introSource else fallback.introSource,
+        outroStart = if (outro) primary.outroStart else fallback.outroStart,
+        outroEnd = if (outro) primary.outroEnd else fallback.outroEnd,
+        outroSkipId = if (outro) primary.outroSkipId else fallback.outroSkipId,
+        outroSource = if (outro) primary.outroSource else fallback.outroSource,
+        recapStart = if (recap) primary.recapStart else fallback.recapStart,
+        recapEnd = if (recap) primary.recapEnd else fallback.recapEnd,
+        recapSkipId = if (recap) primary.recapSkipId else fallback.recapSkipId,
+        recapSource = if (recap) primary.recapSource else fallback.recapSource,
+    )
+}
+
+private fun validSkipWindow(start: Double?, end: Double?): Boolean =
+    start != null && end != null && start.isFinite() && end.isFinite() && start >= 0 && end > start
+
+private fun hasCompleteSkipWindows(times: SkipTimes?): Boolean =
+    times != null && validSkipWindow(times.introStart ?: 0.0, times.introEnd) &&
+        validSkipWindow(times.outroStart, times.outroEnd)

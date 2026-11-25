@@ -150,7 +150,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.HazeState
 import com.anilili.data.settings.GlassSection
-import com.anilili.ui.components.backdropBlur
+import com.anilili.ui.components.browseHeaderGlass
 import com.anilili.ui.components.glassEnabled
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.runtime.key
@@ -298,16 +298,12 @@ fun SearchScreen(
                         // what slides, and the grid reserves it along with the rest.
                         Modifier
                             .pointerInput(Unit) { detectTapGestures { } }
+                            // At rest the header and results share the same canvas, with no
+                            // rectangular scrim. Once cards scroll underneath, fade only the
+                            // backing (not the text or controls) toward a transparent bottom edge.
                             .then(
-                                if (browseBackdrop != null) {
-                                    Modifier.backdropBlur(
-                                        browseBackdrop,
-                                        tint = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .38f),
-                                        radius = 24.dp,
-                                    )
-                                } else {
-                                    Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.52f))
-                                },
+                                if (headerRoomOnScreen) Modifier
+                                else Modifier.browseHeaderGlass(browseBackdrop),
                             )
                             .statusBarsPadding()
                     } else {
@@ -316,7 +312,7 @@ fun SearchScreen(
                 ),
         ) {
             SearchTopBar(
-                translucent = browseBackdrop != null,
+                translucent = headerFloats,
                 vm = vm,
                 options = options,
                 onOpenFilters = { showFilters = true },
@@ -328,7 +324,7 @@ fun SearchScreen(
                     onAnimeClick(suggestion.id)
                 },
             )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .22f))
+            if (!headerFloats) HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = .22f))
         }
     }
 
@@ -537,7 +533,7 @@ private fun SearchTopBar(
                         .padding(bottom = 6.dp),
                 ) {
                     Row(
-                        Modifier.fillMaxWidth().padding(top = 10.dp),
+                        Modifier.fillMaxWidth().padding(top = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -587,7 +583,7 @@ private fun SearchTopBar(
                                         }
                                     }
                                 },
-                                shape = RoundedCornerShape(24.dp),
+                                shape = RoundedCornerShape(28.dp),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(onSearch = {
@@ -611,16 +607,21 @@ private fun SearchTopBar(
                             )),
                             border = androidx.compose.foundation.BorderStroke(1.dp, glassRimColor()),
                             onClick = onOpenFilters,
-                            contentPadding = PaddingValues(horizontal = 15.dp),
+                            contentPadding = PaddingValues(0.dp),
                             modifier = Modifier
                                 .focusRequester(filterFocusRequester)
-                                .height(56.dp)
-                                .focusFill(controlFocus1, RoundedCornerShape(50)),
-                            shape = RoundedCornerShape(22.dp),
+                                .size(56.dp)
+                                .focusFill(controlFocus1, CircleShape),
+                            shape = CircleShape,
                         ) {
-                            Icon(Icons.Default.FilterList, contentDescription = "Open filters")
-                            if (vm.filters.activeCount > 0) {
-                                Text(" ${vm.filters.activeCount}", fontWeight = FontWeight.Bold)
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.FilterList, contentDescription = "Open filters (${vm.filters.activeCount} active)", modifier = Modifier.size(24.dp))
+                                if (vm.filters.activeCount > 0) {
+                                    Box(
+                                        Modifier.align(Alignment.TopEnd).size(7.dp)
+                                            .background(MaterialTheme.colorScheme.onSurface, CircleShape),
+                                    )
+                                }
                             }
                         }
                     }
@@ -658,11 +659,11 @@ private fun SearchTopBar(
                         "Categories",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 14.dp, bottom = 2.dp),
+                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
                     )
                     LazyRow(
                         modifier = Modifier.fillMaxWidth().focusGroup(),
-                        contentPadding = PaddingValues(end = 16.dp),
+                        contentPadding = PaddingValues(end = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(7.dp),
                     ) {
                         item(key = "season") {

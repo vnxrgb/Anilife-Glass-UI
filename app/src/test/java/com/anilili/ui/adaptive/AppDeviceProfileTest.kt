@@ -9,6 +9,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import androidx.compose.ui.unit.dp
 
 class AppDeviceProfileTest {
     @Test
@@ -25,6 +26,22 @@ class AppDeviceProfileTest {
         assertEquals(AppFormFactor.TABLET, profile.formFactor)
         assertTrue(profile.useNavigationRail)
         assertEquals(6, profile.episodeColumns)
+    }
+
+    @Test
+    fun `expanded Home grid adapts to tablet split screen width`() {
+        val tablet = resolveAppDeviceProfile(Configuration.UI_MODE_TYPE_NORMAL, 700)
+        assertEquals(4, tablet.homePosterColumns(652.dp, 9.dp))
+        assertEquals(3, tablet.homePosterColumns(420.dp, 9.dp))
+        assertEquals(2, tablet.homePosterColumns(270.dp, 9.dp))
+    }
+
+    @Test
+    fun `expanded Home grid keeps phone and TV column counts`() {
+        val phone = resolveAppDeviceProfile(Configuration.UI_MODE_TYPE_NORMAL, 412)
+        val tv = resolveAppDeviceProfile(Configuration.UI_MODE_TYPE_TELEVISION, 960)
+        assertEquals(phone.posterColumns, phone.homePosterColumns(300.dp, 9.dp))
+        assertEquals(tv.posterColumns, tv.homePosterColumns(700.dp, 16.dp))
     }
 
     @Test

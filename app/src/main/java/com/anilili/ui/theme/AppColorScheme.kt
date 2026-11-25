@@ -127,13 +127,14 @@ fun appColors(spec: ThemeSpec, wallpaperSeed: Int?): AppColors {
     }
     val source = Hct.fromInt(seedArgb)
     val contrast = spec.contrast.level
+    val light = spec.background == ThemeBackground.LIGHT
     val dynamic: DynamicScheme = when {
-        monochrome -> SchemeMonochrome(source, true, contrast)
+        monochrome -> SchemeMonochrome(source, !light, contrast)
         else -> when (spec.style) {
-            ThemeStyle.VIVID -> SchemeFidelity(source, true, contrast)
-            ThemeStyle.TONAL -> SchemeTonalSpot(source, true, contrast)
-            ThemeStyle.NEUTRAL -> SchemeNeutral(source, true, contrast)
-            ThemeStyle.VIBRANT -> SchemeVibrant(source, true, contrast)
+            ThemeStyle.VIVID -> SchemeFidelity(source, !light, contrast)
+            ThemeStyle.TONAL -> SchemeTonalSpot(source, !light, contrast)
+            ThemeStyle.NEUTRAL -> SchemeNeutral(source, !light, contrast)
+            ThemeStyle.VIBRANT -> SchemeVibrant(source, !light, contrast)
         }
     }
     val roles = MaterialDynamicColors()
@@ -146,7 +147,7 @@ fun appColors(spec: ThemeSpec, wallpaperSeed: Int?): AppColors {
 
     var primary = roles.primary().color()
     var onPrimary = roles.onPrimary().color()
-    if (!monochrome && spec.style == ThemeStyle.VIVID) {
+    if (!monochrome && spec.style == ThemeStyle.VIVID && !light) {
         // The seed itself - unless it is too dark to read on a black canvas, which only a custom
         // colour can be (every preset sits above tone 40). Then its own hue, lifted to tone 50.
         primary = if (source.tone >= MIN_PRIMARY_TONE) Color(seedArgb) else Color(source.withTone(50.0).toInt())
@@ -162,8 +163,8 @@ fun appColors(spec: ThemeSpec, wallpaperSeed: Int?): AppColors {
     val containerHigh = if (amoled) neutral.at(10.0) else roles.surfaceContainerHigh().color()
     val containerHighest = if (amoled) neutral.at(14.0) else roles.surfaceContainerHighest().color()
 
-    val outline = neutralVariant.at(24.0 + 18.0 * lift)
-    val outlineVariant = neutralVariant.at(15.0 + 12.0 * lift)
+    val outline = neutralVariant.at(if (light) 75.0 - 18.0 * lift else 24.0 + 18.0 * lift)
+    val outlineVariant = neutralVariant.at(if (light) 88.0 - 12.0 * lift else 15.0 + 12.0 * lift)
 
     val scheme = darkColorScheme(
         primary = primary,
@@ -205,13 +206,13 @@ fun appColors(spec: ThemeSpec, wallpaperSeed: Int?): AppColors {
     )
     return AppColors(
         scheme = scheme,
-        text3 = neutralVariant.at(58.0 + 14.0 * lift),
+        text3 = neutralVariant.at(if (light) 43.0 - 14.0 * lift else 58.0 + 14.0 * lift),
         line = outlineVariant,
         line2 = outline,
-        radioRing = neutralVariant.at(40.0 + 15.0 * lift),
+        radioRing = neutralVariant.at(if (light) 55.0 - 15.0 * lift else 40.0 + 15.0 * lift),
         barTrack = containerHighest,
         disabledFill = containerHigh,
-        disabledContent = neutralVariant.at(40.0 + 10.0 * lift),
+        disabledContent = neutralVariant.at(if (light) 55.0 - 10.0 * lift else 40.0 + 10.0 * lift),
         focusFill = primary,
         focusContent = onPrimary,
         playerAccent = if (spec.playerAccent) primary else Color.White,

@@ -8,6 +8,7 @@ import coil.imageLoader
 import coil.request.ImageRequest
 import com.anilili.data.AppGraph
 import com.anilili.data.library.WatchedTitles
+import com.anilili.data.model.DiscoverFilters
 import com.anilili.data.model.Media
 import com.anilili.data.model.WatchedFilter
 import com.anilili.data.recs.Recommendations
@@ -69,6 +70,22 @@ class RandomAnimeViewModel(app: Application) : AndroidViewModel(app) {
      * is all started titles, and that is what was asked for — and no taste picks are mixed in, since
      * a card from outside the list would break the promise of the chip.
      */
+    private fun moodDeck(genre: String): RandomAnimeDeck = RandomAnimeDeck(
+        fetchPage = { page ->
+            repo.discover(DiscoverFilters(genres = setOf(genre), excludedGenres = MoodPolicy.excludedGenres(genre), hideWatched = WatchedFilter.STARTED), page).items
+                .filter { MoodPolicy.matches(it, genre) }
+        },
+        pageCount = 8,
+        strictSkip = true,
+        sparsePages = true,
+        skip = { WatchedTitles.hides(it, WatchedFilter.STARTED) },
+        tasteSource = {
+            Recommendations.forYou(limit = 60)?.items.orEmpty()
+                .filter { MoodPolicy.matches(it, genre) }
+        },
+        tasteEvery = 3,
+    )
+
     private fun listDeck(ids: List<Int>): RandomAnimeDeck {
         val pages = ids.sorted().chunked(LIST_PAGE)
         return RandomAnimeDeck(
@@ -93,9 +110,11 @@ class RandomAnimeViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(rolling = true, failure = null) }
         rollJob = viewModelScope.launch {
             val pause = async { if (tumble) delay(MIN_TUMBLE_MS) }
-            val result = runCatching { deck.draw() }
+            val activeDeck = deck
+            val result = runCatching { activeDeck.draw() }
             pause.await()
             result.onFailure { it.rethrowIfCancellation() }
+            if (activeDeck !== deck) return@launch
             val pick = result.getOrNull()
             _state.update { current ->
                 if (pick != null) {
@@ -120,7 +139,7 @@ class RandomAnimeViewModel(app: Application) : AndroidViewModel(app) {
      * that has emptied, or been deleted, falls back to anything.
      */
     fun ensurePick() {
-        val sources = currentDiceSources()
+        val sources = currentDiceSources() + DiceSource.MOODS
         val wanted = sources.firstOrNull { it.key == sourceKey } ?: DiceSource.ANYWHERE
         _state.update { it.copy(sources = sources, source = wanted) }
         if (wanted != source) {
@@ -145,8 +164,13 @@ class RandomAnimeViewModel(app: Application) : AndroidViewModel(app) {
     /** Swaps the deck, dropping the cards dealt from the old one and any draw still under way. */
     private fun useSource(next: DiceSource) {
         rollJob?.cancel()
+        rollJob = null
         source = next
-        deck = if (next.isAnywhere) anywhereDeck() else listDeck(next.ids)
+        deck = when {
+            next.isAnywhere -> anywhereDeck()
+            next.moodGenre != null -> moodDeck(next.moodGenre)
+            else -> listDeck(next.ids)
+        }
         _state.update { it.copy(pick = null, upNext = null, rolling = false, failure = null) }
     }
 

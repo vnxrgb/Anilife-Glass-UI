@@ -66,15 +66,13 @@ class SettingsSearchIndexTest {
 
     @Test
     fun `a name match outranks a keyword match`() {
-        // "Skip button" and "Skip button length" are named for it; auto-skip only mentions it.
-        val titles = searchSettings("skip button", entries).map { it.title }
-        assertEquals("Skip button", titles.first())
+        val titles = searchSettings("skip filler", entries).map { it.title }
+        assertEquals("Skip filler episodes", titles.first())
     }
 
     @Test
     fun `every word has to land somewhere`() {
-        // Both words are in "Skip button length", so it survives.
-        assertTrue(searchSettings("skip length", entries).any { it.title == "Skip button length" })
+        assertTrue(searchSettings("skip filler", entries).any { it.title == "Skip filler episodes" })
         // The second word matches nothing at all, so the first word cannot carry the result.
         assertTrue(searchSettings("skip zzzzz", entries).isEmpty())
     }
@@ -98,7 +96,9 @@ class SettingsSearchIndexTest {
         assertTrue(entries.any { it.title == "Overscan" })
         assertTrue(phone.none { it.title == "Interface size" || it.title == "Overscan" || it.title == "Spoken feedback" })
         // Drawn on both since the television's top menu learned to fade out.
-        assertTrue(phone.any { it.title == "Keep the bars on screen" })
+        assertTrue(phone.any { it.title == "Keep the header on screen" })
+        assertTrue(phone.none { it.title == "Keep the bars on screen" })
+        assertTrue(searchSettings("pin header", phone).any { it.title == "Keep the header on screen" })
         assertTrue(entries.any { it.title == "Keep the bars on screen" })
     }
 
@@ -146,11 +146,11 @@ class SettingsSearchIndexTest {
         val body = source.substring(source.indexOf("""settingsSection(""""))
         var section = ""
         val rows = mutableSetOf<Pair<String, String>>()
-        Regex("""settingsSection\("([a-z]+)"|title = "([^"]+)"""").findAll(body).forEach { match ->
+        Regex("""settingsSection\("([a-z]+)"|(?:title|label) = "([^"]+)"""").findAll(body).forEach { match ->
             val (sectionId, title) = match.destructured
             if (sectionId.isNotEmpty()) section = sectionId else rows += section to title
         }
-        val indexed = entries.map { it.sectionId to it.title }.toSet()
+        val indexed = (entries + settingsSearchEntries(isTv = false)).map { it.sectionId to it.title }.toSet()
         assertEquals(emptySet<Pair<String, String>>(), indexed - rows)
     }
 
@@ -165,7 +165,7 @@ class SettingsSearchIndexTest {
                 val (sectionId, key) = match.destructured
                 if (sectionId.isNotEmpty()) section = sectionId else keyedRows += section to key
             }
-        val indexed = entries.map { it.sectionId to it.title }.toSet()
+        val indexed = (entries + settingsSearchEntries(isTv = false)).map { it.sectionId to it.title }.toSet()
         assertEquals(emptySet<Pair<String, String>>(), indexed - keyedRows)
     }
 

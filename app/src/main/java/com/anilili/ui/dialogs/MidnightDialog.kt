@@ -6,6 +6,8 @@ import android.view.WindowManager
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.ScrollState
+import com.anilili.ui.components.glassPanelColor
+import com.anilili.ui.components.glassRimColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -269,10 +271,10 @@ fun MidnightSheet(
         // has to reach the bottom edge itself: the sheet's own inset padding would leave a strip
         // there with nothing in it but the app showing through sharp.
         containerColor = if (backdrop != null) Color.Transparent
-            else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
+            else glassPanelColor().copy(alpha = glassPanelColor().alpha.coerceAtLeast(.85f)),
         contentWindowInsets = { if (backdrop != null) WindowInsets(0) else BottomSheetDefaults.windowInsets },
-        contentColor = Midnight.Text,
-        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
         dragHandle = null,
         tonalElevation = 0.dp,
     ) {
@@ -304,7 +306,7 @@ fun MidnightSheet(
                 .then(
                     if (backdrop != null) {
                         Modifier.popupGlass(backdrop)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = GLASS_PANEL_ALPHA))
+                            .background(glassPanelColor())
                     } else {
                         Modifier
                     },
@@ -406,7 +408,7 @@ fun MidnightModal(
             } else {
                 maxWidth
             }
-            val shape = RoundedCornerShape(24.dp)
+            val shape = RoundedCornerShape(30.dp)
             Column(
                 modifier = modifier
                     .align(Alignment.Center)
@@ -423,7 +425,7 @@ fun MidnightModal(
                     .border(
                         1.dp,
                         if (device.isTv) Midnight.Line2
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.20f),
+                        else glassRimColor(),
                         shape,
                     )
                     .padding(if (device.isTv) 18.dp else 16.dp),

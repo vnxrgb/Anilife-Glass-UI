@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -26,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -70,11 +72,11 @@ internal fun ScrollHintColumn(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .height(36.dp)
                     .background(
                         Brush.verticalGradient(
                             0f to fadeColor.copy(alpha = 0f),
-                            1f to fadeColor,
+                            1f to fadeColor.copy(alpha = .70f),
                         ),
                     ),
                 contentAlignment = Alignment.BottomCenter,
@@ -84,7 +86,7 @@ internal fun ScrollHintColumn(
                         .padding(bottom = 2.dp)
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.14f))
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
                         .pointerInput(scrollState) {
                             detectTapGestures {
                                 scope.launch {
@@ -100,7 +102,7 @@ internal fun ScrollHintColumn(
                         imageVector = Icons.Default.KeyboardArrowDown,
                         // Decorative to a screen reader, which scrolls the list itself.
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(22.dp),
                     )
                 }

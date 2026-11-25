@@ -73,6 +73,7 @@ import com.anilili.ui.adaptive.LocalAppDeviceProfile
 import com.anilili.ui.adaptive.FocusRingGap
 import com.anilili.ui.adaptive.focusHalo
 import com.anilili.ui.theme.LocalMidnightAccent
+import com.anilili.ui.components.glassCard
 import com.anilili.ui.theme.Midnight
 import kotlinx.coroutines.flow.first
 
@@ -388,15 +389,9 @@ private fun MidnightSettingRowScaffold(
             .padding(vertical = 3.dp)
             // A television's cursor; ahead of the clip, which would shave the ring off.
             .focusHalo(focused && device.isTv, shape, FocusRingGap)
-            .clip(shape)
-            .background(fill, shape)
             .then(
-                if (device.isTv || focused) Modifier
-                else Modifier.border(
-                    1.dp,
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f),
-                    shape,
-                )
+                if (focused) Modifier.clip(shape).background(fill, shape)
+                else Modifier.glassCard(shape)
             )
             .bringIntoViewRequester(bringIntoView)
             .onSizeChanged { rowSize = it }

@@ -83,6 +83,7 @@ import com.anilili.ui.adaptive.rememberFocusFill
 import com.anilili.ui.components.EpisodeArtwork
 import com.anilili.ui.components.EpisodeBlockPicker
 import com.anilili.ui.components.EpisodeFillerBadge
+import com.anilili.ui.components.EpisodeClassificationBadge
 import com.anilili.ui.components.EqualizerWaveIndicator
 import com.anilili.ui.components.WatchProgressBar
 import com.anilili.ui.components.blockIndexContaining
@@ -110,8 +111,12 @@ internal fun InPlayerEpisodeDrawer(
     val rowArtwork = remember(episodes, artworkUrl) { episodeArtworkFallback(episodes, artworkUrl) }
 
     var chosenBlockIndex by remember(episodes) { mutableStateOf<Int?>(null) }
-    val blocks = remember(episodes) { episodeBlocks(episodes) }
     val currentEpisode = episodes.getOrNull(currentIndex)
+    val hideFillerEpisodes by SettingsStore.hideFillerEpisodes.collectAsState()
+    val visibleEpisodes = remember(episodes, currentEpisode, hideFillerEpisodes) {
+        if (hideFillerEpisodes) episodes.filter { !it.filler || it.pipeId == currentEpisode?.pipeId } else episodes
+    }
+    val blocks = remember(visibleEpisodes) { episodeBlocks(visibleEpisodes) }
     val defaultBlockIndex = remember(blocks, currentEpisode) {
         blockIndexContaining(blocks, currentEpisode?.number).coerceIn(0, (blocks.size - 1).coerceAtLeast(0))
     }
@@ -131,7 +136,7 @@ internal fun InPlayerEpisodeDrawer(
     // current episode.
     LaunchedEffect(blocks, currentIndex) {
         val block = blocks.getOrNull(defaultBlockIndex)
-        val shownEpisodes = block?.episodes ?: episodes
+        val shownEpisodes = block?.episodes ?: visibleEpisodes
         val targetInShown = shownEpisodes.indexOfFirst { indexByPipeId[it.pipeId] == currentIndex }
         if (targetInShown >= 0) {
             listState.scrollToItem(
@@ -256,7 +261,7 @@ internal fun InPlayerEpisodeDrawer(
                     ) {
                         if (blocks.size <= 1) {
                             episodeEntries(
-                                episodes = episodes,
+                                episodes = visibleEpisodes,
                                 keyPrefix = "flat",
                                 artworkUrl = rowArtwork,
                                 blurEpisodeImages = blurEpisodeImages,
@@ -458,8 +463,8 @@ private fun InPlayerEpisodeNumberTile(
             fontWeight = FontWeight.Bold,
             color = fillFocus1.content(if (isCurrent) Color.White else Color.White),
         )
-        if (episode.filler) {
-            EpisodeFillerBadge(
+        if (episode.filler || episode.classification != null) {
+            EpisodeClassificationBadge(episode = episode, 
                 compact = true,
                 modifier = Modifier.align(Alignment.TopEnd).padding(5.dp),
             )
@@ -641,8 +646,8 @@ private fun InPlayerEpisodeItemRow(
                     )
                 }
             }
-            if (episode.filler) {
-                EpisodeFillerBadge(compact = true)
+            if (episode.filler || episode.classification != null) {
+                EpisodeClassificationBadge(episode = episode, compact = true)
             }
             if (watchedFraction >= 0.999f) {
                 Text(

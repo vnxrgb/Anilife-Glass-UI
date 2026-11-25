@@ -47,8 +47,8 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
             "Show details when paused" to listOf("pause", "description", "synopsis"),
             "Auto-skip intro, recap and outro" to listOf("skip", "opening", "ending", "op", "ed"),
             "Skip filler episodes" to listOf("skip", "filler", "canon", "next", "autoplay"),
-            "Skip button" to listOf("skip", "button"),
-            "Skip button length" to listOf("skip", "seconds", "length", "85"),
+            "Hide filler episodes" to listOf("hide", "filler", "episode list"),
+            "Skip recap episodes" to listOf("recap", "skip", "autoplay"),
             "Watched at" to listOf("progress", "watched", "percent", "complete"),
             "Default quality" to listOf("quality", "resolution", "1080", "720", "480", "data"),
             "Buffer size" to listOf("buffer", "buffering", "stutter", "stall", "freeze", "lag",
@@ -162,6 +162,7 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
                     "gilded", "forest", "deep sea", "midnight", "high contrast",
                 ),
             )
+            if (BuildConfig.FLAVOR == "mobile") add("Ambient Home" to listOf("ambient", "home", "banner", "poster", "glow", "lighting"))
             add("Background" to listOf("theme", "amoled", "black", "oled", "dark", "grey", "gray", "canvas"))
             add(
                 "Background image" to listOf(
@@ -198,7 +199,7 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
             if (BuildConfig.FLAVOR != "mobile") add("Layout" to listOf("layout", "tv", "tablet", "phone", "form factor", "leanback"))
             add("App layout" to listOf("layout", "legacy", "cinema", "navigation", "icons"))
             add(
-                "Keep the bars on screen" to listOf(
+                (if (isTv) "Keep the bars on screen" else "Keep the header on screen") to listOf(
                     "bar", "chrome", "hide", "scroll", "menu", "top", "nav", "navigation", "fade",
                     "auto hide", "always", "pin",
                 ),
@@ -247,6 +248,7 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
             "Export MyAnimeList XML" to listOf("export", "mal", "myanimelist", "xml"),
             "Video cache" to listOf("cache", "storage", "space", "disk", "size", "seek"),
             "Clear cache" to listOf("cache", "clear", "storage", "space"),
+            "Metadata Diagnostics" to listOf("metadata", "api", "fallback", "intro", "filler", "test"),
             "Re-download metadata" to listOf("metadata", "refresh", "index", "catalogue", "catalog", "update", "data", "stale"),
             "Clear viewing history" to listOf("history", "clear", "watched", "continue"),
         ),
@@ -266,7 +268,8 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
     )
     section(
         "about", "About",
-        listOf(            "Discord server" to listOf("discord", "support", "community", "help"),
+        listOf(            "What's new" to listOf("release", "features", "changelog", "guide"),
+            "Discord server" to listOf("discord", "support", "community", "help"),
             "Morphe attribution" to listOf("morphe", "credit", "attribution", "license", "gpl", "about", "website"),
         ),
     )

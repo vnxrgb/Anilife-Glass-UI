@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 
 /** Theme-adaptive Anilumos wordmark, retaining the navigation layout API. */
 @Composable
-fun AnililiWordmark(modifier: Modifier = Modifier) {
+fun AnililiWordmark(modifier: Modifier = Modifier, textColor: Color = MaterialTheme.colorScheme.onSurface) {
     Row(
         modifier = modifier.semantics { contentDescription = "Anilumos" },
         horizontalArrangement = Arrangement.spacedBy(7.dp),
@@ -26,7 +26,7 @@ fun AnililiWordmark(modifier: Modifier = Modifier) {
         AnilumosBrandMark(Modifier.fillMaxHeight().aspectRatio(1f))
         Text(
             text = "ANILUMOS",
-            color = Color.White,
+            color = textColor,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Black,
             maxLines = 1,

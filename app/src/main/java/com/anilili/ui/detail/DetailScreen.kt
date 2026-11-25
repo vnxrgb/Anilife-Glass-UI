@@ -1,5 +1,7 @@
 package com.anilili.ui.detail
 
+import com.anilili.data.AppGraph
+
 import com.anilili.ui.nav.AnililiLink
 import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassAtmosphere
@@ -74,6 +76,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -101,6 +104,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import com.anilili.ui.components.ArtworkStatusBarScrim
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
@@ -167,6 +172,7 @@ import com.anilili.ui.components.EpisodeBrowserBar
 import com.anilili.ui.components.EpisodeDownloadAction
 import com.anilili.ui.components.EpisodeDownloadButton
 import com.anilili.ui.components.EpisodeFillerBadge
+import com.anilili.ui.components.EpisodeClassificationBadge
 import com.anilili.ui.components.EpisodeNumberChip
 import com.anilili.ui.components.EpisodeWatchedToggle
 import com.anilili.ui.components.ErrorBox
@@ -245,6 +251,7 @@ fun DetailScreen(
     focusEpisode: String? = null,
     /** The television's reload, raised by a hold on the lit tab in the navigation bar above. */
     tvRefreshRequest: TvRefreshRequest? = null,
+    onHeroUnderBarsChanged: (Boolean) -> Unit = {},
     vm: DetailViewModel = viewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -260,6 +267,7 @@ fun DetailScreen(
             onSeasonWatch = onSeasonWatch,
             focusEpisode = focusEpisode,
             tvRefreshRequest = tvRefreshRequest,
+            onHeroUnderBarsChanged = onHeroUnderBarsChanged,
             vm = vm,
         )
     }
@@ -276,6 +284,7 @@ private fun DetailScreenBody(
     onSeasonWatch: (Int) -> Unit,
     focusEpisode: String?,
     tvRefreshRequest: TvRefreshRequest?,
+    onHeroUnderBarsChanged: (Boolean) -> Unit,
     vm: DetailViewModel,
 ) {
     LaunchedEffect(animeId) { vm.load(animeId) }
@@ -364,9 +373,19 @@ private fun DetailScreenBody(
     val detailListState = rememberLazyListState()
     // What the header frosts once it is back over the page; null with Details' glass switched off.
     val detailBackdrop = if (glassEnabled(GlassSection.DETAILS)) remember { HazeState() } else null
-    val chromeOverHero by remember {
-        derivedStateOf { detailListState.firstVisibleItemIndex == 0 }
+    val detailMedia = (state as? UiState.Success)?.data?.info
+    val hasArtwork = detailMedia?.let { !it.bannerImage.isNullOrBlank() || !it.coverImage.best.isNullOrBlank() } == true
+    // The bottom of the detail hero fades to the theme much earlier than Home's tall poster.
+    // Switch before that light tail crosses the status area, not after the entire item leaves.
+    val fadeClearancePx = with(LocalDensity.current) { 112.dp.roundToPx() }
+    val chromeOverHero by remember(hasArtwork, fadeClearancePx) {
+        derivedStateOf {
+            val heroSize = detailListState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == 0 }?.size
+            hasArtwork && detailListState.firstVisibleItemIndex == 0 &&
+                (heroSize == null || detailListState.firstVisibleItemScrollOffset < (heroSize - fadeClearancePx).coerceAtLeast(0))
+        }
     }
+    SideEffect { onHeroUnderBarsChanged(chromeOverHero) }
 
     Scaffold(
         modifier = if (device.isTv) Modifier.appCanvas() else Modifier.glassAtmosphere(),
@@ -388,7 +407,7 @@ private fun DetailScreenBody(
                                 }
                                 .focusFill(controlFocus1, RoundedCornerShape(24.dp)),
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = if (!device.isTv && chromeOverHero) Color.White else MaterialTheme.colorScheme.onSurface)
                         }
                     },
                     actions = {
@@ -400,7 +419,7 @@ private fun DetailScreenBody(
                             onClick = { shareAnimeLink(context, animeId, title) },
                             modifier = Modifier.focusFill(shareFocus, RoundedCornerShape(24.dp)),
                         ) {
-                            Icon(Icons.Default.Share, contentDescription = "Share link")
+                            Icon(Icons.Default.Share, contentDescription = "Share link", tint = if (!device.isTv && chromeOverHero) Color.White else MaterialTheme.colorScheme.onSurface)
                         }
                     },
                     // Same treatment as Home: the artwork runs to the top edge and the back arrow
@@ -454,6 +473,7 @@ private fun DetailScreenBody(
                     DetailContent(
                         contentPadding = padding,
                         detailListState = detailListState,
+                        artworkUnderStatusBar = chromeOverHero,
                         data = s.data,
                         saved = saved,
                         listStatusLabel = listStatusLabel,
@@ -503,9 +523,16 @@ private fun DetailContent(
     onPrimaryFocusAcquired: () -> Unit,
     /** Hoisted so the scaffold's bar, which sits above this in the tree, can watch it. */
     detailListState: LazyListState,
+    artworkUnderStatusBar: Boolean = false,
     contentPadding: PaddingValues = PaddingValues(),
 ) {
     val info = data.info
+    var hdArtwork by remember(info.id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(info.id) {
+        hdArtwork = try { AppGraph.repository.hdHeroArtwork(info, portrait = false) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { null }
+    }
     // The episode rows belong to the season the chips selected, not to the anime the page was
     // opened on, so what has aired has to be read from that one — `info.nextAiringEpisode` is the
     // schedule of a different season as soon as the viewer switches.
@@ -563,7 +590,11 @@ private fun DetailContent(
     var episodeQuery by remember(data.selectedSeasonId) { mutableStateOf("") }
     // Keyed on the order too: an index into the ranges names a different range once they turn round.
     var chosenBlockIndex by remember(data.selectedSeasonId, episodeOrder) { mutableStateOf<Int?>(null) }
-    val blocks = remember(episodes, episodeOrder) { orderEpisodeBlocks(episodeBlocks(episodes), episodeOrder) }
+    val hideFillerEpisodes by SettingsStore.hideFillerEpisodes.collectAsState()
+    val visibleEpisodes = remember(episodes, hideFillerEpisodes) {
+        if (hideFillerEpisodes) episodes.filterNot { it.filler } else episodes
+    }
+    val blocks = remember(visibleEpisodes, episodeOrder) { orderEpisodeBlocks(episodeBlocks(visibleEpisodes), episodeOrder) }
     // The bar is up wherever there are episodes, because the layout toggle lives in it and a short
     // season chooses grid or list too; the range picker and the filter are the long-list halves.
     val browserVisible = selectedTab == DetailTab.EPISODES && episodes.isNotEmpty()
@@ -584,7 +615,7 @@ private fun DetailContent(
     // A search spans the whole season; only an unfiltered list is bounded by the block.
     val filtering = episodeQuery.isNotBlank()
     val shown = if (filtering) {
-        orderEpisodes(filterEpisodes(episodes, episodeQuery), episodeOrder)
+        orderEpisodes(filterEpisodes(visibleEpisodes, episodeQuery), episodeOrder)
     } else {
         blocks.getOrNull(blockIndex)?.episodes.orEmpty()
     }
@@ -616,35 +647,16 @@ private fun DetailContent(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // A softly tinted, unbroken glow from the poster. Do not draw a second
-        // full-size banner bitmap here: on pre-Android-12 devices Modifier.blur()
-        // cannot soften it, and its cropped colors become a hard brown/blue band
-        // behind the Quick Facts and countdown rows when the detail page scrolls.
-        // Drawing the ambient spill as a radial brush over the WHOLE viewport
-        // removes the rectangular artwork boundary on all supported Android APIs.
         if (!device.isTv) {
             val coverTint = remember(info.id, info.coverImage.color) {
                 info.coverImage.color?.let { hex ->
                     runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
                 }
             } ?: MaterialTheme.colorScheme.primary
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .drawBehind {
-                        if (size.width <= 0f || size.height <= 0f) return@drawBehind
-                        val reach = maxOf(size.width * 1.15f, size.height * 0.76f)
-                        drawRect(
-                            brush = Brush.radialGradient(
-                                0f to coverTint.copy(alpha = 0.12f),
-                                0.35f to coverTint.copy(alpha = 0.065f),
-                                0.67f to coverTint.copy(alpha = 0.020f),
-                                1f to Color.Transparent,
-                                center = Offset(size.width * 0.50f, size.height * 0.01f),
-                                radius = reach,
-                            ),
-                        )
-                    },
+            DetailAmbient(
+                artwork = hdArtwork ?: info.bannerImage ?: info.coverImage.best,
+                fallback = coverTint,
+                modifier = Modifier.matchParentSize(),
             )
         }
         LazyColumn(
@@ -663,6 +675,7 @@ private fun DetailContent(
             item {
                 DetailHero(
                     info = info,
+                    hdArtwork = hdArtwork,
                     // This hero always shows the page's own title and cover, so it takes the page's
                     // logo rather than the selected season's — which used to leave it with none at
                     // all as soon as another season chip was picked. See DetailData.pageLogo.
@@ -959,12 +972,14 @@ private fun DetailContent(
             }
             item { Spacer(Modifier.height(device.pagePadding)) }
         }
+        if (artworkUnderStatusBar) ArtworkStatusBarScrim(Modifier.align(Alignment.TopCenter))
     }
 }
 
 @Composable
 private fun DetailHero(
     info: Media,
+    hdArtwork: String? = null,
     /** The series' own wordmark, drawn in place of the title where the metadata tree has one. */
     logo: String?,
     onStudioClick: (StudioNode) -> Unit,
@@ -979,7 +994,8 @@ private fun DetailHero(
     topInset: Dp = 0.dp,
 ) {
     val device = LocalAppDeviceProfile.current
-    val banner = info.bannerImage ?: info.coverImage.best
+    var hdFailed by remember(hdArtwork) { mutableStateOf(false) }
+    val banner = hdArtwork.takeUnless { hdFailed } ?: info.bannerImage ?: info.coverImage.best
     val bannerHeight = topInset + if (device.isExpanded) 258.dp else if (device.isTablet) 224.dp else 195.dp
     Box(
         Modifier.fillMaxWidth().height(
@@ -989,6 +1005,7 @@ private fun DetailHero(
         AsyncImage(
             model = banner,
             contentDescription = null,
+            onError = { if (hdArtwork != null) hdFailed = true },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(bannerHeight)
@@ -1834,8 +1851,8 @@ private fun DetailEpisodeRow(
                 blurred = blurred,
                 modifier = Modifier.fillMaxSize(),
             )
-            if (episode.filler) {
-                EpisodeFillerBadge(
+            if (episode.filler || episode.classification != null) {
+                EpisodeClassificationBadge(episode = episode, 
                     compact = true,
                     modifier = Modifier.align(Alignment.TopStart).padding(5.dp),
                 )

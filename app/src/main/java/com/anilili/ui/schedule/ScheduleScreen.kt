@@ -50,6 +50,8 @@ import androidx.compose.material3.MaterialTheme
 import com.anilili.ui.components.glassCard
 import com.anilili.ui.components.glassPanelColor
 import com.anilili.ui.components.glassRimColor
+import androidx.compose.material3.FilterChip
+import com.anilili.data.library.LibraryStore
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -90,6 +92,7 @@ import com.anilili.ui.components.ErrorBox
 import com.anilili.ui.components.LoadingBox
 import com.anilili.ui.components.LocalAppChromeBottomInset
 import com.anilili.ui.components.LocalTimeOfDayFormatter
+import com.anilili.ui.components.cinematicFilterChipColors
 import com.anilili.ui.components.PageTitleBar
 import com.anilili.ui.components.PullRefreshContainer
 import com.anilili.ui.components.ScrollAwareTopBar
@@ -131,6 +134,22 @@ fun ScheduleScreen(
     val calendarView by SettingsStore.scheduleCalendarView.collectAsState()
     val dayCounts by vm.dayCounts.collectAsState()
     val countsLoading by vm.countsLoading.collectAsState()
+    // Build a personal schedule from existing local library data without extra API calls.
+    val savedShows by LibraryStore.watchlist.collectAsState()
+    val watchingShows by LibraryStore.history.collectAsState()
+    var followingOnly by remember { mutableStateOf(false) }
+    val followingIds = remember(savedShows, watchingShows) {
+        (savedShows.map { it.anilistId } + watchingShows.map { it.anilistId }).toSet()
+    }
+    val visibleSchedule = remember(state, followingOnly, followingIds) {
+        when (val current = state) {
+            is UiState.Success -> UiState.Success(
+                if (followingOnly) current.data.filter { it.media?.id in followingIds }
+                else current.data
+            )
+            else -> current
+        }
+    }
     val context = LocalContext.current
     var pendingReminder by remember { mutableStateOf<AiringSchedule?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -216,11 +235,33 @@ fun ScheduleScreen(
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .padding(horizontal = device.pagePadding, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FilterChip(
+                    selected = followingOnly,
+                    onClick = { followingOnly = !followingOnly },
+                    shape = RoundedCornerShape(50),
+                    colors = cinematicFilterChipColors(),
+                    label = { Text("Following only") },
+                )
+                if (followingOnly && visibleSchedule is UiState.Success) {
+                    val count = (visibleSchedule as UiState.Success).data.size
+                    Text(
+                        "$count ${if (count == 1) "episode" else "episodes"}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             Column(Modifier.fillMaxWidth().weight(1f)) {
                 if (calendarView) {
                     CalendarSchedule(
                         vm = vm,
-                        state = state,
+                        state = visibleSchedule,
                         isRefreshing = isRefreshing,
                         today = today,
                         gridDays = gridDays,
@@ -236,7 +277,7 @@ fun ScheduleScreen(
                 } else {
                     DayTabs(today, vm.selectedDate, vm::selectDate)
                     SelectedDateLabel(vm.selectedDate)
-                    when (val s = state) {
+                    when (val s = visibleSchedule) {
                         is UiState.Loading -> LoadingBox()
                         is UiState.Error -> ErrorBox(s.failure, vm::load)
                         is UiState.Success -> PullRefreshContainer(

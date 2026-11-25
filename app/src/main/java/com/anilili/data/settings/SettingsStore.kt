@@ -809,6 +809,10 @@ object SettingsStore {
      */
     private val _autoSkipFiller = MutableStateFlow(false)
     val autoSkipFiller = _autoSkipFiller.asStateFlow()
+    private val _hideFillerEpisodes = MutableStateFlow(false)
+    val hideFillerEpisodes = _hideFillerEpisodes.asStateFlow()
+    private val _autoSkipRecapEpisodes = MutableStateFlow(false)
+    val autoSkipRecapEpisodes = _autoSkipRecapEpisodes.asStateFlow()
 
     /**
      * A one-press jump forward shown on the player whenever no timed "Skip Intro" window applies.
@@ -938,6 +942,9 @@ object SettingsStore {
     /** Ambient video-colour glow underneath the portrait player. Off also stops PixelCopy sampling. */
     private val _playerAmbientGlow = MutableStateFlow(true)
     val playerAmbientGlow = _playerAmbientGlow.asStateFlow()
+
+    private val _homeAmbientGlow = MutableStateFlow(true)
+    val homeAmbientGlow = _homeAmbientGlow.asStateFlow()
 
     /** Three practical watch-page glow strengths, with the centre preset as the default. */
     private val _playerAmbientIntensity = MutableStateFlow(0.75f)
@@ -1140,6 +1147,28 @@ object SettingsStore {
     val themeAccent = _themeAccent.asStateFlow()
     private val _themeStyle = MutableStateFlow(ThemeStyle.VIVID)
     val themeStyle = _themeStyle.asStateFlow()
+    private val _glassMaterial = MutableStateFlow(GlassMaterial.LIQUID)
+    val glassMaterial = _glassMaterial.asStateFlow()
+    // Negative values use the selected material's defaults.
+    private val _glassOpacity = MutableStateFlow(-1)
+    val glassOpacity = _glassOpacity.asStateFlow()
+    private val _glassBlur = MutableStateFlow(-1)
+    val glassBlur = _glassBlur.asStateFlow()
+    private val _glassAmbient = MutableStateFlow(80)
+    val glassAmbient = _glassAmbient.asStateFlow()
+    private val _glassBorders = MutableStateFlow(true)
+    val glassBorders = _glassBorders.asStateFlow()
+    fun setGlassMaterial(value: GlassMaterial) {
+        _glassMaterial.value = value
+        _glassOpacity.value = -1
+        _glassBlur.value = -1
+        scope.launch { store.edit { it[GLASS_MATERIAL] = value.name; it[GLASS_OPACITY] = -1; it[GLASS_BLUR] = -1 } }
+    }
+    fun setGlassOpacity(value: Int) = save(GLASS_OPACITY, value.coerceIn(-1, 100), _glassOpacity)
+    fun setGlassBlur(value: Int) = save(GLASS_BLUR, value.coerceIn(-1, 100), _glassBlur)
+    fun setGlassAmbient(value: Int) = save(GLASS_AMBIENT, value.coerceIn(0, 100), _glassAmbient)
+    fun setGlassBorders(value: Boolean) = save(GLASS_BORDERS, value, _glassBorders)
+
     private val _themeContrast = MutableStateFlow(ThemeContrast.STANDARD)
     val themeContrast = _themeContrast.asStateFlow()
 
@@ -1363,6 +1392,8 @@ object SettingsStore {
     fun setSyncSavedToAniList(value: Boolean) = save(SYNC_SAVED_TO_ANILIST, value, _syncSavedToAniList)
     fun setAutoSkipIntroOutro(value: Boolean) = save(AUTO_SKIP_INTRO_OUTRO, value, _autoSkipIntroOutro)
     fun setAutoSkipFiller(value: Boolean) = save(AUTO_SKIP_FILLER, value, _autoSkipFiller)
+    fun setHideFillerEpisodes(value: Boolean) = save(HIDE_FILLER_EPISODES, value, _hideFillerEpisodes)
+    fun setAutoSkipRecapEpisodes(value: Boolean) = save(AUTO_SKIP_RECAP_EPISODES, value, _autoSkipRecapEpisodes)
     fun setShowSkipButton(value: Boolean) = save(SHOW_SKIP_BUTTON, value, _showSkipButton)
 
     fun setSkipButtonSeconds(seconds: Int) {
@@ -1855,6 +1886,11 @@ object SettingsStore {
         scope.launch { store.edit { it[PLAYER_CLOCK] = value } }
     }
 
+    fun setHomeAmbientGlow(value: Boolean) {
+        _homeAmbientGlow.value = value
+        scope.launch { store.edit { it[HOME_AMBIENT_GLOW] = value } }
+    }
+
     fun setPlayerAmbientGlow(value: Boolean) {
         _playerAmbientGlow.value = value
         scope.launch { store.edit { it[PLAYER_AMBIENT_GLOW] = value } }
@@ -2011,7 +2047,7 @@ object SettingsStore {
 
     private fun JsonObject.primitive(name: String): JsonPrimitive? = this[name] as? JsonPrimitive
 
-    private fun save(key: Preferences.Key<Boolean>, value: Boolean, state: MutableStateFlow<Boolean>) {
+    private fun <T> save(key: Preferences.Key<T>, value: T, state: MutableStateFlow<T>) {
         state.value = value
         scope.launch { store.edit { it[key] = value } }
     }
@@ -2070,6 +2106,8 @@ object SettingsStore {
         _syncSavedToAniList.value = prefs[SYNC_SAVED_TO_ANILIST] ?: true
         _autoSkipIntroOutro.value = prefs[AUTO_SKIP_INTRO_OUTRO] ?: false
         _autoSkipFiller.value = prefs[AUTO_SKIP_FILLER] ?: false
+        _hideFillerEpisodes.value = prefs[HIDE_FILLER_EPISODES] ?: false
+        _autoSkipRecapEpisodes.value = prefs[AUTO_SKIP_RECAP_EPISODES] ?: false
         _showSkipButton.value = prefs[SHOW_SKIP_BUTTON] ?: true
         _skipButtonSeconds.value = (prefs[SKIP_BUTTON_SECONDS] ?: SKIP_BUTTON_DEFAULT_SECONDS)
             .coerceIn(SKIP_BUTTON_MIN_SECONDS, SKIP_BUTTON_MAX_SECONDS)
@@ -2123,6 +2161,11 @@ object SettingsStore {
         _themeBackground.value = ThemeBackground.fromStored(prefs[THEME_BACKGROUND])
         _themeAccent.value = ThemeAccent.fromStored(prefs[THEME_ACCENT])
         _themeStyle.value = ThemeStyle.fromStored(prefs[THEME_STYLE])
+        _glassMaterial.value = GlassMaterial.fromStored(prefs[GLASS_MATERIAL])
+        _glassOpacity.value = (prefs[GLASS_OPACITY] ?: -1).coerceIn(-1, 100)
+        _glassBlur.value = (prefs[GLASS_BLUR] ?: -1).coerceIn(-1, 100)
+        _glassAmbient.value = (prefs[GLASS_AMBIENT] ?: 80).coerceIn(0, 100)
+        _glassBorders.value = prefs[GLASS_BORDERS] ?: true
         _themeContrast.value = ThemeContrast.fromStored(prefs[THEME_CONTRAST])
         _playerAccent.value = prefs[PLAYER_ACCENT] ?: false
         _themeCustomSeed.value = prefs[THEME_CUSTOM_SEED] ?: DEFAULT_CUSTOM_SEED
@@ -2175,6 +2218,7 @@ object SettingsStore {
         _playerStatusBar.value = prefs[PLAYER_STATUS_BAR] ?: true
         _playerClock.value = prefs[PLAYER_CLOCK] ?: true
         _playerAmbientGlow.value = prefs[PLAYER_AMBIENT_GLOW] ?: true
+        _homeAmbientGlow.value = prefs[HOME_AMBIENT_GLOW] ?: true
         _playerAmbientIntensity.value = (prefs[PLAYER_AMBIENT_INTENSITY] ?: 0.75f).coerceIn(0.5f, 1f)
         _tvDoubleBackToExit.value = prefs[TV_DOUBLE_BACK_TO_EXIT] ?: true
         _lastWorkingPipeOrigin.value = prefs[LAST_PIPE_ORIGIN].orEmpty()
@@ -2244,6 +2288,8 @@ object SettingsStore {
     private val SYNC_SAVED_TO_ANILIST = booleanPreferencesKey("sync_saved_to_anilist")
     private val AUTO_SKIP_INTRO_OUTRO = booleanPreferencesKey("auto_skip_intro_outro")
     private val AUTO_SKIP_FILLER = booleanPreferencesKey("auto_skip_filler")
+    private val HIDE_FILLER_EPISODES = booleanPreferencesKey("hide_filler_episodes")
+    private val AUTO_SKIP_RECAP_EPISODES = booleanPreferencesKey("auto_skip_recap_episodes")
     private val SHOW_SKIP_BUTTON = booleanPreferencesKey("show_skip_button")
     private val SKIP_BUTTON_SECONDS = intPreferencesKey("skip_button_seconds")
     private val WATCHED_THRESHOLD_PERCENT = intPreferencesKey("watched_threshold_percent")
@@ -2301,6 +2347,11 @@ object SettingsStore {
     private val THEME_BACKGROUND = stringPreferencesKey("theme_background")
     private val THEME_ACCENT = stringPreferencesKey("theme_accent")
     private val THEME_STYLE = stringPreferencesKey("theme_style")
+    private val GLASS_MATERIAL = stringPreferencesKey("glass_material")
+    private val GLASS_OPACITY = intPreferencesKey("glass_opacity")
+    private val GLASS_BLUR = intPreferencesKey("glass_blur")
+    private val GLASS_AMBIENT = intPreferencesKey("glass_ambient")
+    private val GLASS_BORDERS = booleanPreferencesKey("glass_borders")
     private val THEME_CONTRAST = stringPreferencesKey("theme_contrast")
     private val PLAYER_ACCENT = booleanPreferencesKey("player_accent")
     private val THEME_CUSTOM_SEED = intPreferencesKey("theme_custom_seed")
@@ -2338,6 +2389,7 @@ object SettingsStore {
     private val PLAYER_STATUS_BAR = booleanPreferencesKey("player_status_bar")
     private val PLAYER_CLOCK = booleanPreferencesKey("player_clock")
     private val PLAYER_AMBIENT_GLOW = booleanPreferencesKey("player_ambient_glow")
+    private val HOME_AMBIENT_GLOW = booleanPreferencesKey("home_ambient_glow")
     private val PLAYER_AMBIENT_INTENSITY = floatPreferencesKey("player_ambient_intensity")
     private val TV_DOUBLE_BACK_TO_EXIT = booleanPreferencesKey("tv_double_back_to_exit")
     private val MIGRATED = booleanPreferencesKey("migrated_from_shared_preferences")
@@ -2372,6 +2424,7 @@ object SettingsStore {
     // Boolean from an Int, and guessing from the JSON is how a String ends up under a Boolean key.
 
     private val BACKUP_BOOLEAN_KEYS = listOf(
+        GLASS_BORDERS,
         AUTOPLAY,
         BROWSE_HEADER_COLLAPSED,
         PLAY_ON_OPEN,
@@ -2385,6 +2438,8 @@ object SettingsStore {
         SYNC_SAVED_TO_ANILIST,
         AUTO_SKIP_INTRO_OUTRO,
         AUTO_SKIP_FILLER,
+        HIDE_FILLER_EPISODES,
+        AUTO_SKIP_RECAP_EPISODES,
         SHOW_SKIP_BUTTON,
         HIDE_ADULT_CONTENT,
         BLUR_EPISODE_IMAGES,
@@ -2415,10 +2470,14 @@ object SettingsStore {
         PLAYER_STATUS_BAR,
         PLAYER_CLOCK,
         PLAYER_AMBIENT_GLOW,
+        HOME_AMBIENT_GLOW,
         TV_DOUBLE_BACK_TO_EXIT,
     ) + GLASS_KEYS.values
 
     private val BACKUP_INT_KEYS = listOf(
+        GLASS_OPACITY,
+        GLASS_BLUR,
+        GLASS_AMBIENT,
         THEME_CUSTOM_SEED,
         SKIP_BUTTON_SECONDS,
         WATCHED_THRESHOLD_PERCENT,
@@ -2435,6 +2494,7 @@ object SettingsStore {
         listOf(DEFAULT_PLAYBACK_SPEED_KEY, HOLD_PLAYBACK_SPEED, PLAYER_BRIGHTNESS, PLAYER_AMBIENT_INTENSITY)
 
     private val BACKUP_STRING_KEYS = listOf(
+        GLASS_MATERIAL,
         APP_LAYOUT_MODE,
         DIAGNOSTIC_DETAIL,
         EPISODE_DRAWER_LAYOUT,

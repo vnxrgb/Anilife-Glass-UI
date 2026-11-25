@@ -273,7 +273,7 @@ private fun videoCacheValue(context: Context, size: VideoCacheSize, budget: Long
 
 /** Which choice picker is open, if any. One value beats a dozen independent booleans. */
 private enum class SettingsPicker {
-    SKIP_BUTTON_LENGTH,
+
     WATCHED_THRESHOLD,
     DEFAULT_QUALITY,
     PLAYBACK_BUFFER_SIZE,
@@ -358,8 +358,8 @@ fun SettingsScreen(
     val pauseDetailsOverlay by SettingsStore.pauseDetailsOverlay.collectAsState()
     val autoSkip by SettingsStore.autoSkipIntroOutro.collectAsState()
     val autoSkipFiller by SettingsStore.autoSkipFiller.collectAsState()
-    val showSkipButton by SettingsStore.showSkipButton.collectAsState()
-    val skipButtonSeconds by SettingsStore.skipButtonSeconds.collectAsState()
+    val hideFillerEpisodes by SettingsStore.hideFillerEpisodes.collectAsState()
+    val autoSkipRecapEpisodes by SettingsStore.autoSkipRecapEpisodes.collectAsState()
     val autoSync by SettingsStore.autoSyncAniList.collectAsState()
     val watchedThresholdPercent by SettingsStore.watchedThresholdPercent.collectAsState()
     val preferDub by SettingsStore.preferDub.collectAsState()
@@ -404,6 +404,7 @@ fun SettingsScreen(
     val playerStatusBar by SettingsStore.playerStatusBar.collectAsState()
     val playerClock by SettingsStore.playerClock.collectAsState()
     val playerAmbientGlow by SettingsStore.playerAmbientGlow.collectAsState()
+    val homeAmbientGlow by SettingsStore.homeAmbientGlow.collectAsState()
     val playerAmbientIntensity by SettingsStore.playerAmbientIntensity.collectAsState()
     val tvDoubleBackToExit by SettingsStore.tvDoubleBackToExit.collectAsState()
     val serverPriority by SettingsStore.serverPriority.collectAsState()
@@ -519,6 +520,14 @@ fun SettingsScreen(
     fun goToSection(id: String?, spotlight: String? = null) {
         openSectionId = id
         spotlightRow = spotlight
+    }
+
+    val releaseSection = com.anilili.ui.tour.WhatsNewTour.requestedSettingsSection
+    LaunchedEffect(releaseSection) {
+        if (releaseSection != null) {
+            goToSection(releaseSection)
+            com.anilili.ui.tour.WhatsNewTour.requestedSettingsSection = null
+        }
     }
 
     // The floating navigation capsule covers the bottom of the window, so a marked row scrolled up
@@ -1411,31 +1420,6 @@ fun SettingsScreen(
     CompiledSeparately {
     val closePicker = { openPicker = null }
     when (openPicker) {
-        SettingsPicker.SKIP_BUTTON_LENGTH -> MidnightChoicePicker(
-            kicker = "Player",
-            title = "Skip button length",
-            explanation = "How far the player's skip button jumps. A standard TV anime opening " +
-                "is 85 seconds.",
-            options = SKIP_BUTTON_PRESETS,
-            selected = skipButtonSeconds,
-            label = { "${it}s" },
-            onSelect = SettingsStore::setSkipButtonSeconds,
-            onDismiss = closePicker,
-            dismissOnSelect = false,
-            body = {
-                MidnightStepperRow(
-                    label = "Fine tune",
-                    value = "${skipButtonSeconds}s",
-                    onDecrease = { SettingsStore.setSkipButtonSeconds(skipButtonSeconds - 5) },
-                    onIncrease = { SettingsStore.setSkipButtonSeconds(skipButtonSeconds + 5) },
-                    decreaseLabel = "−5s",
-                    increaseLabel = "+5s",
-                    decreaseEnabled = skipButtonSeconds > SKIP_BUTTON_MIN_SECONDS,
-                    increaseEnabled = skipButtonSeconds < SKIP_BUTTON_MAX_SECONDS,
-                )
-            },
-        )
-
         SettingsPicker.WATCHED_THRESHOLD -> MidnightChoicePicker(
             kicker = "Player",
             title = "Watched at",
@@ -2048,7 +2032,7 @@ fun SettingsScreen(
         modifier = modifier.then(if (device.isTv) Modifier else Modifier.glassAtmosphere()),
         topBar = {
             if (device.isTv) return@Scaffold
-            ScrollAwareTopBar {
+            ScrollAwareTopBar(visible = true) {
                 PageTitleBar(
                     title = openSection?.title
                         ?: if (menuLanguage.usesSpanish()) "Ajustes" else "Settings",
@@ -2088,6 +2072,7 @@ fun SettingsScreen(
             },
         ) {
         SettingsList(
+            modifier = if (device.isTv) Modifier else Modifier.padding(top = padding.calculateTopPadding()),
             spotlight = spotlight,
             // Scroll padding, not layout padding: rows travel under the bars instead of the list
             // being shunted about by them.
@@ -2103,7 +2088,7 @@ fun SettingsScreen(
             contentPadding = PaddingValues(
                 start = device.pagePadding,
                 end = device.pagePadding,
-                top = padding.calculateTopPadding(),
+                top = if (device.isTv) padding.calculateTopPadding() + 8.dp else 8.dp,
                 bottom = padding.calculateBottomPadding()
                     .coerceAtLeast(LocalAppChromeBottomInset.current) + 32.dp,
             ),
@@ -2132,11 +2117,11 @@ fun SettingsScreen(
                         )
                     }
                 }
-                val columns = if (device.isTv) 5 else 3
+                val columns = if (device.isTv) 5 else 2
                 items(sectionTiles.chunked(columns), key = { it.first().id }) { row ->
                     Row(
-                        Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         // Center an incomplete final phone row without stretching its cards.
                         val missing = columns - row.size
@@ -2217,7 +2202,7 @@ fun SettingsScreen(
                 item(key = "Auto-skip intro, recap and outro") {
                     MidnightSettingSwitchRow(
                         title = "Auto-skip intro, recap and outro",
-                        description = "Use provider or AniSkip timings when available",
+                        description = "Use provider or community timestamps when available",
                         checked = autoSkip,
                         onCheckedChange = SettingsStore::setAutoSkipIntroOutro,
                     )
@@ -2230,23 +2215,21 @@ fun SettingsScreen(
                         onCheckedChange = SettingsStore::setAutoSkipFiller,
                     )
                 }
-                item(key = "Skip button") {
+                item(key = "Hide filler episodes") {
                     MidnightSettingSwitchRow(
-                        title = "Skip button",
-                        description = "A one-press jump on the controls when a show has no skip timings",
-                        checked = showSkipButton,
-                        onCheckedChange = SettingsStore::setShowSkipButton,
+                        title = "Hide filler episodes",
+                        description = "Hide confirmed filler from episode lists without changing watch progress",
+                        checked = hideFillerEpisodes,
+                        onCheckedChange = SettingsStore::setHideFillerEpisodes,
                     )
                 }
-                if (showSkipButton) {
-                    item(key = "Skip button length") {
-                        MidnightSettingRow(
-                            title = "Skip button length",
-                            description = "How far one press jumps",
-                            value = "${skipButtonSeconds}s",
-                            onClick = { openPicker = SettingsPicker.SKIP_BUTTON_LENGTH },
-                        )
-                    }
+                item(key = "Skip recap episodes") {
+                    MidnightSettingSwitchRow(
+                        title = "Skip recap episodes",
+                        description = "Next and auto-play skip episodes explicitly marked as recap",
+                        checked = autoSkipRecapEpisodes,
+                        onCheckedChange = SettingsStore::setAutoSkipRecapEpisodes,
+                    )
                 }
                 item(key = "Watched at") {
                     MidnightSettingRow(
@@ -2764,57 +2747,19 @@ fun SettingsScreen(
             }
 
             settingsSection("appearance", openSectionId) {
-                // A television shows it in the rail under the Appearance row instead (see
-                // TvSettingsTwoPane's openSectionPanel), where it stays in sight for every change and
-                // costs the rows none of their height. A phone scrolls back to it with a flick.
-                // Pinned on a phone, so every row below can be changed with its effect in view
-                // instead of a flick back up after each one. The backing is the page colour so the
-                // rows pass cleanly beneath it.
+                // Keep the preview in the measured list, never translate a sticky item
+                // over controls. TV has a separate preview pane.
                 if (!device.isTv) {
-                    stickyHeader(key = "Theme preview") {
-                        // A sticky header pins to the list's own top edge, and this list runs
-                        // behind the title bar and the clock. So it is pushed down by whatever is
-                        // at the top right now — the title bar, or just the status bar once the
-                        // title has tucked away — but only by as much of that as it would be under,
-                        // so it glides to a stop below the bar instead of jumping there.
-                        val chromeVisible = LocalAppChromeVisible.current
-                        val statusBar = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-                        val clearance by animateDpAsState(
-                            targetValue = if (chromeVisible) padding.calculateTopPadding() else statusBar,
-                            animationSpec = tween(220),
-                            label = "previewClearance",
+                    item(key = "Theme preview") { ThemePreview() }
+                }
+                if (!device.isTv) {
+                    item(key = "Ambient Home") {
+                        MidnightSettingSwitchRow(
+                            title = "Ambient Home",
+                            description = "Featured artwork casts a soft, changing glow across Home",
+                            checked = homeAmbientGlow,
+                            onCheckedChange = SettingsStore::setHomeAmbientGlow,
                         )
-                        var top by remember { mutableFloatStateOf(Float.MAX_VALUE) }
-                        var left by remember { mutableFloatStateOf(0f) }
-                        val backing = MaterialTheme.colorScheme.background
-                        val backdrop = LocalAppBackdrop.current
-                        val rootView = androidx.compose.ui.platform.LocalView.current.rootView
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .onGloballyPositioned {
-                                    top = it.positionInWindow().y
-                                    left = it.positionInWindow().x
-                                }
-                                .graphicsLayer { translationY = (clearance.toPx() - top).coerceAtLeast(0f) }
-                                // The backing reaches up over the gap it was pushed down by, so the
-                                // rows passing beneath do not show through behind the clock.
-                                .drawBehind {
-                                    val lift = (clearance.toPx() - top).coerceAtLeast(0f)
-                                    // The picture's slice, when there is one, lines up with where
-                                    // this box is drawn — its laid-out place plus the lift.
-                                    drawAppCanvas(
-                                        backdrop = backdrop,
-                                        colour = backing,
-                                        origin = Offset(left, top + lift),
-                                        window = androidx.compose.ui.unit.IntSize(rootView.width, rootView.height),
-                                        topLeft = Offset(0f, -lift),
-                                        rectSize = Size(size.width, size.height + lift),
-                                    )
-                                },
-                        ) {
-                            ThemePreview()
-                        }
                     }
                 }
                 item(key = "Theme presets") {
@@ -3039,19 +2984,25 @@ fun SettingsScreen(
                         onClick = { openPicker = SettingsPicker.APP_LAYOUT },
                     )
                 }
-                // One switch on both: the phone's bars tuck away on a scroll, the television's top
-                // menu fades out a few seconds after the cursor leaves it.
-                item(key = "Keep the bars on screen") {
-                    MidnightSettingSwitchRow(
-                        title = "Keep the bars on screen",
-                        description = if (device.isTv) {
-                            "Stop the top menu fading out while you browse"
-                        } else {
-                            "Stop the top bar and bottom menu tucking away as you scroll"
-                        },
-                        checked = staticAppChrome,
-                        onCheckedChange = SettingsStore::setStaticAppChrome,
-                    )
+                // The mobile header preference is independent of the floating dock.
+                if (device.isTv) {
+                    item(key = "Keep the bars on screen") {
+                        MidnightSettingSwitchRow(
+                            title = "Keep the bars on screen",
+                            description = "Stop the top menu fading out while you browse",
+                            checked = staticAppChrome,
+                            onCheckedChange = SettingsStore::setStaticAppChrome,
+                        )
+                    }
+                } else {
+                    item(key = "Keep the header on screen") {
+                        MidnightSettingSwitchRow(
+                            title = "Keep the header on screen",
+                            description = "Keep the top header visible; the floating dock still compacts while scrolling",
+                            checked = staticAppChrome,
+                            onCheckedChange = SettingsStore::setStaticAppChrome,
+                        )
+                    }
                 }
                 item(key = "Search as you type") {
                     MidnightSettingSwitchRow(
@@ -3229,6 +3180,7 @@ fun SettingsScreen(
                     item { MidnightInlineNotice(message, tone = MidnightNoticeTone.SUCCESS) }
                 }
                 item(key = "Re-download metadata") { MetadataRefreshRow(title = "Re-download metadata") }
+                item(key = "Metadata Diagnostics") { MetadataDiagnosticsRow(title = "Metadata Diagnostics") }
                 item(key = "Clear viewing history") {
                     MidnightSettingRow(
                         title = "Clear viewing history",
@@ -3348,6 +3300,13 @@ fun SettingsScreen(
             }
 
             settingsSection("about", openSectionId) {
+                item(key = "What's new") {
+                    MidnightSettingRow(
+                        title = "What's new",
+                        description = "Explore new features and where to find them",
+                        onClick = com.anilili.ui.tour.WhatsNewTour::reopen,
+                    )
+                }
                 item(key = "Discord server") {
                     val inviteUrl = validatedDiscordInviteUrl(BuildConfig.DISCORD_INVITE_URL)
                     MidnightSettingRow(
@@ -3416,6 +3375,7 @@ private fun LazyListScope.settingsSection(
  */
 @Composable
 private fun SettingsList(
+    modifier: Modifier = Modifier,
     spotlight: MidnightSettingSpotlight?,
     contentPadding: PaddingValues,
     content: LazyListScope.() -> Unit,
@@ -3437,7 +3397,7 @@ private fun SettingsList(
     ) {
         LazyColumn(
             state = state,
-            modifier = Modifier.fillMaxSize(),
+            modifier = modifier.fillMaxSize(),
             contentPadding = contentPadding,
         ) {
             indexedContent.emit(this)
@@ -3477,7 +3437,7 @@ private fun SettingsSectionCard(
     val fillFocus1 = rememberFocusFill()
     Surface(
         modifier = modifier
-            .heightIn(min = if (LocalAppDeviceProfile.current.isTv) 88.dp else 86.dp)
+            .heightIn(min = if (LocalAppDeviceProfile.current.isTv) 88.dp else 96.dp)
             .focusFill(fillFocus1, RoundedCornerShape(22.dp))
             .glassCard(RoundedCornerShape(22.dp))
             .clickable(role = Role.Button, onClickLabel = "Open ${tile.title} settings", onClick = onClick),
@@ -3486,9 +3446,9 @@ private fun SettingsSectionCard(
         contentColor = fillFocus1.content(LocalContentColor.current),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 5.dp),
+            Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(7.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             // A softly tinted emblem separates the glyph from the glass tile.
             // Accent stays with the icon; the pane itself adapts neutrally to the theme.

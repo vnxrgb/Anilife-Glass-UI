@@ -1,6 +1,1 @@
-AniLumos stable release trigger
-Version v1.0.4 (versionCode 14)
-Changes: widened and softened fullscreen ambient lighting in video side letterboxes.
-Release the universal mobile APK using the existing production signing key only after
-build, unit tests, lint, APK signature, package and version verification succeed.
-Do not overwrite existing releases, merge unrelated preview changes or publish TV alpha builds here.
+Publish AniLumos v2.0.0 stable (version code 15) after tests, lint and signing verification.

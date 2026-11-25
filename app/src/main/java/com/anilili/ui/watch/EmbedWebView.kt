@@ -21,6 +21,9 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -33,6 +36,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -357,8 +361,6 @@ fun EmbedWebView(
     val currentOnPlaybackError by rememberUpdatedState(onPlaybackError)
     val autoSkipIntroOutro by SettingsStore.autoSkipIntroOutro.collectAsState()
     val autoSkipFiller by SettingsStore.autoSkipFiller.collectAsState()
-    val showSkipButton by SettingsStore.showSkipButton.collectAsState()
-    val skipButtonSeconds by SettingsStore.skipButtonSeconds.collectAsState()
     val autoplay by SettingsStore.autoplay.collectAsState()
     val playOnOpen by SettingsStore.playOnOpen.collectAsState()
     val captionStyle by SettingsStore.captionStyle.collectAsState()
@@ -656,8 +658,7 @@ fun EmbedWebView(
         // Down opens on the fixed "+Ns" instead; see [tvRowOpensOnFixedSkip].
         if (tvRowOpensOnFixedSkip(
                 openedByDown = openedByDown,
-                fixedSkipShown = SettingsStore.showSkipButton.value &&
-                    shouldShowManualSkipButton(positionMs, durationMs),
+                fixedSkipShown = false,
                 skipActionFocused = tvSkipActionFocused,
             )
         ) {
@@ -1945,7 +1946,7 @@ fun EmbedWebView(
             )
         }
 
-        if (touchControlsActive && touchControlsVisible && !screenLocked) {
+        if (touchControlsActive && touchControlsVisible && !screenLocked && !settingsSheetVisible) {
             EmbedTouchControls(
                 seriesTitle = seriesTitle,
                 episodeTitle = episodeTitle,
@@ -2153,7 +2154,7 @@ fun EmbedWebView(
         // Reduced native bar for old WebView builds that cannot report cross-origin position or
         // duration. Provider controls remain suppressed, so seeking is unavailable in this rare
         // compatibility mode instead of exposing the page UI.
-        if (fallbackControlsActive && fallbackControlsVisible) Row(
+        if (fallbackControlsActive && fallbackControlsVisible && !settingsSheetVisible) Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
@@ -2356,12 +2357,14 @@ fun EmbedWebView(
         val inIntro = isInSkipWindow(positionMs, introStartMs, introEndMs)
         val recapPopup = rememberTimedSkipPopup(inRecap, webIsPlaying, recapStartMs, recapEndMs)
         val introPopup = rememberTimedSkipPopup(inIntro, webIsPlaying, introStartMs, introEndMs)
+        val inOutro = outroWindowIsCredits(outroStartMs, outroEndMs, durationMs) && isInSkipWindow(positionMs, outroStartMs, outroEndMs)
+        val outroPopup = rememberTimedSkipPopup(inOutro, webIsPlaying, outroStartMs, outroEndMs)
         val action: Pair<String, () -> Unit>? = when {
             overlaysHidden -> null
             !skipAvailable -> null
             // With or without the controls, and the count appended at the button: see PlayerSurface.
             autoSkipCountdown != null -> autoSkipCountdown!!.let { pending ->
-                "Skipping ${pending.segment}" to {
+                "Skip ${pending.segment}" to {
                     autoSkipCountdown = null
                     requestSkipSeek(pending.endMs, "auto-${pending.segment.lowercase()}-now")
                 }
@@ -2370,25 +2373,15 @@ fun EmbedWebView(
             // Both timed skips pop up on their own and then ride the controls, for the reason
             // spelled out in PlayerSurface: an intro window that starts at 0 would otherwise pin
             // the button over the picture for the whole opening. See TIMED_SKIP_POPUP_MS.
-            recapEndMs != null && (controlsShowing || recapPopup) && inRecap ->
+            recapEndMs != null && (controlsShowing || recapPopup.showing) && inRecap ->
                 "Skip Recap" to { requestSkipSeek(recapEndMs, "manual-recap") }
-            introEndMs != null && (controlsShowing || introPopup) && inIntro ->
+            introEndMs != null && (controlsShowing || introPopup.showing) && inIntro ->
                 "Skip Intro" to { requestSkipSeek(introEndMs, "manual-intro") }
             // Only an outro that reaches the end of this file; see outroWindowIsCredits. Skips the
             // credits, not the episode: see PlayerSurface.
             outroEndMs != null &&
-                outroWindowIsCredits(outroStartMs, outroEndMs, durationMs) &&
-                isInSkipWindow(positionMs, outroStartMs, outroEndMs) ->
+                inOutro && (controlsShowing || outroPopup.showing) ->
                 "Skip Outro" to { requestSkipSeek(outroSkipTargetMs(outroEndMs, durationMs), "manual-outro") }
-            // The fallback for shows the timings miss. It rides with the controls, so it can be
-            // offered for the whole episode without ever sitting over the picture.
-            showSkipButton &&
-                controlsShowing &&
-                shouldShowManualSkipButton(positionMs, durationMs) ->
-                "+${skipButtonSeconds}s" to {
-                    val targetMs = (positionMs + skipButtonSeconds * 1_000L).coerceAtMost(durationMs)
-                    requestSkipSeek(targetMs, "manual-fixed")
-                }
             else -> null
         }
         LaunchedEffect(action?.first, activeUrl) {
@@ -2464,10 +2457,14 @@ fun EmbedWebView(
             // See PlayerSurface: on a TV the outer ~5% is overscan, so the usual 24.dp corner
             // inset puts this button off the edge of the picture entirely.
             val edgeInset = if (device.isTv) TV_SAFE_AREA_INSET else 24.dp
-            val countdown = autoSkipCountdown
             WebSkipButton(
-                label = if (countdown != null) autoSkipCountdownLabel(countdown, autoSkipSecondsLeft) else label,
-                countdownSeconds = countdown?.let { autoSkipSecondsLeft },
+                label = label,
+                fraction = { when (label) {
+                    "Skip Recap" -> recapPopup.fraction
+                    "Skip Intro" -> introPopup.fraction
+                    "Skip Outro" -> outroPopup.fraction
+                    else -> 0f
+                } },
                 onClick = onClick,
                 compact = compactHeight,
                 // Bottom right either way — see PlayerSurface. It only rises far enough to clear
@@ -2518,42 +2515,34 @@ private fun WebSkipButton(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    countdownSeconds: Int? = null,
-    /** The short inline player; see [CompactSkipActionHeight]. */
+    fraction: () -> Float,
     compact: Boolean = false,
 ) {
-    val extraFocus1 = rememberFocusFill()
-    AutoSkipButtonBounds {
+    val focus = rememberFocusFill()
     OutlinedButton(
         onClick = onClick,
-        shape = RoundedCornerShape(3.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.55f)),
-        colors = extraFocus1.buttonColors(
-            ButtonDefaults.outlinedButtonColors(
-                containerColor = Color.Black.copy(alpha = 0.5f),
-                contentColor = Color.White,
-            ),
-        ),
-        contentPadding = if (compact) {
-            PaddingValues(horizontal = 10.dp, vertical = 0.dp)
-        } else {
-            PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-        },
-        modifier = modifier
-            .then(if (compact) Modifier.height(CompactSkipActionHeight) else Modifier)
-            .focusFill(extraFocus1, RoundedCornerShape(3.dp))
-            .autoSkipSweep(
-                secondsLeft = countdownSeconds,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(3.dp),
-            ),
+        shape = CircleShape,
+        border = null,
+        colors = focus.buttonColors(ButtonDefaults.outlinedButtonColors(
+            containerColor = Color.Transparent,
+            contentColor = Color.White,
+        )),
+        contentPadding = if (compact) PaddingValues(horizontal = 14.dp, vertical = 2.dp)
+            else PaddingValues(horizontal = 22.dp, vertical = 5.dp),
+        modifier = modifier.height(if (compact) 36.dp else 48.dp)
+            .playerLiquidGlass(CircleShape, PlayerLiquidGlassTone.PRIMARY)
+            .focusFill(focus, CircleShape),
     ) {
-        Text(
-            label.uppercase(),
-            style = if (compact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-        )
-    }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(label, style = if (compact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Canvas(Modifier.width(if (compact) 70.dp else 96.dp).height(5.dp)) {
+                val remaining = fraction().coerceIn(0f, 1f)
+                val y = size.height / 2f
+                val stroke = 2.dp.toPx()
+                drawLine(Color.White.copy(alpha = .22f), Offset(0f, y), Offset(size.width, y), stroke, StrokeCap.Round)
+                if (remaining > 0f) drawLine(Color.White.copy(alpha = .92f), Offset(0f, y), Offset(size.width * remaining, y), stroke, StrokeCap.Round)
+            }
+        }
     }
 }
 

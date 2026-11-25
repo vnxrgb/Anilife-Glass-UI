@@ -1,6 +1,7 @@
 package com.anilili.ui.tour
 
 import android.content.Context
+import com.anilili.ui.components.glassCard
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateRectAsState
@@ -81,7 +82,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** The things on screen a tour step can point at. Each is tagged where it is drawn ([tourTarget]). */
-enum class TourTarget { FOR_YOU, BECAUSE, ROW_HANDLE, DICE, ARRANGE_SETTINGS }
+enum class TourTarget { FOR_YOU, BECAUSE, ROW_HANDLE, DICE, ARRANGE_SETTINGS, NAV_HOME, NAV_LIST, NAV_BROWSE, NAV_DOWNLOADS, NAV_PROFILE }
 
 /**
  * One step: what it points at (null for a card on its own), what it says, and what it adds when
@@ -92,6 +93,7 @@ internal data class TourStep(
     val title: String,
     val body: String,
     val whenMissing: String? = null,
+    val destination: String? = null,
 )
 
 /** This release's tour, as the device draws Home: drag on a phone, Settings on a television. */
@@ -134,6 +136,19 @@ internal fun tourSteps(isTv: Boolean): List<TourStep> = listOf(
     ),
 )
 
+private fun mobileReleaseSteps() = listOf(
+    TourStep(TourTarget.NAV_HOME, "Welcome to AniLumos", "The new optical glass navigation reflects the content behind it. Switch sections from here.", destination = "home"),
+    TourStep(TourTarget.DICE, "Discover by mood", "Open Discover on Home and choose a mood, from Comfort to Suspense. Swipe for another matching anime.", destination = "home"),
+    TourStep(TourTarget.NAV_BROWSE, "Explore anime", "Browse for a series. Anime details now borrow ambient colours from the artwork.", destination = "browse"),
+    TourStep(TourTarget.NAV_HOME, "Smart Resume", "Continue Watching takes you back to unfinished episodes.", destination = "home"),
+    TourStep(TourTarget.NAV_LIST, "Your anime library", "Find collections and AniLumos Wrapped in your library.", destination = "more"),
+    TourStep(null, "Personalized Calendar", "Choose Following only on the schedule to focus on releases from your list.", destination = "schedule"),
+    TourStep(TourTarget.NAV_DOWNLOADS, "Download queue", "Manage active, paused and failed downloads in one place.", destination = "downloads"),
+    TourStep(null, "Cinema and episode tools", "Open an episode to find cinema lighting, episode notes and stream recovery options. Playback is not started during this tour."),
+    TourStep(TourTarget.NAV_PROFILE, "Make it yours", "Find themes and account options in your profile. Link a TV from Accounts & sync.", destination = "appearance"),
+    TourStep(TourTarget.NAV_HOME, "You're ready", "Enjoy AniLumos. Replay this walkthrough from About whenever you like.", destination = "home"),
+)
+
 /**
  * What's new, shown once: on the first open of a release that carries a new [TOUR_ID], whether the
  * app was updated or installed fresh — for a new viewer it is the welcome.
@@ -144,7 +159,7 @@ internal fun tourSteps(isTv: Boolean): List<TourStep> = listOf(
  */
 object WhatsNewTour {
     /** Change this for the next release's tour; every install then shows it once more. */
-    const val TOUR_ID = "home-2026-10"
+    const val TOUR_ID = "optical-mobile-2026-11-v3"
     private const val SEEN_FILE = "whats-new-seen"
 
     var active by mutableStateOf(false)
@@ -168,6 +183,15 @@ object WhatsNewTour {
         active = true
         DiagnosticsLog.event("WhatsNewTour started id=$TOUR_ID")
     }
+
+    fun reopen() {
+        step = 0
+        active = true
+    }
+
+    var requestedSettingsSection by mutableStateOf<String?>(null)
+
+    internal fun previous() { if (step > 0) step-- }
 
     internal fun next(count: Int) {
         if (step + 1 >= count) finish() else step++
@@ -225,11 +249,11 @@ fun RegisterTourScroller(scroll: suspend (TourTarget) -> Unit) {
  * remote the card's two buttons hold the cursor, and Back ends the tour.
  */
 @Composable
-fun WhatsNewTourOverlay() {
+fun WhatsNewTourOverlay(onNavigate: (String) -> Unit = {}) {
     if (!WhatsNewTour.active) return
     val device = LocalAppDeviceProfile.current
     val density = LocalDensity.current
-    val steps = remember(device.isTv) { tourSteps(device.isTv) }
+    val steps = remember(device.isTv) { if (device.isTv) tourSteps(true) else mobileReleaseSteps() }
     val index = WhatsNewTour.step.coerceIn(0, steps.lastIndex)
     val step = steps[index]
     val accent = LocalMidnightAccent.current
@@ -237,9 +261,12 @@ fun WhatsNewTourOverlay() {
 
     // Bring the step's target on screen, then wait for it to report where it is. A target that
     // never does (no For You row yet, say) gets the card on its own, with [TourStep.whenMissing].
-    var settled by remember(index) { mutableStateOf(step.target == null) }
+    var settled by remember(index) { mutableStateOf(false) }
+    val navigate by rememberUpdatedState(onNavigate)
     LaunchedEffect(index) {
-        val target = step.target ?: return@LaunchedEffect
+        step.destination?.let { navigate(it); delay(350) }
+        val target = step.target
+        if (target == null) { settled = true; return@LaunchedEffect }
         WhatsNewTour.bringIntoView?.invoke(target)
         withTimeoutOrNull(TARGET_WAIT_MS) { snapshotFlow { WhatsNewTour.bounds[target] }.first { it != null } }
         delay(SCROLL_SETTLE_MS)
@@ -260,21 +287,24 @@ fun WhatsNewTourOverlay() {
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
-            .onGloballyPositioned { origin = it.positionInWindow() }
-            // Swallow every touch: the tour is the only thing on screen that answers.
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        event.changes.forEach { it.consume() }
-                        if (event.changes.none { it.pressed }) break
-                    }
-                }
-            },
+            .onGloballyPositioned { origin = it.positionInWindow() },
     ) {
         val corner = with(density) { 18.dp.toPx() }
         val ring = with(density) { 2.dp.toPx() }
-        Canvas(Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }) {
+        // A sibling behind TourCard blocks the underlying app, never the card's buttons.
+        Canvas(
+            Modifier.fillMaxSize()
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            event.changes.forEach { it.consume() }
+                            if (event.changes.none { it.pressed }) break
+                        }
+                    }
+                }
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        ) {
             drawRect(Color.Black.copy(alpha = SCRIM_ALPHA))
             if (holeAlpha > 0f) {
                 drawRoundRect(
@@ -309,12 +339,12 @@ fun WhatsNewTourOverlay() {
         } else {
             (target.center.x - cardWidthPx / 2f).coerceIn(margin, (screenW - cardWidthPx - margin).coerceAtLeast(margin))
         }
-        val y = when {
+        val y = (when {
             target == null -> (screenH - cardHeight) / 2f
             target.bottom + margin + cardHeight <= screenH - margin * 2 -> target.bottom + margin
             target.top - margin - cardHeight >= margin * 2 -> target.top - margin - cardHeight
             else -> screenH - cardHeight - margin * 2
-        }
+        }).coerceIn(margin, (screenH - cardHeight - margin).coerceAtLeast(margin))
         val cardAlpha by animateFloatAsState(if (settled && cardHeight > 0) 1f else 0f, tween(200), label = "tour-card")
 
         TourCard(
@@ -357,9 +387,8 @@ private fun TourCard(
     }
     Column(
         modifier
-            .background(Midnight.ModalSurface, RoundedCornerShape(22.dp))
-            .border(1.dp, Midnight.Line2, RoundedCornerShape(22.dp))
-            .padding(20.dp)
+            .glassCard(RoundedCornerShape(28.dp), MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .96f))
+            .padding(16.dp)
             .onPreviewKeyEvent { event ->
                 // Up and Down have nowhere to go inside the card; outside it is the app the tour
                 // is covering, which the cursor must not wander into.
@@ -368,7 +397,7 @@ private fun TourCard(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = if (isFirst) "WHAT'S NEW" else "WHAT'S NEW · $index OF ${count - 1}",
+            text = "WHAT'S NEW · ${index + 1} OF $count",
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = accent,
@@ -377,48 +406,27 @@ private fun TourCard(
             step.title,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = Midnight.Text,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             if (showMissing && step.whenMissing != null) "${step.body} ${step.whenMissing}" else step.body,
             style = MaterialTheme.typography.bodyMedium,
-            color = Midnight.Text2,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Row(
             Modifier.fillMaxWidth().padding(top = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (!isFirst) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    repeat(count - 1) { dot ->
-                        Box(
-                            Modifier
-                                .size(if (dot == index - 1) 8.dp else 6.dp)
-                                .background(
-                                    if (dot == index - 1) accent else Midnight.Text3.copy(alpha = .5f),
-                                    CircleShape,
-                                ),
-                        )
-                    }
-                }
+            TextButton(onClick = { WhatsNewTour.previous() }, enabled = !isFirst) {
+                Text("Back")
             }
             Spacer(Modifier.weight(1f))
-            if (!isLast) {
-                val skip = rememberFocusFill()
-                TextButton(
-                    onClick = { WhatsNewTour.finish() },
-                    colors = skip.buttonColors(ButtonDefaults.textButtonColors(contentColor = Midnight.Text2)),
-                    modifier = Modifier
-                        .focusRequester(skipFocus)
-                        .focusProperties { left = FocusRequester.Cancel }
-                        .focusFill(skip, RoundedCornerShape(50)),
-                ) { Text(if (isFirst) "Not now" else "Skip") }
-            }
+            TextButton(onClick = WhatsNewTour::finish) { Text("Skip") }
             val next = rememberFocusFill()
             Button(
                 onClick = { WhatsNewTour.next(count) },
                 colors = next.buttonColors(
-                    ButtonDefaults.buttonColors(containerColor = accent, contentColor = Midnight.OnAccent),
+                    com.anilili.ui.components.cinematicPrimaryButtonColors(),
                 ),
                 modifier = Modifier
                     .padding(start = 8.dp)
@@ -428,8 +436,7 @@ private fun TourCard(
             ) {
                 Text(
                     when {
-                        isFirst -> "Show me"
-                        isLast -> "Got it"
+                        isLast -> "Get started"
                         else -> "Next"
                     },
                     fontWeight = FontWeight.Bold,
@@ -444,3 +451,98 @@ private const val TOUR_START_DELAY_MS = 1_200L
 private const val TARGET_WAIT_MS = 1_200L
 private const val SCROLL_SETTLE_MS = 250L
 private const val FOCUS_DELAY_MS = 120L
+
+/** Release-specific walkthrough; no account, playback or settings changes are made automatically. */
+@Composable
+fun WhatsNewReleaseDialog(onOpen: (String) -> Unit) {
+    if (!WhatsNewTour.active) return
+    val isTv = LocalAppDeviceProfile.current.isTv
+    if (!isTv) {
+        WhatsNewTourOverlay(onOpen)
+        return
+    }
+    val entries = remember(isTv) { listOf(
+        Triple("New themes & glass", "Settings › Appearance", "Choose your preferred colour theme in Appearance."),
+        Triple("AniLumos Wrapped", "My List › Wrapped", "Explore your viewing statistics and personality. Share your recap where supported."),
+        Triple("Mood Discovery", "Home › Discover", "Open the dice or Discover and select a mood to find matching anime."),
+        Triple("Smart Resume", "Home › Continue Watching", "Pick up an unfinished episode where you left off."),
+        Triple("Personalized Calendar", "Schedule", "Choose Following only to see releases relevant to your list."),
+        Triple("Anime Collections", "My List › Collections", "Organize anime into queues and collections."),
+        Triple("Episode Notes", "Anime details / episode player", "Keep personal notes on episodes."),
+        Triple("Smart Download Queue", "Downloads", "Manage active, paused and failed downloads."),
+        Triple("Stream Health Assistant", "Episode player", "Look for recovery options when a stream has trouble."),
+        Triple("Cinema lighting", "Episode player", "Explore the lighting controls available in your player."),
+        Triple("AniLumos Connect", if (isTv) "My List › Sign in" else "Settings › Accounts & sync › Link a TV", if (isTv) "Use the TV sign-in card to pair with your phone." else "Scan the TV pairing code and confirm the connection.")
+    ) }
+    val index = WhatsNewTour.step.coerceIn(0, entries.lastIndex)
+    val (title, location, body) = entries[index]
+    val destination = when (index) {
+        0 -> "appearance"
+        1, 5 -> "more"
+        2 -> "discover"
+        3 -> "home"
+        4 -> "schedule"
+        7 -> "downloads"
+        10 -> if (isTv) "more" else "accounts"
+        else -> null
+    }
+    com.anilili.ui.dialogs.MidnightDialogHost(
+        onDismiss = WhatsNewTour::finish,
+        header = { showClose ->
+            com.anilili.ui.dialogs.MidnightMediaHeader(
+                kicker = "WHAT'S NEW · ${index + 1} OF ${entries.size}",
+                title = title,
+                metadata = location,
+                onDismiss = (WhatsNewTour::finish).takeIf { showClose },
+            )
+        },
+        footer = {
+            com.anilili.ui.dialogs.MidnightDialogFooter(
+                extraQuietText = "Back".takeIf { index > 0 },
+                onExtraQuiet = { WhatsNewTour.previous() },
+                quietText = "Skip",
+                onQuiet = WhatsNewTour::finish,
+            )
+            val focus = rememberFocusFill()
+            Button(
+                onClick = { WhatsNewTour.next(entries.size) },
+                modifier = Modifier.fillMaxWidth().focusFill(focus, RoundedCornerShape(50)),
+                colors = focus.buttonColors(ButtonDefaults.buttonColors()),
+                shape = RoundedCornerShape(50),
+            ) { Text(if (index == entries.lastIndex) "Done" else "Next") }
+        },
+    ) {
+        Column(
+            Modifier.fillMaxWidth()
+                .then(Modifier.releaseGuideGlass())
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                repeat(entries.size) { position ->
+                    Box(Modifier.weight(1f).size(4.dp).background(
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = if (position <= index) .85f else .15f),
+                        RoundedCornerShape(50),
+                    ))
+                }
+            }
+            Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text("WHERE TO FIND IT", style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(location, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            if (destination != null) {
+                val focus = rememberFocusFill()
+                TextButton(onClick = {
+                    onOpen(destination)
+                }, modifier = Modifier.focusFill(focus, RoundedCornerShape(50)),
+                    colors = focus.buttonColors(ButtonDefaults.textButtonColors())) {
+                    Text("Open feature")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Modifier.releaseGuideGlass(): Modifier =
+    this.glassCard(RoundedCornerShape(28.dp))

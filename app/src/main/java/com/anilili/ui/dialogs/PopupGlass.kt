@@ -7,6 +7,8 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.PixelCopy
+import androidx.compose.runtime.collectAsState
+import com.anilili.data.settings.SettingsStore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,11 +56,14 @@ import kotlin.coroutines.resume
 @Composable
 internal fun rememberPopupBackdrop(): PopupBackdrop? {
     val wanted = glassEnabled(GlassSection.POPUPS)
+    val material by SettingsStore.glassMaterial.collectAsState()
+    val blur by SettingsStore.glassBlur.collectAsState()
+    val radius = (BLUR_RADIUS * if (blur < 0) material.blurScale else blur / 50f).toInt().coerceIn(0, 14)
     val context = LocalContext.current
     val activity = context.findActivity()
     val lowRam = (context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager)?.isLowRamDevice == true
     var backdrop by remember { mutableStateOf<PopupBackdrop?>(null) }
-    LaunchedEffect(wanted, activity, lowRam) {
+    LaunchedEffect(wanted, activity, lowRam, radius) {
         if (!wanted || activity == null || lowRam || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             backdrop = null
             return@LaunchedEffect
@@ -95,7 +100,7 @@ internal fun rememberPopupBackdrop(): PopupBackdrop? {
             return@LaunchedEffect
         }
         try {
-            withContext(Dispatchers.Default) { boxBlur(copy, BLUR_RADIUS, passes = 3) }
+            withContext(Dispatchers.Default) { if (radius > 0) boxBlur(copy, radius, passes = 3) }
             val origin = IntArray(2).also(decor::getLocationOnScreen)
             backdrop = PopupBackdrop(
                 image = copy.asImageBitmap(),

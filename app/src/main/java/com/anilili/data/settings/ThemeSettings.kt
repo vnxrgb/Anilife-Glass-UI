@@ -11,7 +11,9 @@ package com.anilili.data.settings
 /** The canvas: what shows where nothing else is drawn. */
 enum class ThemeBackground(val storedValue: String, val label: String, val description: String) {
     AMOLED("amoled", "AMOLED black", "Pure black; OLED screens switch those pixels off"),
-    DARK("dark", "Dark", "Material's dark grey, a little softer in a lit room");
+    DARK("dark", "Dark", "Material's dark grey, a little softer in a lit room"),
+    LIGHT("light", "Light", "Bright surfaces and dark text"),
+    SYSTEM("system", "Follow system", "Match Android light or dark appearance");
 
     companion object {
         fun fromStored(value: String?): ThemeBackground =
@@ -22,18 +24,19 @@ enum class ThemeBackground(val storedValue: String, val label: String, val descr
 /**
  * The seed every colour in the scheme is generated from.
  *
- * [ANILIFE_GREEN] is the default shared with the logo and web client. [MONOCHROME] preserves the
+ * [ANILIFE_GREEN] retains its legacy stored key but uses the AniLumos brand purple. [MONOCHROME] preserves the
  * app's long-standing look as the Legacy Midnight preset. [WALLPAPER] is Material You: the seed
  * the system extracted from the wallpaper, and only exists on Android 12+.
  * [CUSTOM] is whatever the viewer mixed in the custom colour dialog.
  */
 enum class ThemeAccent(val storedValue: String, val label: String, val seed: Long?) {
-    ANILIFE_GREEN("anilife_green", "Anilumos green", 0xFF79D66C),
+    ANILIFE_GREEN("anilife_green", "Anilumos purple", 0xFF6D3DF2),
     MONOCHROME("monochrome", "Monochrome", null),
     WALLPAPER("wallpaper", "From wallpaper", null),
     /** The viewer's own colour, stored beside it as `theme_custom_seed`. */
     CUSTOM("custom", "Custom", null),
     PURPLE("purple", "Purple", 0xFF8B5CF6),
+    JADE("jade", "Jade green", 0xFF79D66C),
     NEON_GREEN("neon_green", "Neon green", 0xFF39FF14),
     BLOOD_RED("blood_red", "Blood red", 0xFFD1102B),
     OCEAN_BLUE("ocean_blue", "Ocean blue", 0xFF3B82F6),
@@ -41,7 +44,20 @@ enum class ThemeAccent(val storedValue: String, val label: String, val seed: Lon
     SAKURA_PINK("sakura_pink", "Sakura pink", 0xFFF472B6),
     SUNSET_ORANGE("sunset_orange", "Sunset orange", 0xFFF97316),
     GOLD("gold", "Gold", 0xFFFACC15),
-    EMERALD("emerald", "Emerald", 0xFF10B981);
+    EMERALD("emerald", "Emerald", 0xFF10B981),
+    GLACIER("glacier", "Glacier", 0xFFB9E4FA),
+    AURORA("aurora", "Aurora", 0xFF64E6C1),
+    ROSE_GOLD("rose_gold", "Rose Gold", 0xFFE8B49D),
+    NORDIC("nordic", "Nordic", 0xFF88C0D0),
+    MOCHA("mocha", "Mocha", 0xFFC9A68D),
+    LAVENDER_MIST("lavender_mist", "Lavender Mist", 0xFFD4C5F9),
+    GRAPHITE("graphite", "Graphite", 0xFFB0BEC5),
+    PEACH_FROST("peach_frost", "Peach Frost", 0xFFFFC8A2),
+    MATCHA("matcha", "Matcha", 0xFFB8CB91),
+    BLUE_HOUR("blue_hour", "Blue Hour", 0xFF8B9CF5),
+    CHAMPAGNE("champagne", "Champagne", 0xFFE6D4B2),
+    RETRO_WAVE("retro_wave", "Retro Wave", 0xFFF18BC9),
+    ;
 
     companion object {
         fun fromStored(value: String?): ThemeAccent =
@@ -106,12 +122,31 @@ enum class ThemePreset(
     CRIMSON_NIGHT("Crimson Night", ThemeBackground.AMOLED, ThemeAccent.BLOOD_RED, ThemeStyle.VIVID),
     TOXIC("Toxic", ThemeBackground.AMOLED, ThemeAccent.NEON_GREEN, ThemeStyle.VIBRANT),
     ROYAL("Royal", ThemeBackground.AMOLED, ThemeAccent.PURPLE, ThemeStyle.VIVID),
+    JADE("Jade", ThemeBackground.AMOLED, ThemeAccent.JADE, ThemeStyle.VIVID),
     DEEP_SEA("Deep Sea", ThemeBackground.AMOLED, ThemeAccent.OCEAN_BLUE, ThemeStyle.VIVID),
     CYBER("Cyber", ThemeBackground.AMOLED, ThemeAccent.CYAN, ThemeStyle.VIBRANT),
     SAKURA("Sakura", ThemeBackground.DARK, ThemeAccent.SAKURA_PINK, ThemeStyle.TONAL),
     EMBER("Ember", ThemeBackground.AMOLED, ThemeAccent.SUNSET_ORANGE, ThemeStyle.VIVID),
     GILDED("Gilded", ThemeBackground.AMOLED, ThemeAccent.GOLD, ThemeStyle.NEUTRAL),
     FOREST("Forest", ThemeBackground.DARK, ThemeAccent.EMERALD, ThemeStyle.TONAL),
+    GLACIER("Glacier", ThemeBackground.DARK, ThemeAccent.GLACIER, ThemeStyle.TONAL),
+    AURORA("Aurora", ThemeBackground.DARK, ThemeAccent.AURORA, ThemeStyle.VIBRANT),
+    ROSE_GOLD("Rose Gold", ThemeBackground.DARK, ThemeAccent.ROSE_GOLD, ThemeStyle.TONAL),
+    NORDIC("Nordic", ThemeBackground.DARK, ThemeAccent.NORDIC, ThemeStyle.NEUTRAL),
+    MOCHA("Mocha", ThemeBackground.DARK, ThemeAccent.MOCHA, ThemeStyle.TONAL),
+    LAVENDER_MIST("Lavender Mist", ThemeBackground.DARK, ThemeAccent.LAVENDER_MIST, ThemeStyle.TONAL),
+    GRAPHITE("Graphite", ThemeBackground.DARK, ThemeAccent.GRAPHITE, ThemeStyle.NEUTRAL),
+    PEACH_FROST("Peach Frost", ThemeBackground.DARK, ThemeAccent.PEACH_FROST, ThemeStyle.TONAL),
+    MATCHA("Matcha", ThemeBackground.DARK, ThemeAccent.MATCHA, ThemeStyle.TONAL),
+    BLUE_HOUR("Blue Hour", ThemeBackground.DARK, ThemeAccent.BLUE_HOUR, ThemeStyle.VIBRANT),
+    CHAMPAGNE("Champagne", ThemeBackground.DARK, ThemeAccent.CHAMPAGNE, ThemeStyle.NEUTRAL),
+    RETRO_WAVE("Retro Wave", ThemeBackground.DARK, ThemeAccent.RETRO_WAVE, ThemeStyle.VIBRANT),
+    ANILUMOS_LIGHT("AniLumos Light", ThemeBackground.LIGHT, ThemeAccent.ANILIFE_GREEN, ThemeStyle.VIVID),
+    PORCELAIN("Porcelain", ThemeBackground.LIGHT, ThemeAccent.MONOCHROME, ThemeStyle.NEUTRAL),
+    IVORY("Ivory", ThemeBackground.LIGHT, ThemeAccent.CHAMPAGNE, ThemeStyle.TONAL),
+    ARCTIC("Arctic", ThemeBackground.LIGHT, ThemeAccent.OCEAN_BLUE, ThemeStyle.TONAL),
+    BLOOM("Bloom", ThemeBackground.LIGHT, ThemeAccent.SAKURA_PINK, ThemeStyle.TONAL),
+    MINT("Mint", ThemeBackground.LIGHT, ThemeAccent.EMERALD, ThemeStyle.TONAL),
     HIGH_CONTRAST(
         "High contrast", ThemeBackground.AMOLED, ThemeAccent.MONOCHROME, ThemeStyle.VIVID, ThemeContrast.HIGH,
     );
@@ -183,4 +218,14 @@ internal fun backdropUrlOf(source: AppBackdropSource, animeUrl: String?, imageUr
     AppBackdropSource.NONE -> null
     AppBackdropSource.ANIME -> animeUrl
     AppBackdropSource.IMAGE -> imageUrl
+}
+
+/** Glass material is independent of theme colour. Liquid preserves the existing appearance. */
+enum class GlassMaterial(val label: String, val panelAlpha: Float, val blurScale: Float) {
+    LIQUID("Liquid Glass", .62f, 1f),
+    FROSTED("Frosted Glass", .84f, 1.5f),
+    SMOKED("Smoked Glass", .90f, .75f);
+    companion object {
+        fun fromStored(value: String?): GlassMaterial = entries.firstOrNull { it.name == value } ?: LIQUID
+    }
 }

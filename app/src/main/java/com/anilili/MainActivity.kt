@@ -1,6 +1,9 @@
 package com.anilili
 
 import com.anilili.ui.theme.appCanvas
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.anilili.ui.components.LocalOpticalBackdrop
 import com.anilili.ui.theme.canvasColor
 import android.Manifest
 import android.app.PictureInPictureParams
@@ -19,6 +22,9 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.SystemBarStyle
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.compose.ui.graphics.luminance
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -48,6 +54,12 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -115,6 +127,10 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalContext
@@ -253,6 +269,18 @@ class MainActivity : FragmentActivity() {
     private var pendingRoute by mutableStateOf<String?>(null)
     private var pendingLink by mutableStateOf<AnililiLink?>(null)
     private var pictureInPictureReady = false
+    // Non-null only when a browsing destination owns the status bar.
+    private var browsingDarkStatusIcons: Boolean? = null
+
+    private fun restoreBrowsingStatusBar() {
+        val darkIcons = browsingDarkStatusIcons ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) return
+        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            show(WindowInsetsCompat.Type.statusBars())
+            isAppearanceLightStatusBars = darkIcons
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val launchStartedAt = SystemClock.elapsedRealtime()
@@ -315,7 +343,23 @@ class MainActivity : FragmentActivity() {
                 // The window shows through during transitions and before first draw, so it follows
                 // the Appearance canvas rather than staying the AMOLED black it starts as.
                 val canvas = MaterialTheme.colorScheme.background.toArgb()
-                SideEffect { window.decorView.setBackgroundColor(canvas) }
+                val lightCanvas = MaterialTheme.colorScheme.background.luminance() > .5f
+                var artworkStatusBar by remember { mutableStateOf(false) }
+                var browsingStatusBar by remember { mutableStateOf(false) }
+                val darkStatusIcons = lightCanvas && !artworkStatusBar
+                SideEffect {
+                    val nextBrowsingPolicy = darkStatusIcons.takeIf { browsingStatusBar }
+                    if (nextBrowsingPolicy != browsingDarkStatusIcons) {
+                        browsingDarkStatusIcons = nextBrowsingPolicy
+                        DiagnosticsLog.event("Browsing status bar darkIcons=$nextBrowsingPolicy")
+                    }
+                    window.decorView.setBackgroundColor(canvas)
+                    WindowCompat.getInsetsController(window, window.decorView).apply {
+                        isAppearanceLightStatusBars = darkStatusIcons
+                        isAppearanceLightNavigationBars = lightCanvas
+                    }
+                    restoreBrowsingStatusBar()
+                }
                 // Outside everything that measures, so the viewer's chosen interface size and
                 // overscan reach every screen from one place (the size reaches dialogs and popups too).
                 AppUiScale { AppOverscan {
@@ -351,6 +395,10 @@ class MainActivity : FragmentActivity() {
                                 onRouteConsumed = { pendingRoute = null },
                                 pendingLink = pendingLink,
                                 onLinkConsumed = { pendingLink = null },
+                                onArtworkStatusBarChanged = { artwork, browsing ->
+                                    artworkStatusBar = artwork
+                                    browsingStatusBar = browsing
+                                },
                             )
                             AllAnimeCaptchaHost()
                             CloudflareChallengeHost()
@@ -405,7 +453,7 @@ class MainActivity : FragmentActivity() {
                             ) {
                                 when (videoIntro) {
                                     // The window's own colour, which the mark's splash also opens on.
-                                    null -> Box(Modifier.fillMaxSize().background(ComposeColor.Black))
+                                    null -> Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
                                     true -> AppLaunchSplash(onFinished = { showLaunchSplash = false }, animateFlame = true)
                                     false -> AppLaunchSplash(onFinished = { showLaunchSplash = false }, animateFlame = false)
                                 }
@@ -596,6 +644,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) restoreBrowsingStatusBar()
         DiagnosticsLog.event(
             "MainActivity.onWindowFocusChanged hasFocus=$hasFocus " +
                 "decorShown=${window.decorView.isShown} size=${window.decorView.width}x${window.decorView.height}",
@@ -757,11 +806,23 @@ private fun MiruroRoot(
     onRouteConsumed: () -> Unit,
     pendingLink: AnililiLink?,
     onLinkConsumed: () -> Unit,
+    onArtworkStatusBarChanged: (Boolean, Boolean) -> Unit,
 ) {
     val deviceProfile = rememberAppDeviceProfile()
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = Routes.tabRoute(backStack?.destination?.route)
+    // Scope artwork contrast to the visible back-stack entry, including detail-to-detail navigation.
+    // A screen exiting through an animation must not override the screen coming in.
+    var artworkBarReport by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
+    val browsingBars = !deviceProfile.isTv && !inPictureInPicture &&
+        (currentRoute == Routes.HOME || currentRoute == Routes.DETAIL)
+    SideEffect {
+        // Default to white during the transition into an artwork route. The visible entry
+        // then reports whether its artwork has actually scrolled clear.
+        val overArtwork = artworkBarReport?.takeIf { it.first == backStack?.id }?.second ?: true
+        onArtworkStatusBarChanged(browsingBars && overArtwork, browsingBars)
+    }
     val showBottomBar = currentRoute in Routes.tabRoutes
     // The anime page keeps the phone's tab bar (and the tablet's rail): it is where most browsing
     // lands, and without the bar every jump to another tab from there cost a Back first. No tab is
@@ -773,6 +834,7 @@ private fun MiruroRoot(
     val navigationTabs = if (cinema) cinemaPhoneTabs else phoneTabs
     val railTabs = if (cinema) cinemaTabs else Tab.entries
     var chromeVisible by remember { mutableStateOf(true) }
+    var dockCollapsed by remember { mutableStateOf(false) }
     val tvSearchRailFocusRequester = remember { FocusRequester() }
     // Redirect destinations, not plain requesters: both live on screens that are only composed on
     // some routes and only once their data lands, and a redirect to an absent one crashes the app.
@@ -813,8 +875,8 @@ private fun MiruroRoot(
     // more, so without this a hidden bar would be inherited by the next destination — which lands
     // you on a page with no title, no search and no way to ask for them but a scroll it may not
     // even have.
-    LaunchedEffect(backStack?.destination?.route) { chromeVisible = true }
-    val revealChrome = remember { { chromeVisible = true } }
+    LaunchedEffect(backStack?.destination?.route) { chromeVisible = true; dockCollapsed = false }
+    val revealChrome = remember { { chromeVisible = true; dockCollapsed = false } }
     val chromeScrollConnection = remember(deviceProfile.isTv, chromeHideThresholdPx, staticChrome) {
         object : NestedScrollConnection {
             private var accumulated = 0f
@@ -830,9 +892,12 @@ private fun MiruroRoot(
                 available: Offset,
                 source: NestedScrollSource,
             ): Offset {
-                if (deviceProfile.isTv || staticChrome || consumed.y == 0f) return Offset.Zero
+                if (deviceProfile.isTv || consumed.y == 0f) return Offset.Zero
                 if ((accumulated < 0f) != (consumed.y < 0f)) accumulated = 0f
                 accumulated += consumed.y
+                if (accumulated < -chromeHideThresholdPx) dockCollapsed = true
+                else if (accumulated > chromeHideThresholdPx) dockCollapsed = false
+                if (staticChrome) return Offset.Zero
                 if (accumulated < -chromeHideThresholdPx && chromeVisible) {
                     chromeVisible = false
                 } else if (accumulated > chromeHideThresholdPx && !chromeVisible) {
@@ -945,8 +1010,10 @@ private fun MiruroRoot(
     val systemUses24Hour = rememberSystemUses24Hour()
     val clockFormat by SettingsStore.clockFormat.collectAsState()
     val chromeTakeover = remember { AppChromeTakeover() }
+    val opticalBackdrop = rememberLayerBackdrop()
     CompositionLocalProvider(
         LocalAppChromeTakeover provides chromeTakeover,
+        LocalOpticalBackdrop provides if (!deviceProfile.isTv && !inPictureInPicture) opticalBackdrop else null,
         LocalAppDeviceProfile provides deviceProfile,
         // Material pads chips, icon buttons, tabs and text buttons out to a 48dp touch target round
         // what it draws. That is for fingers; on a television it only put the focus ring — which
@@ -970,7 +1037,37 @@ private fun MiruroRoot(
     ) {
         NotificationPermissionEffect()
         UpdatePromptHost()
-        Box(Modifier.fillMaxSize().nestedScroll(chromeScrollConnection)) {
+        Box(Modifier.fillMaxSize().nestedScroll(chromeScrollConnection)
+            .pointerInput(deviceProfile.isTv, chromeHideThresholdPx) {
+                if (deviceProfile.isTv) return@pointerInput
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    var last = down.position
+                    var dx = 0f
+                    var dy = 0f
+                    var vertical = false
+                    var horizontal = false
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        val delta = change.position - last
+                        last = change.position
+                        if (!vertical && !horizontal) {
+                            dx += delta.x; dy += delta.y
+                            if (kotlin.math.abs(dx) > chromeHideThresholdPx && kotlin.math.abs(dx) > kotlin.math.abs(dy)) horizontal = true
+                            else if (kotlin.math.abs(dy) > chromeHideThresholdPx && kotlin.math.abs(dy) > kotlin.math.abs(dx)) {
+                                vertical = true
+                                dockCollapsed = dy < 0f
+                                dy = 0f
+                            }
+                        } else if (vertical) {
+                            if ((dy < 0f) != (delta.y < 0f)) dy = 0f
+                            dy += delta.y
+                            if (kotlin.math.abs(dy) > chromeHideThresholdPx) { dockCollapsed = dy < 0f; dy = 0f }
+                        }
+                    } while (change.pressed)
+                }
+            }) {
             val hasPhoneBottomBar = showPhoneNavigation && !deviceProfile.useNavigationRail
             // A sign-in page drawn over the tab keeps the layout beneath it as it was and only
             // loses the capsule, its blur and the tab swipe — see [AppChromeTakeover].
@@ -995,7 +1092,7 @@ private fun MiruroRoot(
                     (showBottomBar || currentRoute == Routes.DETAIL)
                 // The canvas is painted inside the capsule's blur source, so the glass frosts the
                 // background picture too rather than showing it sharp through a tint.
-                Box((if (showPhoneCapsule && navBackdrop != null) Modifier.fillMaxSize().hazeSource(navBackdrop) else Modifier.fillMaxSize()).appCanvas()) {
+                Box((if (showPhoneCapsule && navBackdrop != null) Modifier.fillMaxSize().hazeSource(navBackdrop) else Modifier.fillMaxSize()).then(if (showPhoneCapsule && !inPictureInPicture && Build.VERSION.SDK_INT >= 31) Modifier.layerBackdrop(opticalBackdrop) else Modifier).appCanvas()) {
                     Row(
                         Modifier
                             .fillMaxSize()
@@ -1010,6 +1107,7 @@ private fun MiruroRoot(
                                 currentRoute = currentRoute,
                                 menuLanguage = menuLanguage,
                                 tabs = railTabs,
+                                compactTabs = navigationTabs,
                                 cinema = cinema,
                                 onNavigate = nav::navigateTab,
                                 searchRailFocusRequester = tvSearchRailFocusRequester,
@@ -1029,6 +1127,10 @@ private fun MiruroRoot(
                             tvHomeRefresh = tvHomeRefresh,
                             tvDetailRefresh = tvDetailRefresh,
                             tabSwipe = tabSwipe,
+                            onMoodDiscovery = { randomVm.ensurePick(); showRandomPick = true },
+                            onArtworkUnderBarsChanged = { entryId, overArtwork ->
+                                artworkBarReport = entryId to overArtwork
+                            },
                             modifier = Modifier
                                 .weight(1f)
                                 .swipeBetweenTabs(
@@ -1100,39 +1202,13 @@ private fun MiruroRoot(
                 FloatingNavigationBar(
                     items = navItems,
                     selectedRoute = currentRoute,
-                    onSelect = nav::navigateTab,
+                    onSelect = { route -> chromeVisible = true; dockCollapsed = false; nav.navigateTab(route) },
                     bottomInset = navBarInset,
+                    collapsed = dockCollapsed && !com.anilili.ui.tour.WhatsNewTour.active,
+                    compactRoutes = setOf(Routes.HOME, Routes.SEARCH),
                     backdrop = navBackdrop,
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
-            }
-            // Home's dice, over the capsule's right-hand end (or the corner, beside a rail). Home
-            // only: it is a way into the catalogue, and Home is where browsing starts. It stays put
-            // while the feed scrolls, either way: it used to step aside with the top bar on a
-            // downward scroll, which hid it exactly while someone was browsing for something to
-            // watch — and the capsule it sits on never hides, so it read as a button that vanished.
-            if (currentRoute == Routes.HOME && !deviceProfile.isTv && !chromeTakeover.active) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(
-                            end = if (hasPhoneBottomBar) RandomButtonEndInset else 20.dp,
-                            bottom = navBarInset + if (hasPhoneBottomBar) {
-                                PhoneNavigationBarHeight + RandomButtonGap
-                            } else {
-                                20.dp
-                            },
-                        )
-                        .tourTarget(TourTarget.DICE),
-                ) {
-                    RandomAnimeButton(
-                        onClick = {
-                            randomVm.ensurePick()
-                            showRandomPick = true
-                        },
-                        backdrop = navBackdrop,
-                    )
-                }
             }
             if (showRandomPick) {
                 val randomState by randomVm.state.collectAsState()
@@ -1172,6 +1248,29 @@ private fun MiruroRoot(
             // Over the app and its bars, the dice included, since it points at them; under the
             // profile screens, which it waits for anyway.
             // Last, so the first-run setup and the profile switcher draw over everything else.
+            if (currentRoute == Routes.HOME && !inPictureInPicture && !showRandomPick && !chromeTakeover.active) {
+                com.anilili.ui.tour.StartWhatsNewTourWhenSettled()
+            }
+            if (!inPictureInPicture) {
+                com.anilili.ui.tour.WhatsNewReleaseDialog { destination ->
+                    when (destination) {
+                        "appearance", "accounts", "player" -> {
+                            com.anilili.ui.tour.WhatsNewTour.requestedSettingsSection = destination
+                            nav.navigateTab(Routes.SETTINGS)
+                        }
+                        "discover" -> {
+                            nav.navigateTab(Routes.HOME)
+                            randomVm.ensurePick()
+                            showRandomPick = true
+                        }
+                        "browse" -> nav.navigateTab(Routes.SEARCH)
+                        "more" -> nav.navigateTab(Routes.MORE)
+                        "schedule" -> nav.navigateTab(Routes.SCHEDULE)
+                        "downloads" -> nav.navigateTab(Routes.DOWNLOADS)
+                        else -> nav.navigateTab(Routes.HOME)
+                    }
+                }
+            }
             com.anilili.ui.profiles.ProfilesHost()
         }
     }
@@ -1352,7 +1451,7 @@ private fun AppTvTopNavigation(
             .alpha(chromeAlpha)
             .background(
                 androidx.compose.ui.graphics.Brush.verticalGradient(
-                    0f to MaterialTheme.colorScheme.background.copy(.74f),
+                    0f to com.anilili.ui.components.glassPanelColor(),
                     1f to ComposeColor.Transparent,
                 ),
             )
@@ -1688,11 +1787,87 @@ private fun AppNavigationRail(
     currentRoute: String?,
     menuLanguage: MenuLanguage,
     tabs: List<Tab>,
+    compactTabs: List<Tab>,
     cinema: Boolean,
     onNavigate: (String) -> Unit,
     searchRailFocusRequester: FocusRequester,
     searchFieldFocusTarget: TvFocusTarget,
     modifier: Modifier = Modifier,
+) {
+    val device = LocalAppDeviceProfile.current
+    if (!device.isTv) {
+        BoxWithConstraints(modifier) {
+            if (maxHeight < 520.dp) {
+                CompactLandscapeRail(currentRoute, menuLanguage, compactTabs, cinema, onNavigate)
+            } else {
+                StandardNavigationRail(currentRoute, menuLanguage, tabs, cinema, onNavigate,
+                    searchRailFocusRequester, searchFieldFocusTarget, Modifier.fillMaxHeight())
+            }
+        }
+        return
+    }
+    StandardNavigationRail(currentRoute, menuLanguage, tabs, cinema, onNavigate,
+        searchRailFocusRequester, searchFieldFocusTarget, modifier)
+}
+
+@Composable
+private fun CompactLandscapeRail(
+    currentRoute: String?,
+    menuLanguage: MenuLanguage,
+    tabs: List<Tab>,
+    cinema: Boolean,
+    onNavigate: (String) -> Unit,
+) {
+    val statusInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val shape = RoundedCornerShape(30.dp)
+    BoxWithConstraints(
+        Modifier.fillMaxHeight().width(68.dp)
+            .padding(top = statusInset + 4.dp, bottom = 4.dp, start = 6.dp, end = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        val itemHeight = ((maxHeight - 12.dp) / tabs.size.coerceAtLeast(1)).coerceIn(44.dp, 58.dp)
+        Column(
+            Modifier.fillMaxWidth().clip(shape)
+                .background(com.anilili.ui.components.glassPanelColor())
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .65f), shape)
+                .verticalScroll(rememberScrollState()).padding(vertical = 6.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            tabs.forEach { tab ->
+                val selected = currentRoute == tab.route
+                val label = tab.navigationLabel(menuLanguage, cinema)
+                Box(
+                    Modifier.fillMaxWidth().height(itemHeight).clip(CircleShape)
+                        .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = .15f) else ComposeColor.Transparent)
+                        .selectable(selected = selected, role = Role.Tab, onClick = { onNavigate(tab.route) }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center) {
+                        Icon(tab.navigationIcon(cinema), contentDescription = label,
+                            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(23.dp))
+                        if (itemHeight >= 52.dp) Text(label,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StandardNavigationRail(
+    currentRoute: String?,
+    menuLanguage: MenuLanguage,
+    tabs: List<Tab>,
+    cinema: Boolean,
+    onNavigate: (String) -> Unit,
+    searchRailFocusRequester: FocusRequester,
+    searchFieldFocusTarget: TvFocusTarget,
+    modifier: Modifier,
 ) {
     val device = LocalAppDeviceProfile.current
     var expanded by remember { mutableStateOf(false) }
@@ -1725,7 +1900,7 @@ private fun AppNavigationRail(
         modifier = modifier
             .then(if (device.isTv && cinema) Modifier.width(railWidth) else Modifier)
             .onFocusChanged { expanded = it.hasFocus },
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = com.anilili.ui.components.glassPanelColor(),
         header = {
             if (!device.isTv || !cinema || expanded) {
                 Text(
@@ -1841,6 +2016,8 @@ private fun AppNavHost(
     tvDetailRefresh: TvRefreshRequest? = null,
     /** Makes a swipe between tabs hand over sideways; every other navigation keeps the fade. */
     tabSwipe: TabSwipeState? = null,
+    onMoodDiscovery: () -> Unit = {},
+    onArtworkUnderBarsChanged: (String, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -1853,7 +2030,7 @@ private fun AppNavHost(
         popEnterTransition = { tabSwipe?.enter(DefaultNavEnter) ?: DefaultNavEnter },
         popExitTransition = { tabSwipe?.exit(DefaultNavExit) ?: DefaultNavExit },
     ) {
-            composable(Routes.HOME) {
+            composable(Routes.HOME) { entry ->
                 LaunchedEffect(Unit) { DiagnosticsLog.event("Route HOME content entered") }
                 HomeScreen(
                     onAnimeClick = { id -> nav.navigate(Routes.detail(id)) },
@@ -1871,6 +2048,10 @@ private fun AppNavHost(
                         else nav.navigate(Routes.genreSearch(genre)) { launchSingleTop = true }
                     },
                     onNotificationsClick = { nav.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
+                    onMoodDiscovery = onMoodDiscovery,
+                    onHeroUnderBarsChanged = { overArtwork ->
+                        if (nav.currentBackStackEntry?.id == entry.id) onArtworkUnderBarsChanged(entry.id, overArtwork)
+                    },
                     tvPrimaryFocusTarget = tvHomePrimaryFocusTarget,
                     tvRefreshRequest = tvHomeRefresh,
                 )
@@ -1989,6 +2170,9 @@ private fun AppNavHost(
                 DetailScreen(
                     animeId = id,
                     focusEpisode = returnEpisode,
+                    onHeroUnderBarsChanged = { overArtwork ->
+                        if (nav.currentBackStackEntry?.id == entry.id) onArtworkUnderBarsChanged(entry.id, overArtwork)
+                    },
                     onBack = { nav.popBackStack() },
                     onAnimeClick = { relatedId ->
                         if (relatedId != id) nav.navigate(Routes.detail(relatedId))

@@ -1,5 +1,8 @@
 package com.anilili.ui.components
 
+import com.anilili.ui.tour.TourTarget
+import com.anilili.ui.tour.tourTarget
+
 import android.os.Build
 import dev.chrisbanes.haze.ExperimentalHazeApi
 import dev.chrisbanes.haze.HazeInputScale
@@ -45,6 +48,9 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import com.anilili.data.settings.SettingsStore
+import com.anilili.data.settings.GlassMaterial
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -61,6 +67,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.anilili.ui.nav.Routes
 import com.anilili.ui.theme.LocalMidnightAccent
 import com.anilili.ui.theme.Midnight
 
@@ -82,54 +90,6 @@ private val IconSize = 22.dp
 private val BarPadding = 3.dp
 private val BarShape = RoundedCornerShape(50)
 
-// A gentle top light keeps the glass character without a white sheen across the icons.
-// The nearly opaque center preserves contrast when bright artwork scrolls behind the bar.
-// Built from the theme, so they are rebuilt only when the theme changes.
-@Composable
-private fun barGlass(): Brush {
-    val top = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.09f)
-    val middle = MaterialTheme.colorScheme.surfaceContainerHigh
-    val bottom = MaterialTheme.colorScheme.surfaceContainer
-    return remember(top, middle, bottom) {
-        Brush.verticalGradient(
-            0f to top.copy(alpha = 0.72f),
-            0.42f to middle.copy(alpha = 0.72f),
-            1f to bottom.copy(alpha = 0.79f),
-        )
-    }
-}
-
-/**
- * Live glass: what scrolls behind the bar, blurred and darkened enough that the idle icons keep
- * their contrast over a white poster. The tint is the painted glass's own middle colour.
- */
-@Composable
-private fun barBlur(): HazeStyle {
-    val background = MaterialTheme.colorScheme.surface
-    val tint = MaterialTheme.colorScheme.surfaceContainerHigh
-    return remember(background, tint) {
-        HazeStyle(
-            backgroundColor = background,
-            tint = HazeTint(tint.copy(alpha = 0.50f)),
-            blurRadius = 24.dp,
-            noiseFactor = 0.04f,
-        )
-    }
-}
-
-@Composable
-private fun barRim(): Brush {
-    val top = MaterialTheme.colorScheme.onSurface
-    val accent = MaterialTheme.colorScheme.primary
-    return remember(top, accent) {
-        Brush.verticalGradient(
-            0f to top.copy(alpha = 0.32f),
-            0.48f to top.copy(alpha = 0.24f),
-            1f to accent.copy(alpha = 0.34f),
-        )
-    }
-}
-
 /**
  * A quiet, softly shaded glass surface. The current destination opens into a filled pill carrying
  * its name, so the page is named without a second row of text under every icon; the pill springs
@@ -149,6 +109,8 @@ fun FloatingNavigationBar(
     modifier: Modifier = Modifier,
     /** The content behind the bar, blurred through it on Android 12+; null keeps painted glass. */
     backdrop: HazeState? = null,
+    collapsed: Boolean = false,
+    compactRoutes: Set<String> = emptySet(),
 ) {
     BoxWithConstraints(
         modifier = modifier
@@ -157,47 +119,95 @@ fun FloatingNavigationBar(
             .padding(bottom = bottomInset.coerceAtLeast(0.dp) + FloatingNavBarMargin),
         contentAlignment = Alignment.BottomCenter,
     ) {
-        // RenderEffect arrived in Android 12; below it Haze only lays a flat scrim, which is worse
-        // than the painted glass, so older phones keep that.
-        val blurred = backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+        val compact = collapsed && compactRoutes.size == 2
+        val fold by animateFloatAsState(
+            targetValue = if (compact) 1f else 0f,
+            animationSpec = spring(dampingRatio = 1f, stiffness = 180f, visibilityThreshold = .001f),
+            label = "dockFold",
+        )
+        val progress = fold.coerceIn(0f, 1f)
+        val glassProgress = progress * progress * (3f - 2f * progress)
+        val disappearingAlpha = (1f - progress * 1.4f).coerceIn(0f, 1f)
         val inner = (maxWidth - BarPadding * 2).coerceAtLeast(0.dp)
-        // Five stable, equal-width destinations. Selecting a tab must not displace
-        // its neighbours or change the capsule width.
-        val itemWidth = if (items.isEmpty()) ItemSize else inner / items.size
-        val showLabels = floatingNavShowsCaption(itemWidth)
-        Row(
-            // Full width, so the bar's edges stay put while the pill changes length per label;
-            // the spare room is shared between the icons instead.
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(FloatingNavBarExpandedHeight)
-                // Reduce the dark halo on OLED; the rim carries the depth.
-                .shadow(5.dp, BarShape)
-                .clip(BarShape)
-                .then(
-                    if (blurred) {
-                        // A third of the resolution: the blur discards that detail anyway. On an
-                        // S25 it cut the GPU 90th percentile while scrolling from 10ms to 6ms
-                        // (painted glass: 4ms) with no visible difference.
-                        Modifier.hazeEffect(backdrop!!, barBlur()) { inputScale = HazeInputScale.Fixed(0.33f) }
-                    } else {
-                        Modifier.background(barGlass())
-                    },
-                )
-                .border(1.dp, barRim(), BarShape)
-                .padding(horizontal = BarPadding)
-                .selectableGroup(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        val expandedItem = if (items.isEmpty()) ItemSize else inner / items.size
+        val compactItem = FloatingNavBarExpandedHeight.coerceAtMost(inner / 2)
+        val widths = items.map { item ->
+            val target = if (item.route in compactRoutes) compactItem else 0.dp
+            expandedItem + (target - expandedItem) * progress
+        }
+        // Keep the layout full-width: only the glass surfaces fold, not the
+        // coordinate system. The retained destinations travel to opposite edges.
+        Box(
+            modifier = Modifier.fillMaxWidth().height(FloatingNavBarExpandedHeight),
+            contentAlignment = Alignment.Center,
         ) {
-            items.forEach { item ->
-                FloatingNavIcon(
-                    item = item,
-                    selected = item.route == selectedRoute,
-                    width = itemWidth,
-                    showLabel = showLabels,
-                    onClick = { onSelect(item.route) },
+            if (progress < 1f) {
+                Box(
+                    Modifier.fillMaxWidth().fillMaxHeight()
+                        .graphicsLayer { alpha = 1f - glassProgress }
+                        .opticalGlass(BarShape, enabled = backdrop != null, navigation = true),
                 )
+            }
+            Layout(
+                modifier = Modifier.fillMaxWidth().fillMaxHeight()
+                    .padding(horizontal = BarPadding)
+                    .selectableGroup(),
+                content = {
+                    items.forEachIndexed { index, item ->
+                        val keep = item.route in compactRoutes
+                        val width = widths[index]
+                        Box(
+                            Modifier.fillMaxHeight().clip(BarShape)
+                                .graphicsLayer { alpha = if (keep) 1f else disappearingAlpha },
+                        ) {
+                            if (keep && progress > 0f) {
+                                Box(
+                                    Modifier.align(Alignment.Center)
+                                        .size(compactItem)
+                                        .graphicsLayer { alpha = glassProgress }
+                                        .opticalGlass(CircleShape, enabled = backdrop != null, navigation = true),
+                                )
+                            }
+                            if (width > 0.dp && (keep || disappearingAlpha > 0f)) {
+                                FloatingNavIcon(
+                                    item = item,
+                                    selected = item.route == selectedRoute,
+                                    width = width,
+                                    showLabel = floatingNavShowsCaption(expandedItem),
+                                    labelProgress = progress,
+                                    interactionEnabled = keep || !compact,
+                                    onClick = { onSelect(item.route) },
+                                    compactProgress = if (keep) progress else 0f,
+                                )
+                            } else if (width > 0.dp && progress < .98f) {
+                                Icon(item.icon, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.align(Alignment.Center).size(IconSize))
+                            }
+                        }
+                    }
+                },
+            ) { measurables, constraints ->
+                val measured = measurables.mapIndexed { index, measurable ->
+                    measurable.measure(Constraints.fixed(widths[index].roundToPx().coerceAtLeast(0), constraints.maxHeight))
+                }
+                val availableWidth = constraints.maxWidth
+                val edgeInset = 16.dp.toPx().coerceAtMost((availableWidth - compactItem.toPx() * 2).coerceAtLeast(0f) / 2f)
+                val discCenter = compactItem.toPx() / 2f + edgeInset
+                layout(availableWidth, constraints.maxHeight) {
+                    measured.forEachIndexed { index, placeable ->
+                        val expandedCenter = availableWidth * (index + .5f) / items.size
+                        val route = items[index].route
+                        val compactCenter = when (route) {
+                            Routes.HOME -> discCenter
+                            Routes.SEARCH -> availableWidth - discCenter
+                            else -> availableWidth * .5f
+                        }
+                        val center = expandedCenter * (1f - progress) + compactCenter * progress
+                        placeable.place((center - placeable.width / 2f).roundToInt(), 0,
+                            zIndex = if (route in compactRoutes) 1f else 0f)
+                    }
+                }
             }
         }
     }
@@ -217,20 +227,10 @@ fun FloatingNavDisc(
     backdrop: HazeState? = null,
     icon: @Composable () -> Unit,
 ) {
-    val blurred = backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     Box(
         modifier = modifier
             .size(FloatingNavDiscSize)
-            .shadow(5.dp, CircleShape)
-            .clip(CircleShape)
-            .then(
-                if (blurred) {
-                    Modifier.hazeEffect(backdrop!!, barBlur()) { inputScale = HazeInputScale.Fixed(0.33f) }
-                } else {
-                    Modifier.background(barGlass())
-                },
-            )
-            .border(1.dp, barRim(), CircleShape)
+            .opticalGlass(CircleShape, enabled = backdrop != null, navigation = true)
             .clickable(onClickLabel = contentDescription, role = Role.Button, onClick = onClick)
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
@@ -260,9 +260,11 @@ private fun FloatingNavIcon(
     width: Dp,
     showLabel: Boolean,
     onClick: () -> Unit,
+    compactProgress: Float = 0f,
+    labelProgress: Float = 0f,
+    interactionEnabled: Boolean = true,
 ) {
-    val iconColor = if (selected) MaterialTheme.colorScheme.onSurface
-        else MaterialTheme.colorScheme.onSurfaceVariant
+    val iconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = if (selected) 1f else .86f)
     val shape = RoundedCornerShape(50)
     // A persistent, animated neutral selection wash; accent is reserved for the soft rim.
     val selectionAlpha by animateFloatAsState(
@@ -270,71 +272,57 @@ private fun FloatingNavIcon(
         animationSpec = tween(durationMillis = 260),
         label = "navSelectionWash",
     )
-    val glowAlpha by animateFloatAsState(
-        targetValue = if (selected) 0.26f else 0f,
-        animationSpec = tween(durationMillis = 320),
-        label = "navSelectionGlow",
-    )
-    // Keep the selected halo neutral across artwork and themes.
-    val halo = MaterialTheme.colorScheme.onSurface
-    val accent = MaterialTheme.colorScheme.primary
     Box(
         modifier = Modifier
             .width(width)
             .fillMaxHeight()
-            .padding(vertical = 2.dp, horizontal = 2.dp)
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    0f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.19f * selectionAlpha),
-                    1f to MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.45f * selectionAlpha),
-                ),
-            )
-            .drawBehind {
-                if (glowAlpha > 0f) {
-                    drawCircle(
-                        color = halo.copy(alpha = glowAlpha * 0.45f),
-                        radius = size.minDimension * 0.42f,
-                        center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height * 0.82f),
-                    )
-                }
-            }
-            .border(
-                1.dp,
-                Brush.verticalGradient(
-                    0f to halo.copy(alpha = 0.40f * selectionAlpha),
-                    1f to accent.copy(alpha = 0.60f * selectionAlpha),
-                ),
-                shape,
-            )
             .selectable(
                 selected = selected,
+                enabled = interactionEnabled,
                 role = Role.Tab,
                 onClick = onClick,
             )
+            .then(when (item.label.lowercase()) {
+                "home" -> Modifier.tourTarget(TourTarget.NAV_HOME)
+                "my list" -> Modifier.tourTarget(TourTarget.NAV_LIST)
+                "browse" -> Modifier.tourTarget(TourTarget.NAV_BROWSE)
+                "downloads" -> Modifier.tourTarget(TourTarget.NAV_DOWNLOADS)
+                "profile" -> Modifier.tourTarget(TourTarget.NAV_PROFILE)
+                else -> Modifier
+            })
             .semantics { contentDescription = item.label },
         contentAlignment = Alignment.Center,
     ) {
         androidx.compose.foundation.layout.Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 7.dp)
+                .clip(shape)
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = .09f * selectionAlpha * (1f - compactProgress)))
+                .padding(vertical = 1.dp),
         ) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = null,
                 tint = iconColor,
-                modifier = Modifier.size(IconSize),
+                modifier = Modifier.size(IconSize + 4.dp * compactProgress),
             )
-            if (showLabel) {
+            if (showLabel && labelProgress < 1f) {
+                val captionFraction = (1f - labelProgress * 1.6f).coerceIn(0f, 1f)
+                Box(Modifier.height(13.dp * captionFraction).clip(shape)
+                    .graphicsLayer { alpha = captionFraction }) {
                 Text(
                     text = item.label,
                     color = iconColor,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 10.sp,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                    ),
                     maxLines = 1,
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis,
                 )
+                }
             }
         }
     }

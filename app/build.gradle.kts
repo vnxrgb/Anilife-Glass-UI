@@ -20,8 +20,8 @@ val diagnosticBuildSha = providers.environmentVariable("GITHUB_SHA").orNull
             isIgnoreExitValue = true
         }.standardOutput.asText.get().trim()
     }.getOrDefault("unknown").ifBlank { "unknown" }
-val appVersionCode = 14
-val appVersionName = "1.0.4"
+val appVersionCode = 15
+val appVersionName = "2.0.0"
 
 tasks.named<CyclonedxDirectTask>("cyclonedxDirectBom") {
     componentName = "Anilumos"
@@ -149,6 +149,8 @@ android {
     flavorDimensions += "form"
     productFlavors {
         create("mobile") {
+            // Optical renderer dependencies require API 23 or newer.
+            minSdk = 23
             dimension = "form"
             isDefault = true
         }
@@ -321,7 +323,12 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
     implementation(libs.qrcodegen)
+    // Permission-free QR scanning for the mobile-to-TV pairing address.
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     implementation(libs.haze)
+    // Experimental optical glass renderer (Apache-2.0).
+    implementation("io.github.kyant0:backdrop:1.0.6")
+    implementation("io.github.kyant0:shapes:1.2.0")
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.tvprovider)

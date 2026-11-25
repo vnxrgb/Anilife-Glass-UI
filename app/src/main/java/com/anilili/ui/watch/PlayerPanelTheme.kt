@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import com.anilili.ui.theme.LocalAppColors
 import com.anilili.ui.theme.LocalMidnightAccent
@@ -30,6 +31,12 @@ import com.anilili.ui.theme.LocalMidnightAccent
 fun PlayerPanelTheme(content: @Composable () -> Unit) {
     val base = MaterialTheme.colorScheme
     val colors = LocalAppColors.current
+    if (base.background.luminance() > .5f) {
+        CompositionLocalProvider(LocalMidnightAccent provides base.primary) {
+            MaterialTheme(colorScheme = base, content = content)
+        }
+        return
+    }
     CompositionLocalProvider(LocalMidnightAccent provides colors.playerAccent) {
     MaterialTheme(
         colorScheme = base.copy(
@@ -46,6 +53,10 @@ fun PlayerPanelTheme(content: @Composable () -> Unit) {
             surface = PlayerPanelSurface,
             onSurface = Color.White,
             surfaceVariant = PlayerPanelRaised,
+            surfaceContainerLow = PlayerPanelSurface,
+            surfaceContainer = Color(0xFF161616),
+            surfaceContainerHigh = Color(0xFF202020),
+            surfaceContainerHighest = Color(0xFF303030),
             onSurfaceVariant = PlayerPanelMutedText,
             outline = PlayerPanelOutline,
             outlineVariant = PlayerPanelOutline,
@@ -68,7 +79,7 @@ val PlayerPanelSurface = Color(0xFF0C0C0C)
 val PlayerPanelShape = RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)
 
 /** A row or card inside a panel, one step up from it. */
-val PlayerPanelRaised = Color(0xFF252835)
+val PlayerPanelRaised = Color(0xFF252525)
 
 /** Chosen, but not where the cursor is — the fifth of white the anime page's tabs use. */
 val PlayerPanelSelected = Color.White.copy(alpha = 0.2f)
@@ -108,3 +119,15 @@ fun PlayerAccentScope(content: @Composable () -> Unit) {
         )
     }
 }
+
+// Player panels use the same theme as the rest of the app, even over a video.
+@Composable
+internal fun playerPanelBackground(): Color =
+    if (MaterialTheme.colorScheme.background.luminance() > .5f)
+        MaterialTheme.colorScheme.surfaceContainerLow else PlayerPanelSurface
+
+@Composable
+internal fun playerPanelForeground(): Color = MaterialTheme.colorScheme.onSurface
+
+@Composable
+internal fun playerPanelMuted(): Color = MaterialTheme.colorScheme.onSurfaceVariant

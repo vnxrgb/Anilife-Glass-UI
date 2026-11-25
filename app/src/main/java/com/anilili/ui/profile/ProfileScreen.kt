@@ -137,7 +137,11 @@ import com.anilili.data.library.HistoryEntry
 import com.anilili.data.library.LibraryStore
 import com.anilili.data.library.LocalWatchedStore
 import com.anilili.data.library.WatchedEntry
+import com.anilili.data.library.WatchActivityStore
+import com.anilili.data.library.activityStreak
+import java.time.LocalDate
 import com.anilili.data.library.WatchlistEntry
+import com.anilili.data.library.resumeFor
 import com.anilili.data.library.continueWatchingCaption
 import com.anilili.data.library.listKey
 import com.anilili.data.model.MediaListEntry
@@ -293,6 +297,12 @@ fun ProfileScreen(
     val malLoggedIn by MalAuthManager.loggedIn.collectAsState()
     val profileState by vm.profile.collectAsState()
     val history by LibraryStore.history.collectAsState()
+    val localActivity by WatchActivityStore.days.collectAsState()
+    var wrappedOpen by rememberSaveable { mutableStateOf(false) }
+    if (wrappedOpen && !device.isTv) {
+        AnimeWrappedScreen(localActivity, history, onBack = { wrappedOpen = false })
+        return
+    }
     val historyByAnimeId = remember(history) { history.associateBy(HistoryEntry::anilistId) }
     val watchlist by LibraryStore.watchlist.collectAsState()
     val customLists by CustomListStore.lists.collectAsState()
@@ -596,7 +606,7 @@ fun ProfileScreen(
         modifier = modifier.then(if (device.isTv) Modifier else Modifier.glassAtmosphere()),
         topBar = {
             // A signed-in television names the page in its hero instead, over the account's art.
-            if (!(device.isTv && loggedIn)) ScrollAwareTopBar {
+            if (!(device.isTv && loggedIn)) ScrollAwareTopBar(visible = true) {
                 PageTitleBar(
                     title = "My List",
                     // The account pill is the phone's, and only once there is an account to show.
@@ -619,11 +629,11 @@ fun ProfileScreen(
         PullRefreshContainer(
             isRefreshing = isRefreshing,
             onRefresh = vm::refresh,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(top = if (device.isTv) 0.dp else padding.calculateTopPadding()),
             // The list reserves the bar as scroll padding rather than sitting below it, so this box
             // starts behind the bar and the puck needs telling; without it a pull on My List spun
             // underneath an opaque header and looked like nothing happened.
-            indicatorTopPadding = padding.calculateTopPadding(),
+            indicatorTopPadding = if (device.isTv) padding.calculateTopPadding() else 0.dp,
         ) {
             Box(Modifier.fillMaxSize()) {
                 // On TV the focused row comes to rest mid-screen, going up as well as down, as on Home.
@@ -632,12 +642,12 @@ fun ProfileScreen(
                         state = profileListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            top = padding.calculateTopPadding(),
+                            top = if (device.isTv) padding.calculateTopPadding() else 8.dp,
                             bottom = padding.calculateBottomPadding()
                                 .coerceAtLeast(LocalAppChromeBottomInset.current) +
                                 AppChromeListBottomGap + (if (device.isTv) 0.dp else 20.dp),
                         ),
-                        verticalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 7.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 12.dp),
                     ) {
                         if (device.isTv && !loggedIn) {
                             // Give the two provider buttons the whole first focus row. In the old
@@ -756,6 +766,49 @@ fun ProfileScreen(
                             }
                         }
 
+                        if (!device.isTv) {
+                            item(key = "anilumos-wrapped") {
+                                val stats = wrappedStats(localActivity, LocalDate.now())
+                                val artwork = history.firstOrNull { !it.fromRemote && !it.cover.isNullOrBlank() }?.cover
+                                WrappedSummaryCard(
+                                    stats = stats,
+                                    artwork = artwork,
+                                    onOpen = { wrappedOpen = true },
+                                    modifier = Modifier.padding(horizontal = device.pagePadding, vertical = 6.dp),
+                                )
+                            }
+                        }
+                        if (!device.isTv && listOf("Weekend Queue", "Comfort Rewatches", "Movie Night")
+                                .any { starter -> customLists.none { it.name.equals(starter, ignoreCase = true) } }) {
+                            item(key = "anilumos-collection-starters") {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .padding(horizontal = device.pagePadding, vertical = 4.dp)
+                                        .glassCard(RoundedCornerShape(22.dp))
+                                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text("Anime collections", style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold)
+                                    Text(
+                                        "Build personal collections. Long-press an anime to add it to any list.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        listOf("Weekend Queue", "Comfort Rewatches", "Movie Night")
+                                            .filter { preset -> customLists.none { it.name.equals(preset, true) } }
+                                            .forEach { preset ->
+                                                item(key = preset) {
+                                                    androidx.compose.material3.OutlinedButton(onClick = { CustomListStore.create(preset) }, shape = RoundedCornerShape(50), colors = com.anilili.ui.components.cinematicSecondaryButtonColors(), border = com.anilili.ui.components.cinematicSecondaryButtonBorder()) {
+                                                        Text("+ $preset", maxLines = 2)
+                                                    }
+                                                }
+                                            }
+                                    }
+                                }
+                            }
+                        }
                         if (selectedViews.isEmpty() && shownCustomLists.isEmpty()) {
                             item { EmptyPanel("Choose a list above to show it here") }
                         }
@@ -1075,7 +1128,7 @@ private fun LibraryHeader(
     customChips: CustomListChips,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(if (LocalAppDeviceProfile.current.isTv) 12.dp else 8.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(if (LocalAppDeviceProfile.current.isTv) 12.dp else 10.dp)) {
         PageSearch(
             value = titleFilter,
             onValueChange = onTitleFilterChange,
@@ -1641,14 +1694,16 @@ private fun EpisodeDownloadCard(
     val episodeNumber = metadata.episodeNumber.trim().toDoubleOrNull()
     val watchedFraction = episodeNumber?.let { episodeWatchFraction(historyEntry, it) } ?: 0f
     val isWatched = watchedFraction >= 0.999f
-    val savedPositionMs = historyEntry
-        ?.takeIf { episodeNumber == it.episodeNumber }
-        ?.positionMs
-        ?.coerceAtLeast(0L)
-        ?: 0L
+    // One series may have multiple unfinished episodes: each needs its own resume clock.
+    val resumePoint = episodeNumber?.let { historyEntry?.resumeFor(it) }
+    val savedPositionMs = resumePoint?.positionMs?.coerceAtLeast(0L) ?: 0L
+    val remainingMs = resumePoint?.durationMs?.takeIf { it > savedPositionMs }
+        ?.minus(savedPositionMs)
     val hasResumePosition = !isWatched && savedPositionMs > 0L
     val playbackLabel = when {
         isWatched -> "Watched"
+        hasResumePosition && remainingMs != null ->
+            "Resume at ${formatPlaybackPosition(savedPositionMs)} · ${formatPlaybackPosition(remainingMs)} left"
         hasResumePosition -> "Resume at ${formatPlaybackPosition(savedPositionMs)}"
         else -> null
     }

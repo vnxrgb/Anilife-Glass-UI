@@ -682,7 +682,7 @@ internal fun MediaVolumeSlider(
                 }
                 onInteract()
             }, modifier = Modifier.size(PlayerSliderIconSize).focusFill(extraFocus1, CircleShape),) {
-            Icon(volumeIcon(volume), contentDescription = if (volume > 0.001f) "Mute" else "Unmute", tint = extraFocus1.content(Color.White))
+            Icon(volumeIcon(volume), contentDescription = if (volume > 0.001f) "Mute" else "Unmute", tint = extraFocus1.content(MaterialTheme.colorScheme.onSurfaceVariant))
         }
         }
         Slider(
@@ -721,7 +721,7 @@ internal fun MediaVolumeSlider(
                 },
         )
         if (showPercentLabel) {
-            PlayerSliderValue("${(volume * 100).roundToInt()}%", color = Color.White)
+            PlayerSliderValue("${(volume * 100).roundToInt()}%", color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
