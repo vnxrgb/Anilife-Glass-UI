@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
  */
 @UnstableApi
 internal object WasmMediaTransport {
-    fun factory(provider: ApprovedWasmProvider): DataSource.Factory {
+    fun factory(provider: ApprovedWasmProvider, headers: Map<String, String> = emptyMap()): DataSource.Factory {
         val client = OkHttpClient.Builder()
             .proxy(Proxy.NO_PROXY)
             .followRedirects(false)
@@ -55,7 +55,7 @@ internal object WasmMediaTransport {
                 }
                 response
             }.build()
-        val upstream = OkHttpDataSource.Factory(client)
+        val upstream = OkHttpDataSource.Factory(client).setDefaultRequestProperties(headers)
         return DataSource.Factory { upstream.createDataSource() }
     }
 
