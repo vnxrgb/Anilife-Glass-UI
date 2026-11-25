@@ -52,3 +52,9 @@ TV update selection now requires both metadata and APK asset URLs to match the s
 - TV GitHub release metadata fetch now bounds bytes while reading even if HTTP Content-Length is missing or inaccurate. Follow-up commit `75040c3756aaa34288614fcc4be8fa90c6c8bae9` needs CI verification.
 - The only verified published TV signed preview still targets `ac24c1e`; the current TV branch has **no verified release-signed preview APK**. Dedicated preview workflow runs every six hours and can be manually dispatched; avoid overlapping signed builds.
 - GitHub TV updates: PRESENT / CI validation pending for latest hardening; installer signature checks still required. Full D-pad, Fire TV, account-pairing, playback and feature parity remain VALIDATE; no physical device testing performed.
+
+## 2026-11-25 response origin hardening
+
+- TV CI [45690628564](https://github.com/vnxrgb/Anilumos/actions/runs/45690628564) passed at 75040c3. Main remains ebe374e; TV divergence is 223 behind / 103 ahead, so no wholesale merge.
+- TV update metadata fetch now refuses responses redirected away from exact official GitHub release API or selected metadata URL, with unit regression checks. Await new CI for this change.
+- Current signed TV preview remains at ac24c1e; physical TV and Fire TV behavior remains unverified.

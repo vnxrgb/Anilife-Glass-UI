@@ -9,6 +9,16 @@ class GithubTvUpdateSourceTest {
     private val prefix = "https://github.com/vnxrgb/anilumos-preview/releases/download/tv-alpha-signed-abcdef123456-run2/"
     private fun releases(name: String = "AniLumos-TV-ALPHA-signed.apk") = """[{"tag_name":"tv-alpha-signed-abcdef123456-run2","draft":false,"prerelease":true,"assets":[{"name":"$name","browser_download_url":"${prefix}AniLumos-TV-ALPHA-signed.apk","size":2048},{"name":"TV-UPDATE.json","browser_download_url":"${prefix}TV-UPDATE.json","size":256}]}]"""
     private val payload = """{"formFactor":"tv","packageName":"com.anilumos.app","asset":"AniLumos-TV-ALPHA-signed.apk","version":"1.2.3","build":124,"sha256":"${"a".repeat(64)}"}"""
+    @Test fun refusesRedirectedOrInsecureReleaseResponses() {
+        val official = "https://api.github.com/repos/vnxrgb/anilumos-preview/releases?per_page=30"
+        val metadata = prefix + "TV-UPDATE.json"
+        assertTrue(GithubTvUpdateSource.trustedResponseUrl(official, official))
+        assertTrue(GithubTvUpdateSource.trustedResponseUrl(metadata, metadata))
+        assertFalse(GithubTvUpdateSource.trustedResponseUrl(official, "https://example.org/releases"))
+        assertFalse(GithubTvUpdateSource.trustedResponseUrl(metadata, "https://example.org/TV-UPDATE.json"))
+        assertFalse(GithubTvUpdateSource.trustedResponseUrl("http://api.github.com/repos/vnxrgb/anilumos-preview/releases?per_page=30", official))
+        assertFalse(GithubTvUpdateSource.trustedResponseUrl(metadata + "?token=unexpected", metadata + "?token=unexpected"))
+    }
     @Test fun selectsTvPreview() {
         val selected = GithubTvUpdateSource.select(releases(), json) { payload }
         assertEquals(124, selected?.build)

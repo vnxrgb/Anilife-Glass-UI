@@ -54,10 +54,18 @@ internal object GithubTvUpdateSource {
         return candidates.maxWithOrNull(compareBy<UpdateManager.UpdateInfo> { it.build ?: 0 }.thenBy { it.version })
     }
 
+    /** Reject redirected metadata responses, even when the injected client follows redirects. */
+    internal fun trustedResponseUrl(requested: String, actual: String): Boolean =
+        requested == actual && requested.startsWith("https://") &&
+            (requested == RELEASES ||
+                (requested.startsWith("https://github.com/vnxrgb/anilumos-preview/releases/download/") &&
+                    requested.endsWith("/" + META)))
+
     fun fetch(client: OkHttpClient, json: Json): UpdateManager.UpdateInfo {
         fun get(url: String): String? = runCatching {
             client.newCall(Request.Builder().url(url).build()).execute().use { response ->
-                if (!response.isSuccessful || (response.body?.contentLength() ?: 0) > 256000L) return@use null
+                if (!response.isSuccessful || !trustedResponseUrl(url, response.request.url.toString()) ||
+                    (response.body?.contentLength() ?: 0) > 256000L) return@use null
                 // Content-Length can be absent or dishonest. Bound the actual bytes read
                 // before decoding rather than allocating an unbounded response string.
                 response.body?.byteStream()?.use { stream ->
