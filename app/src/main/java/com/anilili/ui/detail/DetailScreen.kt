@@ -167,6 +167,7 @@ import com.anilili.ui.components.EpisodeBrowserBar
 import com.anilili.ui.components.EpisodeDownloadAction
 import com.anilili.ui.components.EpisodeDownloadButton
 import com.anilili.ui.components.EpisodeFillerBadge
+import com.anilili.ui.components.EpisodeClassificationBadge
 import com.anilili.ui.components.EpisodeNumberChip
 import com.anilili.ui.components.EpisodeWatchedToggle
 import com.anilili.ui.components.ErrorBox
@@ -1819,8 +1820,8 @@ private fun DetailEpisodeRow(
                 blurred = blurred,
                 modifier = Modifier.fillMaxSize(),
             )
-            if (episode.filler) {
-                EpisodeFillerBadge(
+            if (episode.filler || episode.classification != null) {
+                EpisodeClassificationBadge(episode = episode, 
                     compact = true,
                     modifier = Modifier.align(Alignment.TopStart).padding(5.dp),
                 )

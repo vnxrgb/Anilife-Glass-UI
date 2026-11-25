@@ -811,6 +811,8 @@ object SettingsStore {
     val autoSkipFiller = _autoSkipFiller.asStateFlow()
     private val _hideFillerEpisodes = MutableStateFlow(false)
     val hideFillerEpisodes = _hideFillerEpisodes.asStateFlow()
+    private val _autoSkipRecapEpisodes = MutableStateFlow(false)
+    val autoSkipRecapEpisodes = _autoSkipRecapEpisodes.asStateFlow()
 
     /**
      * A one-press jump forward shown on the player whenever no timed "Skip Intro" window applies.
@@ -1388,6 +1390,7 @@ object SettingsStore {
     fun setAutoSkipIntroOutro(value: Boolean) = save(AUTO_SKIP_INTRO_OUTRO, value, _autoSkipIntroOutro)
     fun setAutoSkipFiller(value: Boolean) = save(AUTO_SKIP_FILLER, value, _autoSkipFiller)
     fun setHideFillerEpisodes(value: Boolean) = save(HIDE_FILLER_EPISODES, value, _hideFillerEpisodes)
+    fun setAutoSkipRecapEpisodes(value: Boolean) = save(AUTO_SKIP_RECAP_EPISODES, value, _autoSkipRecapEpisodes)
     fun setShowSkipButton(value: Boolean) = save(SHOW_SKIP_BUTTON, value, _showSkipButton)
 
     fun setSkipButtonSeconds(seconds: Int) {
@@ -2096,6 +2099,7 @@ object SettingsStore {
         _autoSkipIntroOutro.value = prefs[AUTO_SKIP_INTRO_OUTRO] ?: false
         _autoSkipFiller.value = prefs[AUTO_SKIP_FILLER] ?: false
         _hideFillerEpisodes.value = prefs[HIDE_FILLER_EPISODES] ?: false
+        _autoSkipRecapEpisodes.value = prefs[AUTO_SKIP_RECAP_EPISODES] ?: false
         _showSkipButton.value = prefs[SHOW_SKIP_BUTTON] ?: true
         _skipButtonSeconds.value = (prefs[SKIP_BUTTON_SECONDS] ?: SKIP_BUTTON_DEFAULT_SECONDS)
             .coerceIn(SKIP_BUTTON_MIN_SECONDS, SKIP_BUTTON_MAX_SECONDS)
@@ -2276,6 +2280,7 @@ object SettingsStore {
     private val AUTO_SKIP_INTRO_OUTRO = booleanPreferencesKey("auto_skip_intro_outro")
     private val AUTO_SKIP_FILLER = booleanPreferencesKey("auto_skip_filler")
     private val HIDE_FILLER_EPISODES = booleanPreferencesKey("hide_filler_episodes")
+    private val AUTO_SKIP_RECAP_EPISODES = booleanPreferencesKey("auto_skip_recap_episodes")
     private val SHOW_SKIP_BUTTON = booleanPreferencesKey("show_skip_button")
     private val SKIP_BUTTON_SECONDS = intPreferencesKey("skip_button_seconds")
     private val WATCHED_THRESHOLD_PERCENT = intPreferencesKey("watched_threshold_percent")
@@ -2424,6 +2429,7 @@ object SettingsStore {
         AUTO_SKIP_INTRO_OUTRO,
         AUTO_SKIP_FILLER,
         HIDE_FILLER_EPISODES,
+        AUTO_SKIP_RECAP_EPISODES,
         SHOW_SKIP_BUTTON,
         HIDE_ADULT_CONTENT,
         BLUR_EPISODE_IMAGES,

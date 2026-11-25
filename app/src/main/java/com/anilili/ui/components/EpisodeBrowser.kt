@@ -513,8 +513,8 @@ fun EpisodeNumberChip(
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 5.dp),
             )
         }
-        if (episode.filler) {
-            EpisodeFillerBadge(
+        if (episode.filler || episode.classification != null) {
+            EpisodeClassificationBadge(episode = episode, 
                 compact = true,
                 modifier = Modifier.align(Alignment.TopStart).padding(top = 3.dp, start = 4.dp),
             )

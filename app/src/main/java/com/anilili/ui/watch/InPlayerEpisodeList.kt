@@ -83,6 +83,7 @@ import com.anilili.ui.adaptive.rememberFocusFill
 import com.anilili.ui.components.EpisodeArtwork
 import com.anilili.ui.components.EpisodeBlockPicker
 import com.anilili.ui.components.EpisodeFillerBadge
+import com.anilili.ui.components.EpisodeClassificationBadge
 import com.anilili.ui.components.EqualizerWaveIndicator
 import com.anilili.ui.components.WatchProgressBar
 import com.anilili.ui.components.blockIndexContaining
@@ -462,8 +463,8 @@ private fun InPlayerEpisodeNumberTile(
             fontWeight = FontWeight.Bold,
             color = fillFocus1.content(if (isCurrent) Color.White else Color.White),
         )
-        if (episode.filler) {
-            EpisodeFillerBadge(
+        if (episode.filler || episode.classification != null) {
+            EpisodeClassificationBadge(episode = episode, 
                 compact = true,
                 modifier = Modifier.align(Alignment.TopEnd).padding(5.dp),
             )
@@ -645,8 +646,8 @@ private fun InPlayerEpisodeItemRow(
                     )
                 }
             }
-            if (episode.filler) {
-                EpisodeFillerBadge(compact = true)
+            if (episode.filler || episode.classification != null) {
+                EpisodeClassificationBadge(episode = episode, compact = true)
             }
             if (watchedFraction >= 0.999f) {
                 Text(

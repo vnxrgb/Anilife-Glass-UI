@@ -359,6 +359,7 @@ fun SettingsScreen(
     val autoSkip by SettingsStore.autoSkipIntroOutro.collectAsState()
     val autoSkipFiller by SettingsStore.autoSkipFiller.collectAsState()
     val hideFillerEpisodes by SettingsStore.hideFillerEpisodes.collectAsState()
+    val autoSkipRecapEpisodes by SettingsStore.autoSkipRecapEpisodes.collectAsState()
     val autoSync by SettingsStore.autoSyncAniList.collectAsState()
     val watchedThresholdPercent by SettingsStore.watchedThresholdPercent.collectAsState()
     val preferDub by SettingsStore.preferDub.collectAsState()
@@ -2203,6 +2204,14 @@ fun SettingsScreen(
                         description = "Hide confirmed filler from episode lists without changing watch progress",
                         checked = hideFillerEpisodes,
                         onCheckedChange = SettingsStore::setHideFillerEpisodes,
+                    )
+                }
+                item(key = "Skip recap episodes") {
+                    MidnightSettingSwitchRow(
+                        title = "Skip recap episodes",
+                        description = "Next and auto-play skip episodes explicitly marked as recap",
+                        checked = autoSkipRecapEpisodes,
+                        onCheckedChange = SettingsStore::setAutoSkipRecapEpisodes,
                     )
                 }
                 item(key = "Watched at") {

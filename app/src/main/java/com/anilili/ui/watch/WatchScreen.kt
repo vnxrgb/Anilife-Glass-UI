@@ -200,6 +200,7 @@ import com.anilili.ui.components.EPISODE_BROWSER_MIN_EPISODES
 import com.anilili.ui.components.EpisodeArtwork
 import com.anilili.ui.components.EpisodeBrowserBar
 import com.anilili.ui.components.EpisodeFillerBadge
+import com.anilili.ui.components.EpisodeClassificationBadge
 import com.anilili.ui.components.EpisodeNumberChip
 import com.anilili.ui.components.ErrorBox
 import com.anilili.ui.components.LoadingBox
@@ -730,8 +731,9 @@ private fun WatchContent(
     // Where moving on lands, with "Skip filler episodes" taken into account, for the up-next card
     // and the FILLER tag's label; the view model makes the same call when the move happens.
     val autoSkipFiller by SettingsStore.autoSkipFiller.collectAsState()
-    val nextEpisodeIndex = data.nextIndex(skipFiller = autoSkipFiller)
-    val movesIntoNextSeason = data.advancesIntoNextSeason(skipFiller = autoSkipFiller)
+    val autoSkipRecapEpisodes by SettingsStore.autoSkipRecapEpisodes.collectAsState()
+    val nextEpisodeIndex = data.nextIndex(skipFiller = autoSkipFiller, skipRecap = autoSkipRecapEpisodes)
+    val movesIntoNextSeason = data.advancesIntoNextSeason(skipFiller = autoSkipFiller, skipRecap = autoSkipRecapEpisodes)
     val fillerSkip = if (!isMovie && data.canSkipFiller) {
         val target = if (data.advancesIntoNextSeason(skipFiller = true)) {
             data.nextSeason?.label ?: "next season"
@@ -2672,8 +2674,8 @@ private fun MobileEpisodeRow(
                 blurred = blurred,
                 modifier = Modifier.fillMaxSize(),
             )
-            if (episode.filler) {
-                EpisodeFillerBadge(
+            if (episode.filler || episode.classification != null) {
+                EpisodeClassificationBadge(episode = episode, 
                     compact = true,
                     modifier = Modifier.align(Alignment.TopStart).padding(5.dp),
                 )

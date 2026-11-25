@@ -20,6 +20,7 @@ import com.anilili.data.settings.WATCHED_THRESHOLD_MAX_PERCENT
 import com.anilili.data.settings.WATCHED_THRESHOLD_MIN_PERCENT
 import com.anilili.data.model.Category
 import com.anilili.data.model.EpisodeItem
+import com.anilili.data.model.EpisodeClassification
 import com.anilili.data.model.EpisodesResult
 import com.anilili.data.model.SourcesResult
 import com.anilili.data.model.StreamItem
@@ -191,17 +192,20 @@ data class WatchData(
      * the next one: skipping filler is about getting to the story, and stranding the viewer on the
      * last canon episode with a dead Next button is not that.
      */
-    fun nextIndex(skipFiller: Boolean): Int? {
+    private fun shouldSkipEpisode(episode: EpisodeItem, skipFiller: Boolean, skipRecap: Boolean): Boolean =
+        (skipFiller && episode.filler && episode.classification != EpisodeClassification.MIXED) ||
+            (skipRecap && episode.classification == EpisodeClassification.RECAP)
+
+    fun nextIndex(skipFiller: Boolean, skipRecap: Boolean = false): Int? {
         if (!hasNext) return null
-        if (!skipFiller) return currentIndex + 1
-        return ((currentIndex + 1)..episodes.lastIndex).firstOrNull { !episodes[it].filler }
-            ?: (currentIndex + 1).takeUnless { advancesIntoNextSeason(skipFiller = true) }
+        if (!skipFiller && !skipRecap) return currentIndex + 1
+        return ((currentIndex + 1)..episodes.lastIndex).firstOrNull { !shouldSkipEpisode(episodes[it], skipFiller, skipRecap) }
+            ?: (currentIndex + 1).takeUnless { advancesIntoNextSeason(skipFiller, skipRecap) }
     }
 
-    /** Whether moving on, with or without [skipFiller], means the next season's first episode. */
-    fun advancesIntoNextSeason(skipFiller: Boolean): Boolean {
-        if (!skipFiller || !hasNext) return continuesIntoNextSeason
-        if (((currentIndex + 1)..episodes.lastIndex).any { !episodes[it].filler }) return false
+    fun advancesIntoNextSeason(skipFiller: Boolean, skipRecap: Boolean = false): Boolean {
+        if ((!skipFiller && !skipRecap) || !hasNext) return continuesIntoNextSeason
+        if (((currentIndex + 1)..episodes.lastIndex).any { !shouldSkipEpisode(episodes[it], skipFiller, skipRecap) }) return false
         // Only filler left in the list: the same finished-season test as [continuesIntoNextSeason],
         // made against the last episode listed rather than this one.
         val season = nextSeason ?: return false
@@ -2078,7 +2082,7 @@ class WatchViewModel : ViewModel() {
      * would have.
      */
     internal fun externalPlaybackSession(data: WatchData, durationMsHint: Long = 0L): ExternalPlaybackSession {
-        val next = data.nextIndex(SettingsStore.autoSkipFiller.value)?.let(data.episodes::getOrNull)
+        val next = data.nextIndex(SettingsStore.autoSkipFiller.value, SettingsStore.autoSkipRecapEpisodes.value)?.let(data.episodes::getOrNull)
         return ExternalPlaybackSession(
             anilistId = anilistId,
             episodeNumber = data.current.number,
@@ -2099,7 +2103,7 @@ class WatchViewModel : ViewModel() {
         val episode = watchedNumber.toInt()
         if (!locallyWatchedEpisodes.add(episode)) return
         // Continue Watching offers what Next would open, so with filler skipped it skips it too.
-        val next = data.nextIndex(SettingsStore.autoSkipFiller.value)?.let(data.episodes::getOrNull)
+        val next = data.nextIndex(SettingsStore.autoSkipFiller.value, SettingsStore.autoSkipRecapEpisodes.value)?.let(data.episodes::getOrNull)
         val seriesCompleted = totalEpisodes?.takeIf { it > 0 }?.let { episode >= it } == true
         LibraryStore.markEpisodeWatched(
             anilistId = anilistId,
@@ -2128,7 +2132,7 @@ class WatchViewModel : ViewModel() {
         if (AppGraph.isTv) return
         if (positionMs < PREHEAT_AFTER_MS) return
         // The episode moving on will actually open, so a filler run being skipped is not preheated.
-        val next = data.nextIndex(SettingsStore.autoSkipFiller.value)?.let(data.episodes::getOrNull) ?: return
+        val next = data.nextIndex(SettingsStore.autoSkipFiller.value, SettingsStore.autoSkipRecapEpisodes.value)?.let(data.episodes::getOrNull) ?: return
         if (!preheatedEpisodes.add(next.number)) return
         viewModelScope.launch {
             runCatching {
@@ -2204,11 +2208,12 @@ class WatchViewModel : ViewModel() {
 
     /** Next or auto-play, with the filler after this episode passed over when [skipFiller] says so. */
     private fun moveOn(data: WatchData, autoAdvance: Boolean, skipFiller: Boolean) {
-        if (data.advancesIntoNextSeason(skipFiller)) {
+        val skipRecap = SettingsStore.autoSkipRecapEpisodes.value
+        if (data.advancesIntoNextSeason(skipFiller, skipRecap)) {
             requestNextSeason(data, autoAdvance = autoAdvance)
             return
         }
-        val index = data.nextIndex(skipFiller) ?: return
+        val index = data.nextIndex(skipFiller, skipRecap) ?: return
         if (index > data.currentIndex + 1) {
             DiagnosticsLog.event(
                 "Watch skipping filler from=${fmt(data.current.number)} " +

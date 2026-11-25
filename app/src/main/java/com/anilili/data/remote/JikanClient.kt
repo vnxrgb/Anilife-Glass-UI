@@ -55,6 +55,7 @@ class JikanClient(
                 when {
                     episode["recap"]?.jsonPrimitive?.booleanOrNull == true -> fillers[number] = EpisodeClassification.RECAP
                     episode["filler"]?.jsonPrimitive?.booleanOrNull == true -> fillers[number] = EpisodeClassification.FILLER
+                    else -> Unit
                 }
             }
             val hasNext = root["pagination"]?.jsonObject
