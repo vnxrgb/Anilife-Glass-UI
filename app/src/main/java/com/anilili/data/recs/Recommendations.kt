@@ -156,7 +156,7 @@ object Recommendations {
         for (seed in seeds) {
             // Only selected public title IDs are sent. Full history and feedback remain on device.
             val a = safe(emptyList<Media>()) { AppGraph.repository.communityAniListRecommendations(seed.anilistId) }
-            val b = safe(emptyList<Media>()) { AppGraph.repository.communityJikanRecommendations(seed.anilistId) }
+            val b = safe(emptyList<Media>()) { AppGraph.repository.communityTenraiRecommendations(seed.anilistId) }
             for ((items, weight) in listOf(a to 1.0, b to .8)) {
                 val eligible = items.filter { it.id > 0 && it.status != "NOT_YET_RELEASED" &&
                     it.status != "CANCELLED" && (!hideAdult || !it.isAdult) }

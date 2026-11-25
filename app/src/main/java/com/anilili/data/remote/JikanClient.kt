@@ -15,86 +15,74 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
- * Minimal Jikan (MyAnimeList) client. Only used for per-episode filler flags,
- * which AniList doesn't track.
+ * Community MAL metadata. The legacy class name is retained for wiring compatibility;
+ * the discontinued Jikan host is never contacted. Tenrai v1 supplies the compatible schema.
  */
 class JikanClient(
     private val client: OkHttpClient,
     private val json: Json,
 ) {
-    /**
-     * Episode numbers marked as filler on MAL. Empty when the title has none.
-     *
-     * Throws when any page fails rather than answering with what it has: the answer is cached for a
-     * week, and a Jikan outage (it answers 504 whenever MAL refuses it) used to be stored as
-     * "no filler" — or as the first page's fillers only — for that whole week.
-     */
-    fun fillerEpisodes(malId: Int): Set<Int> = episodeClassifications(malId).filterValues { it == EpisodeClassification.FILLER }.keys
+    fun fillerEpisodes(malId: Int): Set<Int> =
+        episodeClassifications(malId).filterValues { it == EpisodeClassification.FILLER }.keys
 
+    /** Fetch only explicitly flagged rows; no need to download every episode of a long show. */
     internal fun episodeClassifications(malId: Int): Map<Int, EpisodeClassification> {
-        val fillers = mutableMapOf<Int, EpisodeClassification>()
-        var page = 1
-        while (page <= MAX_PAGES) {
-            // Jikan allows three requests a second; a long series is a dozen pages back to back.
-            if (page > 1) Thread.sleep(PAGE_SPACING_MS)
-            val root = episodePage(malId, page) ?: if (page == 1) return emptyMap()
-                else error("Jikan episode pagination incomplete")
-            val episodes = root["data"]?.jsonArray ?: error("Jikan episode data missing")
-            episodes.forEach { element ->
-                val episode = element.jsonObject
-                val number = episode["mal_id"]?.jsonPrimitive?.intOrNull?.takeIf { it > 0 } ?: return@forEach
-                when {
-                    episode["recap"]?.jsonPrimitive?.booleanOrNull == true -> fillers[number] = EpisodeClassification.RECAP
-                    episode["filler"]?.jsonPrimitive?.booleanOrNull == true -> fillers[number] = EpisodeClassification.FILLER
-                    else -> Unit
+        require(malId > 0)
+        val result = mutableMapOf<Int, EpisodeClassification>()
+        for (filter in listOf("filler", "recap")) {
+            var page = 1
+            while (page <= MAX_PAGES) {
+                val root = tenraiJson("/anime/$malId/episodes?$filter=true&page=$page")
+                    ?: if (page == 1) return emptyMap() else error("Tenrai episode pagination incomplete")
+                val rows = root["data"] as? JsonArray ?: error("Tenrai episode data missing")
+                rows.forEach { item ->
+                    val row = item as? JsonObject ?: error("Tenrai invalid episode record")
+                    val number = row["mal_id"]?.jsonPrimitive?.intOrNull?.takeIf { it > 0 }
+                        ?: error("Tenrai invalid episode number")
+                    val kind = tenraiEpisodeKind(row)
+                    if (kind != null && (result[number] != EpisodeClassification.RECAP || kind == EpisodeClassification.RECAP)) {
+                        result[number] = kind
+                    }
                 }
+                val next = (root["pagination"] as? JsonObject)?.get("has_next_page")?.jsonPrimitive?.booleanOrNull
+                    ?: error("Tenrai pagination missing")
+                if (!next) break
+                if (rows.isEmpty() || page == MAX_PAGES) error("Tenrai episode pagination incomplete")
+                page++
             }
-            val hasNext = root["pagination"]?.jsonObject
-                ?.get("has_next_page")?.jsonPrimitive?.booleanOrNull ?: false
-            if (!hasNext) return fillers
-            if (page == MAX_PAGES) error("Jikan episode pagination limit reached")
-            page++
         }
-        return fillers
+        return result
     }
 
-
-    /** Probe only the page containing this episode, rather than fetching a whole long series. */
-    internal fun episodeClassificationPage(malId: Int, episode: Int): Map<Int, EpisodeClassification> {
+    /** A single episode probe, independent of list pagination and cached classifications. */
+    internal fun tenraiEpisode(malId: Int, episode: Int): JsonObject? {
         require(malId > 0 && episode > 0)
-        val root = episodePage(malId, (episode - 1) / 100 + 1) ?: return emptyMap()
-        val rows = root["data"]?.jsonArray ?: error("Jikan episode data missing")
-        return rows.mapNotNull { item ->
-            val row = item.jsonObject
-            val number = row["mal_id"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
-            val kind = when {
-                row["recap"]?.jsonPrimitive?.booleanOrNull == true -> EpisodeClassification.RECAP
-                row["filler"]?.jsonPrimitive?.booleanOrNull == true -> EpisodeClassification.FILLER
-                else -> null
-            } ?: return@mapNotNull null
-            number to kind
-        }.toMap()
+        val root = tenraiJson("/anime/$malId/episodes/$episode") ?: return null
+        val row = root["data"] as? JsonObject ?: error("Tenrai episode data missing")
+        if (row["mal_id"]?.jsonPrimitive?.intOrNull != episode) error("Tenrai episode mapping mismatch")
+        return row
     }
 
-    private fun episodePage(malId: Int, page: Int): JsonObject? {
-        val request = Request.Builder()
-            .url("https://api.jikan.moe/v4/anime/$malId/episodes?page=$page")
-            .header("Accept", "application/json").build()
-        // Retry a transient timeout/5xx once; respect rate limiting instead of hammering the API.
-        repeat(2) { attempt ->
-            try {
-                val response = client.newCall(request).apply { timeout().timeout(8, java.util.concurrent.TimeUnit.SECONDS) }.execute()
-                response.use {
-                    if (it.code == 404) return null
-                    if (it.isSuccessful) return json.parseToJsonElement(it.body?.string().orEmpty()).jsonObject
-                    if (it.code !in 500..599 || attempt == 1) error("Jikan HTTP ${it.code}")
+    private fun tenraiJson(path: String): JsonObject? = synchronized(tenraiGate) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now < tenraiBlockedUntil) error("Tenrai HTTP 429 (cooldown)")
+        val wait = (tenraiNextRequest - now).coerceAtLeast(0L)
+        if (wait > 0) Thread.sleep(wait)
+        tenraiNextRequest = android.os.SystemClock.elapsedRealtime() + 600L
+        val request = Request.Builder().url("https://api.tenrai.org/v1$path")
+            .header("Accept", "application/json")
+            .header("User-Agent", "AniLumos Android (https://github.com/vnxrgb/Anilumos)").build()
+        client.newCall(request).apply { timeout().timeout(5, java.util.concurrent.TimeUnit.SECONDS) }
+            .execute().use { response ->
+                if (response.code == 404) return@synchronized null
+                if (response.code == 429) {
+                    val seconds = response.header("Retry-After")?.toLongOrNull()?.coerceIn(1L, 86400L) ?: 60L
+                    tenraiBlockedUntil = android.os.SystemClock.elapsedRealtime() + seconds * 1000L
                 }
-            } catch (error: java.io.IOException) {
-                if (attempt == 1) throw error
+                if (!response.isSuccessful) error("Tenrai HTTP ${response.code}")
+                json.parseToJsonElement(response.body?.string().orEmpty()) as? JsonObject
+                    ?: error("Tenrai invalid response")
             }
-            Thread.sleep(750)
-        }
-        error("Jikan request failed")
     }
 
     /**
@@ -146,15 +134,9 @@ class JikanClient(
     /** MAL community recommendations, ranked by votes, then mapped to AniList by exact MAL ID. */
     internal fun recommendationIds(malId: Int): List<Int> {
         require(malId > 0)
-        val root = publicJson("https://api.jikan.moe/v4/anime/$malId/recommendations") as? JsonObject
+        val root = tenraiJson("/anime/$malId/recommendations")
             ?: return emptyList()
-        val rows = root["data"] as? JsonArray ?: error("Jikan recommendations data missing")
-        return rows.mapNotNull { item ->
-            val row = item as? JsonObject ?: return@mapNotNull null
-            val entry = row["entry"] as? JsonObject ?: return@mapNotNull null
-            val id = entry["mal_id"]?.jsonPrimitive?.intOrNull?.takeIf { it > 0 && it != malId } ?: return@mapNotNull null
-            id to (row["votes"]?.jsonPrimitive?.intOrNull ?: 0)
-        }.sortedByDescending { it.second }.map { it.first }.distinct().take(24)
+        return tenraiRecommendationIds(root, malId)
     }
 
     private fun publicJson(url: String): JsonElement? {
@@ -171,8 +153,10 @@ class JikanClient(
     private companion object {
         private val WHOLE_RUN_SLUGS = mapOf(20 to "naruto", 1735 to "naruto-shippuden", 21 to "one-piece", 269 to "bleach", 34572 to "black-clover", 34566 to "boruto", 223 to "dragon-ball", 813 to "dragon-ball-z", 11061 to "hunter-x-hunter")
 
-        // 100 episodes per page; 15 pages covers the longest running series that matter.
         const val MAX_PAGES = 15
-        const val PAGE_SPACING_MS = 400L
+        // Shared by playback and diagnostics instances. Respect server cooldown, no retry storm.
+        val tenraiGate = Any()
+        var tenraiNextRequest = 0L
+        var tenraiBlockedUntil = 0L
     }
 }

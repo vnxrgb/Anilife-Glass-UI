@@ -1793,8 +1793,8 @@ class MiruroRepository(
     }
 
     /**
-     * Filler episode numbers for a title: the published filler index first, MAL via Jikan for any
-     * title the index has never answered. Empty with neither. Throws when Jikan fails.
+     * Filler episode numbers for a title: the published filler index first, MAL via Tenrai for any
+     * title the index has never answered. Empty with neither. Throws when Tenrai fails.
      */
     /**
      * When each of [anilistId]'s episodes that aired in the last
@@ -1836,9 +1836,10 @@ class MiruroRepository(
         val fetch = fillerFetches.getOrPut(malId) {
             fillerScope.async(start = CoroutineStart.LAZY) {
                 cache.getOrFetch(
-                    key = "episode-classifications:v3:$malId",
+                    key = "episode-classifications:v4:$malId",
                     serializer = MapSerializer(Int.serializer(), EpisodeClassificationRecord.serializer()),
                     ttlMs = OPTIONS_TTL,
+                    cacheIf = { it.isNotEmpty() },
                 ) {
                     var failure: Exception? = null
                     fun attempt(block: () -> Map<Int, EpisodeClassification>?): Map<Int, EpisodeClassification>? =
@@ -1847,7 +1848,7 @@ class MiruroRepository(
                             failure = error
                             null
                         }
-                    // A slow full-series Jikan lookup must not prevent the richer services
+                    // A slow full-series Tenrai lookup must not prevent the richer services
                     // from being attempted. Prefer their explicit canon/mixed classifications.
                     val lists = attempt { jikan.fillerListsEpisodes(malId) }
                     val pedia = if (lists.isNullOrEmpty()) attempt { jikan.aniFillerPediaEpisodes(malId) } else null
@@ -1856,7 +1857,7 @@ class MiruroRepository(
                     if (primary == null && lists == null && pedia == null) failure?.let { throw it }
                     // Explicit map defaults avoid the repository's Any?.orEmpty() string helper.
                     buildMap<Int, EpisodeClassificationRecord> {
-                        if (primary != null) putAll(primary.mapValues { EpisodeClassificationRecord(it.value, "Jikan") })
+                        if (primary != null) putAll(primary.mapValues { EpisodeClassificationRecord(it.value, "Tenrai") })
                         if (pedia != null) putAll(pedia.mapValues { EpisodeClassificationRecord(it.value, "AniFillerPedia") })
                         if (lists != null) putAll(lists.mapValues { EpisodeClassificationRecord(it.value, "FillerLists") })
                     }
@@ -2214,7 +2215,7 @@ class MiruroRepository(
      * Cached for as long as the info record, and empty on failure: the Recommended tab still has
      * the series entries to show, so a refused AniList request must not turn into an error there.
      */
-    /** Existing AniList mirror/live path, kept independent of Jikan for partial failures. */
+    /** Existing AniList mirror/live path, kept independent of Tenrai for partial failures. */
     suspend fun communityAniListRecommendations(id: Int): List<Media> {
         // Catalogue-native entries (hanime) use negative ids and have no AniList record.
         if (id < 0) return emptyList()
@@ -2244,12 +2245,12 @@ class MiruroRepository(
     }
 
     /** Cache mapped recommendations independently so a failed source cannot poison the other. */
-    suspend fun communityJikanRecommendations(id: Int): List<Media> {
+    suspend fun communityTenraiRecommendations(id: Int): List<Media> {
         if (id <= 0) return emptyList()
         return try {
             val malId = malIdFor(id) ?: return emptyList()
             cache.getOrFetch(
-                key = "jikan-recommendations:v1:$malId",
+                key = "tenrai-recommendations:v1:$malId",
                 serializer = ListSerializer(Media.serializer()),
                 ttlMs = INFO_TTL,
                 cacheIf = { it.isNotEmpty() },
@@ -2262,14 +2263,14 @@ class MiruroRepository(
             }.filter { it.id != id && (!hideAdult || !it.isAdult) && it.status != "NOT_YET_RELEASED" }
         } catch (error: Exception) {
             error.rethrowIfCancellation()
-            DiagnosticsLog.throwable("Jikan recommendations failed id=$id", error)
+            DiagnosticsLog.throwable("Tenrai recommendations failed id=$id", error)
             emptyList()
         }
     }
 
     suspend fun animeRecommendations(id: Int): List<Media> {
         val a = communityAniListRecommendations(id)
-        val b = communityJikanRecommendations(id)
+        val b = communityTenraiRecommendations(id)
         val all = (a + b).associateBy { it.id }
         val ranks = com.anilili.data.recs.HybridRanking.rank(
             listOf(a.map { it.id } to 1.0, b.map { it.id } to .8), setOf(id), 30
@@ -2455,7 +2456,7 @@ class MiruroRepository(
 
     /**
      * Applies MAL filler flags to every provider's episode list. Providers rarely carry filler
-     * data themselves; Jikan is authoritative and cached, and a timeout keeps a slow first
+     * data themselves; Tenrai supplies explicit flags and cached, and a timeout keeps a slow first
      * fetch from delaying episode loading.
      */
     private suspend fun EpisodesResult.withFillerMarks(anilistId: Int): EpisodesResult {

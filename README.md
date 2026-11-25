@@ -84,6 +84,8 @@ Anilumos isn't affiliated with or endorsed by AniLife or Morphe. It doesn't host
 
 ### Community playback metadata
 
+- [Tenrai](https://tenrai.org/) — unofficial public MAL episode flags and community recommendations, using its documented v1 API. Replaces the discontinued public Jikan API. No API key is embedded; public request limits and cooldowns are respected. See [Tenrai terms](https://tenrai.org/terms).
+
 - [AniSkip](https://github.com/aniskip/aniskip-api) — anime intro, ending and recap timestamps.
 - [TheIntroDB](https://theintrodb.org/) — community segment timestamps.
 - [IntroDB](https://introdb.app/) — community segment timestamps, [ODbL 1.0 open data](https://api.introdb.app/open-data/).

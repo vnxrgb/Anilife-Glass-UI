@@ -5,6 +5,9 @@ import com.anilili.data.model.SkipTimes
 import com.anilili.data.remote.AniSkipClient
 import com.anilili.data.remote.AniZipClient
 import com.anilili.data.remote.JikanClient
+import com.anilili.data.remote.tenraiEpisodeKind
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +32,7 @@ internal data class MetadataProbe(val provider: String, val result: String, val 
 internal object MetadataDiagnostics {
     private val _last = MutableStateFlow<MetadataPlayback?>(null)
     val last = _last.asStateFlow()
-    val providers = listOf("AniSkip", "TheIntroDB", "IntroDB", "Jikan", "FillerLists", "AniFillerPedia")
+    val providers = listOf("AniSkip", "TheIntroDB", "IntroDB", "Tenrai · Episodes", "Tenrai · Recommendations", "FillerLists", "AniFillerPedia")
 
     fun record(anilistId: Int, episode: EpisodeItem, durationMs: Long, skip: SkipTimes?) {
         if (episode.number < 1 || episode.number % 1.0 != 0.0) return
@@ -78,7 +81,23 @@ internal object MetadataDiagnostics {
                             status to "S${imdb.season} E${imdb.episode} · $detail"
                         }
                     }
-                    "Jikan" -> if (mal == null) "Mapping unavailable" to "No MAL ID" else classification(filler.episodeClassificationPage(mal, episode))
+                    "Tenrai · Episodes" -> if (mal == null) "Mapping unavailable" to "No MAL ID" else {
+                        val row = filler.tenraiEpisode(mal, episode)
+                        if (row == null) "No data" to "Episode not found"
+                        else {
+                            val kind = tenraiEpisodeKind(row)
+                            val flagsKnown = row["filler"]?.jsonPrimitive?.booleanOrNull != null &&
+                                row["recap"]?.jsonPrimitive?.booleanOrNull != null
+                            if (kind != null) "Data found" to kind.label
+                            else if (flagsKnown) "Data found" to "Neither filler nor recap flagged (not necessarily canon)"
+                            else "No episode label" to "Episode found, but classification flags missing"
+                        }
+                    }
+                    "Tenrai · Recommendations" -> if (mal == null) "Mapping unavailable" to "No MAL ID" else {
+                        val ids = filler.recommendationIds(mal)
+                        if (ids.isEmpty()) "No data" to "No recommendations returned"
+                        else "Data found" to "${ids.size} MAL recommendations"
+                    }
                     "FillerLists" -> if (mal == null) "Mapping unavailable" to "No MAL ID" else classification(filler.fillerListsEpisodes(mal))
                     else -> if (mal == null) "Mapping unavailable" to "No MAL ID" else classification(filler.aniFillerPediaEpisodes(mal))
                 }

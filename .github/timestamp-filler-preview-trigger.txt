@@ -1,1 +1,1 @@
-Signed mobile preview: hybrid community recommendations and mood filtering.
+Build signed preview replacing retired public Jikan with Tenrai v1, including independent recommendation and episode probes.
