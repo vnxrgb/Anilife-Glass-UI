@@ -89,8 +89,10 @@ internal class WasmSourceResolver(context: Context) {
     suspend fun resolve(language: String, query: WasmEpisodeQuery, disabled: Set<String>): List<WasmPlaybackSource> {
         for (provider in WasmRegistry.select(WasmRegistry.bundled, language)) {
             if (provider.id in disabled) continue
-            val result = loader.resolve(provider.id, language, query)
-            val sources = WasmPlaybackSource.fromValidated(provider, result, query.dub)
+            val sources = runCatching {
+                val result = loader.resolve(provider.id, language, query)
+                WasmPlaybackSource.fromValidated(provider, result, query.dub)
+            }.getOrDefault(emptyList())
             if (sources.isNotEmpty()) return sources
         }
         return emptyList()

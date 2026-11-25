@@ -52,7 +52,8 @@ internal class WasmProviderLoader(context: Context) {
         withContext(Dispatchers.IO) {
             serial.withLock {
                 if (!BuildConfig.DEBUG || bytes.size > MAX_BYTES || !WasmPolicy.verify(bytes, approved.digest) ||
-                    !query.valid() || WasmRegistry.select(listOf(approved), approved.languages.firstOrNull().orEmpty()).isEmpty()) {
+                    !query.valid() || approved.languages.isEmpty() ||
+                    WasmRegistry.select(listOf(approved), approved.languages.first()) != listOf(approved)) {
                     return@withLock JSONArray()
                 }
                 val temp = File.createTempFile("wasm-", ".tmp", app.cacheDir)
