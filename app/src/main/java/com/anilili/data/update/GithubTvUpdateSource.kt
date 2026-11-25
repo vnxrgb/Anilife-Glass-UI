@@ -64,7 +64,7 @@ internal object GithubTvUpdateSource {
         val destination = actual.toHttpUrlOrNull() ?: return false
         if (original.scheme != "https" || original.host != "github.com" ||
             original.query != null || original.fragment != null ||
-            !original.encodedPath.matches(Regex("/vnxrgb/anilumos-preview/releases/download/tv-alpha-signed-[0-9a-f]{12}-run[1-9][0-9]*/TV-UPDATE\\\\.json"))) return false
+            !original.encodedPath.matches(Regex("/vnxrgb/anilumos-preview/releases/download/tv-alpha-signed-[0-9a-f]{12}-run[1-9][0-9]*/TV-UPDATE[.]json"))) return false
         if (requested == actual) return true
         return destination.scheme == "https" && destination.host in setOf(
             "release-assets.githubusercontent.com", "objects.githubusercontent.com"
