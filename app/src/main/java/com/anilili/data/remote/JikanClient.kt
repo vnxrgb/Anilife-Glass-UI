@@ -1,5 +1,9 @@
 package com.anilili.data.remote
 
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
@@ -57,7 +61,56 @@ class JikanClient(
         return fillers
     }
 
+
+    /**
+     * FillerLists uses absolute broadcast numbering, so only explicitly mapped whole-run MAL
+     * entries can use it. Split seasons must never inherit another season's filler flags.
+     */
+    internal fun fillerListsEpisodes(malId: Int): Set<Int>? {
+        val slug = WHOLE_RUN_SLUGS[malId] ?: return null
+        val root = publicJson("https://fillerlists.com/data/$slug.json") as? JsonObject ?: return null
+        val rows = root["episodes"] as? JsonArray ?: return null
+        if (rows.isEmpty()) return null
+        return rows.mapNotNull { item ->
+            val row = item as? JsonObject ?: return@mapNotNull null
+            if (row["type"]?.jsonPrimitive?.contentOrNull != "filler") return@mapNotNull null
+            row["n"]?.jsonPrimitive?.intOrNull?.takeIf { it > 0 }
+        }.toSet()
+    }
+
+    /** Public, cited episode classifications; restricted to known whole-run mappings. */
+    internal fun aniFillerPediaEpisodes(malId: Int): Set<Int>? {
+        if (malId !in WHOLE_RUN_SLUGS) return null
+        val root = publicJson("https://anifillerpedia.wiki/api/v1/series?mal_id=$malId") as? JsonObject ?: return null
+        val series = (root["items"] as? JsonArray)?.mapNotNull { it as? JsonObject }
+            ?.filter { it["mal_id"]?.jsonPrimitive?.intOrNull == malId }?.singleOrNull() ?: return null
+        val id = series["id"]?.jsonPrimitive?.intOrNull?.takeIf { it > 0 } ?: return null
+        val rows = publicJson("https://anifillerpedia.wiki/api/v1/series/$id/episodes") as? JsonArray ?: return null
+        if (rows.isEmpty()) return null
+        return rows.mapNotNull { item ->
+            val row = item as? JsonObject ?: return@mapNotNull null
+            if (row["series_id"]?.jsonPrimitive?.intOrNull != id ||
+                row["status"]?.jsonPrimitive?.contentOrNull != "filler" ||
+                row["citation"] !is JsonObject ||
+                row["has_pending_contribution"]?.jsonPrimitive?.booleanOrNull == true) return@mapNotNull null
+            row["episode_number"]?.jsonPrimitive?.intOrNull?.takeIf { it > 0 }
+        }.toSet()
+    }
+
+    private fun publicJson(url: String): JsonElement? {
+        val request = Request.Builder().url(url).header("Accept", "application/json")
+            .header("User-Agent", "AniLumos Android (https://github.com/vnxrgb/Anilumos)").build()
+        return client.newCall(request).apply { timeout().timeout(4, java.util.concurrent.TimeUnit.SECONDS) }
+            .execute().use { response ->
+                if (response.code == 404) return null
+                if (!response.isSuccessful) error("Filler metadata HTTP ${response.code}")
+                json.parseToJsonElement(response.body?.string().orEmpty())
+            }
+    }
+
     private companion object {
+        private val WHOLE_RUN_SLUGS = mapOf(20 to "naruto", 1735 to "naruto-shippuden", 21 to "one-piece", 269 to "bleach", 34572 to "black-clover", 34566 to "boruto", 223 to "dragon-ball", 813 to "dragon-ball-z", 11061 to "hunter-x-hunter")
+
         // 100 episodes per page; 15 pages covers the longest running series that matter.
         const val MAX_PAGES = 15
         const val PAGE_SPACING_MS = 400L
