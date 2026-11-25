@@ -215,6 +215,40 @@ class AniSkipClient(
         val skipId: String?,
     )
 
+
+    /** Public TheIntroDB lookup using the existing TVDB season mapping. */
+    internal fun theIntroDbTimes(tvdbId: Int, season: Int, episode: Int, duration: Double): SkipTimes? {
+        if (tvdbId <= 0 || season <= 0 || episode <= 0 || !duration.isFinite() || duration <= 0) return null
+        val url = "https://api.theintrodb.org/v4/media".toHttpUrl().newBuilder()
+            .addQueryParameter("tvdb_id", tvdbId.toString())
+            .addQueryParameter("season", season.toString())
+            .addQueryParameter("episode", episode.toString())
+            .addQueryParameter("duration_ms", (duration * 1000).toLong().toString())
+            .build()
+        val root = client.newCall(Request.Builder().url(url).header("Accept", "application/json").build())
+            .apply { timeout().timeout(4, java.util.concurrent.TimeUnit.SECONDS) }
+            .execute().use { response ->
+                if (response.code == 404) return null
+                if (!response.isSuccessful) throw IOException("TheIntroDB HTTP ${response.code}")
+                json.parseToJsonElement(response.body?.string().orEmpty()).jsonObject
+            }
+        if (root["tvdb_id"]?.jsonPrimitive?.intOrNull != tvdbId) return null
+        fun window(type: String): Pair<Double, Double>? {
+            val rows = root[type] as? kotlinx.serialization.json.JsonArray ?: return null
+            val row = rows.singleOrNull() as? JsonObject ?: return null
+            val start = row["start_ms"]?.jsonPrimitive?.doubleOrNull?.div(1000.0) ?: return null
+            val end = row["end_ms"]?.jsonPrimitive?.doubleOrNull?.div(1000.0) ?: return null
+            return (start to end).takeIf { start.isFinite() && end.isFinite() && start >= 0 && end > start && end <= duration }
+        }
+        val intro = window("intro")
+        val outro = window("credits")
+        val recap = window("recap")
+        if (intro == null && outro == null && recap == null) return null
+        return SkipTimes(introStart = intro?.first, introEnd = intro?.second,
+            outroStart = outro?.first, outroEnd = outro?.second,
+            recapStart = recap?.first, recapEnd = recap?.second)
+    }
+
     private companion object {
         /**
          * Everything worth skipping. "mixed" is AniSkip's name for an opening or ending that runs
