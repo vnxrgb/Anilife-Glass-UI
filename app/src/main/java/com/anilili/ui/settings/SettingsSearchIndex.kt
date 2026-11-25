@@ -47,8 +47,6 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
             "Show details when paused" to listOf("pause", "description", "synopsis"),
             "Auto-skip intro, recap and outro" to listOf("skip", "opening", "ending", "op", "ed"),
             "Skip filler episodes" to listOf("skip", "filler", "canon", "next", "autoplay"),
-            "Skip button" to listOf("skip", "button"),
-            "Skip button length" to listOf("skip", "seconds", "length", "85"),
             "Watched at" to listOf("progress", "watched", "percent", "complete"),
             "Default quality" to listOf("quality", "resolution", "1080", "720", "480", "data"),
             "Buffer size" to listOf("buffer", "buffering", "stutter", "stall", "freeze", "lag",

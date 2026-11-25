@@ -18,7 +18,7 @@ import kotlinx.coroutines.delay
  * picture for a minute and a half with no way to dismiss it. So the button pops up for this long,
  * the way the streaming services do it, and after that it shows only with the controls.
  */
-internal const val TIMED_SKIP_POPUP_MS = 10_000L
+internal const val TIMED_SKIP_POPUP_MS = 6_000L
 
 private const val TIMED_SKIP_POPUP_TICK_MS = 250L
 

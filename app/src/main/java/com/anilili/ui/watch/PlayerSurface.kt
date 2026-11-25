@@ -14,7 +14,10 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -1247,8 +1250,7 @@ fun PlayerSurface(
         // composed with the row, so it is retried like the row is.
         if (tvRowOpensOnFixedSkip(
                 openedByDown = openedByDown,
-                fixedSkipShown = SettingsStore.showSkipButton.value &&
-                    shouldShowManualSkipButton(positionMs, durationMs),
+                fixedSkipShown = false,
                 skipActionFocused = tvSkipActionFocused,
             )
         ) {
@@ -2888,8 +2890,6 @@ fun PlayerSurface(
             )
         }
 
-        val showSkipButton by SettingsStore.showSkipButton.collectAsState()
-        val skipButtonSeconds by SettingsStore.skipButtonSeconds.collectAsState()
         val controlsVisible = if (device.isTv) tvControlsVisible else phoneControlsVisible
         // Every panel is composed above, so anything composed here is painted over it rather than
         // under it — the episode drawer wore a "+85s" across its rows. The control row already
@@ -2992,6 +2992,7 @@ fun PlayerSurface(
         }
         val recapPopup = rememberTimedSkipPopup(skipWindows.recap, playbackIsPlaying, recapStartMs, recapEndMs)
         val introPopup = rememberTimedSkipPopup(skipWindows.intro, playbackIsPlaying, introStartMs, introEndMs)
+        val outroPopup = rememberTimedSkipPopup(skipWindows.creditsOutro, playbackIsPlaying, outroStartMs, outroEndMs)
         val action: Pair<String, () -> Unit>? = when {
             // See panelOwnsScreen: offered here it would be drawn over the panel, and on a TV could
             // take the remote from it. Nor in the mini-player, where nothing can press it.
@@ -3001,7 +3002,7 @@ fun PlayerSurface(
             // appended where the button is drawn, so this label stays put from one second to the
             // next and the effects keyed on it do not read each tick as a new action.
             autoSkipCountdown != null -> autoSkipCountdown!!.let { pending ->
-                "Skipping ${pending.segment}" to {
+                "Skip ${pending.segment}" to {
                     autoSkipCountdown = null
                     requestSkipSeek(pending.endMs, "auto-${pending.segment.lowercase()}-now")
                 }
@@ -3028,17 +3029,8 @@ fun PlayerSurface(
             // not the credits. See outroWindowIsCredits. This was "Next Episode", which threw away
             // the preview that often follows the credits and left no way to skip just the credits;
             // the next episode is the up-next card's job, at the end of the file.
-            outroEndMs != null && skipWindows.creditsOutro ->
+            outroEndMs != null && skipWindows.creditsOutro && (controlsVisible || outroPopup) ->
                 "Skip Outro" to { requestSkipSeek(outroSkipTargetMs(outroEndMs, durationMs), "manual-outro") }
-            // The fallback for shows the timings miss. It rides with the controls, so it can be
-            // offered for the whole episode without ever sitting over the picture.
-            showSkipButton &&
-                controlsVisible &&
-                skipWindows.fixedSkip ->
-                "+${skipButtonSeconds}s" to {
-                    val targetMs = (positionMs + skipButtonSeconds * 1_000L).coerceAtMost(durationMs)
-                    requestSkipSeek(targetMs, "manual-fixed")
-                }
             else -> null
         }
         val actionTakesRemote = device.isTv && focusPlayerOnStart && !screenReaderActive &&
@@ -3120,7 +3112,10 @@ fun PlayerSurface(
                 TvEpisodeChangeFocus.HOLD, TvEpisodeChangeFocus.UNCHANGED -> Unit
             }
         }
-        action?.let { (label, onClick) -> PlayerFloatingActionFrame { compactHeight ->
+        var lastSkipAction by remember(activeStream.url) { mutableStateOf<Pair<String, () -> Unit>?>(null) }
+        SideEffect { if (action != null) lastSkipAction = action }
+        val visibleAction = action ?: lastSkipAction
+        PlayerFloatingActionFrame { compactHeight ->
             // TV sets cut off the outer ~5% of the picture, so 24.dp from the corner lands inside
             // the overscan and the button is simply never seen — reported as "skip intro doesn't
             // show on TV" while working on phones. Every other TV surface already insets 48.dp.
@@ -3148,45 +3143,47 @@ fun PlayerSurface(
                 // most of what made it loom over the short inline frame.
                 .then(if (compactHeight) Modifier.height(CompactSkipActionHeight) else Modifier)
             val controlFocus1 = rememberFocusFill()
-            val countdown = autoSkipCountdown
-            val countdownSeconds = countdown?.let { autoSkipSecondsLeft }
-            AutoSkipButtonBounds {
+            val skipShape = RoundedCornerShape(if (compactHeight) 12.dp else 18.dp)
+            AnimatedVisibility(
+                visible = action != null,
+                modifier = actionModifier,
+                enter = fadeIn(tween(220)),
+                exit = fadeOut(tween(280)),
+            ) {
             OutlinedButton(
-                onClick = onClick,
-                shape = CircleShape,
-                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.86f)),
+                onClick = { action?.second?.invoke() },
+                enabled = action != null,
+                shape = skipShape,
+                border = null,
                 colors = controlFocus1.buttonColors(
                     ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color.Black.copy(alpha = 0.5f),
+                        containerColor = Color.Transparent,
                         contentColor = Color.White,
+                        disabledContentColor = Color.White,
                     ),
                 ),
                 contentPadding = if (compactHeight) {
-                    PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+                    PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                 } else {
-                    PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    PaddingValues(horizontal = 20.dp, vertical = 6.dp)
                 },
                 // Every other TV control carries this; without it the button can hold remote focus
                 // and show nothing, so on a TV the skip action looked unreachable.
-                modifier = actionModifier
+                modifier = Modifier
+                    .then(if (compactHeight) Modifier.height(CompactSkipActionHeight) else Modifier)
                     .focusRequester(tvSkipActionFocus)
                     .onFocusChanged { tvSkipActionFocused = it.hasFocus }
-                    .focusFill(controlFocus1, CircleShape)
-                    .autoSkipSweep(
-                        secondsLeft = countdownSeconds,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                        shape = CircleShape,
-                    ),
+                    .playerLiquidGlass(skipShape, PlayerLiquidGlassTone.PRIMARY)
+                    .focusFill(controlFocus1, skipShape),
             ) {
                 Text(
-                    (if (countdown != null) autoSkipCountdownLabel(countdown, autoSkipSecondsLeft) else label)
-                        .uppercase(),
+                    visibleAction?.first.orEmpty(),
                     style = if (compactHeight) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                 )
             }
             }
-        } }
+        }
     }
     }
 }

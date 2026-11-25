@@ -273,7 +273,7 @@ private fun videoCacheValue(context: Context, size: VideoCacheSize, budget: Long
 
 /** Which choice picker is open, if any. One value beats a dozen independent booleans. */
 private enum class SettingsPicker {
-    SKIP_BUTTON_LENGTH,
+
     WATCHED_THRESHOLD,
     DEFAULT_QUALITY,
     PLAYBACK_BUFFER_SIZE,
@@ -358,8 +358,6 @@ fun SettingsScreen(
     val pauseDetailsOverlay by SettingsStore.pauseDetailsOverlay.collectAsState()
     val autoSkip by SettingsStore.autoSkipIntroOutro.collectAsState()
     val autoSkipFiller by SettingsStore.autoSkipFiller.collectAsState()
-    val showSkipButton by SettingsStore.showSkipButton.collectAsState()
-    val skipButtonSeconds by SettingsStore.skipButtonSeconds.collectAsState()
     val autoSync by SettingsStore.autoSyncAniList.collectAsState()
     val watchedThresholdPercent by SettingsStore.watchedThresholdPercent.collectAsState()
     val preferDub by SettingsStore.preferDub.collectAsState()
@@ -1403,31 +1401,6 @@ fun SettingsScreen(
     CompiledSeparately {
     val closePicker = { openPicker = null }
     when (openPicker) {
-        SettingsPicker.SKIP_BUTTON_LENGTH -> MidnightChoicePicker(
-            kicker = "Player",
-            title = "Skip button length",
-            explanation = "How far the player's skip button jumps. A standard TV anime opening " +
-                "is 85 seconds.",
-            options = SKIP_BUTTON_PRESETS,
-            selected = skipButtonSeconds,
-            label = { "${it}s" },
-            onSelect = SettingsStore::setSkipButtonSeconds,
-            onDismiss = closePicker,
-            dismissOnSelect = false,
-            body = {
-                MidnightStepperRow(
-                    label = "Fine tune",
-                    value = "${skipButtonSeconds}s",
-                    onDecrease = { SettingsStore.setSkipButtonSeconds(skipButtonSeconds - 5) },
-                    onIncrease = { SettingsStore.setSkipButtonSeconds(skipButtonSeconds + 5) },
-                    decreaseLabel = "−5s",
-                    increaseLabel = "+5s",
-                    decreaseEnabled = skipButtonSeconds > SKIP_BUTTON_MIN_SECONDS,
-                    increaseEnabled = skipButtonSeconds < SKIP_BUTTON_MAX_SECONDS,
-                )
-            },
-        )
-
         SettingsPicker.WATCHED_THRESHOLD -> MidnightChoicePicker(
             kicker = "Player",
             title = "Watched at",
@@ -2222,24 +2195,6 @@ fun SettingsScreen(
                         checked = autoSkipFiller,
                         onCheckedChange = SettingsStore::setAutoSkipFiller,
                     )
-                }
-                item(key = "Skip button") {
-                    MidnightSettingSwitchRow(
-                        title = "Skip button",
-                        description = "A one-press jump on the controls when a show has no skip timings",
-                        checked = showSkipButton,
-                        onCheckedChange = SettingsStore::setShowSkipButton,
-                    )
-                }
-                if (showSkipButton) {
-                    item(key = "Skip button length") {
-                        MidnightSettingRow(
-                            title = "Skip button length",
-                            description = "How far one press jumps",
-                            value = "${skipButtonSeconds}s",
-                            onClick = { openPicker = SettingsPicker.SKIP_BUTTON_LENGTH },
-                        )
-                    }
                 }
                 item(key = "Watched at") {
                     MidnightSettingRow(
