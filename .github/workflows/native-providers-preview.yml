@@ -1,0 +1,70 @@
+name: Native providers mobile test APK
+
+on:
+  push:
+    branches: [feature/native-providers]
+    paths:
+      - '.github/workflows/native-providers-preview.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-providers-mobile-preview
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
+  ANIVEXA_PROVIDER_ENDPOINT: https://anivexa-api-mlgw.onrender.com
+
+jobs:
+  mobile:
+    if: github.ref == 'refs/heads/feature/native-providers'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Check API documentation availability
+        continue-on-error: true
+        run: curl --fail --silent --show-error --max-time 100 --output /dev/null "${ANIVEXA_PROVIDER_ENDPOINT}/docs"
+      - name: Set up JDK 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+        with:
+          cache-read-only: false
+      - name: Mobile tests, lint and build
+        run: ./gradlew :app:testMobileDebugUnitTest :app:lintMobileDebug :app:assembleMobileDebug --max-workers=2 --no-configuration-cache --console=plain
+      - name: Verify and stage universal debug APK
+        run: |
+          set -euo pipefail
+          apk=app/build/outputs/apk/mobile/debug/Anilumos-debug.apk
+          test -s "$apk"
+          "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify --verbose "$apk"
+          mkdir -p dist
+          cp "$apk" dist/anilumos-native-providers-test.apk
+      - name: Upload test APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: anilumos-native-providers-test
+          path: dist/anilumos-native-providers-test.apk
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-providers-test-reports
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-*.html
+          if-no-files-found: ignore
+          retention-days: 7
