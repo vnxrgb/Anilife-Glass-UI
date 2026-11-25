@@ -563,7 +563,11 @@ private fun DetailContent(
     var episodeQuery by remember(data.selectedSeasonId) { mutableStateOf("") }
     // Keyed on the order too: an index into the ranges names a different range once they turn round.
     var chosenBlockIndex by remember(data.selectedSeasonId, episodeOrder) { mutableStateOf<Int?>(null) }
-    val blocks = remember(episodes, episodeOrder) { orderEpisodeBlocks(episodeBlocks(episodes), episodeOrder) }
+    val hideFillerEpisodes by SettingsStore.hideFillerEpisodes.collectAsState()
+    val visibleEpisodes = remember(episodes, hideFillerEpisodes) {
+        if (hideFillerEpisodes) episodes.filterNot { it.filler } else episodes
+    }
+    val blocks = remember(visibleEpisodes, episodeOrder) { orderEpisodeBlocks(episodeBlocks(visibleEpisodes), episodeOrder) }
     // The bar is up wherever there are episodes, because the layout toggle lives in it and a short
     // season chooses grid or list too; the range picker and the filter are the long-list halves.
     val browserVisible = selectedTab == DetailTab.EPISODES && episodes.isNotEmpty()
@@ -584,7 +588,7 @@ private fun DetailContent(
     // A search spans the whole season; only an unfiltered list is bounded by the block.
     val filtering = episodeQuery.isNotBlank()
     val shown = if (filtering) {
-        orderEpisodes(filterEpisodes(episodes, episodeQuery), episodeOrder)
+        orderEpisodes(filterEpisodes(visibleEpisodes, episodeQuery), episodeOrder)
     } else {
         blocks.getOrNull(blockIndex)?.episodes.orEmpty()
     }
