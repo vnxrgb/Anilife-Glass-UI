@@ -236,8 +236,10 @@ class AniSkipClient(
         fun window(type: String): Pair<Double, Double>? {
             val rows = root[type] as? kotlinx.serialization.json.JsonArray ?: return null
             val row = rows.singleOrNull() as? JsonObject ?: return null
-            val start = row["start_ms"]?.jsonPrimitive?.doubleOrNull?.div(1000.0) ?: return null
-            val end = row["end_ms"]?.jsonPrimitive?.doubleOrNull?.div(1000.0) ?: return null
+            val startValue = row["start_ms"] ?: return null
+            val start = if (startValue == kotlinx.serialization.json.JsonNull) 0.0 else startValue.jsonPrimitive.doubleOrNull?.div(1000.0) ?: return null
+            val endValue = row["end_ms"] ?: return null
+            val end = if (endValue == kotlinx.serialization.json.JsonNull) duration else endValue.jsonPrimitive.doubleOrNull?.div(1000.0) ?: return null
             return (start to end).takeIf { start.isFinite() && end.isFinite() && start >= 0 && end > start && end <= duration }
         }
         val intro = window("intro")
