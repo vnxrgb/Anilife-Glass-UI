@@ -22,4 +22,11 @@ jobs:
         run: |
           rustup target add aarch64-linux-android --toolchain stable
           cargo +stable install cargo-ndk --locked
-          cargo +stable ndk -t arm64-v8a -p 23 -o "$RUNNER_TEMP/wasm-jni" build --manifest-path wasm-runtime/Cargo.toml --release
+          cd wasm-runtime
+          cargo +stable ndk -t arm64-v8a -p 23 -o "$RUNNER_TEMP/wasm-jni" build --release
+      - name: Upload native runtime proof
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: wasm-arm64-runtime
+          path: ${{ runner.temp }}/wasm-jni/arm64-v8a/libanilumos_wasm_runtime.so
+          if-no-files-found: error
