@@ -13,6 +13,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 /** Dedicated credential-free host client. No automatic redirects or proxy inheritance. */
 internal class WasmHttpGateway(private val approvedHosts: Set<String>) {
+    private companion object { const val MAX_BROKER_BODY_BYTES = 4 * 1024 * 1024 }
     private val client = OkHttpClient.Builder()
         .proxy(Proxy.NO_PROXY)
         .dns(object : Dns {
@@ -25,7 +26,7 @@ internal class WasmHttpGateway(private val approvedHosts: Set<String>) {
         .followSslRedirects(false)
         .retryOnConnectionFailure(false)
         .callTimeout(20, TimeUnit.SECONDS)
-        .addInterceptor(ProviderResponseLimitInterceptor(WasmPolicy.MAX_RESPONSE_BYTES))
+        .addInterceptor(ProviderResponseLimitInterceptor(MAX_BROKER_BODY_BYTES.toLong()))
         .build()
 
     fun cancel() { client.dispatcher.cancelAll() }
@@ -40,6 +41,7 @@ internal class WasmHttpGateway(private val approvedHosts: Set<String>) {
         require((body?.size ?: 0) <= 256 * 1024)
         require(headers.size <= 32)
         if (browserOrigin != null) require(WasmPolicy.allowsUrl(browserOrigin, approvedHosts))
+        require(headers.none { (name, value) -> name.any { it == '\\r' || it == '\\n' } || value.any { it == '\\r' || it == '\\n' } })
         var target = url
         var hops = 0
         val visited = mutableSetOf<String>()
@@ -57,8 +59,13 @@ internal class WasmHttpGateway(private val approvedHosts: Set<String>) {
                         builder.header(name, value)
                 }
             }
-            if (hops == 0 && browserOrigin != null && headers.none { it.first.equals("referer", true) })
-                builder.header("Referer", browserOrigin)
+            if (hops == 0 && browserOrigin != null) {
+                if (headers.none { it.first.equals("referer", true) }) builder.header("Referer", browserOrigin)
+                if (headers.none { it.first.equals("origin", true) }) {
+                    val parsed = browserOrigin.toHttpUrlOrNull()!!
+                    builder.header("Origin", "${parsed.scheme}://${parsed.host}")
+                }
+            }
             builder.method(method, if (method == "POST") (body ?: ByteArray(0)).toRequestBody() else null)
             var next: String? = null
             client.newCall(builder.build()).execute().use { response ->
@@ -69,7 +76,11 @@ internal class WasmHttpGateway(private val approvedHosts: Set<String>) {
                 } else {
                     val safe = response.headers.names().filter { it.lowercase() in setOf("content-type", "content-language", "cache-control") }
                         .flatMap { name -> response.headers.values(name).map { name to it } }
-                    return Reply(response.code, response.body?.bytes() ?: ByteArray(0), safe)
+                    val contentLength = response.body?.contentLength() ?: 0L
+                    if (contentLength > MAX_BROKER_BODY_BYTES) throw IOException("Provider response too large")
+                    val payload = response.body?.bytes() ?: ByteArray(0)
+                    if (payload.size > MAX_BROKER_BODY_BYTES) throw IOException("Provider response too large")
+                    return Reply(response.code, payload, safe)
                 }
             }
             target = next ?: throw IOException("Missing redirect")

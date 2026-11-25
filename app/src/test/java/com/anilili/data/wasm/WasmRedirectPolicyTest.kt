@@ -13,6 +13,9 @@ class WasmRedirectPolicyTest {
         assertNull(next("http://example.org/next"))
         assertNull(next("https://127.0.0.1/"))
         assertNull(next("https://user:secret@example.org/"))
+        assertNull(next("https://example.org:8443/next"))
+        assertNull(next("https://localhost/"))
+        assertNull(next("https://192.168.1.2/"))
     }
     @Test fun methodAndHopLimits() {
         assertNull(next("/next", method = "POST"))
