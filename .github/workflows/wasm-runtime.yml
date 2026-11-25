@@ -2,7 +2,7 @@ name: WASM runtime proof
 on:
   push:
     branches: [feature/wasm-sandbox]
-    paths: ['wasm-runtime/**', '.github/workflows/wasm-runtime.yml']
+    paths: ['wasm-runtime/**', 'app/**', '.github/workflows/wasm-runtime.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -29,4 +29,31 @@ jobs:
         with:
           name: wasm-arm64-runtime
           path: ${{ runner.temp }}/wasm-jni/arm64-v8a/libanilumos_wasm_runtime.so
+          if-no-files-found: error
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Package experimental mobile debug APK
+        run: |
+          mkdir -p app/src/mobile/jniLibs/arm64-v8a
+          cp "$RUNNER_TEMP/wasm-jni/arm64-v8a/libanilumos_wasm_runtime.so" app/src/mobile/jniLibs/arm64-v8a/
+          ./gradlew :app:testMobileDebugUnitTest :app:assembleMobileDebug :app:assembleMobileDebugAndroidTest --max-workers=2 --no-configuration-cache --console=plain
+      - name: Verify native library packaged
+        run: |
+          python3 - <<'PY'
+          import pathlib, zipfile
+          apks = list(pathlib.Path("app/build/outputs/apk/mobile/debug").rglob("*.apk"))
+          assert apks, "No mobile APKs"
+          name = "lib/arm64-v8a/libanilumos_wasm_runtime.so"
+          assert any(name in zipfile.ZipFile(apk).namelist() for apk in apks), "Native library missing"
+          PY
+      - name: Archive experimental mobile build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: wasm-mobile-debug
+          path: |
+            app/build/outputs/apk/mobile/debug/*.apk
+            app/build/outputs/apk/androidTest/mobile/debug/*.apk
           if-no-files-found: error
