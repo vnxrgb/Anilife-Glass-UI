@@ -27,6 +27,8 @@ internal class WasmHttpGateway(private val approvedHosts: Set<String>) {
         .addInterceptor(ProviderResponseLimitInterceptor(WasmPolicy.MAX_RESPONSE_BYTES))
         .build()
 
+    fun cancel() { client.dispatcher.cancelAll() }
+
     data class Reply(val status: Int, val body: ByteArray, val headers: List<Pair<String, String>>)
 
     /** Per invocation quota. Never share an instance across unrelated provider calls. */

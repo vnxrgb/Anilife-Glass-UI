@@ -27,7 +27,14 @@ class ProviderSandboxService : Service() {
     // Debug-only experimental path. The production registry remains empty.
     private fun resolveFixture(data: Parcel, reply: Parcel?): Boolean {
         data.enforceInterface(DESCRIPTOR)
-        val result = runCatching {
+        if (!com.anilili.BuildConfig.DEBUG || Process.myUid() % 100000 !in 90000..99999) {
+            reply?.writeNoException()
+            reply?.writeString("")
+            return true
+        }
+        val timer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
+        val watchdog = timer.schedule({ Process.killProcess(Process.myPid()) }, WasmPolicy.MAX_CALL_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+        val result = try { runCatching {
             require(com.anilili.BuildConfig.DEBUG)
             require(Process.myUid() % 100000 in 90000..99999)
             require(NativeSandbox.available)
@@ -50,7 +57,10 @@ class ProviderSandboxService : Service() {
             val broker = requireNotNull(data.readStrongBinder())
             NativeSandbox.resolve(bytes, community, query, broker, WasmBroker::class.java).orEmpty()
                 .also { require(it.length <= 200000) }
-        }.getOrDefault("")
+        }.getOrDefault("") } finally {
+            watchdog.cancel(false)
+            timer.shutdownNow()
+        }
         reply?.writeNoException()
         reply?.writeString(result)
         return true

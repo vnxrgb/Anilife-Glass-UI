@@ -11,7 +11,7 @@ import org.json.JSONObject
 internal class WasmBroker(private val provider: ApprovedWasmProvider) : Binder() {
     private val gateway = WasmHttpGateway(provider.hosts)
     @Volatile private var revoked = false
-    fun revoke() { revoked = true }
+    fun revoke() { revoked = true; gateway.cancel() }
     private val deadline = SystemClock.elapsedRealtime() + WasmPolicy.MAX_CALL_MS
     override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
         if (code != FETCH) return super.onTransact(code, data, reply, flags)

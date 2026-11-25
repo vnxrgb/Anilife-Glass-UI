@@ -46,6 +46,8 @@ jobs:
         run: |
           mkdir -p app/src/mobile/jniLibs/arm64-v8a
           cp "$RUNNER_TEMP/wasm-jni/arm64-v8a/libanilumos_wasm_runtime.so" app/src/mobile/jniLibs/arm64-v8a/
+          mkdir -p app/src/androidTest/assets/wasm
+          cp wasm-runtime/fixture/target/wasm32-wasip2/release/sandbox_fixture.wasm app/src/androidTest/assets/wasm/fixture.wasm
           ./gradlew :app:testMobileDebugUnitTest :app:assembleMobileDebug :app:assembleMobileDebugAndroidTest --max-workers=2 --no-configuration-cache --console=plain
       - name: Verify native library packaged
         run: |
