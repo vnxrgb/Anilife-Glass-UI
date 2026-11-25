@@ -31,8 +31,10 @@ internal class WasmProviderLoader(context: Context) {
         val approved = WasmRegistry.select(WasmRegistry.bundled, language)
             .singleOrNull { it.id == providerId } ?: return JSONArray()
         return withContext(Dispatchers.IO) {
+            val installed = WasmInstalledModules.load(app, approved)
+            val selected = installed?.first ?: approved
             val bytes = try {
-                app.assets.open("wasm/providers/${approved.id}.wasm").use { input ->
+                if (installed != null) installed.second else app.assets.open("wasm/providers/${approved.id}.wasm").use { input ->
                     val output = java.io.ByteArrayOutputStream()
                     val chunk = ByteArray(8192)
                     while (true) {
@@ -48,7 +50,7 @@ internal class WasmProviderLoader(context: Context) {
             } catch (_: Exception) {
                 return@withContext JSONArray()
             }
-            resolveVerified(approved, bytes, query)
+            resolveVerified(selected, bytes, query)
         }
     }
 
