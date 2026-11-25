@@ -1854,7 +1854,7 @@ class MiruroRepository(
         return cache.getOrFetch(
             // v3: entries now carry recap windows and the segment ids voting needs, so a v2 row
             // would decode into timings a viewer cannot report.
-            key = "aniskip:v4:$malId:${episode.toInt()}:$durationMs",
+            key = "aniskip:v5:$malId:${episode.toInt()}:$durationMs",
             serializer = SkipTimes.serializer().nullable,
             ttlMs = OPTIONS_TTL,
             cacheIf = { it != null },
@@ -1877,6 +1877,18 @@ class MiruroRepository(
                     } catch (error: Exception) {
                         error.rethrowIfCancellation()
                         failure = error
+                    }
+                }
+                if (!hasCompleteSkipWindows(resolved) && episodeLengthSeconds > 0) {
+                    val ref = konoha.tvdbRefFor(anilistId)
+                    val season = ref?.season
+                    if (ref != null && season != null && season > 0) {
+                        try {
+                            resolved = mergeSkipWindows(resolved, aniSkip.theIntroDbTimes(ref.id, season, number, episodeLengthSeconds))
+                        } catch (error: Exception) {
+                            error.rethrowIfCancellation()
+                            failure = error
+                        }
                     }
                 }
                 if (resolved == null) failure?.let { throw it }
