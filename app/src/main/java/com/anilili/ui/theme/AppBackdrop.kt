@@ -29,6 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -102,11 +104,15 @@ internal fun ProvideAppBackdrop(content: @Composable () -> Unit) {
         AppBackdropSource.ANIME -> animeUrl
         AppBackdropSource.IMAGE -> imageUrl
     }
+    val canvasColor = MaterialTheme.colorScheme.background
+    val lightCanvas = canvasColor.luminance() > 0.5f
+    val tint = if (lightCanvas) canvasColor.toArgb() else android.graphics.Color.BLACK
+    val overlayAlpha = backdropOverlayAlpha(dim.alpha, lightCanvas)
     val context = LocalContext.current
     val view = LocalView.current
     val configuration = LocalConfiguration.current
     var backdrop by remember { mutableStateOf<AppBackdrop?>(null) }
-    LaunchedEffect(url, dim, blur, configuration.screenWidthDp, configuration.screenHeightDp) {
+    LaunchedEffect(url, overlayAlpha, tint, blur, configuration.screenWidthDp, configuration.screenHeightDp) {
         if (url == null) {
             backdrop = null
             return@LaunchedEffect
@@ -119,7 +125,7 @@ internal fun ProvideAppBackdrop(content: @Composable () -> Unit) {
             awaitFrame()
             size = IntSize(view.rootView.width, view.rootView.height)
         }
-        backdrop = renderAppBackdrop(context, url, size, dim.alpha, blur)?.let(::AppBackdrop)
+        backdrop = renderAppBackdrop(context, url, size, overlayAlpha, blur, tint)?.let(::AppBackdrop)
     }
     CompositionLocalProvider(LocalAppBackdrop provides backdrop, content = content)
 }
@@ -231,6 +237,7 @@ internal suspend fun renderAppBackdrop(
     window: IntSize,
     dim: Float,
     blur: Boolean,
+    tint: Int = android.graphics.Color.BLACK,
 ): ImageBitmap? {
     val lowRam = (context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager)?.isLowRamDevice == true
     val longSide = maxOf(window.width, window.height).toFloat()
@@ -266,7 +273,8 @@ internal suspend fun renderAppBackdrop(
                 Paint(Paint.FILTER_BITMAP_FLAG),
             )
             if (blur) boxBlur(baked, radius = (minOf(width, height) / 45).coerceIn(4, 16), passes = 3)
-            canvas.drawColor(android.graphics.Color.argb((dim * 255).roundToInt(), 0, 0, 0))
+            canvas.drawColor(android.graphics.Color.argb((dim.coerceIn(0f, 1f) * 255).roundToInt(),
+                android.graphics.Color.red(tint), android.graphics.Color.green(tint), android.graphics.Color.blue(tint)))
             DiagnosticsLog.event(
                 "App background baked ${decoded.width}x${decoded.height} -> ${width}x$height " +
                     "blur=$blur dim=$dim lowRam=$lowRam",
@@ -279,6 +287,11 @@ internal suspend fun renderAppBackdrop(
         null
     }
 }
+
+/** Keep even dark artwork readable behind light-theme text; retain the dark-mode dim levels. */
+internal fun backdropOverlayAlpha(dim: Float, lightCanvas: Boolean): Float =
+    if (lightCanvas) (0.70f + (dim - 0.50f) * 0.5f).coerceIn(0.70f, 0.85f)
+    else dim.coerceIn(0f, 1f)
 
 /** The largest centred part of a [sourceW]×[sourceH] picture with the shape of [targetW]×[targetH]. */
 internal fun centreCrop(sourceW: Int, sourceH: Int, targetW: Int, targetH: Int): IntRect {

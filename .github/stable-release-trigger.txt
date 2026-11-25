@@ -1,1 +1,1 @@
-Publish AniLumos v2.0.0 stable (version code 15) after tests, lint and signing verification.
+Publish signed AniLumos v2.0.1 (version code 16): theme-aware custom wallpaper hotfix.

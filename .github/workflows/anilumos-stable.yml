@@ -50,10 +50,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'val appVersionCode = 15' app/build.gradle.kts
-          grep -Fq 'val appVersionName = "2.0.0"' app/build.gradle.kts
-          if gh release view "v2.0.0" >/dev/null 2>&1; then
-            echo "::error::Release v2.0.0 already exists; refusing overwrite."
+          grep -Fq 'val appVersionCode = 16' app/build.gradle.kts
+          grep -Fq 'val appVersionName = "2.0.1"' app/build.gradle.kts
+          if gh release view "v2.0.1" >/dev/null 2>&1; then
+            echo "::error::Release v2.0.1 already exists; refusing overwrite."
             exit 1
           fi
 
@@ -163,12 +163,12 @@ jobs:
           test "${fingerprint,,}" = "${ANDROID_SIGNING_CERT_SHA256,,}"
           package_line="$("$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$apk" | head -n 1)"
           [[ "$package_line" == *"name='com.anilumos.app'"* ]]
-          [[ "$package_line" == *"versionName='2.0.0'"* ]]
-          [[ "$package_line" == *"versionCode='15'"* ]]
+          [[ "$package_line" == *"versionName='2.0.1'"* ]]
+          [[ "$package_line" == *"versionCode='16'"* ]]
           cp "$apk" dist/Anilumos.apk
           printf '%s\n' "$fingerprint" > dist/SIGNING-CERTIFICATE-SHA256.txt
           (cd dist && sha256sum Anilumos.apk SIGNING-CERTIFICATE-SHA256.txt > SHA256SUMS)
-          printf '%s\n' "Anilumos 2.0.0 release: main commit $GITHUB_SHA" > dist/BUILD-REVISION.txt
+          printf '%s\n' "Anilumos 2.0.1 release: main commit $GITHUB_SHA" > dist/BUILD-REVISION.txt
 
       - name: Verify release checksum manifest
         shell: bash
@@ -181,22 +181,14 @@ jobs:
         run: |
           set -euo pipefail
           cat > release-notes.txt <<'EOF'
-          # AniLumos v2.0.0
+          # AniLumos v2.0.1
 
-          - Redesigned Glass UI and new theme presets.
-          - Added mood-based anime discovery.
-          - Added AniLumos Wrapped with image sharing.
-          - Added Netflix-style Skip Intro and Outro.
-          - Added filler episode detection and filtering.
-          - Added anime metadata diagnostics.
-          - Improved anime recommendations.
-          - Improved Ambient Cinema and landscape support.
-          - Improved overall performance and stability.
+          - Fixed custom background readability in light mode.
 
           AniLife: https://github.com/anilifecommunity/android-and-tv
           This app uses code from Morphe. To learn more, visit https://morphe.software
           See LICENSE and notices for applicable terms.
           EOF
-          gh release create "v2.0.0" dist/Anilumos.apk \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "AniLumos v2.0.0" --notes-file release-notes.txt --latest
-          echo "Stable APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v2.0.0/Anilumos.apk" >> "$GITHUB_STEP_SUMMARY"
+          gh release create "v2.0.1" dist/Anilumos.apk \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "AniLumos v2.0.1" --notes-file release-notes.txt --latest
+          echo "Stable APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v2.0.1/Anilumos.apk" >> "$GITHUB_STEP_SUMMARY"
