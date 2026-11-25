@@ -162,6 +162,7 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
                     "gilded", "forest", "deep sea", "midnight", "high contrast",
                 ),
             )
+            if (BuildConfig.FLAVOR == "mobile") add("Ambient Home" to listOf("ambient", "home", "banner", "poster", "glow", "lighting"))
             add("Background" to listOf("theme", "amoled", "black", "oled", "dark", "grey", "gray", "canvas"))
             add(
                 "Background image" to listOf(

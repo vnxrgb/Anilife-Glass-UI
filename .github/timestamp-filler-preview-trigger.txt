@@ -1,1 +1,1 @@
-Build preview with legible player sliders, hidden transport chrome behind settings and lighter scroll fade.
+Signed mobile preview with cinematic home hero and dynamic artwork ambient glow.

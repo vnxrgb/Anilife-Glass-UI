@@ -367,6 +367,7 @@ fun HomeScreen(
                     exhausted = exhausted,
                     history = history,
                     onAnimeClick = onAnimeClick,
+                    onWatchNow = onWatchNow,
                     onResume = onResume,
                     onOpenDetails = onOpenDetails,
                     listState = homeListState,
@@ -528,6 +529,7 @@ private fun HomeContent(
     exhausted: Set<HomeSection>,
     history: List<HistoryEntry>,
     onAnimeClick: (Int) -> Unit,
+    onWatchNow: (Int) -> Unit,
     onResume: (HistoryEntry) -> Unit,
     onOpenDetails: (HistoryEntry) -> Unit,
     listState: LazyListState = rememberLazyListState(),
@@ -568,6 +570,14 @@ private fun HomeContent(
         // is only reserved when there is no spotlight to run underneath — without that, a feed that
         // came back without one would open with its first row already behind the wordmark.
         val spotlight = remember(data.spotlight) { data.spotlight.take(6) }
+        val ambientEnabled by SettingsStore.homeAmbientGlow.collectAsState()
+        val spotlightIds = remember(spotlight) { spotlight.map(Media::id) }
+        var activeHeroId by remember(spotlightIds) { mutableStateOf(spotlight.firstOrNull()?.id) }
+        val activeHero = spotlight.firstOrNull { it.id == activeHeroId } ?: spotlight.firstOrNull()
+        val ambientArtwork = activeHero?.let {
+            if (device.isTablet || device.isExpanded) it.wideHeroArtwork() ?: it.coverImage.best
+            else it.coverImage.best ?: it.wideHeroArtwork()
+        }
         val topOverlay = contentPadding.calculateTopPadding()
 
         // The rows drawn right now, each with its LazyColumn key: shown, and with something in
@@ -615,6 +625,9 @@ private fun HomeContent(
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
+            if (!device.isTv && ambientEnabled && ambientArtwork != null) {
+                HomeAmbient(artwork = ambientArtwork, listState = listState, modifier = Modifier.fillMaxSize())
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -628,13 +641,12 @@ private fun HomeContent(
                 item {
                     HeroPager(
                         items = spotlight,
+                        onActiveMediaChanged = { activeHeroId = it },
                         onAnimeClick = onAnimeClick,
                         onWatch = { id ->
-                            // Resume immediately when this hero is already in Continue
-                            // Watching. A first-time title still opens Details to choose
-                            // its first available episode/source safely.
+                            // Reuse the app's Watch Now route; never invent an episode or source.
                             val previous = history.firstOrNull { it.anilistId == id }
-                            if (previous != null) onResume(previous) else onAnimeClick(id)
+                            if (previous != null) onResume(previous) else onWatchNow(id)
                         },
                         // Header clearance is owned by the scrolling list on phones.
                         // Adding it to the hero inflated the artwork and misaligned its CTAs.
@@ -813,6 +825,7 @@ private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, 
 @Composable
 private fun HeroPager(
     items: List<Media>,
+    onActiveMediaChanged: (Int) -> Unit = {},
     onAnimeClick: (Int) -> Unit,
     onWatch: (Int) -> Unit,
     onMoveDown: (() -> Boolean)?,
@@ -827,15 +840,18 @@ private fun HeroPager(
     var tvPage by remember(heroIds) { mutableIntStateOf(0) }
     var tvHeroHasFocus by remember(heroIds) { mutableStateOf(false) }
     val safeTvPage = tvPage.coerceIn(0, items.lastIndex)
+    val activePage = if (device.isTv) safeTvPage else pagerState.settledPage.coerceIn(0, items.lastIndex)
+    val activeId = items[activePage].id
+    LaunchedEffect(activeId) { onActiveMediaChanged(activeId) }
     val pagerIsDragged by pagerState.interactionSource.collectIsDraggedAsState()
     val heroHeight = topInset + when {
         device.isTv -> 420.dp
-        device.isExpanded -> 336.dp
-        device.isTablet -> 294.dp
+        device.isExpanded -> 370.dp
+        device.isTablet -> 340.dp
         // A phone needs a distinct artwork zone above the title and actions. The old 244dp
         // forced long titles, metadata, genre chips, buttons and dots into one crowded block.
         // Keep the hero stable as slides change so page indicators never jump.
-        else -> 314.dp
+        else -> 410.dp
     }
     if (device.isTv) {
         LaunchedEffect(heroIds, safeTvPage, tvHeroHasFocus) {
@@ -864,14 +880,11 @@ private fun HeroPager(
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = if (device.isTv || device.isTablet) device.pagePadding else 14.dp)
+            .then(if (device.isTv) Modifier.padding(horizontal = device.pagePadding) else Modifier)
             .height(heroHeight)
-            .clip(if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(26.dp))
-            .border(
-                1.dp,
-                Color.White.copy(alpha = if (device.isTv) 0.10f else 0.24f),
-                if (device.isTv) RoundedCornerShape(18.dp) else RoundedCornerShape(26.dp),
-            ),
+            .then(if (device.isTv) Modifier.clip(RoundedCornerShape(18.dp))
+                .border(1.dp, Color.White.copy(alpha = .10f), RoundedCornerShape(18.dp))
+                else Modifier.clipToBounds()),
     ) {
         if (device.isTv) {
             val page = safeTvPage
@@ -1042,7 +1055,16 @@ private fun HeroCard(
                 role = Role.Button,
             ) { onAnimeClick(media.id) },
     ) {
-        Box(Modifier.fillMaxSize().then(if (heroArt != null) Modifier.hazeSource(heroArt) else Modifier)) {
+        Box(Modifier.fillMaxSize()
+            .then(if (device.isTv) Modifier else Modifier
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    drawRect(Brush.verticalGradient(
+                        0f to Color.Black, .92f to Color.Black, 1f to Color.Transparent
+                    ), blendMode = BlendMode.DstIn)
+                })
+            .then(if (heroArt != null) Modifier.hazeSource(heroArt) else Modifier)) {
             HeroBackdrop(media, topInset)
             Box(
                 Modifier.fillMaxSize().appCanvasFade { canvas ->
@@ -1099,7 +1121,7 @@ private fun HeroCard(
                 .padding(horizontal = device.pagePadding)
                 .padding(
                     top = if (device.isTv) 16.dp else 8.dp,
-                    bottom = if (device.isTv) 26.dp else if (pageCount > 1) 35.dp else 15.dp,
+                    bottom = if (device.isTv) 26.dp else if (pageCount > 1) 49.dp else 32.dp,
                 ),
             horizontalAlignment = if (device.isTv) Alignment.CenterHorizontally else Alignment.Start,
         ) {
@@ -1115,7 +1137,7 @@ private fun HeroCard(
                 modifier = Modifier
                     .padding(top = if (device.isTv) 10.dp else 0.dp)
                     .fillMaxWidth(if (device.isExpanded) 0.6f else 1f)
-                    .height(if (device.isTv) 88.dp else if (device.isExpanded) 68.dp else 54.dp),
+                    .height(if (device.isTv) 88.dp else if (device.isExpanded) 68.dp else 64.dp),
             ) {
                 ShrinkingTitle(
                     text = media.title.preferred,
@@ -1154,21 +1176,27 @@ private fun HeroCard(
                 ) {
                     OutlinedButton(
                         onClick = { onWatch(media.id) },
-                        // Neutral high-contrast action; keep the artwork free of theme-accent tint.
-                        colors = cinematicSecondaryButtonColors(onArtwork = true),
-                        border = cinematicSecondaryButtonBorder(onArtwork = true),
-                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                        // Shared glass hierarchy: brighter primary over the dark artwork scrim.
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = Color.White.copy(alpha = .24f),
+                            contentColor = Color.White,
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(.8.dp, Color.White.copy(alpha = .48f)),
+                        modifier = Modifier.weight(1.25f).heightIn(min = 48.dp),
                         shape = RoundedCornerShape(50),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 9.dp),
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(19.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Watch now", fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text("Watch Now", fontWeight = FontWeight.SemiBold, maxLines = 1)
                     }
                     OutlinedButton(
                         modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                         onClick = { onAnimeClick(media.id) },
-                        colors = cinematicSecondaryButtonColors(onArtwork = true),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = Color.White.copy(alpha = .11f),
+                            contentColor = Color.White,
+                        ),
                         border = cinematicSecondaryButtonBorder(onArtwork = true),
                         shape = RoundedCornerShape(50),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),

@@ -943,6 +943,9 @@ object SettingsStore {
     private val _playerAmbientGlow = MutableStateFlow(true)
     val playerAmbientGlow = _playerAmbientGlow.asStateFlow()
 
+    private val _homeAmbientGlow = MutableStateFlow(true)
+    val homeAmbientGlow = _homeAmbientGlow.asStateFlow()
+
     /** Three practical watch-page glow strengths, with the centre preset as the default. */
     private val _playerAmbientIntensity = MutableStateFlow(0.75f)
     val playerAmbientIntensity = _playerAmbientIntensity.asStateFlow()
@@ -1883,6 +1886,11 @@ object SettingsStore {
         scope.launch { store.edit { it[PLAYER_CLOCK] = value } }
     }
 
+    fun setHomeAmbientGlow(value: Boolean) {
+        _homeAmbientGlow.value = value
+        scope.launch { store.edit { it[HOME_AMBIENT_GLOW] = value } }
+    }
+
     fun setPlayerAmbientGlow(value: Boolean) {
         _playerAmbientGlow.value = value
         scope.launch { store.edit { it[PLAYER_AMBIENT_GLOW] = value } }
@@ -2210,6 +2218,7 @@ object SettingsStore {
         _playerStatusBar.value = prefs[PLAYER_STATUS_BAR] ?: true
         _playerClock.value = prefs[PLAYER_CLOCK] ?: true
         _playerAmbientGlow.value = prefs[PLAYER_AMBIENT_GLOW] ?: true
+        _homeAmbientGlow.value = prefs[HOME_AMBIENT_GLOW] ?: true
         _playerAmbientIntensity.value = (prefs[PLAYER_AMBIENT_INTENSITY] ?: 0.75f).coerceIn(0.5f, 1f)
         _tvDoubleBackToExit.value = prefs[TV_DOUBLE_BACK_TO_EXIT] ?: true
         _lastWorkingPipeOrigin.value = prefs[LAST_PIPE_ORIGIN].orEmpty()
@@ -2380,6 +2389,7 @@ object SettingsStore {
     private val PLAYER_STATUS_BAR = booleanPreferencesKey("player_status_bar")
     private val PLAYER_CLOCK = booleanPreferencesKey("player_clock")
     private val PLAYER_AMBIENT_GLOW = booleanPreferencesKey("player_ambient_glow")
+    private val HOME_AMBIENT_GLOW = booleanPreferencesKey("home_ambient_glow")
     private val PLAYER_AMBIENT_INTENSITY = floatPreferencesKey("player_ambient_intensity")
     private val TV_DOUBLE_BACK_TO_EXIT = booleanPreferencesKey("tv_double_back_to_exit")
     private val MIGRATED = booleanPreferencesKey("migrated_from_shared_preferences")
@@ -2460,6 +2470,7 @@ object SettingsStore {
         PLAYER_STATUS_BAR,
         PLAYER_CLOCK,
         PLAYER_AMBIENT_GLOW,
+        HOME_AMBIENT_GLOW,
         TV_DOUBLE_BACK_TO_EXIT,
     ) + GLASS_KEYS.values
 

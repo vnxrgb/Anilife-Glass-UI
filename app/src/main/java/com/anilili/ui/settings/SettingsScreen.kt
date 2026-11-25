@@ -404,6 +404,7 @@ fun SettingsScreen(
     val playerStatusBar by SettingsStore.playerStatusBar.collectAsState()
     val playerClock by SettingsStore.playerClock.collectAsState()
     val playerAmbientGlow by SettingsStore.playerAmbientGlow.collectAsState()
+    val homeAmbientGlow by SettingsStore.homeAmbientGlow.collectAsState()
     val playerAmbientIntensity by SettingsStore.playerAmbientIntensity.collectAsState()
     val tvDoubleBackToExit by SettingsStore.tvDoubleBackToExit.collectAsState()
     val serverPriority by SettingsStore.serverPriority.collectAsState()
@@ -2734,6 +2735,16 @@ fun SettingsScreen(
                 // over controls. TV has a separate preview pane.
                 if (!device.isTv) {
                     item(key = "Theme preview") { ThemePreview() }
+                }
+                if (!device.isTv) {
+                    item(key = "Ambient Home") {
+                        MidnightSettingSwitchRow(
+                            title = "Ambient Home",
+                            description = "Featured artwork casts a soft, changing glow across Home",
+                            checked = homeAmbientGlow,
+                            onCheckedChange = SettingsStore::setHomeAmbientGlow,
+                        )
+                    }
                 }
                 item(key = "Theme presets") {
                     ThemePresetRow(
