@@ -53,6 +53,3 @@ fun Modifier.opticalGlass(
         onDrawSurface = { drawRect(tint.copy(alpha = tintAlpha)) },
     )
 }
-
-/** Minimum themed backing for navigation over high-contrast artwork. */
-internal fun navigationGlassOpacity(light: Boolean): Float = if (light) .84f else .78f

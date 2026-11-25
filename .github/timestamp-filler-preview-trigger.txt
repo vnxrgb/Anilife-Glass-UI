@@ -1,1 +1,1 @@
-Rebuild signed preview after fixing episode classification map type errors.
+Rebuild after isolating navigation contrast policy from graphics dependencies in JVM unit tests.
