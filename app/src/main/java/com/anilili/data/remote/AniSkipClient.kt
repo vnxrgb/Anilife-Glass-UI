@@ -251,6 +251,45 @@ class AniSkipClient(
             recapStart = recap?.first, recapEnd = recap?.second)
     }
 
+
+    /** IntroDB public read endpoint. Caller supplies independently mapped episode coordinates. */
+    internal fun introDbTimes(imdbId: String, season: Int, episode: Int, duration: Double): SkipTimes? {
+        if (!Regex("tt[0-9]{7,8}").matches(imdbId) || season < 1 || episode < 1 || !duration.isFinite() || duration <= 0) return null
+        val url = "https://api.introdb.app/segments".toHttpUrl().newBuilder()
+            .addQueryParameter("imdb_id", imdbId)
+            .addQueryParameter("season", season.toString())
+            .addQueryParameter("episode", episode.toString()).build()
+        val root = client.newCall(Request.Builder().url(url).header("Accept", "application/json").build())
+            .apply { timeout().timeout(4, java.util.concurrent.TimeUnit.SECONDS) }
+            .execute().use { response ->
+                if (response.code == 404) return null
+                if (!response.isSuccessful) throw IOException("IntroDB HTTP ${response.code}")
+                json.parseToJsonElement(response.body?.string().orEmpty()) as? JsonObject ?: return null
+            }
+        return parseIntroDb(root, imdbId, season, episode, duration)
+    }
+
+    internal fun parseIntroDb(root: JsonObject, imdbId: String, season: Int, episode: Int, duration: Double): SkipTimes? {
+        if (root["imdb_id"]?.jsonPrimitive?.contentOrNull != imdbId ||
+            root["media_type"]?.jsonPrimitive?.contentOrNull != "tv" ||
+            root["season"]?.jsonPrimitive?.intOrNull != season ||
+            root["episode"]?.jsonPrimitive?.intOrNull != episode) return null
+        fun window(type: String): Pair<Double, Double>? {
+            if (root["no_$type"]?.jsonPrimitive?.booleanOrNull == true) return null
+            val row = root[type] as? JsonObject ?: return null
+            val start = row["start_ms"]?.jsonPrimitive?.doubleOrNull?.div(1000.0) ?: return null
+            val end = row["end_ms"]?.jsonPrimitive?.doubleOrNull?.div(1000.0) ?: return null
+            return (start to end).takeIf { start.isFinite() && end.isFinite() && start >= 0 && end > start && end <= duration }
+        }
+        val intro = window("intro")
+        val outro = window("outro")
+        val recap = window("recap")
+        if (intro == null && outro == null && recap == null) return null
+        return SkipTimes(introStart = intro?.first, introEnd = intro?.second,
+            outroStart = outro?.first, outroEnd = outro?.second,
+            recapStart = recap?.first, recapEnd = recap?.second)
+    }
+
     private companion object {
         /**
          * Everything worth skipping. "mixed" is AniSkip's name for an opening or ending that runs
