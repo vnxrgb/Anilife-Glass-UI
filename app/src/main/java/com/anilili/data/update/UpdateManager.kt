@@ -354,6 +354,17 @@ object UpdateManager {
      * could only ever fail, and asking it first is what made every check pay for a doomed request.
      */
     private suspend fun fetchLatest(includeBeta: Boolean): UpdateInfo = coroutineScope {
+        // TV must never consult the unrelated AniLife release channel.
+        if (BuildConfig.FLAVOR == "tv") {
+            return@coroutineScope GithubTvUpdateSource.fetch(AppGraph.httpClient, json)
+        }
+        val stable = async {
+            runCatching { NostrUpdateSource.fetchManifestFromMirror(AppGraph.httpClient, json) }
+                .recoverCatching { mirrorError ->
+                    DiagnosticsLog.throwable("Manifest mirror failed; falling back to Nostr relays", mirrorError)
+                    NostrUpdateSource.fetchManifest(AppGraph.httpClient, json)
+                }
+        }
         val stable = async {
             runCatching { NostrUpdateSource.fetchManifestFromMirror(AppGraph.httpClient, json) }
                 .recoverCatching { mirrorError ->
