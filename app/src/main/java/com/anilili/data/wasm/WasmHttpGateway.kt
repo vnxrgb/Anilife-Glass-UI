@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit
 import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
 /** Dedicated credential-free host client. No automatic redirects or proxy inheritance. */
@@ -31,31 +32,48 @@ internal class WasmHttpGateway(private val approvedHosts: Set<String>) {
 
     data class Reply(val status: Int, val body: ByteArray, val headers: List<Pair<String, String>>)
 
-    /** Per invocation quota. Never share an instance across unrelated provider calls. */
+    /** Every hop consumes the same quota. No browser engine, cookies, credentials or proxies. */
     private var requests = 0
     @Synchronized
-    fun fetch(url: String, method: String, headers: List<Pair<String, String>>, body: ByteArray?): Reply {
-        if (++requests > 12 || !WasmPolicy.allowsUrl(url, approvedHosts))
-            throw IOException("Provider request denied")
+    fun fetch(url: String, method: String, headers: List<Pair<String, String>>, body: ByteArray?, browserOrigin: String? = null): Reply {
         require(method in setOf("GET", "HEAD", "POST"))
         require((body?.size ?: 0) <= 256 * 1024)
         require(headers.size <= 32)
-        val builder = Request.Builder().url(url)
-        for ((name, value) in headers) {
-            require(name.length <= 64 && value.length <= 4096)
-            if (name.lowercase() in setOf("accept", "accept-language", "content-type", "user-agent", "referer", "origin")) {
-                if (name.equals("referer", true) || name.equals("origin", true))
-                    require(WasmPolicy.allowsUrl(value, approvedHosts))
-                builder.header(name, value)
+        if (browserOrigin != null) require(WasmPolicy.allowsUrl(browserOrigin, approvedHosts))
+        var target = url
+        var hops = 0
+        val visited = mutableSetOf<String>()
+        while (true) {
+            if (++requests > 12 || !WasmPolicy.allowsUrl(target, approvedHosts) || !visited.add(target))
+                throw IOException("Provider request denied")
+            val builder = Request.Builder().url(target)
+            for ((name, value) in headers) {
+                require(name.length <= 64 && value.length <= 4096)
+                if (name.lowercase() in setOf("accept", "accept-language", "content-type", "user-agent", "referer", "origin")) {
+                    if (name.equals("referer", true) || name.equals("origin", true))
+                        require(WasmPolicy.allowsUrl(value, approvedHosts))
+                    // Never carry caller-supplied origin/referer to a redirected destination.
+                    if (hops == 0 || (!name.equals("referer", true) && !name.equals("origin", true)))
+                        builder.header(name, value)
+                }
             }
-        }
-        builder.method(method, if (method == "POST") (body ?: ByteArray(0)).toRequestBody() else null)
-        client.newCall(builder.build()).execute().use { response ->
-            // Redirects intentionally fail closed until each hop is explicitly authorized.
-            if (response.code in 300..399) throw IOException("Provider redirect denied")
-            val safe = response.headers.names().filter { it.lowercase() in setOf("content-type", "content-language", "cache-control") }
-                .flatMap { name -> response.headers.values(name).map { name to it } }
-            return Reply(response.code, response.body?.bytes() ?: ByteArray(0), safe)
+            if (hops == 0 && browserOrigin != null && headers.none { it.first.equals("referer", true) })
+                builder.header("Referer", browserOrigin)
+            builder.method(method, if (method == "POST") (body ?: ByteArray(0)).toRequestBody() else null)
+            var next: String? = null
+            client.newCall(builder.build()).execute().use { response ->
+                if (response.code in 300..399) {
+                    // Only safe GET/HEAD redirects. Never replay a POST body at another URL.
+                    next = WasmRedirectPolicy.next(target, response.header("Location"), response.code, method, hops, approvedHosts)
+                        ?: throw IOException("Provider redirect denied")
+                } else {
+                    val safe = response.headers.names().filter { it.lowercase() in setOf("content-type", "content-language", "cache-control") }
+                        .flatMap { name -> response.headers.values(name).map { name to it } }
+                    return Reply(response.code, response.body?.bytes() ?: ByteArray(0), safe)
+                }
+            }
+            target = next ?: throw IOException("Missing redirect")
+            hops++
         }
     }
 }

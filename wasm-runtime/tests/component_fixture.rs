@@ -1,6 +1,10 @@
 use anilumos_wasm_runtime::adapter::*;
 struct FixtureBroker;
 impl HttpBroker for FixtureBroker {
+    fn browser_fetch(&mut self, origin: String, request: HttpRequest) -> Result<HttpReply, String> {
+        assert_eq!(origin, "https://example.org/fixture");
+        self.fetch(request)
+    }
     fn fetch(&mut self, request: HttpRequest) -> Result<HttpReply, String> {
         assert_eq!(request.url, "https://example.org/");
         assert_eq!(request.method, "GET");

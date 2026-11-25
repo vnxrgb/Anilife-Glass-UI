@@ -36,7 +36,8 @@ internal class WasmBroker(private val provider: ApprovedWasmProvider, private va
                 require(array.length() <= 32768)
                 ByteArray(array.length()) { i -> array.getInt(i).also { require(it in 0..255) }.toByte() }
             }
-            val response = gateway.fetch(req.getString("url"), req.getString("method"), pairs, body)
+            val origin = if (req.has("browser_origin")) req.getString("browser_origin") else null
+            val response = gateway.fetch(req.getString("url"), req.getString("method"), pairs, body, origin)
             require(response.body.size <= MAX_BODY)
             require(!revoked && SystemClock.elapsedRealtime() < deadline)
             val metadata = JSONObject().put("status", response.status)

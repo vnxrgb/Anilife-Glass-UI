@@ -55,8 +55,10 @@ impl modern::anilili::provider::host::Host for DeniedHost {
         let r = broker.fetch(HttpRequest { method: req.method, url: req.url, headers: req.headers, body: req.body })?;
         Ok(modern::anilili::provider::host::Response { status: r.status, headers: r.headers, body: r.body })
     }
-    fn browser_fetch(&mut self, _: String, _: modern::anilili::provider::host::Request) -> std::result::Result<modern::anilili::provider::host::Response, String> {
-        Err("browser access disabled".into())
+    fn browser_fetch(&mut self, origin: String, req: modern::anilili::provider::host::Request) -> std::result::Result<modern::anilili::provider::host::Response, String> {
+        let broker = self.broker.as_mut().ok_or("network broker unavailable")?;
+        let r = broker.browser_fetch(origin, HttpRequest { method: req.method, url: req.url, headers: req.headers, body: req.body })?;
+        Ok(modern::anilili::provider::host::Response { status: r.status, headers: r.headers, body: r.body })
     }
     fn log(&mut self, _: String) {}
     fn cache_get(&mut self, key: String) -> Option<String> { self.cached(&key) }
@@ -70,8 +72,10 @@ impl legacy::anilili::provider::host::Host for DeniedHost {
         let r = broker.fetch(HttpRequest { method: req.method, url: req.url, headers: req.headers, body: req.body })?;
         Ok(legacy::anilili::provider::types::Response { status: r.status, headers: r.headers, body: r.body })
     }
-    fn browser_fetch(&mut self, _: String, _: legacy::anilili::provider::types::Request) -> std::result::Result<legacy::anilili::provider::types::Response, String> {
-        Err("browser access disabled".into())
+    fn browser_fetch(&mut self, origin: String, req: legacy::anilili::provider::types::Request) -> std::result::Result<legacy::anilili::provider::types::Response, String> {
+        let broker = self.broker.as_mut().ok_or("network broker unavailable")?;
+        let r = broker.browser_fetch(origin, HttpRequest { method: req.method, url: req.url, headers: req.headers, body: req.body })?;
+        Ok(legacy::anilili::provider::types::Response { status: r.status, headers: r.headers, body: r.body })
     }
     fn log(&mut self, _: String) {}
     fn cache_get(&mut self, key: String) -> Option<String> { self.cached(&key) }
@@ -130,6 +134,7 @@ pub struct HttpReply {
 /// A trusted external implementation must enforce all destination, credential and time limits.
 pub trait HttpBroker {
     fn fetch(&mut self, request: HttpRequest) -> std::result::Result<HttpReply, String>;
+    fn browser_fetch(&mut self, _origin: String, _request: HttpRequest) -> std::result::Result<HttpReply, String> { Err("browser capability unavailable".into()) }
 }
 
 #[derive(serde::Deserialize)]

@@ -69,9 +69,15 @@ mod android_bridge {
 
     struct BinderBroker { vm: JavaVM, binder: GlobalRef, bridge: GlobalRef }
     impl HttpBroker for BinderBroker {
-        fn fetch(&mut self, req: HttpRequest) -> Result<HttpReply, String> {
+        fn fetch(&mut self, req: HttpRequest) -> Result<HttpReply, String> { self.request(req, None) }
+        fn browser_fetch(&mut self, origin: String, req: HttpRequest) -> Result<HttpReply, String> { self.request(req, Some(origin)) }
+    }
+    impl BinderBroker {
+        fn request(&mut self, req: HttpRequest, origin: Option<String>) -> Result<HttpReply, String> {
             let mut env = self.vm.attach_current_thread().map_err(|e| e.to_string())?;
-            let input = serde_json::to_string(&req).map_err(|e| e.to_string())?;
+            let mut value = serde_json::to_value(&req).map_err(|e| e.to_string())?;
+            if let Some(origin) = origin { value["browser_origin"] = serde_json::Value::String(origin); }
+            let input = serde_json::to_string(&value).map_err(|e| e.to_string())?;
             if input.len() > 128 * 1024 { return Err("request too large".into()); }
             let input = env.new_string(input).map_err(|e| e.to_string())?;
             let result = env.call_static_method(
