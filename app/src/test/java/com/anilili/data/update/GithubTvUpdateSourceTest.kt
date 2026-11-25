@@ -6,8 +6,8 @@ import org.junit.Test
 
 class GithubTvUpdateSourceTest {
     private val json = Json { ignoreUnknownKeys = true }
-    private val prefix = "https://github.com/vnxrgb/anilumos-preview/releases/download/tv-alpha-signed-abc-run2/"
-    private fun releases(name: String = "AniLumos-TV-ALPHA-signed.apk") = """[{"tag_name":"tv-alpha-signed-abc-run2","draft":false,"prerelease":true,"assets":[{"name":"$name","browser_download_url":"${prefix}AniLumos-TV-ALPHA-signed.apk","size":2048},{"name":"TV-UPDATE.json","browser_download_url":"${prefix}TV-UPDATE.json","size":256}]}]"""
+    private val prefix = "https://github.com/vnxrgb/anilumos-preview/releases/download/tv-alpha-signed-abcdef123456-run2/"
+    private fun releases(name: String = "AniLumos-TV-ALPHA-signed.apk") = """[{"tag_name":"tv-alpha-signed-abcdef123456-run2","draft":false,"prerelease":true,"assets":[{"name":"$name","browser_download_url":"${prefix}AniLumos-TV-ALPHA-signed.apk","size":2048},{"name":"TV-UPDATE.json","browser_download_url":"${prefix}TV-UPDATE.json","size":256}]}]"""
     private val payload = """{"formFactor":"tv","packageName":"com.anilumos.app","asset":"AniLumos-TV-ALPHA-signed.apk","version":"1.2.3","build":124,"sha256":"${"a".repeat(64)}"}"""
     @Test fun selectsTvPreview() {
         val selected = GithubTvUpdateSource.select(releases(), json) { payload }
@@ -19,9 +19,15 @@ class GithubTvUpdateSourceTest {
         assertNull(GithubTvUpdateSource.select(releases(), json) { null })
     }
     @Test fun rejectsCrossReleaseAssetUrlsAndUntrustedRedirectShapes() {
-        assertNull(GithubTvUpdateSource.select(releases().replace("tv-alpha-signed-abc-run2/AniLumos-TV", "tv-alpha-signed-other-run2/AniLumos-TV"), json) { payload })
+        assertNull(GithubTvUpdateSource.select(releases().replace("tv-alpha-signed-abcdef123456-run2/AniLumos-TV", "tv-alpha-signed-other-run2/AniLumos-TV"), json) { payload })
         assertNull(GithubTvUpdateSource.select(releases().replace("TV-UPDATE.json", "TV-UPDATE.json?token=untrusted"), json) { payload })
         assertNull(GithubTvUpdateSource.select(releases().replace("2048", "536870913"), json) { payload })
+    }
+    @Test fun rejectsMalformedTagAndIncompleteAssets() {
+        assertNull(GithubTvUpdateSource.select(releases().replace("tv-alpha-signed-abcdef123456-run2", "tv-alpha-signed-../../other"), json) { payload })
+        assertNull(GithubTvUpdateSource.select(releases().replace("tv-alpha-signed-abcdef123456-run2", "tv-alpha-signed-abcdef123456-run2-extra"), json) { payload })
+        assertNull(GithubTvUpdateSource.select(releases().replace("\\"size\\":256", "\\"size\\":9000"), json) { payload })
+        assertNull(GithubTvUpdateSource.select(releases().replace("\\"size\\":2048", "\\"state\\":\\"starter\\",\\"size\\":2048"), json) { payload })
     }
     @Test fun rejectsWrongIdentityAndHash() {
         assertNull(GithubTvUpdateSource.select(releases(), json) { payload.replace("com.anilumos.app", "other.app") })

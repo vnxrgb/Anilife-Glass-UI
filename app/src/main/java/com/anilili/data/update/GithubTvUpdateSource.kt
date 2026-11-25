@@ -12,6 +12,7 @@ internal object GithubTvUpdateSource {
     private const val RELEASES = "https://api.github.com/repos/vnxrgb/anilumos-preview/releases?per_page=30"
     private const val APK = "AniLumos-TV-ALPHA-signed.apk"
     private const val META = "TV-UPDATE.json"
+    private val TAG_PATTERN = Regex("tv-alpha-signed-[0-9a-f]{12}-run[1-9][0-9]*")
     private fun validUrl(url: String, tag: String, name: String): Boolean =
         url == "https://github.com/vnxrgb/anilumos-preview/releases/download/$tag/$name"
 
@@ -21,13 +22,15 @@ internal object GithubTvUpdateSource {
                 val release = item.jsonObject
                 if (release["draft"]?.jsonPrimitive?.content != "false" ||
                     release["prerelease"]?.jsonPrimitive?.content != "true" ||
-                    !release.getValue("tag_name").jsonPrimitive.content.startsWith("tv-alpha-signed-")) return@runCatching null
+                    !TAG_PATTERN.matches(release.getValue("tag_name").jsonPrimitive.content)) return@runCatching null
                 val tag = release.getValue("tag_name").jsonPrimitive.content
                 val assets = release.getValue("assets").jsonArray.map { it.jsonObject }
+                if (assets.size > 100) return@runCatching null
                 val apk = assets.singleOrNull { it["name"]?.jsonPrimitive?.content == APK } ?: return@runCatching null
                 val meta = assets.singleOrNull { it["name"]?.jsonPrimitive?.content == META } ?: return@runCatching null
                 val metaUrl = meta.getValue("browser_download_url").jsonPrimitive.content
-                if (!validUrl(metaUrl, tag, META)) return@runCatching null
+                if (!validUrl(metaUrl, tag, META) ||
+                    meta.getValue("size").jsonPrimitive.content.toLongOrNull()?.let { it in 1..8192L } != true) return@runCatching null
                 val payload = metadata(metaUrl)?.takeIf { it.length <= 8192 } ?: return@runCatching null
                 val details = json.parseToJsonElement(payload).jsonObject
                 if (details["formFactor"]?.jsonPrimitive?.content != "tv" ||
@@ -41,6 +44,7 @@ internal object GithubTvUpdateSource {
                 if (!sha.matches(Regex("[a-f0-9]{64}"))) return@runCatching null
                 val url = apk.getValue("browser_download_url").jsonPrimitive.content
                 if (!validUrl(url, tag, APK)) return@runCatching null
+                if (apk["state"]?.jsonPrimitive?.content?.let { it != "uploaded" } == true) return@runCatching null
                 val size = apk.getValue("size").jsonPrimitive.content.toLongOrNull()?.takeIf { it in 1..536870912L }
                     ?: return@runCatching null
                 UpdateManager.UpdateInfo(version, "AniLumos TV preview", url, size,

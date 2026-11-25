@@ -37,3 +37,10 @@ TV flavor selects only official signed-TV-named GitHub prereleases with a matchi
 
 ## Update asset URL hardening
 TV update selection now requires both metadata and APK asset URLs to match the selected release tag exactly, with no query parameters or cross-release asset substitution; APK size is capped at 512 MiB. Added regression tests. Build and hardware validation remain pending. GitHub metadata is not a cryptographic signature; the installer must continue to enforce package and installed signing identity, and the downloaded SHA-256 must match before installation.
+
+## 2026-11-25 TV CI and release checkpoint
+
+- Stable mobile source remains `ebe374eea7df5a77909f3a6b903753166f188c7e`; TV source `04bb868698115df0876afc13d8a953f6843d1dbf` passed TV verification workflow [45659276712](https://github.com/vnxrgb/Anilumos/actions/runs/45659276712) (unit tests, lint, debug APK assembly, package/launcher checks). This is not physical device validation.
+- Signed preview release `tv-alpha-signed-ac24c1ebb8fd-run14` exists but uses older source `ac24c1e`. Current TV update fixes still need a newly signed preview and matching metadata.
+- Github TV selector hardening now rejects malformed tags, oversized metadata assets, and explicitly non-uploaded APK assets; tests added. CI pending.
+- Status: GitHub TV update code PRESENT / VALIDATE; signed latest preview MISSING; TV hardware parity VALIDATE. Existing TV-specific UI remains intact; no wholesale main merge.
