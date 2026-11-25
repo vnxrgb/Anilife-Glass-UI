@@ -3,6 +3,8 @@ package com.anilili.data.wasm
 import android.content.Context
 import kotlinx.coroutines.CancellationException
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import com.anilili.data.model.StreamItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -23,7 +25,16 @@ internal class WasmPlaybackSource private constructor(
     private val item: MediaItem,
     private val factory: DefaultMediaSourceFactory,
 ) {
-    fun mediaSource(): MediaSource = factory.createMediaSource(item)
+    val handle: String get() = item.mediaId
+    fun mediaSource(metadata: MediaMetadata? = null): MediaSource = factory.createMediaSource(
+        if (metadata == null) item else item.buildUpon().setMediaMetadata(metadata).build()
+    )
+    /** Opaque UI identity, never the actual URL or request headers. */
+    fun playerStream(): StreamItem = StreamItem(handle, when (item.localConfiguration?.mimeType) {
+        MimeTypes.APPLICATION_M3U8 -> "hls"
+        MimeTypes.APPLICATION_MPD -> "dash"
+        else -> "mp4"
+    }, quality, null, null, true, null, null)
 
     companion object {
         const val MEDIA_ID_PREFIX = "wasm-protected:"

@@ -988,7 +988,7 @@ class PlaybackService : MediaSessionService() {
          * Must be called on the player application looper; never reconstruct from a URL.
          */
         @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-        internal fun playProtectedWasm(source: WasmPlaybackSource, startPositionMs: Long = 0): Boolean {
+        internal fun playProtectedWasm(source: WasmPlaybackSource, startPositionMs: Long = 0, playWhenReady: Boolean = true, metadata: androidx.media3.common.MediaMetadata? = null): Boolean {
             if (!com.anilili.BuildConfig.DEBUG) return false
             val local = activePlayer as? ExoPlayer ?: return false
             if (android.os.Looper.myLooper() != local.applicationLooper) return false
@@ -996,9 +996,9 @@ class PlaybackService : MediaSessionService() {
                 local.stop()
                 local.clearMediaItems()
                 finishUncachedPlaybackRecovery()
-                local.setMediaSource(source.mediaSource(), startPositionMs.coerceAtLeast(0L))
+                local.setMediaSource(source.mediaSource(metadata), startPositionMs.coerceAtLeast(0L))
                 local.prepare()
-                local.playWhenReady = true
+                local.playWhenReady = playWhenReady
                 true
             }.getOrDefault(false)
         }

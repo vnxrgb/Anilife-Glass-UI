@@ -143,6 +143,9 @@ import com.anilili.data.library.WatchlistEntry
 import com.anilili.data.model.Category
 import com.anilili.data.model.EpisodeItem
 import com.anilili.data.model.SourceVariant
+import com.anilili.data.wasm.WasmPlaybackSource
+import com.anilili.data.wasm.WasmSourceResolver
+import com.anilili.data.wasm.WasmEpisodeQuery
 import com.anilili.data.model.StreamItem
 import com.anilili.data.model.playsInWebView
 import com.anilili.data.remote.PipeBridge
@@ -709,6 +712,26 @@ private fun WatchContent(
     externalPlaybackSession: ((Long) -> ExternalPlaybackSession)? = null,
 ) {
     val context = LocalContext.current
+    // Keep the native episode selected while a reviewed WASM candidate resolves. Failed lookups
+    // therefore leave native playback untouched. Scope the capability to this episode/native source.
+    val wasmResolver = remember(context) { WasmSourceResolver(context.applicationContext) }
+    val wasmScope = rememberCoroutineScope()
+    var wasmSource by remember(data.anilistId, data.current.number, data.category, data.chosenStream?.url) {
+        mutableStateOf<WasmPlaybackSource?>(null)
+    }
+    var wasmLookup by remember(data.anilistId, data.current.number, data.category, data.chosenStream?.url) {
+        mutableStateOf<kotlinx.coroutines.Job?>(null)
+    }
+    var wasmPosition by remember(data.anilistId, data.current.number, data.category, data.chosenStream?.url) {
+        mutableStateOf<Long?>(null)
+    }
+    val wasmCandidates = remember(data.category) {
+        if (com.anilili.BuildConfig.DEBUG && android.os.Build.SUPPORTED_ABIS.contains("arm64-v8a") &&
+            data.chosenStream?.isEmbed == false) wasmResolver.candidates("en", emptySet()) else emptyList()
+    }
+    androidx.compose.runtime.DisposableEffect(data.anilistId, data.current.number, data.category, data.chosenStream?.url) {
+        onDispose { wasmLookup?.cancel() }
+    }
     val device = LocalAppDeviceProfile.current
     val isMovie = isMovieFormat(data.seriesFormat)
     // Keep ambient colours local to each episode and stream, never behind the entire page.
@@ -749,14 +772,14 @@ private fun WatchContent(
     // Entries that do not carry this episode stay listed but unselectable, because "this server has
     // nothing for episode 12" is the answer someone opening the panel is looking for.
     val preferredSourceLanguages by SettingsStore.preferredSourceLanguages.collectAsState()
-    val playerSourceOptions = remember(data, preferredSourceLanguages) {
+    val playerSourceOptions = remember(data, preferredSourceLanguages, wasmSource, wasmCandidates) {
         val preferredLanguages = preferredSourceLanguages.mapTo(linkedSetOf()) { it.label }
         val isPlaying = { option: WatchSourceOption ->
             option.provider == data.provider && option.variant == data.pickerVariant
         }
         // Playing first, as in the other pickers, so the sheet opens on what is on screen.
         data.sourceOptions.sortedByDescending(isPlaying).map { option ->
-            val selected = isPlaying(option)
+            val selected = wasmSource == null && isPlaying(option)
             PlayerSourceOption(
                 id = "${option.provider}:${option.variant.route}",
                 // The name and second line every other picker shows. This sheet used to show the
@@ -771,8 +794,30 @@ private fun WatchContent(
                 selected = selected,
                 enabled = option.hasCurrentEpisode,
                 onSelect = {
+                    wasmLookup?.cancel()
+                    wasmSource = null
                     if (option.provider != data.provider || option.variant != data.sourceVariant) {
                         onChangeSource(option.provider, option.variant.route)
+                    }
+                },
+            )
+        } + wasmCandidates.map { candidate ->
+            PlayerSourceOption(
+                id = "wasm:" + candidate.id,
+                label = candidate.id,
+                detail = "Experimental WASM · local playback",
+                selected = wasmSource?.providerId == candidate.id,
+                enabled = !data.isResolving,
+                onSelect = {
+                    wasmLookup?.cancel()
+                    wasmLookup = wasmScope.launch {
+                        val query = WasmEpisodeQuery(data.anilistId.toLong(), null, listOf(data.seriesTitle), data.current.number, data.category == Category.DUB)
+                        val resolved = wasmResolver.resolveProvider(candidate.id, "en", query, emptySet())
+                        if (resolved.isEmpty()) {
+                            Toast.makeText(context, "WASM source unavailable; keeping current server", Toast.LENGTH_SHORT).show()
+                        } else {
+                            wasmSource = resolved.first()
+                        }
                     }
                 },
             )
@@ -806,8 +851,8 @@ private fun WatchContent(
     val hasOfflineCopy = episodeDownload?.isComplete == true || exportedEpisode != null
     // The chosen stream may be an embed (Bonk, Kiwi) that cannot be saved; fall back to
     // any natively downloadable stream so the episode stays downloadable either way.
-    val streamForDownload = data.chosenStream?.takeIf(EpisodeDownloads::canDownload)
-        ?: downloadSeedStream(data.provider, data.sources)
+    val streamForDownload = if (wasmSource != null) null else data.chosenStream?.takeIf(EpisodeDownloads::canDownload)
+        ?: if (wasmSource == null) downloadSeedStream(data.provider, data.sources) else null
     // A device whose Media3 cannot transmux has already proven it; offering "save to Downloads"
     // there only produces a failed export. In-app downloads still work and stay on offer.
     val canSaveToDevice = DeviceDownloadAccess.isSupported &&
@@ -1267,8 +1312,9 @@ private fun WatchContent(
         CompositionLocalProvider(
             LocalPlayerSourcePicker provides { sourcePickerRequest++ },
             LocalPlayerDownload provides playerDownload,
+            LocalProtectedWasmSource provides wasmSource,
         ) {
-            val stream = data.chosenStream
+            val stream = wasmSource?.playerStream() ?: data.chosenStream
             // Key on the KIND of player only, never per-episode/per-url: recreating PlayerSurface
             // for every Next tore down and rebuilt the PlayerView + MediaController each episode
             // (the new view was even created before the old one released). On weak TV hardware
@@ -1422,12 +1468,12 @@ private fun WatchContent(
                             // the picture for the whole episode.
                         }
                     else -> PlayerSurface(
-                        externalPlaybackSession = externalPlaybackSession,
+                        externalPlaybackSession = if (wasmSource == null) externalPlaybackSession else null,
                         stream = stream,
-                        qualityStreams = data.sources.streams.filterNot(StreamItem::isEmbed),
-                        subtitles = data.sources.subtitles,
-                        subtitleOffsetMs = data.sources.subtitleOffsetMs,
-                        skip = data.sources.skip,
+                        qualityStreams = if (wasmSource == null) data.sources.streams.filterNot(StreamItem::isEmbed) else listOf(stream),
+                        subtitles = if (wasmSource == null) data.sources.subtitles else emptyList(),
+                        subtitleOffsetMs = if (wasmSource == null) data.sources.subtitleOffsetMs else 0L,
+                        skip = wasmSource?.skip ?: data.sources.skip.takeIf { wasmSource == null },
                         skipTimingStatus = data.skipTimingStatus,
                         skipReport = data.skipReport,
                         onReportSkipTiming = onReportSkipTiming,
@@ -1459,15 +1505,30 @@ private fun WatchContent(
                         },
                         onNextEpisode = onNext,
                         onAutoAdvance = onAutoAdvance,
-                        onError = onPlaybackError,
+                        onError = { failure, source, position ->
+                            if (wasmSource?.handle == source) {
+                                wasmPosition = position
+                                wasmSource = null
+                            } else onPlaybackError(failure, source, position)
+                        },
                         onStalled = { source, elapsed ->
-                            streamStalled = true
-                            onPlaybackStalled(source, elapsed)
+                            if (wasmSource?.handle == source) {
+                                wasmPosition = elapsed
+                                wasmSource = null
+                            } else {
+                                streamStalled = true
+                                onPlaybackStalled(source, elapsed)
+                            }
                         },
                         modifier = Modifier.fillMaxSize(),
                         onToggleFullscreen = onToggleFullscreen,
-                        startPositionMs = data.startPositionMs,
-                        onProgress = onProgress,
+                        startPositionMs = wasmPosition ?: data.startPositionMs,
+                        onProgress = { source, position, duration ->
+                            if (wasmSource?.handle == source) {
+                                wasmPosition = position
+                                data.chosenStream?.url?.let { onProgress(it, position, duration) }
+                            } else onProgress(source, position, duration)
+                        },
                         onPreviousEpisode = onPrev,
                         hasNextEpisode = data.canAdvance,
                         nextSeasonLabel = data.nextSeason?.label?.takeIf { movesIntoNextSeason },

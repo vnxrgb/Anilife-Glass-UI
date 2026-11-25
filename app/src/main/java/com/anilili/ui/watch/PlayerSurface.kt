@@ -347,6 +347,7 @@ fun PlayerSurface(
     /** The FILLER tag and its skip; null when this episode is not filler. */
     fillerSkip: PlayerFillerSkip? = null,
 ) {
+    val protectedWasm = LocalProtectedWasmSource.current
     val context = LocalContext.current
     val lifecycleOwner = remember(context) { context.findActivity() as? LifecycleOwner }
     val device = LocalAppDeviceProfile.current
@@ -842,6 +843,13 @@ fun PlayerSurface(
             )
             // Media3 1.8.1's prepare() is a no-op outside STATE_IDLE. Rebuild the held item so this
             // is a real reload, and keep the position and play intent the viewer already had.
+            if (protectedWasm?.handle == activeStream.url) {
+                val source = protectedWasm ?: return@LaunchedEffect
+                if (!PlaybackService.playProtectedWasm(source, positionMs)) {
+                    currentOnStalled?.invoke(activeStream.url, positionMs)
+                }
+                return@LaunchedEffect
+            }
             val retryItem = activeController.currentMediaItem ?: return@LaunchedEffect
             PlaybackService.beginUncachedPlaybackRecovery()
             activeController.stop()
@@ -1012,6 +1020,16 @@ fun PlayerSurface(
                 putString(PlaybackService.EXTRA_WATCH_ROUTE, watchRoute)
             })
             .build()
+        if (activeStream.url.startsWith(com.anilili.data.wasm.WasmPlaybackSource.MEDIA_ID_PREFIX)) {
+            val source = protectedWasm
+            if (source == null || source.handle != activeStream.url ||
+                !PlaybackService.playProtectedWasm(source, preparePositionMs, resumePlayback, metadata)) {
+                currentOnError(AnililiError.PLAYBACK_SOURCE_UNREACHABLE.report(detail = "Protected source unavailable"), activeStream.url, preparePositionMs)
+            } else {
+                preparedSubtitleSignature = subtitleSignature
+            }
+            return@LaunchedEffect
+        }
         val itemBuilder = MediaItem.Builder()
             .setMediaId(activeStream.url)
             .setUri(activeStream.url)
@@ -2504,7 +2522,7 @@ fun PlayerSurface(
                 skipTimingStatus = skipTimingStatus,
                 skipReport = skipReport,
                 onReportSkipTiming = onReportSkipTiming,
-                onOpenInExternalPlayer = {
+                onOpenInExternalPlayer = if (protectedWasm != null) null else {
                     settingsExpanded = false
                     // The other player fetches the stream itself, so this one must let go of it
                     // first: two readers on the same short-lived CDN token is how a source that
