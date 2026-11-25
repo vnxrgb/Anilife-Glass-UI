@@ -37,17 +37,8 @@ class JikanClient(
         while (page <= MAX_PAGES) {
             // Jikan allows three requests a second; a long series is a dozen pages back to back.
             if (page > 1) Thread.sleep(PAGE_SPACING_MS)
-            val request = Request.Builder()
-                .url("https://api.jikan.moe/v4/anime/$malId/episodes?page=$page")
-                .header("Accept", "application/json")
-                .build()
-            val root = client.newCall(request).execute().use { response ->
-                // MAL has no episode list for this id: an answer, not a failure.
-                if (response.code == 404 && page == 1) return emptyMap()
-                if (response.code == 404) error("Jikan episode pagination incomplete")
-                if (!response.isSuccessful) error("Jikan HTTP ${response.code}")
-                json.parseToJsonElement(response.body?.string().orEmpty()).jsonObject
-            }
+            val root = episodePage(malId, page) ?: if (page == 1) return emptyMap()
+                else error("Jikan episode pagination incomplete")
             val episodes = root["data"]?.jsonArray ?: error("Jikan episode data missing")
             episodes.forEach { element ->
                 val episode = element.jsonObject
@@ -67,6 +58,44 @@ class JikanClient(
         return fillers
     }
 
+
+    /** Probe only the page containing this episode, rather than fetching a whole long series. */
+    internal fun episodeClassificationPage(malId: Int, episode: Int): Map<Int, EpisodeClassification> {
+        require(malId > 0 && episode > 0)
+        val root = episodePage(malId, (episode - 1) / 100 + 1) ?: return emptyMap()
+        val rows = root["data"]?.jsonArray ?: error("Jikan episode data missing")
+        return rows.mapNotNull { item ->
+            val row = item.jsonObject
+            val number = row["mal_id"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
+            val kind = when {
+                row["recap"]?.jsonPrimitive?.booleanOrNull == true -> EpisodeClassification.RECAP
+                row["filler"]?.jsonPrimitive?.booleanOrNull == true -> EpisodeClassification.FILLER
+                else -> null
+            } ?: return@mapNotNull null
+            number to kind
+        }.toMap()
+    }
+
+    private fun episodePage(malId: Int, page: Int): JsonObject? {
+        val request = Request.Builder()
+            .url("https://api.jikan.moe/v4/anime/$malId/episodes?page=$page")
+            .header("Accept", "application/json").build()
+        // Retry a transient timeout/5xx once; respect rate limiting instead of hammering the API.
+        repeat(2) { attempt ->
+            try {
+                val response = client.newCall(request).apply { timeout().timeout(8, java.util.concurrent.TimeUnit.SECONDS) }.execute()
+                response.use {
+                    if (it.code == 404) return null
+                    if (it.isSuccessful) return json.parseToJsonElement(it.body?.string().orEmpty()).jsonObject
+                    if (it.code !in 500..599 || attempt == 1) error("Jikan HTTP ${it.code}")
+                }
+            } catch (error: java.io.IOException) {
+                if (attempt == 1) throw error
+            }
+            Thread.sleep(750)
+        }
+        error("Jikan request failed")
+    }
 
     /**
      * FillerLists uses absolute broadcast numbering, so only explicitly mapped whole-run MAL

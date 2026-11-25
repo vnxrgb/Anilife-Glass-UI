@@ -71,8 +71,14 @@ internal object MetadataDiagnostics {
                 when (provider) {
                     "AniSkip" -> if (mal == null) "Mapping unavailable" to "No MAL ID" else timing(ani.skipTimes(mal, episode, duration))
                     "TheIntroDB" -> if (mapped?.tvdbId == null) "Mapping unavailable" to "No verified TVDB episode" else timing(ani.theIntroDbTimes(mapped.tvdbId!!, mapped.season, mapped.episode, duration))
-                    "IntroDB" -> if (mapped?.imdbId == null || mapped.season != 1 || mapped.episode != episode) "Mapping unavailable" to "No supported IMDb episode coordinate" else timing(ani.introDbTimes(mapped.imdbId!!, mapped.season, mapped.episode, duration))
-                    "Jikan" -> if (mal == null) "Mapping unavailable" to "No MAL ID" else classification(filler.episodeClassifications(mal))
+                    "IntroDB" -> {
+                        val imdb = mapped?.let { zip.imdbEpisodeReference(it) }
+                        if (imdb == null) "Mapping unavailable" to "No unique title/date match in IMDb-based episode metadata"
+                        else timing(ani.introDbTimes(imdb.imdbId, imdb.season, imdb.episode, duration)).let { (status, detail) ->
+                            status to "S${imdb.season} E${imdb.episode} · $detail"
+                        }
+                    }
+                    "Jikan" -> if (mal == null) "Mapping unavailable" to "No MAL ID" else classification(filler.episodeClassificationPage(mal, episode))
                     "FillerLists" -> if (mal == null) "Mapping unavailable" to "No MAL ID" else classification(filler.fillerListsEpisodes(mal))
                     else -> if (mal == null) "Mapping unavailable" to "No MAL ID" else classification(filler.aniFillerPediaEpisodes(mal))
                 }

@@ -8,6 +8,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.contentOrNull
@@ -81,8 +83,30 @@ class AniZipClient(
                 val season = row["seasonNumber"]?.jsonPrimitive?.intOrNull ?: return null
                 val number = row["episodeNumber"]?.jsonPrimitive?.intOrNull ?: return null
                 if (season < 1 || number < 1) return null
+                val titles = (row["title"] as? JsonObject)?.values?.mapNotNull {
+                    (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
+                }?.toSet() ?: emptySet()
                 ExternalEpisodeRef(mappings["imdb_id"]?.jsonPrimitive?.contentOrNull,
-                    mappings["thetvdb_id"]?.jsonPrimitive?.intOrNull, season, number)
+                    mappings["thetvdb_id"]?.jsonPrimitive?.intOrNull, season, number,
+                    row["airDate"]?.jsonPrimitive?.contentOrNull?.take(10), titles)
+            }
+    }
+
+    /** Resolve IMDb-based coordinates independently of TVDB order. Only accept a unique
+     * episode whose original air date and title agree with the AniZip episode record.
+     * This is a metadata-only request, not a streaming addon or provider integration.
+     */
+    internal fun imdbEpisodeReference(ref: ExternalEpisodeRef): ImdbEpisodeRef? {
+        val imdb = ref.imdbId?.takeIf { Regex("tt[0-9]{7,10}").matches(it) } ?: return null
+        if (ref.airDate.isNullOrBlank() || ref.titles.isEmpty()) return null
+        val request = Request.Builder().url("https://v3-cinemeta.strem.io/meta/series/$imdb.json")
+            .header("Accept", "application/json").build()
+        return client.newCall(request).apply { timeout().timeout(5, java.util.concurrent.TimeUnit.SECONDS) }
+            .execute().use { response ->
+                if (response.code == 404) return null
+                if (!response.isSuccessful) error("IMDb metadata HTTP ${response.code}")
+                val root = json.parseToJsonElement(response.body?.string().orEmpty()) as? JsonObject ?: return null
+                matchImdbEpisode(root, ref)
             }
     }
 
@@ -92,4 +116,30 @@ class AniZipClient(
     }
 }
 
-internal data class ExternalEpisodeRef(val imdbId: String?, val tvdbId: Int?, val season: Int, val episode: Int)
+internal data class ExternalEpisodeRef(
+    val imdbId: String?, val tvdbId: Int?, val season: Int, val episode: Int,
+    val airDate: String? = null, val titles: Set<String> = emptySet(),
+)
+internal data class ImdbEpisodeRef(val imdbId: String, val season: Int, val episode: Int)
+
+internal fun matchImdbEpisode(root: JsonObject, ref: ExternalEpisodeRef): ImdbEpisodeRef? {
+    val imdb = ref.imdbId ?: return null
+    val date = ref.airDate?.takeIf { Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}").matches(it) } ?: return null
+    fun normalize(title: String) = java.text.Normalizer.normalize(title, java.text.Normalizer.Form.NFKD)
+        .lowercase(java.util.Locale.ROOT).filter { it.isLetterOrDigit() }
+    val titles = ref.titles.map(::normalize).filter { it.length >= 4 }.toSet()
+    if (titles.isEmpty()) return null
+    val meta = root["meta"] as? JsonObject ?: return null
+    if (meta["id"]?.jsonPrimitive?.contentOrNull != imdb) return null
+    val videos = meta["videos"] as? JsonArray ?: return null
+    return videos.mapNotNull { item ->
+        val row = item as? JsonObject ?: return@mapNotNull null
+        val season = row["season"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
+        val number = row["episode"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
+        if (season <= 0 || number <= 0 || row["id"]?.jsonPrimitive?.contentOrNull != "$imdb:$season:$number") return@mapNotNull null
+        if (row["released"]?.jsonPrimitive?.contentOrNull?.take(10) != date) return@mapNotNull null
+        val title = row["title"]?.jsonPrimitive?.contentOrNull ?: row["name"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+        if (normalize(title) !in titles) return@mapNotNull null
+        ImdbEpisodeRef(imdb, season, number)
+    }.distinct().singleOrNull()
+}

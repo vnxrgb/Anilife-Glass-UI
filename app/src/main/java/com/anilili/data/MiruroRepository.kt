@@ -1836,7 +1836,7 @@ class MiruroRepository(
         val fetch = fillerFetches.getOrPut(malId) {
             fillerScope.async(start = CoroutineStart.LAZY) {
                 cache.getOrFetch(
-                    key = "episode-classifications:v2:$malId",
+                    key = "episode-classifications:v3:$malId",
                     serializer = MapSerializer(Int.serializer(), EpisodeClassificationRecord.serializer()),
                     ttlMs = OPTIONS_TTL,
                 ) {
@@ -1847,9 +1847,12 @@ class MiruroRepository(
                             failure = error
                             null
                         }
-                    val primary = attempt { jikan.episodeClassifications(malId) }
+                    // A slow full-series Jikan lookup must not prevent the richer services
+                    // from being attempted. Prefer their explicit canon/mixed classifications.
                     val lists = attempt { jikan.fillerListsEpisodes(malId) }
                     val pedia = if (lists.isNullOrEmpty()) attempt { jikan.aniFillerPediaEpisodes(malId) } else null
+                    val primary = if (!lists.isNullOrEmpty() || !pedia.isNullOrEmpty()) null
+                        else attempt { jikan.episodeClassifications(malId) }
                     if (primary == null && lists == null && pedia == null) failure?.let { throw it }
                     // Explicit map defaults avoid the repository's Any?.orEmpty() string helper.
                     buildMap<Int, EpisodeClassificationRecord> {
@@ -1880,7 +1883,7 @@ class MiruroRepository(
         return cache.getOrFetch(
             // v3: entries now carry recap windows and the segment ids voting needs, so a v2 row
             // would decode into timings a viewer cannot report.
-            key = "aniskip:v7:$malId:${episode.toInt()}:$durationMs",
+            key = "aniskip:v8:$malId:${episode.toInt()}:$durationMs",
             serializer = SkipTimes.serializer().nullable,
             ttlMs = OPTIONS_TTL,
             cacheIf = { it != null },
@@ -1928,13 +1931,13 @@ class MiruroRepository(
                             failure = error
                         }
                     }
-                    // IMDb order may differ from TVDB. For now only use a coordinate that is
-                    // unshifted in the first season, rather than guessing a split-season offset.
-                    val imdb = mapped?.imdbId
-                    if (!hasCompleteSkipWindows(resolved) && mapped != null && imdb != null &&
-                        mapped.season == 1 && mapped.episode == number) {
+                    // IMDb numbering is independent of TVDB. Match the actual episode's title
+                    // and original air date rather than guessing a season or absolute offset.
+                    if (!hasCompleteSkipWindows(resolved) && mapped != null) {
                         try {
-                            resolved = mergeSkipWindows(resolved, aniSkip.introDbTimes(imdb, 1, number, episodeLengthSeconds)?.withMetadataSource("IntroDB"))
+                            val imdb = aniZip.imdbEpisodeReference(mapped)
+                            if (imdb != null) resolved = mergeSkipWindows(resolved,
+                                aniSkip.introDbTimes(imdb.imdbId, imdb.season, imdb.episode, episodeLengthSeconds)?.withMetadataSource("IntroDB"))
                         } catch (error: Exception) {
                             error.rethrowIfCancellation()
                             failure = error

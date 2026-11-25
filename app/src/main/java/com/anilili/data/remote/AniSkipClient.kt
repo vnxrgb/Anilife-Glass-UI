@@ -232,15 +232,26 @@ class AniSkipClient(
                 if (!response.isSuccessful) throw IOException("TheIntroDB HTTP ${response.code}")
                 json.parseToJsonElement(response.body?.string().orEmpty()).jsonObject
             }
+        return parseTheIntroDb(root, tvdbId, season, episode, duration)
+    }
+
+    internal fun parseTheIntroDb(root: JsonObject, tvdbId: Int, season: Int, episode: Int, duration: Double): SkipTimes? {
         if (root["tvdb_id"]?.jsonPrimitive?.intOrNull != tvdbId) return null
+        if (root["type"]?.jsonPrimitive?.contentOrNull?.let { it != "tv" } == true) return null
+        if (root["season"]?.jsonPrimitive?.intOrNull?.let { it != season } == true ||
+            root["episode"]?.jsonPrimitive?.intOrNull?.let { it != episode } == true) return null
         fun window(type: String): Pair<Double, Double>? {
             val rows = root[type] as? kotlinx.serialization.json.JsonArray ?: return null
-            val row = rows.singleOrNull() as? JsonObject ?: return null
-            val startValue = row["start_ms"] ?: return null
-            val start = if (startValue == kotlinx.serialization.json.JsonNull) 0.0 else startValue.jsonPrimitive.doubleOrNull?.div(1000.0) ?: return null
-            val endValue = row["end_ms"] ?: return null
-            val end = if (endValue == kotlinx.serialization.json.JsonNull) duration else endValue.jsonPrimitive.doubleOrNull?.div(1000.0) ?: return null
-            return (start to end).takeIf { start.isFinite() && end.isFinite() && start >= 0 && end > start && end <= duration }
+            val valid = rows.mapNotNull { item ->
+                val row = item as? JsonObject ?: return@mapNotNull null
+                val startValue = row["start_ms"] ?: return@mapNotNull null
+                val start = if (startValue == kotlinx.serialization.json.JsonNull) 0.0 else startValue.jsonPrimitive.doubleOrNull?.div(1000.0) ?: return@mapNotNull null
+                val endValue = row["end_ms"] ?: return@mapNotNull null
+                val end = if (endValue == kotlinx.serialization.json.JsonNull) duration else endValue.jsonPrimitive.doubleOrNull?.div(1000.0) ?: return@mapNotNull null
+                (start to end).takeIf { start.isFinite() && end.isFinite() && start >= 0 && end > start && end <= duration }
+            }.distinct()
+            // Player currently supports one range per kind. Never join disjoint ranges across story.
+            return if (type == "credits") valid.maxByOrNull { it.first } else valid.minByOrNull { it.first }
         }
         val intro = window("intro")
         val outro = window("credits")
@@ -254,7 +265,7 @@ class AniSkipClient(
 
     /** IntroDB public read endpoint. Caller supplies independently mapped episode coordinates. */
     internal fun introDbTimes(imdbId: String, season: Int, episode: Int, duration: Double): SkipTimes? {
-        if (!Regex("tt[0-9]{7,8}").matches(imdbId) || season < 1 || episode < 1 || !duration.isFinite() || duration <= 0) return null
+        if (!Regex("tt[0-9]{7,10}").matches(imdbId) || season < 1 || episode < 1 || !duration.isFinite() || duration <= 0) return null
         val url = "https://api.introdb.app/segments".toHttpUrl().newBuilder()
             .addQueryParameter("imdb_id", imdbId)
             .addQueryParameter("season", season.toString())

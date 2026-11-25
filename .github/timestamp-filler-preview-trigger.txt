@@ -1,1 +1,1 @@
-Build signed preview with theme-correct player panels, clear navigation glass and metadata diagnostics.
+Build metadata API repair: independent episode mapping, multi-window parsing and bounded Jikan page retry.
