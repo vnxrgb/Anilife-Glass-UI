@@ -358,6 +358,7 @@ fun SettingsScreen(
     val pauseDetailsOverlay by SettingsStore.pauseDetailsOverlay.collectAsState()
     val autoSkip by SettingsStore.autoSkipIntroOutro.collectAsState()
     val autoSkipFiller by SettingsStore.autoSkipFiller.collectAsState()
+    val hideFillerEpisodes by SettingsStore.hideFillerEpisodes.collectAsState()
     val autoSync by SettingsStore.autoSyncAniList.collectAsState()
     val watchedThresholdPercent by SettingsStore.watchedThresholdPercent.collectAsState()
     val preferDub by SettingsStore.preferDub.collectAsState()
@@ -2183,7 +2184,7 @@ fun SettingsScreen(
                 item(key = "Auto-skip intro, recap and outro") {
                     MidnightSettingSwitchRow(
                         title = "Auto-skip intro, recap and outro",
-                        description = "Use provider or AniSkip timings when available",
+                        description = "Use provider or community timestamps when available",
                         checked = autoSkip,
                         onCheckedChange = SettingsStore::setAutoSkipIntroOutro,
                     )
@@ -2194,6 +2195,14 @@ fun SettingsScreen(
                         description = "Next and auto-play go to the next episode that isn't filler",
                         checked = autoSkipFiller,
                         onCheckedChange = SettingsStore::setAutoSkipFiller,
+                    )
+                }
+                item(key = "Hide filler episodes") {
+                    MidnightSettingSwitchRow(
+                        title = "Hide filler episodes",
+                        description = "Hide confirmed filler from episode lists without changing watch progress",
+                        checked = hideFillerEpisodes,
+                        onCheckedChange = SettingsStore::setHideFillerEpisodes,
                     )
                 }
                 item(key = "Watched at") {
