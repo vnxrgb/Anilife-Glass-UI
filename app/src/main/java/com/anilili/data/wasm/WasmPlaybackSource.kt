@@ -87,19 +87,40 @@ internal class WasmPlaybackSource private constructor(
 @UnstableApi
 internal class WasmSourceResolver(context: Context) {
     private val loader = WasmProviderLoader(context)
-    suspend fun resolve(language: String, query: WasmEpisodeQuery, disabled: Set<String>): List<WasmPlaybackSource> {
-        for (provider in WasmRegistry.select(WasmRegistry.bundled, language)) {
-            if (provider.id in disabled) continue
-            val sources = try {
-                val result = loader.resolve(provider.id, language, query)
-                WasmPlaybackSource.fromValidated(provider, result, query.dub)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                emptyList()
-            }
-            if (sources.isNotEmpty()) return sources
+    fun candidates(language: String, disabled: Set<String>): List<ApprovedWasmProvider> =
+        WasmRegistry.select(WasmRegistry.bundled, language)
+            .filterNot { it.id in disabled }
+
+    suspend fun resolveProvider(providerId: String, language: String, query: WasmEpisodeQuery, disabled: Set<String>): List<WasmPlaybackSource> {
+        if (candidates(language, disabled).none { it.id == providerId }) return emptyList()
+        return try {
+            val resolved = loader.resolveWithPolicy(providerId, language, query) ?: return emptyList()
+            // Use the signed installed policy, never the wider bundled policy.
+            WasmPlaybackSource.fromValidated(resolved.provider, resolved.servers, query.dub)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            emptyList()
         }
-        return emptyList()
+    }
+
+    suspend fun resolve(language: String, query: WasmEpisodeQuery, disabled: Set<String>): List<WasmPlaybackSource> =
+        firstSuccessfulSource(candidates(language, disabled).map { it.id }) {
+            resolveProvider(it, language, query, disabled)
+        }
+
+    /** Native fallback is supplied by the existing watch resolver; no unrestricted URL conversion. */
+    suspend fun <T> resolveOrNative(language: String, query: WasmEpisodeQuery, disabled: Set<String>,
+                                    useProtected: suspend (List<WasmPlaybackSource>) -> T?,
+                                    native: suspend () -> T): T {
+        for (provider in candidates(language, disabled)) {
+            val sources = resolveProvider(provider.id, language, query, disabled)
+            if (sources.isEmpty()) continue
+            val selected = try { useProtected(sources) }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { null }
+            if (selected != null) return selected
+        }
+        return native()
     }
 }

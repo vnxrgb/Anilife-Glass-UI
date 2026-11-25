@@ -26,14 +26,17 @@ import java.io.File
 internal class WasmProviderLoader(context: Context) {
     private val app = context.applicationContext
 
-    suspend fun resolve(providerId: String, language: String, query: WasmEpisodeQuery): JSONArray {
-        if (!BuildConfig.DEBUG) return JSONArray()
+    suspend fun resolve(providerId: String, language: String, query: WasmEpisodeQuery): JSONArray =
+        resolveWithPolicy(providerId, language, query)?.servers ?: JSONArray()
+
+    suspend fun resolveWithPolicy(providerId: String, language: String, query: WasmEpisodeQuery): ResolvedWasmProvider? {
+        if (!BuildConfig.DEBUG) return null
         val approved = WasmRegistry.select(WasmRegistry.bundled, language)
-            .singleOrNull { it.id == providerId } ?: return JSONArray()
+            .singleOrNull { it.id == providerId } ?: return null
         return withContext(Dispatchers.IO) {
             val installed = WasmInstalledModules.load(app, approved, WasmUpdateConfiguration.endpoint?.pinnedKey)
             val selected = installed?.first ?: approved
-            if (language !in selected.languages) return@withContext JSONArray()
+            if (language !in selected.languages) return@withContext null
             val bytes = try {
                 if (installed != null) installed.second else app.assets.open("wasm/providers/${approved.id}.wasm").use { input ->
                     val output = java.io.ByteArrayOutputStream()
@@ -49,9 +52,10 @@ internal class WasmProviderLoader(context: Context) {
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                return@withContext JSONArray()
+                return@withContext null
             }
-            resolveVerified(selected, bytes, query)
+            val servers = resolveVerified(selected, bytes, query)
+            if (servers.length() == 0) null else ResolvedWasmProvider(selected, servers)
         }
     }
 
@@ -107,6 +111,8 @@ internal class WasmProviderLoader(context: Context) {
         val serial = Mutex()
     }
 }
+
+internal data class ResolvedWasmProvider(val provider: ApprovedWasmProvider, val servers: JSONArray)
 
 internal data class WasmEpisodeQuery(val anilistId: Long, val malId: Long?, val titles: List<String>, val episode: Double, val dub: Boolean) {
     fun valid(): Boolean = anilistId in 1..4294967295L &&
