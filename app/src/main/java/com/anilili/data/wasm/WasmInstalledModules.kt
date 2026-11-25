@@ -67,12 +67,13 @@ internal object WasmInstalledModules {
         return runCatching {
             val dir = directory(context)
             val metadata = AtomicFile(File(dir, "${bundled.id}.json")).openRead().use {
-                require(it.available() <= 128 * 1024)
-                JSONObject(it.reader(Charsets.UTF_8).readText())
+                val bounded = it.readBytes(128 * 1024 + 1)
+                require(bounded.size <= 128 * 1024)
+                JSONObject(bounded.toString(Charsets.UTF_8))
             }
             fun strings(key: String): Set<String> {
                 val array = metadata.getJSONArray(key)
-                (0 until array.length()).map { array.getString(it) }.toSet()
+                return (0 until array.length()).map { array.getString(it) }.toSet()
             }
             val candidate = ApprovedWasmProvider(
                 metadata.getString("id"), metadata.getLong("version"),
