@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
+import androidx.compose.foundation.Canvas
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -67,6 +68,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -3008,7 +3011,7 @@ fun PlayerSurface(
                 }
             }
             // Before the intro: a show with both runs the recap first, and the two windows can abut.
-            recapEndMs != null && (controlsVisible || recapPopup) &&
+            recapEndMs != null && (controlsVisible || recapPopup.showing) &&
                 skipWindows.recap ->
                 "Skip Recap" to { requestSkipSeek(recapEndMs, "manual-recap") }
             // Shared with the auto-skip above rather than range-checked here: a provider reporting
@@ -3021,7 +3024,7 @@ fun PlayerSurface(
             // over the picture for the first minute and a half of the episode with no way to
             // dismiss it — worst on the inline player, where it covers much more of a small frame.
             // See TIMED_SKIP_POPUP_MS.
-            introEndMs != null && (controlsVisible || introPopup) &&
+            introEndMs != null && (controlsVisible || introPopup.showing) &&
                 skipWindows.intro ->
                 "Skip Intro" to { requestSkipSeek(introEndMs, "manual-intro") }
             nextEpisodeCardVisible -> null
@@ -3029,7 +3032,7 @@ fun PlayerSurface(
             // not the credits. See outroWindowIsCredits. This was "Next Episode", which threw away
             // the preview that often follows the credits and left no way to skip just the credits;
             // the next episode is the up-next card's job, at the end of the file.
-            outroEndMs != null && skipWindows.creditsOutro && (controlsVisible || outroPopup) ->
+            outroEndMs != null && skipWindows.creditsOutro && (controlsVisible || outroPopup.showing) ->
                 "Skip Outro" to { requestSkipSeek(outroSkipTargetMs(outroEndMs, durationMs), "manual-outro") }
             else -> null
         }
@@ -3141,9 +3144,8 @@ fun PlayerSurface(
                 )
                 // A fixed height rather than a smaller font alone: the button's own 40dp minimum is
                 // most of what made it loom over the short inline frame.
-                .then(if (compactHeight) Modifier.height(CompactSkipActionHeight) else Modifier)
             val controlFocus1 = rememberFocusFill()
-            val skipShape = RoundedCornerShape(if (compactHeight) 12.dp else 18.dp)
+            val skipShape = CircleShape
             AnimatedVisibility(
                 visible = action != null,
                 modifier = actionModifier,
@@ -3163,24 +3165,38 @@ fun PlayerSurface(
                     ),
                 ),
                 contentPadding = if (compactHeight) {
-                    PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                    PaddingValues(horizontal = 14.dp, vertical = 2.dp)
                 } else {
-                    PaddingValues(horizontal = 20.dp, vertical = 6.dp)
+                    PaddingValues(horizontal = 22.dp, vertical = 5.dp)
                 },
                 // Every other TV control carries this; without it the button can hold remote focus
                 // and show nothing, so on a TV the skip action looked unreachable.
                 modifier = Modifier
-                    .then(if (compactHeight) Modifier.height(CompactSkipActionHeight) else Modifier)
+                    .height(if (compactHeight) 36.dp else 48.dp)
                     .focusRequester(tvSkipActionFocus)
                     .onFocusChanged { tvSkipActionFocused = it.hasFocus }
                     .playerLiquidGlass(skipShape, PlayerLiquidGlassTone.PRIMARY)
                     .focusFill(controlFocus1, skipShape),
             ) {
-                Text(
-                    visibleAction?.first.orEmpty(),
-                    style = if (compactHeight) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        visibleAction?.first.orEmpty(),
+                        style = if (compactHeight) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Canvas(Modifier.width(if (compactHeight) 70.dp else 96.dp).height(5.dp)) {
+                        val fraction = when (visibleAction?.first) {
+                            "Skip Recap" -> recapPopup.fraction
+                            "Skip Intro" -> introPopup.fraction
+                            "Skip Outro" -> outroPopup.fraction
+                            else -> 0f
+                        }.coerceIn(0f, 1f)
+                        val y = size.height / 2f
+                        val stroke = 2.dp.toPx()
+                        drawLine(Color.White.copy(alpha = .22f), Offset(0f, y), Offset(size.width, y), stroke, StrokeCap.Round)
+                        if (fraction > 0f) drawLine(Color.White.copy(alpha = .92f), Offset(0f, y), Offset(size.width * fraction, y), stroke, StrokeCap.Round)
+                    }
+                }
             }
             }
         }
