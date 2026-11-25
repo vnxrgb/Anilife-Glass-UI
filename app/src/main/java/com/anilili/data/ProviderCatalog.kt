@@ -2,6 +2,7 @@ package com.anilili.data
 
 import com.anilili.data.model.Category
 import com.anilili.data.model.SourceVariant
+import com.anilili.data.remote.AnitakuIntegration
 
 /**
  * Provider classification across both streaming backends:
@@ -203,7 +204,7 @@ object ProviderCatalog {
         // while adult content is hidden. Its catalogue is the cached sitemap, so a lookup costs no
         // request once that is warm, and the stream is header-free DASH — see HStreamProvider.
         "hanime", "hentaihaven", "hstream",
-    )
+    ) + listOfNotNull(AnitakuIntegration.PROVIDER.takeIf { AnitakuIntegration.config != null })
 
     /**
      * The one language a server's streams are in, for servers that are not in English.
@@ -628,6 +629,7 @@ object ProviderCatalog {
     fun label(provider: String): String = when (provider) {
         // Gone as a server (2026-10-03), kept so a download made from it still names its source.
         "anibd" -> "AniBD"
+        AnitakuIntegration.PROVIDER -> "Anitaku (Test)"
         "anidbapp" -> "AniDB App"
         "2dhive" -> "2Dhive"
         "allanime" -> "MKissa (AllAnime)"
