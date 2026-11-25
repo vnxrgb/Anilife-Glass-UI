@@ -361,6 +361,10 @@ object UpdateManager {
                     NostrUpdateSource.fetchManifest(AppGraph.httpClient, json)
                 }
         }
+        // TV must never consult the unrelated AniLife release channel.
+        if (BuildConfig.FLAVOR == "tv") {
+            return@coroutineScope GithubTvUpdateSource.fetch(AppGraph.httpClient, json)
+        }
         if (!includeBeta) return@coroutineScope stable.await().getOrThrow()
 
         val beta = async {

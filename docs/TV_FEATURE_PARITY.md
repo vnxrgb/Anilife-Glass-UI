@@ -31,3 +31,6 @@ TV branch before this tracker: `50930bec8e8e0f711efee8f5a905f2ff200b737a`
 1. Reconcile main's update code, release-selection tests, and TV UI against branch changes without overwriting TV-specific focus behavior.
 2. Implement an official GitHub TV-only update source with trusted release metadata and signer/package verification, then test rejecting mobile-only assets and downgrades.
 3. Verify remote-only playback, TV pairing and focus regressions; run TV unit tests and lint before a signed preview build.
+
+## TV GitHub update integration batch
+TV flavor selects only official signed-TV-named GitHub prereleases with a matching TV-UPDATE.json metadata asset, checksum, package and version. Older releases without metadata are rejected. Existing installer checks enforce installed signer and package. Preview publisher must produce metadata before offers become available; tests and build unverified.
