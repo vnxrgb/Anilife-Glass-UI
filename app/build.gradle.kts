@@ -321,6 +321,7 @@ dependencies {
     implementation(libs.okhttp.dnsoverhttps)
     implementation(libs.okio)
     implementation(libs.kotlinx.serialization.json)
+    implementation("org.yaml:snakeyaml:2.4")
     implementation(libs.coil.compose)
     implementation(libs.qrcodegen)
     // Permission-free QR scanning for the mobile-to-TV pairing address.

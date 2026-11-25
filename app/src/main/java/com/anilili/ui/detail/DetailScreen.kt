@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -75,6 +76,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -115,6 +117,8 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -122,6 +126,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.anilili.ui.theme.ShowColourTheme
 import coil.compose.AsyncImage
+import kotlinx.coroutines.CancellationException
 import com.anilili.data.library.EpisodeStop
 import com.anilili.data.library.HistoryEntry
 import com.anilili.data.library.LibraryStore
@@ -636,6 +641,25 @@ private fun DetailContent(
         loadProviderCatalog = loadProviderCatalog,
     )
 
+    val franchiseEntries = data.watchOrder
+    val franchiseLocal by LocalWatchedStore.entries.collectAsState()
+    val franchiseRemote by LibraryStore.remoteStatuses.collectAsState()
+    val completedFranchiseIds = remember(franchiseLocal, franchiseRemote) {
+        val ids = franchiseLocal.filter { it.anilistId !in franchiseRemote }.mapTo(mutableSetOf()) { it.anilistId }
+        franchiseRemote.filterValues { it == "COMPLETED" }.keys.forEach { ids.add(it) }
+        ids.toSet()
+    }
+    var franchiseOpen by rememberSaveable(info.id) { mutableStateOf(false) }
+    if (franchiseOpen && franchiseEntries.size > 1) {
+        FranchiseWatchOrderDialog(
+            info = info,
+            entries = franchiseEntries,
+            completedIds = completedFranchiseIds,
+            onDismiss = { franchiseOpen = false },
+            onOpen = { franchiseOpen = false; onAnimeClick(it) },
+            onWatch = { franchiseOpen = false; onSeasonWatch(it) },
+        )
+    }
     var coverPreviewVisible by remember(info.id) { mutableStateOf(false) }
 
     if (coverPreviewVisible) {
@@ -731,6 +755,9 @@ private fun DetailContent(
             when (selectedTab) {
                 DetailTab.HOME -> {
                     item { QuickFacts(info) }
+                    if (franchiseEntries.size > 1) item(key = "franchise-overview") {
+                        FranchiseProgressCard(franchiseEntries, completedFranchiseIds) { franchiseOpen = true }
+                    }
                     info.nextAiringEpisode?.airingAt?.let { airingAt ->
                         item { NextAiringCard(airingAt, info.nextAiringEpisode.episode) }
                     }
@@ -864,6 +891,9 @@ private fun DetailContent(
                     // A franchise of one is this page and nothing else, and a guide to it would be
                     // a heading over a row for the title already on screen.
                     val watchOrder = data.watchOrder.takeIf { it.size > 1 }.orEmpty()
+                    if (watchOrder.isNotEmpty()) item(key = "franchise-guide") {
+                        FranchiseProgressCard(watchOrder, completedFranchiseIds) { franchiseOpen = true }
+                    }
                     val suggestions = data.suggestions
                     val shelves = WatchOrderGroup.entries.associateWith { group ->
                         watchOrder.filter { it.group == group }
@@ -2048,6 +2078,202 @@ private fun RelatedFilterRow(
     }
 }
 
+
+@Composable
+private fun FranchiseProgressCard(
+    entries: List<WatchOrderEntry>,
+    completedIds: Set<Int>,
+    onOpen: () -> Unit,
+) {
+    val completed = entries.count { it.media.id in completedIds }
+    val progress = if (entries.isEmpty()) 0f else completed.toFloat() / entries.size
+    val accent = MaterialTheme.colorScheme.primary
+    Row(
+        Modifier.fillMaxWidth()
+            .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp)
+            .glassCard(RoundedCornerShape(22.dp))
+            .clickable(onClickLabel = "Open franchise watch order", onClick = onOpen)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxSize(), color = accent,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant, strokeWidth = 4.dp)
+            Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+        }
+        Column(Modifier.weight(1f)) {
+            Text("Franchise Watch Order", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("$completed of ${entries.size} entries completed", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = accent)
+    }
+}
+
+/** A mobile-only full-screen guide. The existing relation order remains the source of truth. */
+@Composable
+private fun FranchiseWatchOrderDialog(
+    info: Media,
+    entries: List<WatchOrderEntry>,
+    completedIds: Set<Int>,
+    onDismiss: () -> Unit,
+    onOpen: (Int) -> Unit,
+    onWatch: (Int) -> Unit,
+) {
+    var timeline by rememberSaveable(info.id) { mutableStateOf(true) }
+    var groupName by rememberSaveable(info.id) { mutableStateOf<String?>(null) }
+    val context = LocalContext.current.applicationContext
+    val hideAdult by SettingsStore.hideAdultContent.collectAsState()
+    var curated by remember(info.id) { mutableStateOf<List<CuratedOrder>>(emptyList()) }
+    var extraMedia by remember(info.id) { mutableStateOf<Map<Int, Media>>(emptyMap()) }
+    var loadingOrders by remember(info.id) { mutableStateOf(true) }
+    var selectedOrder by rememberSaveable(info.id) { mutableStateOf<String?>(null) }
+    val ids = entries.map { it.media.id }.toSet()
+    LaunchedEffect(info.id, ids) {
+        loadingOrders = true
+        try {
+            val loaded = CuratedWatchOrders.load(context, ids)
+            val missing = loaded.flatMap { it.steps }.map { it.id }.distinct().filterNot { it in ids }.take(100)
+            extraMedia = if (missing.isEmpty()) emptyMap() else try {
+                AppGraph.aniList.mediaByIds(missing).associateBy { it.id }
+            } catch (e: CancellationException) { throw e } catch (e: Exception) { emptyMap() }
+            curated = loaded
+        } catch (e: CancellationException) { throw e } catch (e: Exception) {
+            curated = emptyList()
+        } finally { loadingOrders = false }
+    }
+    fun orderKey(order: CuratedOrder) = order.source + ":" + order.name + ":" + order.steps.joinToString(",") { it.id.toString() }
+    val activeOrder = curated.firstOrNull { orderKey(it) == selectedOrder }
+    val baseById = entries.associateBy { it.media.id }
+    val orderedEntries = activeOrder?.steps?.mapIndexedNotNull { index, step ->
+        val original = baseById[step.id]
+        val media = original?.media ?: extraMedia[step.id] ?: return@mapIndexedNotNull null
+        if (hideAdult && media.isAdult) return@mapIndexedNotNull null
+        val group = when (media.format) {
+            "MOVIE" -> WatchOrderGroup.MOVIES
+            "OVA" -> WatchOrderGroup.OVAS
+            "SPECIAL" -> WatchOrderGroup.SPECIALS
+            "TV", "TV_SHORT" -> WatchOrderGroup.SEASONS
+            else -> WatchOrderGroup.OTHER
+        }
+        original?.copy(position = index + 1) ?: WatchOrderEntry(media, group, index + 1, null, null, media.id == info.id)
+    } ?: entries
+    val optionalIds = activeOrder?.steps?.filter { it.optional }?.map { it.id }?.toSet().orEmpty()
+    val groups = WatchOrderGroup.entries.filter { group -> orderedEntries.any { it.group == group } }
+    val visible = orderedEntries.filter { groupName == null || it.group.name == groupName }
+    val accent = MaterialTheme.colorScheme.primary
+    val next = orderedEntries.firstOrNull { it.media.id !in completedIds && it.media.id !in optionalIds }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+                Text("Franchise Watch Order", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
+            LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(bottom = 24.dp)) {
+                item(key = "franchise-hero") {
+                    Box(Modifier.fillMaxWidth().padding(16.dp).clip(RoundedCornerShape(24.dp))) {
+                        AsyncImage(model = info.bannerImage ?: info.coverImage.best, contentDescription = null,
+                            modifier = Modifier.fillMaxWidth().height(180.dp), contentScale = ContentScale.Crop)
+                        Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .9f)))))
+                        Column(Modifier.align(Alignment.BottomStart).padding(18.dp)) {
+                            Text(info.title.preferred, color = Color.White, style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text("${activeOrder?.name ?: "Release order"} • ${orderedEntries.size} entries", color = Color.White.copy(alpha = .85f),
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+                item(key = "franchise-progress") {
+                    val done = orderedEntries.count { it.media.id in completedIds }
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
+                        .glassCard(RoundedCornerShape(20.dp)).padding(16.dp)) {
+                        Text("Franchise progress", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(10.dp))
+                        Box(Modifier.fillMaxWidth().height(7.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                            Box(Modifier.fillMaxWidth(done.toFloat() / orderedEntries.size.coerceAtLeast(1)).fillMaxHeight().background(accent))
+                        }
+                        Text("$done of ${orderedEntries.size} completed", modifier = Modifier.padding(top = 8.dp),
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (next != null) {
+                            Text("Next unfinished: ${next.media.title.preferred}", modifier = Modifier.padding(top = 12.dp),
+                                style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            TextButton(onClick = { if (next.isCurrent) onWatch(next.media.id) else onOpen(next.media.id) }) {
+                                Text(if (next.isCurrent) "Watch next" else "View anime")
+                            }
+                        }
+                    }
+                }
+                item(key = "franchise-controls") {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                        Text("Viewing order", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val choices = listOf<Pair<String?, String>>(null to "Release order") + curated.map { orderKey(it) to it.name }
+                            choices.forEach { (key, label) ->
+                                val selected = if (key == null) activeOrder == null else key == selectedOrder
+                                Text(label, modifier = Modifier.clip(CircleShape)
+                                    .background(if (selected) glassSelectionColor() else glassPanelColor())
+                                    .border(1.dp, if (selected) accent else glassRimColor(), CircleShape)
+                                    .selectable(selected = selected, onClick = { selectedOrder = key; groupName = null })
+                                    .padding(horizontal = 14.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                        if (loadingOrders) Text("Checking community viewing orders…", style = MaterialTheme.typography.bodySmall)
+                        else if (curated.isEmpty()) Text("No additional curated orders available. Showing release order.", style = MaterialTheme.typography.bodySmall)
+                        activeOrder?.let { order ->
+                            Text("Source: " + order.source, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (orderedEntries.size < order.steps.size) Text("Some entries could not be displayed.", style = MaterialTheme.typography.bodySmall)
+                        }
+                        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                        Row(Modifier.horizontalScroll(rememberScrollState())) {
+                            TextButton(onClick = { uriHandler.openUri("https://github.com/Bas1874/Anime-Watch-Order-Api") }) { Text("Community source") }
+                            TextButton(onClick = { uriHandler.openUri("https://www.reddit.com/r/anime/wiki/watch_order") }) { Text("r/anime wiki") }
+                            TextButton(onClick = { uriHandler.openUri("https://github.com/michael-freling/anime-metadata-db") }) { Text("Metadata DB") }
+                            TextButton(onClick = { uriHandler.openUri("https://opendatacommons.org/licenses/odbl/1-0/") }) { Text("ODbL") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (timeline) Button(onClick = { timeline = true }) { Text("Timeline") }
+                            else OutlinedButton(onClick = { timeline = true }) { Text("Timeline") }
+                            if (!timeline) Button(onClick = { timeline = false }) { Text("Watch order") }
+                            else OutlinedButton(onClick = { timeline = false }) { Text("Watch order") }
+                        }
+                        Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            (listOf<String?>(null) + groups.map { it.name }).forEach { name ->
+                                val selected = groupName == name
+                                val label = groups.firstOrNull { it.name == name }?.label ?: "All"
+                                Text(label, modifier = Modifier.clip(CircleShape)
+                                    .background(if (selected) glassSelectionColor() else glassPanelColor())
+                                    .border(1.dp, if (selected) accent else glassRimColor(), CircleShape)
+                                    .selectable(selected = selected, onClick = { groupName = name })
+                                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                                    style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                    }
+                }
+                itemsIndexed(visible, key = { _, entry -> entry.media.id }) { index, entry ->
+                    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (timeline) {
+                            Box(Modifier.width(26.dp).height(104.dp).drawBehind {
+                                val x = size.width / 2f
+                                if (index > 0) drawLine(accent.copy(alpha = .45f), Offset(x, 0f), Offset(x, size.height / 2), strokeWidth = 2.dp.toPx())
+                                if (index < visible.lastIndex) drawLine(accent.copy(alpha = .45f), Offset(x, size.height / 2), Offset(x, size.height), strokeWidth = 2.dp.toPx())
+                                drawCircle(accent, radius = 5.dp.toPx(), center = Offset(x, size.height / 2))
+                            })
+                        }
+                        Box(Modifier.weight(1f)) {
+                            WatchOrderRow(entry, onOpen = { onOpen(entry.media.id) }, onWatch = { onWatch(entry.media.id) },
+                                completed = entry.media.id in completedIds, optional = entry.media.id in optionalIds)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /**
  * One entry of the watch guide: its place in the running order, its artwork, and what it is.
  *
@@ -2057,9 +2283,9 @@ private fun RelatedFilterRow(
  * the page onto the back stack.
  */
 @Composable
-private fun WatchOrderRow(entry: WatchOrderEntry, onOpen: () -> Unit, onWatch: () -> Unit) {
+private fun WatchOrderRow(entry: WatchOrderEntry, onOpen: () -> Unit, onWatch: () -> Unit, completed: Boolean = false, optional: Boolean = false) {
     val media = entry.media
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(18.dp)
     val accent = MaterialTheme.colorScheme.primary
     val meta = entry.metaLine()
     Row(
@@ -2069,9 +2295,9 @@ private fun WatchOrderRow(entry: WatchOrderEntry, onOpen: () -> Unit, onWatch: (
             .focusHighlight(shape)
             .clip(shape)
             .background(
-                if (entry.isCurrent) accent.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
+                if (entry.isCurrent) accent.copy(alpha = 0.12f) else glassPanelColor(),
             )
-            .border(1.dp, if (entry.isCurrent) accent else MaterialTheme.colorScheme.outline, shape)
+            .border(1.dp, if (entry.isCurrent) accent else glassRimColor(), shape)
             .then(if (entry.isCurrent) Modifier else Modifier.clickable(onClick = onOpen))
             .padding(9.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -2132,6 +2358,12 @@ private fun WatchOrderRow(entry: WatchOrderEntry, onOpen: () -> Unit, onWatch: (
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 3.dp),
                 )
+            }
+            if (optional) {
+                Text("Optional / alternate cut", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (completed) {
+                Text("Completed", style = MaterialTheme.typography.labelSmall, color = accent, fontWeight = FontWeight.Bold)
             }
             if (entry.isCurrent) {
                 Text(
