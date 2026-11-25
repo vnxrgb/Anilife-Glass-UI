@@ -17,6 +17,9 @@ jobs:
       - name: Host runtime tests
         run: |
           rustup update stable
+          rustup target add wasm32-wasip2 --toolchain stable
+          cargo +stable build --manifest-path wasm-runtime/fixture/Cargo.toml --target wasm32-wasip2 --release
+          export WASM_FIXTURE="$GITHUB_WORKSPACE/wasm-runtime/fixture/target/wasm32-wasip2/release/sandbox_fixture.wasm"
           cargo +stable test --manifest-path wasm-runtime/Cargo.toml
       - name: Android ARM64 compile proof
         run: |
