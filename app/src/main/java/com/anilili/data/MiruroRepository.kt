@@ -1854,16 +1854,33 @@ class MiruroRepository(
         return cache.getOrFetch(
             // v3: entries now carry recap windows and the segment ids voting needs, so a v2 row
             // would decode into timings a viewer cannot report.
-            key = "aniskip:v3:$malId:${episode.toInt()}:$durationMs",
+            key = "aniskip:v4:$malId:${episode.toInt()}:$durationMs",
             serializer = SkipTimes.serializer().nullable,
             ttlMs = OPTIONS_TTL,
             cacheIf = { it != null },
         ) {
             withContext(Dispatchers.IO) {
                 val number = episode.toInt()
-                mirroredSkipTimes(anilistId, malId, number, episodeLengthSeconds)
-                    ?: aniSkip.skipTimes(malId, number, episodeLengthSeconds)
-                    ?: redirectedSkipTimes(malId, number, episodeLengthSeconds)
+                var resolved = mirroredSkipTimes(anilistId, malId, number, episodeLengthSeconds)
+                var failure: Exception? = null
+                if (!hasCompleteSkipWindows(resolved)) {
+                    try {
+                        resolved = mergeSkipWindows(resolved, aniSkip.skipTimes(malId, number, episodeLengthSeconds))
+                    } catch (error: Exception) {
+                        error.rethrowIfCancellation()
+                        failure = error
+                    }
+                }
+                if (!hasCompleteSkipWindows(resolved)) {
+                    try {
+                        resolved = mergeSkipWindows(resolved, redirectedSkipTimes(malId, number, episodeLengthSeconds))
+                    } catch (error: Exception) {
+                        error.rethrowIfCancellation()
+                        failure = error
+                    }
+                }
+                if (resolved == null) failure?.let { throw it }
+                resolved
             }
         }
     }
@@ -3118,3 +3135,30 @@ internal fun discoverCacheKey(filters: DiscoverFilters, hideAdult: Boolean): Str
         sort,
     ).joinToString("|")
 }
+
+/** Keep each complete segment and its voting ID together; never splice unrelated boundaries. */
+internal fun mergeSkipWindows(primary: SkipTimes?, fallback: SkipTimes?): SkipTimes? {
+    if (primary == null) return fallback
+    if (fallback == null) return primary
+    val intro = validSkipWindow(primary.introStart, primary.introEnd)
+    val outro = validSkipWindow(primary.outroStart, primary.outroEnd)
+    val recap = validSkipWindow(primary.recapStart, primary.recapEnd)
+    return primary.copy(
+        introStart = if (intro) primary.introStart else fallback.introStart,
+        introEnd = if (intro) primary.introEnd else fallback.introEnd,
+        introSkipId = if (intro) primary.introSkipId else fallback.introSkipId,
+        outroStart = if (outro) primary.outroStart else fallback.outroStart,
+        outroEnd = if (outro) primary.outroEnd else fallback.outroEnd,
+        outroSkipId = if (outro) primary.outroSkipId else fallback.outroSkipId,
+        recapStart = if (recap) primary.recapStart else fallback.recapStart,
+        recapEnd = if (recap) primary.recapEnd else fallback.recapEnd,
+        recapSkipId = if (recap) primary.recapSkipId else fallback.recapSkipId,
+    )
+}
+
+private fun validSkipWindow(start: Double?, end: Double?): Boolean =
+    start != null && end != null && start.isFinite() && end.isFinite() && start >= 0 && end > start
+
+private fun hasCompleteSkipWindows(times: SkipTimes?): Boolean =
+    times != null && validSkipWindow(times.introStart, times.introEnd) &&
+        validSkipWindow(times.outroStart, times.outroEnd)
