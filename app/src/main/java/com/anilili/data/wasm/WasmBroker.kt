@@ -10,13 +10,15 @@ import org.json.JSONObject
 /** Per-call capability binder; never exports the app's general network client. */
 internal class WasmBroker(private val provider: ApprovedWasmProvider) : Binder() {
     private val gateway = WasmHttpGateway(provider.hosts)
+    @Volatile private var revoked = false
+    fun revoke() { revoked = true }
     private val deadline = SystemClock.elapsedRealtime() + WasmPolicy.MAX_CALL_MS
     override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
         if (code != FETCH) return super.onTransact(code, data, reply, flags)
         data.enforceInterface(DESCRIPTOR)
         val input = data.readString().orEmpty()
         val result = runCatching {
-            require(SystemClock.elapsedRealtime() < deadline)
+            require(!revoked && SystemClock.elapsedRealtime() < deadline)
             require(input.length <= 128 * 1024)
             val req = JSONObject(input)
             val headers = req.optJSONArray("headers") ?: JSONArray()
@@ -31,7 +33,7 @@ internal class WasmBroker(private val provider: ApprovedWasmProvider) : Binder()
             }
             val response = gateway.fetch(req.getString("url"), req.getString("method"), pairs, body)
             require(response.body.size <= 32768)
-            require(SystemClock.elapsedRealtime() < deadline)
+            require(!revoked && SystemClock.elapsedRealtime() < deadline)
             JSONObject().put("status", response.status)
                 .put("headers", JSONArray(response.headers.map { JSONArray(listOf(it.first, it.second)) }))
                 .put("body", JSONArray(response.body.map { it.toInt() and 255 })).toString()
