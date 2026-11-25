@@ -8,6 +8,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.contentOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -61,8 +64,32 @@ class AniZipClient(
         }
     }
 
+
+    /** Exact episode cross-reference from AniZip; never infer a season or episode offset. */
+    internal fun episodeReference(anilistId: Int, episode: Int): ExternalEpisodeRef? {
+        val request = Request.Builder()
+            .url("$API_BASE/mappings?anilist_id=$anilistId")
+            .header("Accept", "application/json").build()
+        return client.newCall(request).apply { timeout().timeout(4, java.util.concurrent.TimeUnit.SECONDS) }
+            .execute().use { response ->
+                if (response.code == 404) return null
+                if (!response.isSuccessful) error("AniZip HTTP ${response.code}")
+                val root = json.parseToJsonElement(response.body?.string().orEmpty()) as? kotlinx.serialization.json.JsonObject ?: return null
+                val mappings = root["mappings"] as? kotlinx.serialization.json.JsonObject ?: return null
+                if (mappings["anilist_id"]?.jsonPrimitive?.intOrNull != anilistId) return null
+                val row = (root["episodes"] as? kotlinx.serialization.json.JsonObject)?.get(episode.toString()) as? kotlinx.serialization.json.JsonObject ?: return null
+                val season = row["seasonNumber"]?.jsonPrimitive?.intOrNull ?: return null
+                val number = row["episodeNumber"]?.jsonPrimitive?.intOrNull ?: return null
+                if (season < 1 || number < 1) return null
+                ExternalEpisodeRef(mappings["imdb_id"]?.jsonPrimitive?.contentOrNull,
+                    mappings["thetvdb_id"]?.jsonPrimitive?.intOrNull, season, number)
+            }
+    }
+
     private companion object {
         const val API_BASE = "https://api.ani.zip"
         const val FANART_TTL_MS = 7L * 24 * 60 * 60 * 1000
     }
 }
+
+internal data class ExternalEpisodeRef(val imdbId: String?, val tvdbId: Int?, val season: Int, val episode: Int)
