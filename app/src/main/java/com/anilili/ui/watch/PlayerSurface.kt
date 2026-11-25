@@ -2522,7 +2522,7 @@ fun PlayerSurface(
                 skipTimingStatus = skipTimingStatus,
                 skipReport = skipReport,
                 onReportSkipTiming = onReportSkipTiming,
-                onOpenInExternalPlayer = if (protectedWasm != null) null else {
+                onOpenInExternalPlayer = if (protectedWasm != null) null else ({
                     settingsExpanded = false
                     // The other player fetches the stream itself, so this one must let go of it
                     // first: two readers on the same short-lived CDN token is how a source that
@@ -2546,7 +2546,7 @@ fun PlayerSurface(
                         preferredPackage = SettingsStore.externalPlayerPackage.value,
                         session = externalPlaybackSession?.invoke(activeController.duration.coerceAtLeast(0L)),
                     )
-                },
+                }),
             )
         }
 
