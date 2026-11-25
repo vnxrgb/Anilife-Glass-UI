@@ -34,3 +34,6 @@ TV branch before this tracker: `50930bec8e8e0f711efee8f5a905f2ff200b737a`
 
 ## TV GitHub update integration batch
 TV flavor selects only official signed-TV-named GitHub prereleases with a matching TV-UPDATE.json metadata asset, checksum, package and version. Older releases without metadata are rejected. Existing installer checks enforce installed signer and package. Preview publisher must produce metadata before offers become available; tests and build unverified.
+
+## Update asset URL hardening
+TV update selection now requires both metadata and APK asset URLs to match the selected release tag exactly, with no query parameters or cross-release asset substitution; APK size is capped at 512 MiB. Added regression tests. Build and hardware validation remain pending. GitHub metadata is not a cryptographic signature; the installer must continue to enforce package and installed signing identity, and the downloaded SHA-256 must match before installation.
