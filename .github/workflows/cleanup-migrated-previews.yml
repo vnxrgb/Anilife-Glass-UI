@@ -1,0 +1,51 @@
+name: Clean up verified migrated preview releases
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/cleanup-migrated-previews.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: cleanup-migrated-previews
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Verify every copy before deleting any source release
+        shell: bash
+        run: |
+          set -euo pipefail
+          source=vnxrgb/Anilumos
+          dest=vnxrgb/anilumos-preview
+          tags=()
+          for id in 45570547614 45564383445 45560055601 45558213240 45557754321 45556848177 45555117372 45552720620 45550564984 45547107525; do
+            tag="timestamp-filler-preview-$id-1"
+            if ! gh release view "$tag" --repo "$source" >/dev/null 2>&1; then
+              continue
+            fi
+            for attempt in $(seq 1 60); do
+              if gh release view "$tag" --repo "$dest" >/dev/null 2>&1; then
+                break
+              fi
+              sleep 20
+            done
+            work="$(mktemp -d)"
+            gh api "repos/$source/releases/tags/$tag" | jq -e '.prerelease == true and .draft == false' >/dev/null
+            gh api "repos/$dest/releases/tags/$tag" | jq -e '.prerelease == true and .draft == false' >/dev/null
+            mkdir "$work/original" "$work/copied"
+            gh release download "$tag" --repo "$source" --dir "$work/original"
+            gh release download "$tag" --repo "$dest" --dir "$work/copied"
+            diff -qr "$work/original" "$work/copied"
+            (cd "$work/copied" && sha256sum -c SHA256SUMS && test -s Anilumos.apk)
+            tags+=("$tag")
+            rm -rf "$work"
+          done
+          for tag in "${tags[@]}"; do
+            gh release delete "$tag" --repo "$source" --yes
+            echo "Removed verified migrated prerelease $tag (source Git tag retained)" >> "$GITHUB_STEP_SUMMARY"
+          done
