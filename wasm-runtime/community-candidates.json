@@ -1,0 +1,63 @@
+{
+  "repository": "pecta675-ctrl/example-extension",
+  "run_id": 44905565955,
+  "disposition": "review-only; user reports source redistribution permission; media authorization and Android compatibility pending",
+  "candidates": [
+    {
+      "id": "jkanime",
+      "artifact_id": 14707508967,
+      "filename": "jkanime.wasm",
+      "size": 12086243,
+      "archive_sha256": "fa9505c6a0cf10052d88f1129d14e79c25b9a13f52c15a8655d1bb75f820cc00",
+      "module_sha256": "a3ea7682b895f647a389fc4db49b1c72fb98fa3d29f62f4081e5b81c1feb153e"
+    },
+    {
+      "id": "animeonline",
+      "artifact_id": 14707409143,
+      "filename": "animeonline.wasm",
+      "size": 12077848,
+      "archive_sha256": "8e363e2e8a364653d42720182631c94b5068facbaabb7596ceebe3c88bc2a4b5",
+      "module_sha256": "7bbde1b24206cdb6537510e6f43ad48cdb9764682056fe351b678e11b90f05dd"
+    },
+    {
+      "id": "animewaves",
+      "artifact_id": 14707179829,
+      "filename": "aniwaves.wasm",
+      "size": 12078261,
+      "archive_sha256": "dd76312365c58a56f93bf6abb3e901366c899dad8e2d607c029b58e66ef05cbf",
+      "module_sha256": "05637986b20f66e9b922cca4e9b8f2e86551e592eeacfd7b97661cfe627d1e96"
+    },
+    {
+      "id": "latanime",
+      "artifact_id": 14708246635,
+      "filename": "latanime.wasm",
+      "size": 12086346,
+      "archive_sha256": "12aa66aa473d08aeb41ed6e40f75138a33b6d12b7577b5499a8abb473327aedb",
+      "module_sha256": "2d21ffd0ef71d97464ef561cc3f04001660f8717e15ea8b6bd454ba24ed1fff1"
+    },
+    {
+      "id": "watchanimeworld",
+      "artifact_id": 14708570556,
+      "filename": "watchanimeworld.wasm",
+      "size": 12077094,
+      "archive_sha256": "c8ee9d4f9c0b272edb80e684ff277807788ac81bf1e3fe9907897626fa95081d",
+      "module_sha256": "0f265925f35095f557332cc11d40ae1ee85cbdfe732ff997192f91762088e53b"
+    },
+    {
+      "id": "veranime",
+      "artifact_id": 14708042967,
+      "filename": "verani.wasm",
+      "size": 12077516,
+      "archive_sha256": "0d79b7c6ecbd2bb0a9c7c0f6bc5077295c090090d8d2651f8d489e2131397668",
+      "module_sha256": "0182cf7f43c7ac8b40a295e37566a6bb8d7a6c182c9dd86e5c1a4558cf8f34aa"
+    },
+    {
+      "id": "animesalt",
+      "artifact_id": 14708520073,
+      "filename": "animesalt.wasm",
+      "size": 12075357,
+      "archive_sha256": "bfa1e6a0f92d5893c62924cc7d616103ec4ce04f6ec6eb98f83592039f34e297",
+      "module_sha256": "5605118bd4f18bc68ffb7f6b9acbc9704bc66cfdd83c7dbc66d15a91bfbbccc7"
+    }
+  ]
+}

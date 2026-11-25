@@ -1,0 +1,35 @@
+name: WASM community compatibility review
+on:
+  push:
+    branches: [feature/wasm-sandbox]
+    paths: ['wasm-runtime/**', '.github/workflows/wasm-community-review.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Download and verify pinned candidate artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 wasm-runtime/review_community_artifacts.py "$RUNNER_TEMP/community-review"
+      - name: Build offline metadata probe
+        run: |
+          rustup update stable
+          cargo +stable build --release --manifest-path wasm-runtime/Cargo.toml --example inspect_component
+      - name: Check component ABI with no guest network access
+        run: |
+          set +e
+          failed=0
+          for component in "$RUNNER_TEMP/community-review/"*.wasm; do
+            echo "Checking $(basename "$component")"
+            timeout 120s wasm-runtime/target/release/examples/inspect_component "$component"
+            if [ "$?" -ne 0 ]; then failed=1; fi
+          done
+          exit "$failed"

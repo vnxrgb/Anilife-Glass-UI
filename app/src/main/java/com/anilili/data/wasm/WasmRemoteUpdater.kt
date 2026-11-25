@@ -39,7 +39,7 @@ internal class WasmRemoteUpdater(private val context: Context) {
             fun fetch(name: String, max: Int): ByteArray {
                 val url = config.base.newBuilder().addPathSegment(provider.id).addPathSegment(name).build()
                 require(url.host == config.base.host && WasmPolicy.allowsUrl(url.toString(), setOf(config.base.host)))
-                client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
+                return client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
                     require(response.isSuccessful)
                     val body = requireNotNull(response.body)
                     require(body.contentLength() <= max)
