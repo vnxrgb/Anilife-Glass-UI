@@ -1889,8 +1889,14 @@ class MiruroRepository(
         ) {
             withContext(Dispatchers.IO) {
                 val number = episode.toInt()
-                var resolved = mirroredSkipTimes(anilistId, malId, number, episodeLengthSeconds)
                 var failure: Exception? = null
+                var resolved = try {
+                    mirroredSkipTimes(anilistId, malId, number, episodeLengthSeconds)
+                } catch (error: Exception) {
+                    error.rethrowIfCancellation()
+                    failure = error
+                    null
+                }
                 if (!hasCompleteSkipWindows(resolved)) {
                     try {
                         resolved = mergeSkipWindows(resolved, aniSkip.skipTimes(malId, number, episodeLengthSeconds))
@@ -3198,7 +3204,7 @@ internal fun discoverCacheKey(filters: DiscoverFilters, hideAdult: Boolean): Str
 internal fun mergeSkipWindows(primary: SkipTimes?, fallback: SkipTimes?): SkipTimes? {
     if (primary == null) return fallback
     if (fallback == null) return primary
-    val intro = validSkipWindow(primary.introStart, primary.introEnd)
+    val intro = validSkipWindow(primary.introStart ?: 0.0, primary.introEnd)
     val outro = validSkipWindow(primary.outroStart, primary.outroEnd)
     val recap = validSkipWindow(primary.recapStart, primary.recapEnd)
     return primary.copy(
@@ -3218,5 +3224,5 @@ private fun validSkipWindow(start: Double?, end: Double?): Boolean =
     start != null && end != null && start.isFinite() && end.isFinite() && start >= 0 && end > start
 
 private fun hasCompleteSkipWindows(times: SkipTimes?): Boolean =
-    times != null && validSkipWindow(times.introStart, times.introEnd) &&
+    times != null && validSkipWindow(times.introStart ?: 0.0, times.introEnd) &&
         validSkipWindow(times.outroStart, times.outroEnd)
