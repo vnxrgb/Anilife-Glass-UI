@@ -36,11 +36,12 @@ class JikanClient(
                 .build()
             val root = client.newCall(request).execute().use { response ->
                 // MAL has no episode list for this id: an answer, not a failure.
-                if (response.code == 404) return fillers
+                if (response.code == 404 && page == 1) return emptySet()
+                if (response.code == 404) error("Jikan episode pagination incomplete")
                 if (!response.isSuccessful) error("Jikan HTTP ${response.code}")
                 json.parseToJsonElement(response.body?.string().orEmpty()).jsonObject
             }
-            val episodes = root["data"]?.jsonArray ?: break
+            val episodes = root["data"]?.jsonArray ?: error("Jikan episode data missing")
             episodes.forEach { element ->
                 val episode = element.jsonObject
                 if (episode["filler"]?.jsonPrimitive?.booleanOrNull == true) {
@@ -49,7 +50,8 @@ class JikanClient(
             }
             val hasNext = root["pagination"]?.jsonObject
                 ?.get("has_next_page")?.jsonPrimitive?.booleanOrNull ?: false
-            if (!hasNext) break
+            if (!hasNext) return fillers
+            if (page == MAX_PAGES) error("Jikan episode pagination limit reached")
             page++
         }
         return fillers
