@@ -58,3 +58,5 @@ mod tests {
         assert!(probe(b"\0asm\x0d\0\x01\0\xff").is_err());
     }
 }
+
+pub mod adapter;

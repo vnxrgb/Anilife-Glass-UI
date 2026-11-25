@@ -1,0 +1,60 @@
+package anilili:provider@1.0.0;
+
+interface types {
+    record query {
+        anilist-id: u32,
+        mal-id: option<u32>,
+        titles: list<string>,
+        episode: f64,
+        dub: bool,
+    }
+
+    record media-stream {
+        url: string,
+        quality: option<string>,
+        format: string,
+    }
+
+    record server {
+        name: string,
+        dub: bool,
+        headers: list<tuple<string, string>>,
+        streams: list<media-stream>,
+    }
+
+    record provider-info {
+        name: string,
+        hosts: list<string>,
+    }
+
+    record request {
+        method: string,
+        url: string,
+        headers: list<tuple<string, string>>,
+        body: option<list<u8>>,
+    }
+
+    record response {
+        status: u16,
+        headers: list<tuple<string, string>>,
+        body: list<u8>,
+    }
+}
+
+interface host {
+    use types.{request, response};
+
+    http: func(request: request) -> result<response, string>;
+    browser-fetch: func(origin: string, request: request) -> result<response, string>;
+    log: func(message: string);
+    cache-get: func(key: string) -> option<string>;
+    cache-set: func(key: string, value: string, ttl: u32);
+}
+
+world provider {
+    use types.{query, server, provider-info};
+
+    import host;
+    export info: func() -> provider-info;
+    export servers: func(query: query) -> result<list<server>, string>;
+}
