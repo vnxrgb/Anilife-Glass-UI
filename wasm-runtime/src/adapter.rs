@@ -21,9 +21,25 @@ pub struct ProviderMetadata {
 
 struct DeniedHost {
     broker: Option<Box<dyn HttpBroker + Send>>,
+    cache: std::collections::HashMap<String, (String, std::time::Instant)>,
     limits: wasmtime::StoreLimits,
     wasi: wasmtime_wasi::WasiCtx,
     table: wasmtime::component::ResourceTable,
+}
+
+impl DeniedHost {
+    fn cached(&mut self, key: &str) -> Option<String> {
+        let now = std::time::Instant::now();
+        self.cache.retain(|_, (_, expiry)| *expiry > now);
+        self.cache.get(key).map(|(value, _)| value.clone())
+    }
+    fn cache_value(&mut self, key: String, value: String, ttl: u32) {
+        if self.broker.is_none() || key.len() > 512 || value.len() > 32768 || ttl == 0 { return; }
+        let now = std::time::Instant::now();
+        self.cache.retain(|_, (_, expiry)| *expiry > now);
+        if self.cache.len() >= 32 && !self.cache.contains_key(&key) { return; }
+        self.cache.insert(key, (value, now + std::time::Duration::from_secs(ttl.min(300) as u64)));
+    }
 }
 
 impl wasmtime_wasi::WasiView for DeniedHost {
@@ -43,8 +59,8 @@ impl modern::anilili::provider::host::Host for DeniedHost {
         Err("browser access disabled".into())
     }
     fn log(&mut self, _: String) {}
-    fn cache_get(&mut self, _: String) -> Option<String> { None }
-    fn cache_set(&mut self, _: String, _: String, _: u32) {}
+    fn cache_get(&mut self, key: String) -> Option<String> { self.cached(&key) }
+    fn cache_set(&mut self, key: String, value: String, ttl: u32) { self.cache_value(key, value, ttl); }
 }
 
 impl legacy::anilili::provider::types::Host for DeniedHost {}
@@ -58,13 +74,14 @@ impl legacy::anilili::provider::host::Host for DeniedHost {
         Err("browser access disabled".into())
     }
     fn log(&mut self, _: String) {}
-    fn cache_get(&mut self, _: String) -> Option<String> { None }
-    fn cache_set(&mut self, _: String, _: String, _: u32) {}
+    fn cache_get(&mut self, key: String) -> Option<String> { self.cached(&key) }
+    fn cache_set(&mut self, key: String, value: String, ttl: u32) { self.cache_value(key, value, ttl); }
 }
 
 fn store(engine: &Engine) -> Result<Store<DeniedHost>> {
     let mut store = Store::new(engine, DeniedHost {
         broker: None,
+        cache: std::collections::HashMap::new(),
         wasi: wasmtime_wasi::WasiCtx::builder().build(),
         table: wasmtime::component::ResourceTable::new(),
         limits: StoreLimitsBuilder::new().memory_size(64 << 20).instances(32).memories(4).tables(16).build(),

@@ -107,7 +107,7 @@ internal class WasmProviderLoader(context: Context) {
         }
 
     private companion object {
-        const val MAX_BYTES = 4 * 1024 * 1024
+        const val MAX_BYTES = WasmPolicy.MAX_MODULE_BYTES
         val serial = Mutex()
     }
 }

@@ -5,7 +5,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /** Trusted host policy. Provider self-declarations never grant permissions. */
 internal object WasmPolicy {
-    const val MAX_MODULE_BYTES = 64 * 1024 * 1024
+    const val MAX_MODULE_BYTES = 32 * 1024 * 1024
     const val MAX_RESPONSE_BYTES = 16L * 1024 * 1024
     const val MAX_CALL_MS = 45_000L
     private val componentHeader = byteArrayOf(0, 97, 115, 109, 13, 0, 1, 0)

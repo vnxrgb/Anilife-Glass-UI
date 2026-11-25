@@ -13,7 +13,7 @@ internal object WasmUpdatePolicy {
         pinnedKey: PublicKey,
     ): ApprovedWasmProvider? {
         if (!WasmManifestTrust.verify(manifest, signature, pinnedKey)) return null
-        if (module.size !in 8..4 * 1024 * 1024) return null
+        if (module.size !in 8..WasmPolicy.MAX_MODULE_BYTES) return null
         return runCatching {
             val json = JSONObject(manifest.toString(Charsets.UTF_8))
             require(json.getInt("schema") == 1)

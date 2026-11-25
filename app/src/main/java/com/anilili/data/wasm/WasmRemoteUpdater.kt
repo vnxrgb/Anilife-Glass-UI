@@ -59,7 +59,7 @@ internal class WasmRemoteUpdater(private val context: Context) {
             val manifest = fetch("manifest.json", 128 * 1024)
             val signature = fetch("manifest.sig", 1024)
             require(WasmManifestTrust.verify(manifest, signature, config.pinnedKey))
-            val module = fetch("provider.wasm", 4 * 1024 * 1024)
+            val module = fetch("provider.wasm", WasmPolicy.MAX_MODULE_BYTES)
             WasmInstalledModules.install(context, provider, manifest, signature, module, config.pinnedKey)
         }.getOrDefault(false)
     }

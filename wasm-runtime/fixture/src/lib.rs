@@ -6,6 +6,10 @@ impl Guest for Fixture {
         types::ProviderInfo { name: "Sandbox fixture".into(), hosts: vec!["example.org".into()] }
     }
     fn servers(query: types::Query) -> Result<Vec<types::Server>, String> {
+        host::cache_set("fixture-key", "fixture-value", 60);
+        if host::cache_get("fixture-key").as_deref() != Some("fixture-value") {
+            return Err("fixture cache failed".into());
+        }
         let response = host::http(&types::Request { method: "GET".into(), url: "https://example.org/".into(), headers: vec![], body: None })?;
         if response.status != 200 { return Err("fixture HTTP failed".into()); }
         Ok(vec![types::Server { name: "Fixture".into(), dub: query.dub, headers: vec![], streams: vec![types::MediaStream { url: "https://example.org/fixture.mp4".into(), quality: Some("720p".into()), format: "mp4".into() }] }])

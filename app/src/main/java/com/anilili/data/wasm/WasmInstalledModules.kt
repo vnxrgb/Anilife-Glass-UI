@@ -9,7 +9,7 @@ import java.security.PublicKey
 
 /** A single atomic signed envelope. Re-authenticate the original manifest on every load. */
 internal object WasmInstalledModules {
-    private const val MAX_BYTES = 4 * 1024 * 1024
+    private const val MAX_BYTES = WasmPolicy.MAX_MODULE_BYTES
     private fun directory(context: Context) = File(context.noBackupFilesDir, "reviewed-wasm")
     private fun approved(p: ApprovedWasmProvider) =
         WasmRegistry.select(listOf(p), p.languages.firstOrNull().orEmpty()) == listOf(p)

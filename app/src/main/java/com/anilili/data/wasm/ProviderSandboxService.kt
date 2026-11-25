@@ -45,7 +45,7 @@ class ProviderSandboxService : Service() {
                 while (true) {
                     val n = input.read(chunk)
                     if (n < 0) break
-                    require(buffer.size() + n <= 4 * 1024 * 1024)
+                    require(buffer.size() + n <= WasmPolicy.MAX_MODULE_BYTES)
                     buffer.write(chunk, 0, n)
                 }
                 buffer.toByteArray()
