@@ -726,7 +726,7 @@ private fun WatchContent(
     var wasmPosition by remember(data.anilistId, data.current.number, data.category, data.chosenStream?.url) {
         mutableStateOf<Long?>(null)
     }
-    val wasmCandidates = remember(data.category) {
+    val wasmCandidates = remember(wasmResolver, data.category, data.chosenStream?.isEmbed) {
         if (com.anilili.BuildConfig.DEBUG && android.os.Build.SUPPORTED_ABIS.contains("arm64-v8a") &&
             data.chosenStream?.isEmbed == false) wasmResolver.candidates("en", emptySet()) else emptyList()
     }

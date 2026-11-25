@@ -23,6 +23,11 @@ pub struct ProviderMetadata {
 // Provider network access remains exclusively through the authenticated custom broker.
 struct DenyDirectHttp;
 impl wasmtime_wasi_http::WasiHttpHooks for DenyDirectHttp {
+    // Reject every scheme before building a direct HTTP request. The explicit
+    // send_request denial below remains a second independent safety boundary.
+    fn is_supported_scheme(&mut self, _: &http::uri::Scheme) -> bool { false }
+    fn default_scheme(&mut self) -> Option<http::uri::Scheme> { None }
+
     fn send_request(
         &mut self,
         _request: http::Request<wasmtime_wasi_http::WasiBody>,
@@ -259,5 +264,18 @@ mod framing_tests {
         assert_eq!(reply.body, vec![42; 256 * 1024]);
         assert!(decode_broker_reply(&[0, 0, 0, 10, 0]).is_err());
         assert!(decode_broker_reply(&[]).is_err());
+    }
+}
+
+#[cfg(test)]
+mod direct_http_policy_tests {
+    use super::DenyDirectHttp;
+    use wasmtime_wasi_http::WasiHttpHooks;
+    #[test]
+    fn direct_http_rejects_all_schemes_and_has_no_default() {
+        let mut hooks = DenyDirectHttp;
+        assert!(!hooks.is_supported_scheme(&http::uri::Scheme::HTTP));
+        assert!(!hooks.is_supported_scheme(&http::uri::Scheme::HTTPS));
+        assert!(hooks.default_scheme().is_none());
     }
 }
