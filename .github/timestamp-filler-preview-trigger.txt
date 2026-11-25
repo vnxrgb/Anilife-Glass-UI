@@ -1,1 +1,1 @@
-Signed mobile preview: align hero glass actions and route-aware status bar contrast.
+Signed mobile preview: shared status bar contrast on Home and anime details; restore status bar after playback.

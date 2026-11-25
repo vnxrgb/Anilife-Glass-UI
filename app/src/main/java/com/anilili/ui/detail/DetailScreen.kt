@@ -74,6 +74,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -101,6 +102,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import com.anilili.ui.components.ArtworkStatusBarScrim
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
@@ -246,6 +249,7 @@ fun DetailScreen(
     focusEpisode: String? = null,
     /** The television's reload, raised by a hold on the lit tab in the navigation bar above. */
     tvRefreshRequest: TvRefreshRequest? = null,
+    onHeroUnderBarsChanged: (Boolean) -> Unit = {},
     vm: DetailViewModel = viewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -261,6 +265,7 @@ fun DetailScreen(
             onSeasonWatch = onSeasonWatch,
             focusEpisode = focusEpisode,
             tvRefreshRequest = tvRefreshRequest,
+            onHeroUnderBarsChanged = onHeroUnderBarsChanged,
             vm = vm,
         )
     }
@@ -277,6 +282,7 @@ private fun DetailScreenBody(
     onSeasonWatch: (Int) -> Unit,
     focusEpisode: String?,
     tvRefreshRequest: TvRefreshRequest?,
+    onHeroUnderBarsChanged: (Boolean) -> Unit,
     vm: DetailViewModel,
 ) {
     LaunchedEffect(animeId) { vm.load(animeId) }
@@ -365,9 +371,19 @@ private fun DetailScreenBody(
     val detailListState = rememberLazyListState()
     // What the header frosts once it is back over the page; null with Details' glass switched off.
     val detailBackdrop = if (glassEnabled(GlassSection.DETAILS)) remember { HazeState() } else null
-    val chromeOverHero by remember {
-        derivedStateOf { detailListState.firstVisibleItemIndex == 0 }
+    val detailMedia = (state as? UiState.Success)?.data?.info
+    val hasArtwork = detailMedia?.let { !it.bannerImage.isNullOrBlank() || !it.coverImage.best.isNullOrBlank() } == true
+    // The bottom of the detail hero fades to the theme much earlier than Home's tall poster.
+    // Switch before that light tail crosses the status area, not after the entire item leaves.
+    val fadeClearancePx = with(LocalDensity.current) { 112.dp.roundToPx() }
+    val chromeOverHero by remember(hasArtwork, fadeClearancePx) {
+        derivedStateOf {
+            val heroSize = detailListState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == 0 }?.size
+            hasArtwork && detailListState.firstVisibleItemIndex == 0 &&
+                (heroSize == null || detailListState.firstVisibleItemScrollOffset < (heroSize - fadeClearancePx).coerceAtLeast(0))
+        }
     }
+    SideEffect { onHeroUnderBarsChanged(chromeOverHero) }
 
     Scaffold(
         modifier = if (device.isTv) Modifier.appCanvas() else Modifier.glassAtmosphere(),
@@ -455,6 +471,7 @@ private fun DetailScreenBody(
                     DetailContent(
                         contentPadding = padding,
                         detailListState = detailListState,
+                        artworkUnderStatusBar = chromeOverHero,
                         data = s.data,
                         saved = saved,
                         listStatusLabel = listStatusLabel,
@@ -504,6 +521,7 @@ private fun DetailContent(
     onPrimaryFocusAcquired: () -> Unit,
     /** Hoisted so the scaffold's bar, which sits above this in the tree, can watch it. */
     detailListState: LazyListState,
+    artworkUnderStatusBar: Boolean = false,
     contentPadding: PaddingValues = PaddingValues(),
 ) {
     val info = data.info
@@ -945,6 +963,7 @@ private fun DetailContent(
             }
             item { Spacer(Modifier.height(device.pagePadding)) }
         }
+        if (artworkUnderStatusBar) ArtworkStatusBarScrim(Modifier.align(Alignment.TopCenter))
     }
 }
 

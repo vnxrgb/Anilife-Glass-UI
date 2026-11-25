@@ -29,9 +29,7 @@ import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsTopHeight
+import com.anilili.ui.components.ArtworkStatusBarScrim
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -778,12 +776,7 @@ private fun HomeContent(
             // Remains in place even if the scroll-aware app header slides away.
             // Only paint the actual status inset, never an opaque full header.
             if (artworkUnderStatusBar) {
-                Box(Modifier.align(Alignment.TopCenter).fillMaxWidth()
-                    .windowInsetsTopHeight(WindowInsets.statusBars)
-                    .background(Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = .50f),
-                        1f to Color.Black.copy(alpha = .20f),
-                    )))
+                ArtworkStatusBarScrim(Modifier.align(Alignment.TopCenter))
             }
         }
     }

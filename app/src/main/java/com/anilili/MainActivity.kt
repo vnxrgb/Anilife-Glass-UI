@@ -23,6 +23,7 @@ import android.view.View
 import android.view.WindowManager
 import androidx.activity.SystemBarStyle
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.compose.ui.graphics.luminance
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -325,8 +326,14 @@ class MainActivity : FragmentActivity() {
                 // the Appearance canvas rather than staying the AMOLED black it starts as.
                 val canvas = MaterialTheme.colorScheme.background.toArgb()
                 val lightCanvas = MaterialTheme.colorScheme.background.luminance() > .5f
-                var homeArtworkStatusBar by remember { mutableStateOf(false) }
-                val darkStatusIcons = lightCanvas && !homeArtworkStatusBar
+                var artworkStatusBar by remember { mutableStateOf(false) }
+                var browsingStatusBar by remember { mutableStateOf(false) }
+                val darkStatusIcons = lightCanvas && !artworkStatusBar
+                // A return from immersive playback must not leave browsing bars hidden.
+                LaunchedEffect(browsingStatusBar) {
+                    if (browsingStatusBar) WindowCompat.getInsetsController(window, window.decorView)
+                        .show(WindowInsetsCompat.Type.statusBars())
+                }
                 SideEffect {
                     window.decorView.setBackgroundColor(canvas)
                     WindowCompat.getInsetsController(window, window.decorView).apply {
@@ -369,7 +376,10 @@ class MainActivity : FragmentActivity() {
                                 onRouteConsumed = { pendingRoute = null },
                                 pendingLink = pendingLink,
                                 onLinkConsumed = { pendingLink = null },
-                                onHomeArtworkStatusBarChanged = { homeArtworkStatusBar = it },
+                                onArtworkStatusBarChanged = { artwork, browsing ->
+                                    artworkStatusBar = artwork
+                                    browsingStatusBar = browsing
+                                },
                             )
                             AllAnimeCaptchaHost()
                             CloudflareChallengeHost()
@@ -776,16 +786,20 @@ private fun MiruroRoot(
     onRouteConsumed: () -> Unit,
     pendingLink: AnililiLink?,
     onLinkConsumed: () -> Unit,
-    onHomeArtworkStatusBarChanged: (Boolean) -> Unit,
+    onArtworkStatusBarChanged: (Boolean, Boolean) -> Unit,
 ) {
     val deviceProfile = rememberAppDeviceProfile()
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = Routes.tabRoute(backStack?.destination?.route)
-    var homeHeroUnderBars by remember { mutableStateOf(false) }
+    // Scope artwork contrast to the visible back-stack entry, including detail-to-detail navigation.
+    // A screen exiting through an animation must not override the screen coming in.
+    var artworkBarReport by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
+    val browsingBars = !deviceProfile.isTv && !inPictureInPicture &&
+        (currentRoute == Routes.HOME || currentRoute == Routes.DETAIL)
     SideEffect {
-        onHomeArtworkStatusBarChanged(!deviceProfile.isTv && !inPictureInPicture &&
-            currentRoute == Routes.HOME && homeHeroUnderBars)
+        onArtworkStatusBarChanged(browsingBars && artworkBarReport?.first == backStack?.id &&
+            artworkBarReport?.second == true, browsingBars)
     }
     val showBottomBar = currentRoute in Routes.tabRoutes
     // The anime page keeps the phone's tab bar (and the tablet's rail): it is where most browsing
@@ -1091,7 +1105,9 @@ private fun MiruroRoot(
                             tvDetailRefresh = tvDetailRefresh,
                             tabSwipe = tabSwipe,
                             onMoodDiscovery = { randomVm.ensurePick(); showRandomPick = true },
-                            onHomeHeroUnderBarsChanged = { homeHeroUnderBars = it },
+                            onArtworkUnderBarsChanged = { entryId, overArtwork ->
+                                artworkBarReport = entryId to overArtwork
+                            },
                             modifier = Modifier
                                 .weight(1f)
                                 .swipeBetweenTabs(
@@ -1902,7 +1918,7 @@ private fun AppNavHost(
     /** Makes a swipe between tabs hand over sideways; every other navigation keeps the fade. */
     tabSwipe: TabSwipeState? = null,
     onMoodDiscovery: () -> Unit = {},
-    onHomeHeroUnderBarsChanged: (Boolean) -> Unit = {},
+    onArtworkUnderBarsChanged: (String, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -1915,7 +1931,7 @@ private fun AppNavHost(
         popEnterTransition = { tabSwipe?.enter(DefaultNavEnter) ?: DefaultNavEnter },
         popExitTransition = { tabSwipe?.exit(DefaultNavExit) ?: DefaultNavExit },
     ) {
-            composable(Routes.HOME) {
+            composable(Routes.HOME) { entry ->
                 LaunchedEffect(Unit) { DiagnosticsLog.event("Route HOME content entered") }
                 HomeScreen(
                     onAnimeClick = { id -> nav.navigate(Routes.detail(id)) },
@@ -1934,7 +1950,9 @@ private fun AppNavHost(
                     },
                     onNotificationsClick = { nav.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
                     onMoodDiscovery = onMoodDiscovery,
-                    onHeroUnderBarsChanged = onHomeHeroUnderBarsChanged,
+                    onHeroUnderBarsChanged = { overArtwork ->
+                        if (nav.currentBackStackEntry == entry) onArtworkUnderBarsChanged(entry.id, overArtwork)
+                    },
                     tvPrimaryFocusTarget = tvHomePrimaryFocusTarget,
                     tvRefreshRequest = tvHomeRefresh,
                 )
@@ -2053,6 +2071,9 @@ private fun AppNavHost(
                 DetailScreen(
                     animeId = id,
                     focusEpisode = returnEpisode,
+                    onHeroUnderBarsChanged = { overArtwork ->
+                        if (nav.currentBackStackEntry == entry) onArtworkUnderBarsChanged(entry.id, overArtwork)
+                    },
                     onBack = { nav.popBackStack() },
                     onAnimeClick = { relatedId ->
                         if (relatedId != id) nav.navigate(Routes.detail(relatedId))
