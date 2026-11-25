@@ -2522,31 +2522,12 @@ fun PlayerSurface(
                 skipTimingStatus = skipTimingStatus,
                 skipReport = skipReport,
                 onReportSkipTiming = onReportSkipTiming,
-                onOpenInExternalPlayer = if (protectedWasm != null) null else ({
-                    settingsExpanded = false
-                    // The other player fetches the stream itself, so this one must let go of it
-                    // first: two readers on the same short-lived CDN token is how a source that
-                    // works alone starts refusing both.
-                    val positionMs = activeController.currentPosition.coerceAtLeast(0L)
-                    activeController.pause()
-                    currentOnProgress?.invoke(
-                        activeStream.url,
-                        positionMs,
-                        activeController.duration.coerceAtLeast(0L),
-                    )
-                    launchExternalPlayer(
-                        context = context,
-                        request = externalPlaybackRequest(
-                            stream = activeStream,
-                            seriesTitle = seriesTitle,
-                            episodeTitle = episodeTitle,
-                            resumePositionMs = positionMs,
-                            subtitles = allSubtitles,
-                        ),
-                        preferredPackage = SettingsStore.externalPlayerPackage.value,
-                        session = externalPlaybackSession?.invoke(activeController.duration.coerceAtLeast(0L)),
-                    )
-                }),
+                onOpenInExternalPlayer = nativeExternalPlayerAction(
+                    activeStream, context, activeController, seriesTitle, episodeTitle,
+                    allSubtitles, externalPlaybackSession,
+                    onBeforeLaunch = { settingsExpanded = false },
+                    onProgress = currentOnProgress,
+                ),
             )
         }
 
@@ -3226,6 +3207,40 @@ fun PlayerSurface(
  * Toggle the requested playback intent, not only `isPlaying`. During buffering `isPlaying` is
  * false even though playback is armed, which made a user's pause gesture call play again.
  */
+/** Keep the conditional callback and its captures outside the oversized player composable. */
+@OptIn(UnstableApi::class)
+private fun nativeExternalPlayerAction(
+    stream: StreamItem,
+    context: Context,
+    controller: MediaController,
+    seriesTitle: String,
+    episodeTitle: String,
+    subtitles: List<SubtitleItem>,
+    session: ((Long) -> ExternalPlaybackSession)?,
+    onBeforeLaunch: () -> Unit,
+    onProgress: ((String, Long, Long) -> Unit)?,
+): (() -> Unit)? {
+    if (stream.url.startsWith(com.anilili.data.wasm.WasmPlaybackSource.MEDIA_ID_PREFIX)) return null
+    return {
+        onBeforeLaunch()
+        val positionMs = controller.currentPosition.coerceAtLeast(0L)
+        controller.pause()
+        onProgress?.invoke(stream.url, positionMs, controller.duration.coerceAtLeast(0L))
+        launchExternalPlayer(
+            context = context,
+            request = externalPlaybackRequest(
+                stream = stream,
+                seriesTitle = seriesTitle,
+                episodeTitle = episodeTitle,
+                resumePositionMs = positionMs,
+                subtitles = subtitles,
+            ),
+            preferredPackage = SettingsStore.externalPlayerPackage.value,
+            session = session?.invoke(controller.duration.coerceAtLeast(0L)),
+        )
+    }
+}
+
 private fun togglePlayerPlayback(controller: MediaController): Boolean {
     val willPlay = playerToggleWillPlay(controller.playWhenReady, controller.playbackState)
     if (willPlay) {
