@@ -1,1 +1,2 @@
 Signed mobile preview: compact landscape navigation and split Discover layout.
+Rebuild signed mobile preview with API 23 compatibility fix (68f77f6).
