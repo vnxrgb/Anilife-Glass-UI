@@ -82,6 +82,12 @@ Anilumos isn't affiliated with or endorsed by AniLife or Morphe. It doesn't host
 [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Support](SUPPORT.md)
 
 
+### Original AniLumos contributions
+
+Copyright © 2026 [vnxrgb](https://github.com/vnxrgb).
+
+This notice applies only to original contributions owned by the AniLumos maintainer, such as independently created branding, visual assets, UI work, and code changes. It does not claim ownership of underlying AniLife code, Morphe-derived work, or third-party materials. Their existing licenses, attribution requirements, and permissions remain in effect.
+
 ### Community playback metadata
 
 - [Tenrai](https://tenrai.org/) — unofficial public MAL episode flags and community recommendations, using its documented v1 API. Replaces the discontinued public Jikan API. No API key is embedded; public request limits and cooldowns are respected. See [Tenrai terms](https://tenrai.org/terms).
