@@ -46,26 +46,24 @@ A look at AniLumos on Android, including Franchise Watch Order introduced in v2.
 <p align="center">
   <a href="docs/store/screenshots/01-home.jpg"><img src="docs/store/screenshots/01-home.jpg" width="23%" alt="Home and Glass UI"></a>
   <a href="docs/store/screenshots/02-anime-details.jpg"><img src="docs/store/screenshots/02-anime-details.jpg" width="23%" alt="Anime details"></a>
-  <a href="docs/store/screenshots/03-player.jpg"><img src="docs/store/screenshots/03-player.jpg" width="23%" alt="Ambient player and Skip Intro"></a>
-  <a href="docs/store/screenshots/04-discover.jpg"><img src="docs/store/screenshots/04-discover.jpg" width="23%" alt="Mood-based Discover"></a>
+  <a href="docs/store/screenshots/franchise-watch-order-entry.jpg"><img src="docs/store/screenshots/franchise-watch-order-entry.jpg" width="23%" alt="Franchise guide entry"></a>
+  <a href="docs/store/screenshots/franchise-watch-order-screen.jpg"><img src="docs/store/screenshots/franchise-watch-order-screen.jpg" width="23%" alt="Franchise watch order"></a>
 </p>
-<p align="center">Home and Glass UI · Anime details · Ambient player and Skip Intro · Mood-based Discover</p>
+<p align="center">Home and Glass UI · Anime details · Franchise guide entry · Franchise watch order</p>
 
 <p align="center">
+  <a href="docs/store/screenshots/03-player.jpg"><img src="docs/store/screenshots/03-player.jpg" width="23%" alt="Ambient player and Skip Intro"></a>
+  <a href="docs/store/screenshots/04-discover.jpg"><img src="docs/store/screenshots/04-discover.jpg" width="23%" alt="Mood-based Discover"></a>
   <a href="docs/store/screenshots/05-notifications.jpg"><img src="docs/store/screenshots/05-notifications.jpg" width="23%" alt="Notifications"></a>
+</p>
+<p align="center">Ambient player and Skip Intro · Mood-based Discover · Notifications</p>
+
+<p align="center">
   <a href="docs/store/screenshots/06-schedule.jpg"><img src="docs/store/screenshots/06-schedule.jpg" width="23%" alt="Airing schedule"></a>
   <a href="docs/store/screenshots/07-accounts.jpg"><img src="docs/store/screenshots/07-accounts.jpg" width="23%" alt="Accounts and integrations"></a>
   <a href="docs/store/screenshots/08-appearance.jpg"><img src="docs/store/screenshots/08-appearance.jpg" width="23%" alt="Appearance and themes"></a>
 </p>
-<p align="center">Notifications · Airing schedule · Accounts and integrations · Appearance and themes</p>
-
-### Franchise Watch Order
-
-<p align="center">
-  <a href="docs/store/screenshots/franchise-watch-order-entry.jpg"><img src="docs/store/screenshots/franchise-watch-order-entry.jpg" width="34%" alt="Franchise Watch Order entry on Fate/Zero anime details"></a>
-  <a href="docs/store/screenshots/franchise-watch-order-screen.jpg"><img src="docs/store/screenshots/franchise-watch-order-screen.jpg" width="34%" alt="Fate/Zero chronological franchise watch order and progress"></a>
-</p>
-<p align="center">Open the franchise guide from anime details · Explore chronological orders and track progress</p>
+<p align="center">Airing schedule · Accounts and integrations · Appearance and themes</p>
 
 ## Download
 
