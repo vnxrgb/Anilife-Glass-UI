@@ -44,3 +44,11 @@ TV update selection now requires both metadata and APK asset URLs to match the s
 - Signed preview release `tv-alpha-signed-ac24c1ebb8fd-run14` exists but uses older source `ac24c1e`. Current TV update fixes still need a newly signed preview and matching metadata.
 - Github TV selector hardening now rejects malformed tags, oversized metadata assets, and explicitly non-uploaded APK assets; tests added. CI pending.
 - Status: GitHub TV update code PRESENT / VALIDATE; signed latest preview MISSING; TV hardware parity VALIDATE. Existing TV-specific UI remains intact; no wholesale main merge.
+
+## 2026-11-25 latest verification and response-size hardening
+
+- Stable mobile reference remains `ebe374eea7df5a77909f3a6b903753166f188c7e`. TV diverges by 223 commits ahead / 100 behind when comparing TV to main. Reconcile only reviewed individual changes.
+- Source TV CI [45679485265](https://github.com/vnxrgb/Anilumos/actions/runs/45679485265) **passed** at `649c73aafbcc3168ef0e0cf4782cc2cdf94c8383`: TV unit tests, lint, debug APK assembly and launcher/package verification. This is not a signed preview or hardware test.
+- TV GitHub release metadata fetch now bounds bytes while reading even if HTTP Content-Length is missing or inaccurate. Follow-up commit `75040c3756aaa34288614fcc4be8fa90c6c8bae9` needs CI verification.
+- The only verified published TV signed preview still targets `ac24c1e`; the current TV branch has **no verified release-signed preview APK**. Dedicated preview workflow runs every six hours and can be manually dispatched; avoid overlapping signed builds.
+- GitHub TV updates: PRESENT / CI validation pending for latest hardening; installer signature checks still required. Full D-pad, Fire TV, account-pairing, playback and feature parity remain VALIDATE; no physical device testing performed.
