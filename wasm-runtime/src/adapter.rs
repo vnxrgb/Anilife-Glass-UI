@@ -21,6 +21,14 @@ pub struct ProviderMetadata {
 
 struct DeniedHost {
     limits: wasmtime::StoreLimits,
+    wasi: wasmtime_wasi::WasiCtx,
+    table: wasmtime::component::ResourceTable,
+}
+
+impl wasmtime_wasi::WasiView for DeniedHost {
+    fn ctx(&mut self) -> wasmtime_wasi::WasiCtxView<'_> {
+        wasmtime_wasi::WasiCtxView { ctx: &mut self.wasi, table: &mut self.table }
+    }
 }
 
 impl modern::anilili::provider::types::Host for DeniedHost {}
@@ -51,6 +59,8 @@ impl legacy::anilili::provider::host::Host for DeniedHost {
 
 fn store(engine: &Engine) -> Result<Store<DeniedHost>> {
     let mut store = Store::new(engine, DeniedHost {
+        wasi: wasmtime_wasi::WasiCtx::builder().build(),
+        table: wasmtime::component::ResourceTable::new(),
         limits: StoreLimitsBuilder::new().memory_size(64 << 20).instances(32).memories(4).tables(16).build(),
     });
     store.limiter(|s| &mut s.limits);
@@ -65,6 +75,7 @@ pub fn inspect(bytes: &[u8], community: bool) -> Result<ProviderMetadata> {
     let component = Component::new(&engine, bytes)?;
     let mut store = store(&engine)?;
     let mut linker = Linker::new(&engine);
+    wasmtime_wasi::p2::add_to_linker_sync(&mut linker)?;
     let result = if community {
         legacy::Provider::add_to_linker::<_, wasmtime::component::HasSelf<_>>(&mut linker, |s| s)?;
         let instance = legacy::Provider::instantiate(&mut store, &component, &linker)?;

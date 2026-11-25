@@ -9,5 +9,6 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "1"
-wasmtime = { version = "49", default-features = false, features = ["component-model", "cranelift", "runtime", "std"] }
+wasmtime = { version = "49", default-features = false, features = ["component-model", "cranelift", "runtime", "std", "anyhow"] }
 jni = "0.21"
+wasmtime-wasi = { version = "49", default-features = false, features = ["p2"] }
