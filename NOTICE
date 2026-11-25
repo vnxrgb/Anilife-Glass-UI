@@ -1,0 +1,25 @@
+AniLumos — Copyright and attribution notice
+
+Copyright © 2026 AniLumos contributors, for their respective original contributions only.
+
+AniLumos is derived from AniLife (https://github.com/anilifecommunity/android-and-tv).
+Copyright (c) 2026 Anilife Community contributors.
+The original AniLife license and notices remain intact. See LICENSE. Independent
+distribution and other uses outside that license require applicable permission
+from the AniLife rights holders. This notice does not grant such permission.
+
+Original AniLumos contributions include independently created branding,
+website code, visual assets, interface work and other code changes, only to
+the extent owned by their respective contributors. This notice does not
+claim ownership of upstream code, adapted third-party code, artwork or
+other third-party materials, and does not alter their licensing terms.
+
+This app uses code from Morphe. To learn more, visit https://morphe.software
+
+Morphe-derived code remains subject to its applicable GPLv3 terms.
+See app/src/main/assets/GPL-3.0.txt and app/src/main/assets/MORPHE_NOTICE.txt.
+Other third-party components remain subject to their respective licenses.
+See README.md and docs/ASSET-LICENCES.md for further acknowledgements.
+
+AniLumos is not affiliated with or endorsed by AniLife or Morphe.
+This notice is informational and does not replace, modify or override any license.
