@@ -1,5 +1,7 @@
 package com.anilili.ui.detail
 
+import com.anilili.data.AppGraph
+
 import com.anilili.ui.nav.AnililiLink
 import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassAtmosphere

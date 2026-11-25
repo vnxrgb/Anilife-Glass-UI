@@ -1,1 +1,1 @@
-Mobile preview: restore system status bar at window focus and prefer HD AniZip/TMDB hero artwork.
+Mobile preview: HD hero artwork and window status restoration, complete detail repository import.
