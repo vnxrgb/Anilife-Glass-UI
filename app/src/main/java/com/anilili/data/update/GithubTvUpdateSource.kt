@@ -60,9 +60,17 @@ internal object GithubTvUpdateSource {
                 if (!response.isSuccessful || (response.body?.contentLength() ?: 0) > 256000L) return@use null
                 // Content-Length can be absent or dishonest. Bound the actual bytes read
                 // before decoding rather than allocating an unbounded response string.
-                response.body?.source()?.readByteArray(256001L)
-                    ?.takeIf { it.size <= 256000 }
-                    ?.toString(Charsets.UTF_8)
+                response.body?.byteStream()?.use { stream ->
+                    val output = java.io.ByteArrayOutputStream()
+                    val chunk = ByteArray(8192)
+                    while (true) {
+                        val count = stream.read(chunk)
+                        if (count < 0) break
+                        if (output.size() + count > 256000) return@use null
+                        output.write(chunk, 0, count)
+                    }
+                    output.toString(Charsets.UTF_8.name())
+                }
             }
         }.getOrNull()
         val releases = get(RELEASES) ?: error("AniLumos TV preview channel unavailable")
