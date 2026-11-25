@@ -274,7 +274,7 @@ class MainActivity : FragmentActivity() {
 
     private fun restoreBrowsingStatusBar() {
         val darkIcons = browsingDarkStatusIcons ?: return
-        if (isInPictureInPictureMode) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) return
         window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             show(WindowInsetsCompat.Type.statusBars())
