@@ -52,6 +52,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
@@ -2122,6 +2125,9 @@ private fun FranchiseWatchOrderDialog(
     onWatch: (Int) -> Unit,
 ) {
     var timeline by rememberSaveable(info.id) { mutableStateOf(true) }
+    var showSources by rememberSaveable(info.id) { mutableStateOf(false) }
+    var showOrders by rememberSaveable(info.id) { mutableStateOf(false) }
+    val pad = LocalAppDeviceProfile.current.pagePadding
     var groupName by rememberSaveable(info.id) { mutableStateOf<String?>(null) }
     val context = LocalContext.current.applicationContext
     val hideAdult by SettingsStore.hideAdultContent.collectAsState()
@@ -2165,18 +2171,21 @@ private fun FranchiseWatchOrderDialog(
     val accent = MaterialTheme.colorScheme.primary
     val next = orderedEntries.firstOrNull { it.media.id !in completedIds && it.media.id !in optionalIds }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).systemBarsPadding()) {
+        Column(Modifier.fillMaxSize().appCanvas().glassAtmosphere().systemBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
-                Text("Franchise Watch Order", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("Franchise Watch Order", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 2)
+                IconButton(onClick = { showSources = true }) {
+                    Icon(Icons.Default.Info, contentDescription = "Sources and credits")
+                }
             }
             LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(bottom = 24.dp)) {
                 item(key = "franchise-hero") {
-                    Box(Modifier.fillMaxWidth().padding(16.dp).clip(RoundedCornerShape(24.dp))) {
+                    Box(Modifier.fillMaxWidth().padding(horizontal = pad, vertical = 8.dp).clip(RoundedCornerShape(24.dp))) {
                         AsyncImage(model = info.bannerImage ?: info.coverImage.best, contentDescription = null,
-                            modifier = Modifier.fillMaxWidth().height(180.dp), contentScale = ContentScale.Crop)
+                            modifier = Modifier.fillMaxWidth().height(150.dp), contentScale = ContentScale.Crop)
                         Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .9f)))))
                         Column(Modifier.align(Alignment.BottomStart).padding(18.dp)) {
                             Text(info.title.preferred, color = Color.White, style = MaterialTheme.typography.headlineSmall,
@@ -2188,56 +2197,62 @@ private fun FranchiseWatchOrderDialog(
                 }
                 item(key = "franchise-progress") {
                     val done = orderedEntries.count { it.media.id in completedIds }
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
-                        .glassCard(RoundedCornerShape(20.dp)).padding(16.dp)) {
-                        Text("Franchise progress", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(10.dp))
-                        Box(Modifier.fillMaxWidth().height(7.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                            Box(Modifier.fillMaxWidth(done.toFloat() / orderedEntries.size.coerceAtLeast(1)).fillMaxHeight().background(accent))
+                    Column(Modifier.fillMaxWidth().padding(horizontal = pad, vertical = 6.dp)
+                        .glassCard(RoundedCornerShape(20.dp)).padding(12.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Franchise progress", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                            Text("$done / ${orderedEntries.size}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Text("$done of ${orderedEntries.size} completed", modifier = Modifier.padding(top = 8.dp),
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        WatchProgressBar(fraction = done.toFloat() / orderedEntries.size.coerceAtLeast(1), modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
                         if (next != null) {
-                            Text("Next unfinished: ${next.media.title.preferred}", modifier = Modifier.padding(top = 12.dp),
-                                style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            TextButton(onClick = { if (next.isCurrent) onWatch(next.media.id) else onOpen(next.media.id) }) {
-                                Text(if (next.isCurrent) "Watch next" else "View anime")
+                            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Next unfinished", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(next.media.title.preferred, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                }
+                                IconButton(onClick = { if (next.isCurrent) onWatch(next.media.id) else onOpen(next.media.id) }) {
+                                    if (next.isCurrent) Icon(Icons.Default.PlayArrow, contentDescription = "Watch next", tint = accent)
+                                    else Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "View anime", tint = accent)
+                                }
                             }
                         }
                     }
                 }
                 item(key = "franchise-controls") {
-                    Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-                        Text("Viewing order", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            val choices = listOf<Pair<String?, String>>(null to "Release order") + curated.map { orderKey(it) to it.name }
-                            choices.forEach { (key, label) ->
-                                val selected = if (key == null) activeOrder == null else key == selectedOrder
-                                Text(label, modifier = Modifier.clip(CircleShape)
-                                    .background(if (selected) glassSelectionColor() else glassPanelColor())
-                                    .border(1.dp, if (selected) accent else glassRimColor(), CircleShape)
-                                    .selectable(selected = selected, onClick = { selectedOrder = key; groupName = null })
-                                    .padding(horizontal = 14.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge)
+                    Column(Modifier.fillMaxWidth().padding(horizontal = pad, vertical = 8.dp)) {
+                        Text("Viewing order", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Row(Modifier.fillMaxWidth().padding(top = 8.dp)
+                            .glassCard(RoundedCornerShape(22.dp))
+                            .clickable(onClickLabel = "Choose viewing order") { showOrders = true }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text(activeOrder?.name ?: "Release order", modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyLarge, maxLines = 3)
+                            Icon(Icons.Default.ExpandMore, contentDescription = null)
+                        }
+                        if (loadingOrders) Text("Checking viewing orders…", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 5.dp))
+                        else if (curated.isEmpty()) Text("No additional curated orders available.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 5.dp))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Source: " + when (activeOrder?.source) {
+                                CuratedWatchOrders.COMMUNITY -> "Community watch order"
+                                CuratedWatchOrders.METADATA -> "Anime Metadata DB"
+                                else -> "AniList"
+                            }, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(onClick = { showSources = true }) { Text("Credits") }
+                        }
+                        if (activeOrder != null && orderedEntries.size < activeOrder.steps.size) Text("Some entries could not be displayed.", style = MaterialTheme.typography.bodySmall)
+                        Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(true to "Timeline", false to "Watch order").forEach { (value, label) ->
+                                val selected = timeline == value
+                                val shape = RoundedCornerShape(50)
+                                Box(Modifier.weight(1f).heightIn(min = 48.dp).clip(shape)
+                                    .background(if (selected) glassSelectionColor() else glassPanelColor().copy(alpha = 0.38f))
+                                    .border(1.dp, if (selected) glassRimColor() else glassRimColor().copy(alpha = 0.45f), shape)
+                                    .selectable(selected = selected, role = Role.Tab, onClick = { timeline = value }),
+                                    contentAlignment = Alignment.Center) {
+                                    Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp))
+                                }
                             }
-                        }
-                        if (loadingOrders) Text("Checking community viewing orders…", style = MaterialTheme.typography.bodySmall)
-                        else if (curated.isEmpty()) Text("No additional curated orders available. Showing release order.", style = MaterialTheme.typography.bodySmall)
-                        activeOrder?.let { order ->
-                            Text("Source: " + order.source, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (orderedEntries.size < order.steps.size) Text("Some entries could not be displayed.", style = MaterialTheme.typography.bodySmall)
-                        }
-                        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
-                        Row(Modifier.horizontalScroll(rememberScrollState())) {
-                            TextButton(onClick = { uriHandler.openUri("https://github.com/Bas1874/Anime-Watch-Order-Api") }) { Text("Community source") }
-                            TextButton(onClick = { uriHandler.openUri("https://www.reddit.com/r/anime/wiki/watch_order") }) { Text("r/anime wiki") }
-                            TextButton(onClick = { uriHandler.openUri("https://github.com/michael-freling/anime-metadata-db") }) { Text("Metadata DB") }
-                            TextButton(onClick = { uriHandler.openUri("https://opendatacommons.org/licenses/odbl/1-0/") }) { Text("ODbL") }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (timeline) Button(onClick = { timeline = true }) { Text("Timeline") }
-                            else OutlinedButton(onClick = { timeline = true }) { Text("Timeline") }
-                            if (!timeline) Button(onClick = { timeline = false }) { Text("Watch order") }
-                            else OutlinedButton(onClick = { timeline = false }) { Text("Watch order") }
                         }
                         Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             (listOf<String?>(null) + groups.map { it.name }).forEach { name ->
@@ -2254,9 +2269,9 @@ private fun FranchiseWatchOrderDialog(
                     }
                 }
                 itemsIndexed(visible, key = { _, entry -> entry.media.id }) { index, entry ->
-                    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = pad).height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
                         if (timeline) {
-                            Box(Modifier.width(26.dp).height(104.dp).drawBehind {
+                            Box(Modifier.width(20.dp).fillMaxHeight().drawBehind {
                                 val x = size.width / 2f
                                 if (index > 0) drawLine(accent.copy(alpha = .45f), Offset(x, 0f), Offset(x, size.height / 2), strokeWidth = 2.dp.toPx())
                                 if (index < visible.lastIndex) drawLine(accent.copy(alpha = .45f), Offset(x, size.height / 2), Offset(x, size.height), strokeWidth = 2.dp.toPx())
@@ -2265,13 +2280,76 @@ private fun FranchiseWatchOrderDialog(
                         }
                         Box(Modifier.weight(1f)) {
                             WatchOrderRow(entry, onOpen = { onOpen(entry.media.id) }, onWatch = { onWatch(entry.media.id) },
-                                completed = entry.media.id in completedIds, optional = entry.media.id in optionalIds)
+                                completed = entry.media.id in completedIds, optional = entry.media.id in optionalIds, horizontalPadding = 0.dp)
                         }
                     }
                 }
             }
         }
     }
+    if (showOrders) {
+        Dialog(onDismissRequest = { showOrders = false }) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).appCanvas()
+                .glassCard(RoundedCornerShape(24.dp)).padding(16.dp)) {
+                Text("Viewing order", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                LazyColumn(Modifier.fillMaxWidth().heightIn(max = 380.dp).padding(top = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    val choices = listOf<Pair<String?, String>>(null to "Release order") + curated.map { orderKey(it) to it.name }
+                    items(choices) { (key, label) ->
+                        val selected = if (key == null) activeOrder == null else key == selectedOrder
+                        val shape = RoundedCornerShape(16.dp)
+                        Row(Modifier.fillMaxWidth().clip(shape)
+                            .background(if (selected) glassSelectionColor() else glassPanelColor())
+                            .border(1.dp, if (selected) accent else glassRimColor(), shape)
+                            .selectable(selected = selected, role = Role.RadioButton, onClick = {
+                                selectedOrder = key; groupName = null; showOrders = false
+                            }).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(label, style = MaterialTheme.typography.bodyLarge)
+                                val source = curated.firstOrNull { orderKey(it) == key }?.source
+                                Text(when (source) {
+                                    CuratedWatchOrders.COMMUNITY -> "Community watch order"
+                                    CuratedWatchOrders.METADATA -> "Anime Metadata DB"
+                                    else -> "AniList"
+                                }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (selected) Icon(Icons.Default.Check, contentDescription = "Selected", tint = accent)
+                        }
+                    }
+                }
+                TextButton(onClick = { showOrders = false }, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+            }
+        }
+    }
+    if (showSources) {
+        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+        Dialog(onDismissRequest = { showSources = false }) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).appCanvas()
+                .glassCard(RoundedCornerShape(24.dp)).padding(16.dp).verticalScroll(rememberScrollState())) {
+                Text("Sources & credits", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text("Viewing orders are provided by external databases and community contributors. Availability varies by franchise.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
+                val sources = listOf(
+                    "AniList" to "https://anilist.co/",
+                    "Anime Watch Order API · Bas1874" to "https://github.com/Bas1874/Anime-Watch-Order-Api",
+                    "r/anime watch-order wiki" to "https://www.reddit.com/r/anime/wiki/watch_order",
+                    "Anime Metadata DB · Michael Freling" to "https://github.com/michael-freling/anime-metadata-db",
+                    "Open Database License (ODbL)" to "https://opendatacommons.org/licenses/odbl/1-0/",
+                    "Database Contents License (DbCL)" to "https://opendatacommons.org/licenses/dbcl/1-0/"
+                )
+                sources.forEach { (label, url) ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp).glassCard(RoundedCornerShape(16.dp))
+                        .clickable { runCatching { uriHandler.openUri(url) }.onFailure {
+                            Toast.makeText(context, "Unable to open link", Toast.LENGTH_SHORT).show()
+                        } }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = accent)
+                    }
+                }
+                TextButton(onClick = { showSources = false }, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+            }
+        }
+    }
+
 }
 
 /**
@@ -2283,7 +2361,7 @@ private fun FranchiseWatchOrderDialog(
  * the page onto the back stack.
  */
 @Composable
-private fun WatchOrderRow(entry: WatchOrderEntry, onOpen: () -> Unit, onWatch: () -> Unit, completed: Boolean = false, optional: Boolean = false) {
+private fun WatchOrderRow(entry: WatchOrderEntry, onOpen: () -> Unit, onWatch: () -> Unit, completed: Boolean = false, optional: Boolean = false, horizontalPadding: Dp = LocalAppDeviceProfile.current.pagePadding) {
     val media = entry.media
     val shape = RoundedCornerShape(18.dp)
     val accent = MaterialTheme.colorScheme.primary
@@ -2291,7 +2369,7 @@ private fun WatchOrderRow(entry: WatchOrderEntry, onOpen: () -> Unit, onWatch: (
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 5.dp)
+            .padding(horizontal = horizontalPadding, vertical = 5.dp)
             .focusHighlight(shape)
             .clip(shape)
             .background(
