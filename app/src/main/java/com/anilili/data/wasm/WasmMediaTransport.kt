@@ -19,6 +19,15 @@ import java.util.concurrent.TimeUnit
 @UnstableApi
 internal object WasmMediaTransport {
     fun factory(provider: ApprovedWasmProvider, headers: Map<String, String> = emptyMap()): DataSource.Factory {
+        // The request properties may also come from internal callers; enforce the same
+        // restrictions as the validated WASM result rather than trusting the caller.
+        require(headers.keys.all { it.lowercase(java.util.Locale.ROOT) in allowedHeaders })
+        require(headers.values.all { it.length <= 4096 && '\r' !in it && '\n' !in it })
+        for ((name, value) in headers) {
+            if (name.equals("referer", true) || name.equals("origin", true)) {
+                require(WasmPolicy.allowsUrl(value, provider.hosts))
+            }
+        }
         val client = OkHttpClient.Builder()
             .proxy(Proxy.NO_PROXY)
             .followRedirects(false)
