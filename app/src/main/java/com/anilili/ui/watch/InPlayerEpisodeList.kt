@@ -110,8 +110,12 @@ internal fun InPlayerEpisodeDrawer(
     val rowArtwork = remember(episodes, artworkUrl) { episodeArtworkFallback(episodes, artworkUrl) }
 
     var chosenBlockIndex by remember(episodes) { mutableStateOf<Int?>(null) }
-    val blocks = remember(episodes) { episodeBlocks(episodes) }
     val currentEpisode = episodes.getOrNull(currentIndex)
+    val hideFillerEpisodes by SettingsStore.hideFillerEpisodes.collectAsState()
+    val visibleEpisodes = remember(episodes, currentEpisode, hideFillerEpisodes) {
+        if (hideFillerEpisodes) episodes.filter { !it.filler || it.pipeId == currentEpisode?.pipeId } else episodes
+    }
+    val blocks = remember(visibleEpisodes) { episodeBlocks(visibleEpisodes) }
     val defaultBlockIndex = remember(blocks, currentEpisode) {
         blockIndexContaining(blocks, currentEpisode?.number).coerceIn(0, (blocks.size - 1).coerceAtLeast(0))
     }
@@ -131,7 +135,7 @@ internal fun InPlayerEpisodeDrawer(
     // current episode.
     LaunchedEffect(blocks, currentIndex) {
         val block = blocks.getOrNull(defaultBlockIndex)
-        val shownEpisodes = block?.episodes ?: episodes
+        val shownEpisodes = block?.episodes ?: visibleEpisodes
         val targetInShown = shownEpisodes.indexOfFirst { indexByPipeId[it.pipeId] == currentIndex }
         if (targetInShown >= 0) {
             listState.scrollToItem(
@@ -256,7 +260,7 @@ internal fun InPlayerEpisodeDrawer(
                     ) {
                         if (blocks.size <= 1) {
                             episodeEntries(
-                                episodes = episodes,
+                                episodes = visibleEpisodes,
                                 keyPrefix = "flat",
                                 artworkUrl = rowArtwork,
                                 blurEpisodeImages = blurEpisodeImages,
