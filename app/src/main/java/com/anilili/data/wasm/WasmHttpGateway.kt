@@ -41,7 +41,7 @@ internal class WasmHttpGateway(private val approvedHosts: Set<String>) {
         require((body?.size ?: 0) <= 256 * 1024)
         require(headers.size <= 32)
         if (browserOrigin != null) require(WasmPolicy.allowsUrl(browserOrigin, approvedHosts))
-        require(headers.none { (name, value) -> name.any { it == '\\r' || it == '\\n' } || value.any { it == '\\r' || it == '\\n' } })
+        require(headers.none { (name, value) -> name.any { it.code == 13 || it.code == 10 } || value.any { it.code == 13 || it.code == 10 } })
         var target = url
         var hops = 0
         val visited = mutableSetOf<String>()
