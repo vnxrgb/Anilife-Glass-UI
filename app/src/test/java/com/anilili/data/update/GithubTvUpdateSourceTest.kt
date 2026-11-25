@@ -14,6 +14,11 @@ class GithubTvUpdateSourceTest {
         val metadata = prefix + "TV-UPDATE.json"
         assertTrue(GithubTvUpdateSource.trustedResponseUrl(official, official))
         assertTrue(GithubTvUpdateSource.trustedResponseUrl(metadata, metadata))
+        assertTrue(GithubTvUpdateSource.trustedResponseUrl(metadata, "https://release-assets.githubusercontent.com/github-production-release-asset/123?token=abc"))
+        assertTrue(GithubTvUpdateSource.trustedResponseUrl(metadata, "https://objects.githubusercontent.com/github-production-release-asset/123?token=abc"))
+        assertFalse(GithubTvUpdateSource.trustedResponseUrl(metadata, "https://evil.example.com/asset"))
+        assertFalse(GithubTvUpdateSource.trustedResponseUrl(metadata, "http://release-assets.githubusercontent.com/asset"))
+        assertFalse(GithubTvUpdateSource.trustedResponseUrl(official, "https://release-assets.githubusercontent.com/asset"))
         assertFalse(GithubTvUpdateSource.trustedResponseUrl(official, "https://example.org/releases"))
         assertFalse(GithubTvUpdateSource.trustedResponseUrl(metadata, "https://example.org/TV-UPDATE.json"))
         assertFalse(GithubTvUpdateSource.trustedResponseUrl("http://api.github.com/repos/vnxrgb/anilumos-preview/releases?per_page=30", official))
