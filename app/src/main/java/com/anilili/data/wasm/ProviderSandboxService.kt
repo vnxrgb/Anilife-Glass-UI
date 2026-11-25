@@ -11,6 +11,7 @@ import android.os.Process
 class ProviderSandboxService : Service() {
     private val endpoint = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+            if (code == TRANSACTION_RESOLVE) return resolveFixture(data, reply)
             if (code != TRANSACTION_PROBE) return super.onTransact(code, data, reply, flags)
             data.enforceInterface(DESCRIPTOR)
             // This endpoint must never execute in the application's privileged process.
@@ -23,10 +24,43 @@ class ProviderSandboxService : Service() {
             return true
         }
     }
+    // Debug-only experimental path. The production registry remains empty.
+    private fun resolveFixture(data: Parcel, reply: Parcel?): Boolean {
+        data.enforceInterface(DESCRIPTOR)
+        val result = runCatching {
+            require(com.anilili.BuildConfig.DEBUG)
+            require(Process.myUid() % 100000 in 90000..99999)
+            require(NativeSandbox.available)
+            val fd = android.os.ParcelFileDescriptor.CREATOR.createFromParcel(data)
+            val bytes = android.os.ParcelFileDescriptor.AutoCloseInputStream(fd).use { input ->
+                val buffer = java.io.ByteArrayOutputStream()
+                val chunk = ByteArray(8192)
+                while (true) {
+                    val n = input.read(chunk)
+                    if (n < 0) break
+                    require(buffer.size() + n <= 4 * 1024 * 1024)
+                    buffer.write(chunk, 0, n)
+                }
+                buffer.toByteArray()
+            }
+            require(WasmPolicy.componentHeaderValid(bytes))
+            val community = data.readInt() == 1
+            val query = data.readString().orEmpty()
+            require(query.length <= 32768)
+            val broker = requireNotNull(data.readStrongBinder())
+            NativeSandbox.resolve(bytes, community, query, broker, WasmBroker::class.java).orEmpty()
+                .also { require(it.length <= 200000) }
+        }.getOrDefault("")
+        reply?.writeNoException()
+        reply?.writeString(result)
+        return true
+    }
+
     override fun onBind(intent: Intent?): IBinder = endpoint
 
     companion object {
         internal const val DESCRIPTOR = "com.anilili.data.wasm.Probe"
         internal const val TRANSACTION_PROBE = IBinder.FIRST_CALL_TRANSACTION
+        internal const val TRANSACTION_RESOLVE = IBinder.FIRST_CALL_TRANSACTION + 1
     }
 }
