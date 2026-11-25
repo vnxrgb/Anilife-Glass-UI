@@ -518,6 +518,7 @@ class AnivexaClient(
     private val hStream = HStreamProvider(providerClient, json, cache)
     private val onePace = OnePaceProvider(providerClient, json, cache)
     private val anitaku by lazy { AnitakuIntegration.config?.let { AnitakuProvider(client, json, it.endpoint) } }
+    private val additionalAnivexa by lazy { AnivexaApiIntegration.endpoint?.let { AnivexaApiProvider(client, json, it) } }
     private val rift = RiftProvider(context, providerClient, json)
 
     /**
@@ -879,6 +880,10 @@ class AnivexaClient(
             }
             return checkNotNull(anitaku).sources(request.anilistId, request.audio, request.episode)
         }
+        if (request.provider in AnivexaApiIntegration.providers) {
+            val adapter = additionalAnivexa ?: throw IOException("Additional Anivexa providers are not configured")
+            return adapter.sources(request.provider, request.anilistId, request.audio, request.episode)
+        }
         seedMedia?.let { mediaCache[request.anilistId] = it }
         val media = media(request.anilistId)
         return when (request.provider) {
@@ -1178,6 +1183,8 @@ class AnivexaClient(
 
 
     private suspend fun providerAvailability(provider: String, media: Media, count: Int): EpisodeAvailability = when (provider) {
+        "animenosub", "animedunya" -> additionalAnivexa?.availability(provider, media.id)
+            ?: EpisodeAvailability(emptySet(), emptySet())
         AnitakuIntegration.PROVIDER -> AnitakuIntegration.config?.availability(media.id)
             ?: EpisodeAvailability(emptySet(), emptySet())
         "animepahe" -> pahe.episodeAvailability(media)
