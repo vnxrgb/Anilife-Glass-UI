@@ -58,7 +58,11 @@ internal object GithubTvUpdateSource {
         fun get(url: String): String? = runCatching {
             client.newCall(Request.Builder().url(url).build()).execute().use { response ->
                 if (!response.isSuccessful || (response.body?.contentLength() ?: 0) > 256000L) return@use null
-                response.body?.string()?.takeIf { it.length <= 256000 }
+                // Content-Length can be absent or dishonest. Bound the actual bytes read
+                // before decoding rather than allocating an unbounded response string.
+                response.body?.source()?.readByteArray(256001L)
+                    ?.takeIf { it.size <= 256000 }
+                    ?.toString(Charsets.UTF_8)
             }
         }.getOrNull()
         val releases = get(RELEASES) ?: error("AniLumos TV preview channel unavailable")
