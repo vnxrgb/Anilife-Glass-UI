@@ -22,7 +22,11 @@ import com.kyant.backdrop.highlight.Highlight
 val LocalOpticalBackdrop = staticCompositionLocalOf<LayerBackdrop?> { null }
 
 @Composable
-fun Modifier.opticalGlass(shape: CornerBasedShape, enabled: Boolean = true): Modifier {
+fun Modifier.opticalGlass(
+    shape: CornerBasedShape,
+    enabled: Boolean = true,
+    navigation: Boolean = false,
+): Modifier {
     val source = LocalOpticalBackdrop.current
     val surface = MaterialTheme.colorScheme.surface
     if (!enabled || source == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
@@ -30,18 +34,25 @@ fun Modifier.opticalGlass(shape: CornerBasedShape, enabled: Boolean = true): Mod
             .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = .12f), shape)
     }
     val light = surface.luminance() > .5f
-    val tint = if (light) Color.White else Color.Black
+    // Navigation sits over arbitrary artwork. A theme-colored backing keeps dark
+    // captions legible on black artwork (and white captions legible on bright art).
+    // Leave other optical chrome unchanged and keep a visible refracted backdrop.
+    val tint = if (navigation) surface else if (light) Color.White else Color.Black
+    val tintAlpha = if (navigation) navigationGlassOpacity(light) else if (light) .38f else .40f
     return drawBackdrop(
         backdrop = source,
         shape = { shape },
         effects = {
-            blur(10.dp.toPx())
+            blur((if (navigation) 18.dp else 10.dp).toPx())
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 lens(refractionHeight = 14.dp.toPx(), refractionAmount = 12.dp.toPx(),
                     depthEffect = true, chromaticAberration = true)
             }
         },
         highlight = { Highlight(width = 0.4.dp) },
-        onDrawSurface = { drawRect(tint.copy(alpha = if (light) .38f else .40f)) },
+        onDrawSurface = { drawRect(tint.copy(alpha = tintAlpha)) },
     )
 }
+
+/** Minimum themed backing for navigation over high-contrast artwork. */
+internal fun navigationGlassOpacity(light: Boolean): Float = if (light) .84f else .78f

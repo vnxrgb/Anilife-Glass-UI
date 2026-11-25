@@ -145,7 +145,7 @@ fun FloatingNavigationBar(
                 Box(
                     Modifier.fillMaxWidth().fillMaxHeight()
                         .graphicsLayer { alpha = 1f - glassProgress }
-                        .opticalGlass(BarShape, enabled = backdrop != null),
+                        .opticalGlass(BarShape, enabled = backdrop != null, navigation = true),
                 )
             }
             Layout(
@@ -165,7 +165,7 @@ fun FloatingNavigationBar(
                                     Modifier.align(Alignment.Center)
                                         .size(compactItem)
                                         .graphicsLayer { alpha = glassProgress }
-                                        .opticalGlass(CircleShape, enabled = backdrop != null),
+                                        .opticalGlass(CircleShape, enabled = backdrop != null, navigation = true),
                                 )
                             }
                             if (width > 0.dp && (keep || disappearingAlpha > 0f)) {
@@ -230,7 +230,7 @@ fun FloatingNavDisc(
     Box(
         modifier = modifier
             .size(FloatingNavDiscSize)
-            .opticalGlass(CircleShape, enabled = backdrop != null)
+            .opticalGlass(CircleShape, enabled = backdrop != null, navigation = true)
             .clickable(onClickLabel = contentDescription, role = Role.Button, onClick = onClick)
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
@@ -264,8 +264,7 @@ private fun FloatingNavIcon(
     labelProgress: Float = 0f,
     interactionEnabled: Boolean = true,
 ) {
-    val iconColor = if (selected) MaterialTheme.colorScheme.onSurface
-        else MaterialTheme.colorScheme.onSurfaceVariant
+    val iconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = if (selected) 1f else .86f)
     val shape = RoundedCornerShape(50)
     // A persistent, animated neutral selection wash; accent is reserved for the soft rim.
     val selectionAlpha by animateFloatAsState(
@@ -299,7 +298,7 @@ private fun FloatingNavIcon(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 7.dp)
                 .clip(shape)
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = .11f * selectionAlpha * (1f - compactProgress)))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = .09f * selectionAlpha * (1f - compactProgress)))
                 .padding(vertical = 1.dp),
         ) {
             Icon(
@@ -315,7 +314,10 @@ private fun FloatingNavIcon(
                 Text(
                     text = item.label,
                     color = iconColor,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 10.sp,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                    ),
                     maxLines = 1,
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis,
