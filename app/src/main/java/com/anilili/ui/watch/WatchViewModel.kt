@@ -1911,7 +1911,9 @@ class WatchViewModel : ViewModel() {
      * The lookup is background-only: it never holds up playback and can populate the button live.
      */
     private fun maybeLoadSkipTiming(data: WatchData, durationMs: Long) {
-        if (data.sources.skip?.hasUsableWindow() == true) return
+        val existing = data.sources.skip
+        if (existing != null && existing.introEnd?.let { it > (existing.introStart ?: 0.0) } == true &&
+            existing.outroStart?.let { start -> existing.outroEnd?.let { it > start } } == true) return
         if (data.current.number % 1.0 != 0.0 || durationMs < MIN_SKIP_LOOKUP_DURATION_MS) return
         val durationSeconds = (durationMs / 1000.0).roundToInt().coerceAtLeast(1)
         val key = SkipLookupKey(data.current.number, data.provider, data.sourceVariant, durationSeconds)
@@ -1951,7 +1953,7 @@ class WatchViewModel : ViewModel() {
                     )
                     _state.value = UiState.Success(
                         current.copy(
-                            sources = current.sources.copy(skip = skip),
+                            sources = current.sources.copy(skip = com.anilili.data.mergeSkipWindows(current.sources.skip, skip)),
                             skipTimingStatus = SkipTimingStatus.ANISKIP,
                         ),
                     )
