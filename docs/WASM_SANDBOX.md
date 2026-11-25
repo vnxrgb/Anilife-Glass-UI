@@ -10,3 +10,5 @@ This branch adds the first fail-closed boundary, not a working WebAssembly runti
 - No arbitrary module import or unsigned remote code. A verified signed manifest is required before remote updates; hashes alone do not authenticate publishers.
 - Next: native runtime, bounded Binder IPC via file descriptors for large payloads, mediated networking, cancellation and resource limits, fixture component tests, then provider integration.
 References: https://github.com/sanilili/desktoprepo1/blob/main/crates/core/src/plugin.rs and https://github.com/anilifecommunity/kotlindesktop/blob/main/creating-extension.md .
+
+Second batch: dedicated HTTP gateway with public-address DNS validation, no inherited proxy/cookies/account auth, explicit header allowlist, response limits, request quotas and fail-closed redirects. Not wired to guest execution yet. Android CI runs on this branch. Redirect compatibility and total invocation budget still need integration tests.
