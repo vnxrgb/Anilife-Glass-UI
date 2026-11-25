@@ -1828,10 +1828,38 @@ class MiruroRepository(
         val fetch = fillerFetches.getOrPut(malId) {
             fillerScope.async(start = CoroutineStart.LAZY) {
                 cache.getOrFetch(
-                    key = "filler:$malId",
+                    key = "filler:v2:$malId",
                     serializer = SetSerializer(Int.serializer()),
                     ttlMs = OPTIONS_TTL,
-                ) { jikan.fillerEpisodes(malId) }
+                ) {
+                    var failure: Exception? = null
+                    val primary = try {
+                        jikan.fillerEpisodes(malId)
+                    } catch (error: Exception) {
+                        error.rethrowIfCancellation()
+                        failure = error
+                        null
+                    }
+                    if (!primary.isNullOrEmpty()) primary else {
+                        val fromLists = try {
+                            jikan.fillerListsEpisodes(malId)
+                        } catch (error: Exception) {
+                            error.rethrowIfCancellation()
+                            failure = error
+                            null
+                        }
+                        if (fromLists != null) fromLists else {
+                            val fromPedia = try {
+                                jikan.aniFillerPediaEpisodes(malId)
+                            } catch (error: Exception) {
+                                error.rethrowIfCancellation()
+                                failure = error
+                                null
+                            }
+                            fromPedia ?: primary ?: throw (failure ?: IllegalStateException("No filler data available"))
+                        }
+                    }
+                }
             }.also { deferred -> deferred.invokeOnCompletion { fillerFetches.remove(malId, deferred) } }
         }
         fetch.start()
@@ -1854,7 +1882,7 @@ class MiruroRepository(
         return cache.getOrFetch(
             // v3: entries now carry recap windows and the segment ids voting needs, so a v2 row
             // would decode into timings a viewer cannot report.
-            key = "aniskip:v5:$malId:${episode.toInt()}:$durationMs",
+            key = "aniskip:v6:$malId:${episode.toInt()}:$durationMs",
             serializer = SkipTimes.serializer().nullable,
             ttlMs = OPTIONS_TTL,
             cacheIf = { it != null },
@@ -1880,11 +1908,29 @@ class MiruroRepository(
                     }
                 }
                 if (!hasCompleteSkipWindows(resolved) && episodeLengthSeconds > 0) {
-                    val ref = konoha.tvdbRefFor(anilistId)
-                    val season = ref?.season
-                    if (ref != null && season != null && season > 0) {
+                    val mapped = try {
+                        aniZip.episodeReference(anilistId, number)
+                    } catch (error: Exception) {
+                        error.rethrowIfCancellation()
+                        failure = error
+                        null
+                    }
+                    val tvdbId = mapped?.tvdbId
+                    if (mapped != null && tvdbId != null && tvdbId > 0) {
                         try {
-                            resolved = mergeSkipWindows(resolved, aniSkip.theIntroDbTimes(ref.id, season, number, episodeLengthSeconds))
+                            resolved = mergeSkipWindows(resolved, aniSkip.theIntroDbTimes(tvdbId, mapped.season, mapped.episode, episodeLengthSeconds))
+                        } catch (error: Exception) {
+                            error.rethrowIfCancellation()
+                            failure = error
+                        }
+                    }
+                    // IMDb order may differ from TVDB. For now only use a coordinate that is
+                    // unshifted in the first season, rather than guessing a split-season offset.
+                    val imdb = mapped?.imdbId
+                    if (!hasCompleteSkipWindows(resolved) && mapped != null && imdb != null &&
+                        mapped.season == 1 && mapped.episode == number) {
+                        try {
+                            resolved = mergeSkipWindows(resolved, aniSkip.introDbTimes(imdb, 1, number, episodeLengthSeconds))
                         } catch (error: Exception) {
                             error.rethrowIfCancellation()
                             failure = error
