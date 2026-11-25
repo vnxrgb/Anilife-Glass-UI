@@ -6,6 +6,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /** Official TV prerelease selection; no mobile or unsigned metadata is accepted. */
 internal object GithubTvUpdateSource {
@@ -54,12 +55,21 @@ internal object GithubTvUpdateSource {
         return candidates.maxWithOrNull(compareBy<UpdateManager.UpdateInfo> { it.build ?: 0 }.thenBy { it.version })
     }
 
-    /** Reject redirected metadata responses, even when the injected client follows redirects. */
-    internal fun trustedResponseUrl(requested: String, actual: String): Boolean =
-        requested == actual && requested.startsWith("https://") &&
-            (requested == RELEASES ||
-                (requested.startsWith("https://github.com/vnxrgb/anilumos-preview/releases/download/") &&
-                    requested.endsWith("/" + META)))
+    /** GitHub release assets redirect to GitHub's own signed CDN URLs.
+     * Reject redirects for the releases API and all non-GitHub asset destinations.
+     */
+    internal fun trustedResponseUrl(requested: String, actual: String): Boolean {
+        if (requested == RELEASES) return actual == RELEASES
+        val original = requested.toHttpUrlOrNull() ?: return false
+        val destination = actual.toHttpUrlOrNull() ?: return false
+        if (original.scheme != "https" || original.host != "github.com" ||
+            original.query != null || original.fragment != null ||
+            !original.encodedPath.matches(Regex("/vnxrgb/anilumos-preview/releases/download/tv-alpha-signed-[0-9a-f]{12}-run[1-9][0-9]*/TV-UPDATE\\\\.json"))) return false
+        if (requested == actual) return true
+        return destination.scheme == "https" && destination.host in setOf(
+            "release-assets.githubusercontent.com", "objects.githubusercontent.com"
+        ) && destination.encodedPath.isNotBlank() && destination.encodedPath != "/"
+    }
 
     fun fetch(client: OkHttpClient, json: Json): UpdateManager.UpdateInfo {
         fun get(url: String): String? = runCatching {
