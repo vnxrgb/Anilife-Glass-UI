@@ -30,6 +30,7 @@ AniLumos builds on AniLife with its own visual identity, a redesigned interface 
 | **Cinematic player** | Ambient Cinema lighting, rounded playback controls, fullscreen and picture-in-picture support. |
 | **Skip intro and outro** | Timed, dismissing skip controls when episode timestamps are available. |
 | **Filler episodes** | Episode classification badges and optional filler filtering/skipping where metadata is available. |
+| **Franchise Watch Order** | Release, chronological and community-curated viewing orders where available, with completion tracking and timeline or list views. |
 | **Accounts and library** | AniList, MyAnimeList and Simkl integration, Discord Rich Presence, watch history and downloads. |
 | **Adaptive layout** | Phone and tablet layouts, improved landscape navigation and readable status bars. |
 | **Updates and diagnostics** | Direct in-app updates, metadata diagnostics and an in-app introduction to new features. |
@@ -40,7 +41,7 @@ I've also set up a way to track streaming-provider changes from upstream. Those 
 
 ## Screenshots
 
-A look at AniLumos v2.0.0 on Android.
+A look at AniLumos on Android, including Franchise Watch Order introduced in v2.0.2.
 
 <p align="center">
   <a href="docs/store/screenshots/01-home.jpg"><img src="docs/store/screenshots/01-home.jpg" width="23%" alt="Home and Glass UI"></a>
@@ -57,6 +58,14 @@ A look at AniLumos v2.0.0 on Android.
   <a href="docs/store/screenshots/08-appearance.jpg"><img src="docs/store/screenshots/08-appearance.jpg" width="23%" alt="Appearance and themes"></a>
 </p>
 <p align="center">Notifications · Airing schedule · Accounts and integrations · Appearance and themes</p>
+
+### Franchise Watch Order
+
+<p align="center">
+  <a href="docs/store/screenshots/franchise-watch-order-entry.jpg"><img src="docs/store/screenshots/franchise-watch-order-entry.jpg" width="34%" alt="Franchise Watch Order entry on Fate/Zero anime details"></a>
+  <a href="docs/store/screenshots/franchise-watch-order-screen.jpg"><img src="docs/store/screenshots/franchise-watch-order-screen.jpg" width="34%" alt="Fate/Zero chronological franchise watch order and progress"></a>
+</p>
+<p align="center">Open the franchise guide from anime details · Explore chronological orders and track progress</p>
 
 ## Download
 
