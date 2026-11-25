@@ -97,12 +97,14 @@ pub fn inspect(bytes: &[u8], community: bool) -> Result<ProviderMetadata> {
     Ok(result)
 }
 
+#[derive(serde::Serialize)]
 pub struct HttpRequest {
     pub method: String,
     pub url: String,
     pub headers: Vec<(String, String)>,
     pub body: Option<Vec<u8>>,
 }
+#[derive(serde::Deserialize)]
 pub struct HttpReply {
     pub status: u16,
     pub headers: Vec<(String, String)>,

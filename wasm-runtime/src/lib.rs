@@ -60,3 +60,52 @@ mod tests {
 }
 
 pub mod adapter;
+
+// Android-only callback bridge. The caller must be the isolated service.
+#[cfg(target_os = "android")]
+mod android_bridge {
+    use super::adapter::{HttpBroker, HttpRequest, HttpReply};
+    use jni::{JNIEnv, JavaVM, objects::{GlobalRef, JObject, JValue, JString, JByteArray, JClass}};
+
+    struct BinderBroker { vm: JavaVM, binder: GlobalRef, bridge: GlobalRef }
+    impl HttpBroker for BinderBroker {
+        fn fetch(&mut self, req: HttpRequest) -> Result<HttpReply, String> {
+            let mut env = self.vm.attach_current_thread().map_err(|e| e.to_string())?;
+            let input = serde_json::to_string(&req).map_err(|e| e.to_string())?;
+            if input.len() > 128 * 1024 { return Err("request too large".into()); }
+            let input = env.new_string(input).map_err(|e| e.to_string())?;
+            let result = env.call_static_method(
+                <&JClass>::from(self.bridge.as_obj()),
+                "fetchRemote",
+                "(Landroid/os/IBinder;Ljava/lang/String;)Ljava/lang/String;",
+                &[JValue::Object(self.binder.as_obj()), JValue::Object(input.as_ref())],
+            ).and_then(|v| v.l()).map_err(|e| e.to_string())?;
+            let result = JString::from(result);
+            let output: String = env.get_string(&result).map_err(|e| e.to_string())?.into();
+            if output.is_empty() || output.len() > 200000 { return Err("broker denied request".into()); }
+            serde_json::from_str(&output).map_err(|e| e.to_string())
+        }
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "system" fn Java_com_anilili_data_wasm_NativeSandbox_resolve(
+        mut env: JNIEnv, _: JClass, module: JByteArray, community: jni::sys::jboolean,
+        query: JString, binder: JObject, bridge: JClass,
+    ) -> jni::sys::jstring {
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Option<String> {
+            let n = env.get_array_length(&module).ok()?;
+            if n < 8 || n as usize > super::LIMIT { return None; }
+            let bytes = env.convert_byte_array(module).ok()?;
+            let query: String = env.get_string(&query).ok()?.into();
+            if query.len() > 32768 { return None; }
+            let query = serde_json::from_str(&query).ok()?;
+            let broker = BinderBroker { vm: env.get_java_vm().ok()?, binder: env.new_global_ref(binder).ok()?, bridge: env.new_global_ref(bridge).ok()? };
+            let servers = super::adapter::resolve(&bytes, community != 0, query, Box::new(broker)).ok()?;
+            let output = serde_json::to_string(&servers).ok()?;
+            if output.len() > 200000 { return None; }
+            Some(output)
+        }));
+        let output = result.ok().flatten().unwrap_or_default();
+        env.new_string(output).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
+    }
+}

@@ -6,4 +6,5 @@ internal object NativeSandbox {
         runCatching { System.loadLibrary("anilumos_wasm_runtime") }.isSuccess
     }
     @JvmStatic external fun probe(bytes: ByteArray): Boolean
+    @JvmStatic external fun resolve(bytes: ByteArray, community: Boolean, query: String, broker: android.os.IBinder, bridge: Class<*>): String?
 }
