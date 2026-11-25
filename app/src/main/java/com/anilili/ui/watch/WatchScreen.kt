@@ -673,6 +673,7 @@ private fun AutomaticExternalPlayerHandoff(
     LoadingBox(message = "Opening in external video player…")
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 private fun WatchContent(
     data: WatchData,
