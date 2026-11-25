@@ -20,8 +20,8 @@ class GithubTvUpdateSourceTest {
     }
     @Test fun rejectsCrossReleaseAssetUrlsAndUntrustedRedirectShapes() {
         assertNull(GithubTvUpdateSource.select(releases().replace("tv-alpha-signed-abc-run2/AniLumos-TV", "tv-alpha-signed-other-run2/AniLumos-TV"), json) { payload })
-        assertNull(GithubTvUpdateSource.select(releases().replace("TV-UPDATE.json\\\",", "TV-UPDATE.json?token=untrusted\\\","), json) { payload })
-        assertNull(GithubTvUpdateSource.select(releases().replace("\\\"size\\\":2048", "\\\"size\\\":536870913"), json) { payload })
+        assertNull(GithubTvUpdateSource.select(releases().replace("TV-UPDATE.json", "TV-UPDATE.json?token=untrusted"), json) { payload })
+        assertNull(GithubTvUpdateSource.select(releases().replace("2048", "536870913"), json) { payload })
     }
     @Test fun rejectsWrongIdentityAndHash() {
         assertNull(GithubTvUpdateSource.select(releases(), json) { payload.replace("com.anilumos.app", "other.app") })
