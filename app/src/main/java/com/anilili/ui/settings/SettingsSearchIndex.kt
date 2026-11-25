@@ -247,6 +247,7 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
             "Export MyAnimeList XML" to listOf("export", "mal", "myanimelist", "xml"),
             "Video cache" to listOf("cache", "storage", "space", "disk", "size", "seek"),
             "Clear cache" to listOf("cache", "clear", "storage", "space"),
+            "Metadata Diagnostics" to listOf("metadata", "api", "fallback", "intro", "filler", "test"),
             "Re-download metadata" to listOf("metadata", "refresh", "index", "catalogue", "catalog", "update", "data", "stale"),
             "Clear viewing history" to listOf("history", "clear", "watched", "continue"),
         ),

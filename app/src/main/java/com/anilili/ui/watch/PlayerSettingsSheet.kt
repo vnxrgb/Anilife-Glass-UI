@@ -417,7 +417,7 @@ private fun PlayerModalSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = PlayerPanelSurface.copy(alpha = 0.87f),
+        containerColor = playerPanelBackground().copy(alpha = 0.96f),
         contentColor = Midnight.Text,
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
         dragHandle = null,
@@ -434,13 +434,13 @@ private fun PlayerModalSheet(
                         0f to Color.White.copy(alpha = 0.10f),
                         0.20f to Color.White.copy(alpha = 0.045f),
                         0.68f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = 0.12f),
+                        1f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.025f),
                     ),
                     RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
                 )
                 .border(
                     1.dp,
-                    Color.White.copy(alpha = 0.21f),
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.13f),
                     RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
                 )
                 .padding(start = 18.dp, end = 18.dp, bottom = 18.dp),
@@ -451,7 +451,7 @@ private fun PlayerModalSheet(
                     .align(Alignment.CenterHorizontally)
                     .size(width = 36.dp, height = 4.dp)
                     .clip(RoundedCornerShape(99.dp))
-                    .background(PlayerPanelOutline),
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = .25f)),
             )
             PanelHeader(
                 title = title,
@@ -459,7 +459,7 @@ private fun PlayerModalSheet(
                 onDismiss = onDismiss,
             )
             ScrollHintColumn(
-                fadeColor = Midnight.SheetSurface,
+                fadeColor = playerPanelBackground(),
                 modifier = Modifier.weight(1f, fill = false),
                 content = sections,
             )
@@ -516,19 +516,19 @@ private fun PlayerSidePanel(
                 .width(panelWidth)
                 // The episode drawer's frame, shared by every picker the player opens.
                 .clip(PlayerPanelShape)
-                .background(PlayerPanelSurface.copy(alpha = 0.94f))
+                .background(playerPanelBackground().copy(alpha = 0.90f))
                 .background(
                     Brush.verticalGradient(
                         0f to Color.White.copy(alpha = 0.11f),
                         0.24f to Color.White.copy(alpha = 0.04f),
                         0.65f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = 0.10f),
+                        1f to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.025f),
                     ),
                     PlayerPanelShape,
                 )
                 .border(
                     1.dp,
-                    Color.White.copy(alpha = 0.24f),
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f),
                     PlayerPanelShape,
                 )
                 // Taps inside the panel are the panel's own; without this they would reach the
@@ -550,7 +550,7 @@ private fun PlayerSidePanel(
                 closeModifier = Modifier.focusRequester(initialFocus),
             )
             ScrollHintColumn(
-                fadeColor = PlayerPanelSurface,
+                fadeColor = playerPanelBackground(),
                 modifier = Modifier.weight(1f, fill = false),
                 content = content,
             )
@@ -599,7 +599,7 @@ private fun PanelHeader(
                 text = "NOW PLAYING",
                 style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.8.sp),
                 fontWeight = FontWeight.W800,
-                color = PlayerPanelMutedText,
+                color = playerPanelMuted(),
             )
             Text(
                 text = title,
@@ -816,6 +816,7 @@ private fun ColumnScope.SheetSections(
     )
 
     MidnightSectionLabel("Playback")
+    com.anilili.ui.settings.MetadataDiagnosticsRow(title = "Metadata Diagnostics")
     MidnightSettingSwitchRow(
         title = "Auto-play next episode",
         checked = autoplay,
@@ -1065,7 +1066,7 @@ private fun PlayerAdjustRow(
                 .height(height)
                 .widthIn(min = PlayerAdjustValueWidth)
                 .clip(PlayerAdjustShape)
-                .background(Color.White.copy(alpha = 0.06f))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -1147,7 +1148,7 @@ private fun PlayerSliderRow(content: @Composable RowScope.() -> Unit) {
             .fillMaxWidth()
             .onFocusChanged { focused = it.isFocused || it.hasFocus }
             .clip(shape)
-            .background(if (focused) PlayerSliderFocusFill else Color.Transparent, shape)
+            .background(if (focused) MaterialTheme.colorScheme.onSurface.copy(alpha = .13f) else Color.Transparent, shape)
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
@@ -1294,6 +1295,6 @@ private fun Long.formatSubtitleDelay(): String =
 @Composable
 internal fun midnightSliderColors() = SliderDefaults.colors(
     thumbColor = Color(0xFF9E9E9E),
-    activeTrackColor = Color.White,
-    inactiveTrackColor = Color.White.copy(alpha = 0.22f),
+    activeTrackColor = MaterialTheme.colorScheme.primary,
+    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f),
 )

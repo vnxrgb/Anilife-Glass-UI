@@ -20,6 +20,7 @@ import com.anilili.data.settings.WATCHED_THRESHOLD_MAX_PERCENT
 import com.anilili.data.settings.WATCHED_THRESHOLD_MIN_PERCENT
 import com.anilili.data.model.Category
 import com.anilili.data.model.EpisodeItem
+import com.anilili.data.model.withMetadataSource
 import com.anilili.data.model.EpisodeClassification
 import com.anilili.data.model.EpisodesResult
 import com.anilili.data.model.SourcesResult
@@ -1857,6 +1858,9 @@ class WatchViewModel : ViewModel() {
         lastKnownPositionMs = positionMs
         lastKnownDurationMs = durationMs
         lastKnownNumber = data.current.number
+        if (durationMs > 0) com.anilili.data.MetadataDiagnostics.record(
+            data.anilistId, data.current, durationMs, data.sources.skip?.withMetadataSource("Streaming provider")
+        )
         maybeLoadSkipTiming(data, durationMs)
         // A single report is not evidence of playback: it can be the tail of a torn-down player.
         // Watched/synced state only moves once this stream has been observed running.
@@ -1957,7 +1961,7 @@ class WatchViewModel : ViewModel() {
                     )
                     _state.value = UiState.Success(
                         current.copy(
-                            sources = current.sources.copy(skip = com.anilili.data.mergeSkipWindows(current.sources.skip, skip)),
+                            sources = current.sources.copy(skip = com.anilili.data.mergeSkipWindows(current.sources.skip?.withMetadataSource("Streaming provider"), skip)),
                             skipTimingStatus = SkipTimingStatus.ANISKIP,
                         ),
                     )

@@ -5,7 +5,7 @@ import org.junit.Test
 
 class NavigationGlassContrastTest {
     @Test fun themedBackingRetainsGlassButDominatesArtwork() {
-        assertTrue(navigationGlassOpacity(true) in .80f..90f)
-        assertTrue(navigationGlassOpacity(false) in .75f..90f)
+        assertTrue(navigationGlassOpacity(true) in .60f..70f)
+        assertTrue(navigationGlassOpacity(false) in .55f..70f)
     }
 }

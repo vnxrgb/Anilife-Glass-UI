@@ -549,7 +549,7 @@ class DetailViewModel : ViewModel() {
                 data.copy(
                     episodes = markDubbedEpisodes(withMetadata.map { episode ->
                         if (episode.number % 1.0 != 0.0) episode
-                        else episode.withClassification(fillers[episode.number.toInt()])
+                        else fillers[episode.number.toInt()]?.let { episode.withClassification(it.classification, it.source) } ?: episode
                     }, dubbedThrough),
                 ),
             )

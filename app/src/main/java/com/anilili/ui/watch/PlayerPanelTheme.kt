@@ -119,3 +119,15 @@ fun PlayerAccentScope(content: @Composable () -> Unit) {
         )
     }
 }
+
+// Player panels use the same theme as the rest of the app, even over a video.
+@Composable
+internal fun playerPanelBackground(): Color =
+    if (MaterialTheme.colorScheme.background.luminance() > .5f)
+        MaterialTheme.colorScheme.surfaceContainerLow else PlayerPanelSurface
+
+@Composable
+internal fun playerPanelForeground(): Color = MaterialTheme.colorScheme.onSurface
+
+@Composable
+internal fun playerPanelMuted(): Color = MaterialTheme.colorScheme.onSurfaceVariant

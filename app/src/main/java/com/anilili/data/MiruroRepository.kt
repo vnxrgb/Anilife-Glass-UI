@@ -5,6 +5,8 @@ import com.anilili.data.model.AiringSchedule
 import com.anilili.data.model.Category
 import com.anilili.data.model.SubtitleItem
 import com.anilili.data.model.EpisodeItem
+import com.anilili.data.model.EpisodeClassificationRecord
+import com.anilili.data.model.withMetadataSource
 import com.anilili.data.model.EpisodeClassification
 import com.anilili.data.model.withClassification
 import com.anilili.data.model.EpisodeMetadata
@@ -1811,17 +1813,17 @@ class MiruroRepository(
     }
 
     suspend fun fillerEpisodes(anilistId: Int?, malId: Int?): Set<Int> =
-        episodeClassifications(anilistId, malId).filterValues { it == EpisodeClassification.FILLER }.keys
+        episodeClassifications(anilistId, malId).filterValues { it.classification == EpisodeClassification.FILLER }.keys
 
     /** Use the mirror during a slow live lookup; enrich from the cached live result on later opens. */
-    suspend fun episodeClassifications(anilistId: Int?, malId: Int?): Map<Int, EpisodeClassification> {
-        val mirrored: Map<Int, EpisodeClassification> = if (anilistId != null && anilistId > 0) {
+    suspend fun episodeClassifications(anilistId: Int?, malId: Int?): Map<Int, EpisodeClassificationRecord> {
+        val mirrored: Map<Int, EpisodeClassificationRecord> = if (anilistId != null && anilistId > 0) {
             val numbers = runCatching { konoha.fillerIndex() }
                 .onFailure { it.rethrowIfCancellation(); DiagnosticsLog.throwable("Filler index failed", it) }
                 .getOrNull()?.get(anilistId) ?: emptySet<Int>()
-            numbers.associateWith { EpisodeClassification.FILLER }
+            numbers.associateWith { EpisodeClassificationRecord(EpisodeClassification.FILLER, "Metadata mirror") }
         } else emptyMap()
-        val live: Map<Int, EpisodeClassification> = withTimeoutOrNull(2_000L) {
+        val live: Map<Int, EpisodeClassificationRecord> = withTimeoutOrNull(2_000L) {
             runCatching { malEpisodeClassifications(malId) }
                 .onFailure { it.rethrowIfCancellation(); DiagnosticsLog.throwable("Classification lookup failed", it) }
                 .getOrNull()
@@ -1829,13 +1831,13 @@ class MiruroRepository(
         return mirrored + live
     }
 
-    private suspend fun malEpisodeClassifications(malId: Int?): Map<Int, EpisodeClassification> {
+    private suspend fun malEpisodeClassifications(malId: Int?): Map<Int, EpisodeClassificationRecord> {
         if (malId == null || malId <= 0) return emptyMap()
         val fetch = fillerFetches.getOrPut(malId) {
             fillerScope.async(start = CoroutineStart.LAZY) {
                 cache.getOrFetch(
-                    key = "episode-classifications:v1:$malId",
-                    serializer = MapSerializer(Int.serializer(), EpisodeClassification.serializer()),
+                    key = "episode-classifications:v2:$malId",
+                    serializer = MapSerializer(Int.serializer(), EpisodeClassificationRecord.serializer()),
                     ttlMs = OPTIONS_TTL,
                 ) {
                     var failure: Exception? = null
@@ -1850,10 +1852,10 @@ class MiruroRepository(
                     val pedia = if (lists.isNullOrEmpty()) attempt { jikan.aniFillerPediaEpisodes(malId) } else null
                     if (primary == null && lists == null && pedia == null) failure?.let { throw it }
                     // Explicit map defaults avoid the repository's Any?.orEmpty() string helper.
-                    buildMap<Int, EpisodeClassification> {
-                        if (primary != null) putAll(primary)
-                        if (pedia != null) putAll(pedia)
-                        if (lists != null) putAll(lists)
+                    buildMap<Int, EpisodeClassificationRecord> {
+                        if (primary != null) putAll(primary.mapValues { EpisodeClassificationRecord(it.value, "Jikan") })
+                        if (pedia != null) putAll(pedia.mapValues { EpisodeClassificationRecord(it.value, "AniFillerPedia") })
+                        if (lists != null) putAll(lists.mapValues { EpisodeClassificationRecord(it.value, "FillerLists") })
                     }
                 }
             }.also { deferred -> deferred.invokeOnCompletion { fillerFetches.remove(malId, deferred) } }
@@ -1863,7 +1865,7 @@ class MiruroRepository(
     }
 
     private val fillerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val fillerFetches = ConcurrentHashMap<Int, Deferred<Map<Int, EpisodeClassification>>>()
+    private val fillerFetches = ConcurrentHashMap<Int, Deferred<Map<Int, EpisodeClassificationRecord>>>()
 
     /** Community intro/outro markers via AniSkip; cached when known, with service failures exposed. */
     suspend fun skipTimes(
@@ -1878,7 +1880,7 @@ class MiruroRepository(
         return cache.getOrFetch(
             // v3: entries now carry recap windows and the segment ids voting needs, so a v2 row
             // would decode into timings a viewer cannot report.
-            key = "aniskip:v6:$malId:${episode.toInt()}:$durationMs",
+            key = "aniskip:v7:$malId:${episode.toInt()}:$durationMs",
             serializer = SkipTimes.serializer().nullable,
             ttlMs = OPTIONS_TTL,
             cacheIf = { it != null },
@@ -1887,7 +1889,7 @@ class MiruroRepository(
                 val number = episode.toInt()
                 var failure: Exception? = null
                 var resolved = try {
-                    mirroredSkipTimes(anilistId, malId, number, episodeLengthSeconds)
+                    mirroredSkipTimes(anilistId, malId, number, episodeLengthSeconds)?.withMetadataSource("AniSkip mirror")
                 } catch (error: Exception) {
                     error.rethrowIfCancellation()
                     failure = error
@@ -1895,7 +1897,7 @@ class MiruroRepository(
                 }
                 if (!hasCompleteSkipWindows(resolved)) {
                     try {
-                        resolved = mergeSkipWindows(resolved, aniSkip.skipTimes(malId, number, episodeLengthSeconds))
+                        resolved = mergeSkipWindows(resolved, aniSkip.skipTimes(malId, number, episodeLengthSeconds)?.withMetadataSource("AniSkip"))
                     } catch (error: Exception) {
                         error.rethrowIfCancellation()
                         failure = error
@@ -1903,7 +1905,7 @@ class MiruroRepository(
                 }
                 if (!hasCompleteSkipWindows(resolved)) {
                     try {
-                        resolved = mergeSkipWindows(resolved, redirectedSkipTimes(malId, number, episodeLengthSeconds))
+                        resolved = mergeSkipWindows(resolved, redirectedSkipTimes(malId, number, episodeLengthSeconds)?.withMetadataSource("AniSkip remapped"))
                     } catch (error: Exception) {
                         error.rethrowIfCancellation()
                         failure = error
@@ -1920,7 +1922,7 @@ class MiruroRepository(
                     val tvdbId = mapped?.tvdbId
                     if (mapped != null && tvdbId != null && tvdbId > 0) {
                         try {
-                            resolved = mergeSkipWindows(resolved, aniSkip.theIntroDbTimes(tvdbId, mapped.season, mapped.episode, episodeLengthSeconds))
+                            resolved = mergeSkipWindows(resolved, aniSkip.theIntroDbTimes(tvdbId, mapped.season, mapped.episode, episodeLengthSeconds)?.withMetadataSource("TheIntroDB"))
                         } catch (error: Exception) {
                             error.rethrowIfCancellation()
                             failure = error
@@ -1932,7 +1934,7 @@ class MiruroRepository(
                     if (!hasCompleteSkipWindows(resolved) && mapped != null && imdb != null &&
                         mapped.season == 1 && mapped.episode == number) {
                         try {
-                            resolved = mergeSkipWindows(resolved, aniSkip.introDbTimes(imdb, 1, number, episodeLengthSeconds))
+                            resolved = mergeSkipWindows(resolved, aniSkip.introDbTimes(imdb, 1, number, episodeLengthSeconds)?.withMetadataSource("IntroDB"))
                         } catch (error: Exception) {
                             error.rethrowIfCancellation()
                             failure = error
@@ -2426,7 +2428,7 @@ class MiruroRepository(
         if (classifications.isEmpty()) return this
         fun mark(episodes: List<EpisodeItem>): List<EpisodeItem> = episodes.map { episode ->
             if (episode.number % 1.0 != 0.0) episode
-            else episode.withClassification(classifications[episode.number.toInt()])
+            else classifications[episode.number.toInt()]?.let { episode.withClassification(it.classification, it.source) } ?: episode
         }
         return EpisodesResult(providers.map { it.copy(sub = mark(it.sub), dub = mark(it.dub)) })
     }
@@ -3208,12 +3210,15 @@ internal fun mergeSkipWindows(primary: SkipTimes?, fallback: SkipTimes?): SkipTi
         introStart = if (intro) primary.introStart else fallback.introStart,
         introEnd = if (intro) primary.introEnd else fallback.introEnd,
         introSkipId = if (intro) primary.introSkipId else fallback.introSkipId,
+        introSource = if (intro) primary.introSource else fallback.introSource,
         outroStart = if (outro) primary.outroStart else fallback.outroStart,
         outroEnd = if (outro) primary.outroEnd else fallback.outroEnd,
         outroSkipId = if (outro) primary.outroSkipId else fallback.outroSkipId,
+        outroSource = if (outro) primary.outroSource else fallback.outroSource,
         recapStart = if (recap) primary.recapStart else fallback.recapStart,
         recapEnd = if (recap) primary.recapEnd else fallback.recapEnd,
         recapSkipId = if (recap) primary.recapSkipId else fallback.recapSkipId,
+        recapSource = if (recap) primary.recapSource else fallback.recapSource,
     )
 }
 

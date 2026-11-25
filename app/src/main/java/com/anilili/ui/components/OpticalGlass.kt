@@ -43,7 +43,7 @@ fun Modifier.opticalGlass(
         backdrop = source,
         shape = { shape },
         effects = {
-            blur((if (navigation) 18.dp else 10.dp).toPx())
+            blur((if (navigation) 7.dp else 10.dp).toPx())
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 lens(refractionHeight = 14.dp.toPx(), refractionAmount = 12.dp.toPx(),
                     depthEffect = true, chromaticAberration = true)

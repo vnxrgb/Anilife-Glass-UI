@@ -2880,13 +2880,13 @@ private fun SourceSelectors(
     }
 
     if (showServerDialog && !device.isTv) {
+        PlayerPanelTheme {
         ModalBottomSheet(
             onDismissRequest = { showServerDialog = false },
             sheetState = mobileSheetState,
-            containerColor = PlayerPanelSurface,
-            contentColor = Color.White,
+            containerColor = playerPanelBackground(),
+            contentColor = playerPanelForeground(),
         ) {
-            PlayerPanelTheme {
             MobileServerPickerContent(
                 data = data,
                 options = sourceChoices,
@@ -3168,7 +3168,7 @@ private fun MobileServerPickerContent(
         )
 
         ScrollHintColumn(
-            fadeColor = PlayerPanelSurface,
+            fadeColor = playerPanelBackground(),
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 440.dp),

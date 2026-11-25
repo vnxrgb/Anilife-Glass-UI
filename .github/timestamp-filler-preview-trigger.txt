@@ -1,1 +1,1 @@
-Rebuild after isolating navigation contrast policy from graphics dependencies in JVM unit tests.
+Build signed preview with theme-correct player panels, clear navigation glass and metadata diagnostics.

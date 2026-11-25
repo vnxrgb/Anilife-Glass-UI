@@ -89,6 +89,7 @@ data class EpisodeItem(
      */
     val airingAt: Long? = null,
     val classification: EpisodeClassification? = null,
+    val classificationSource: String? = null,
 ) {
     val displayNumber: String get() = if (number % 1.0 == 0.0) number.toInt().toString() else number.toString()
 
@@ -277,6 +278,9 @@ data class SkipTimes(
     val introSkipId: String? = null,
     val outroSkipId: String? = null,
     val recapSkipId: String? = null,
+    val introSource: String? = null,
+    val outroSource: String? = null,
+    val recapSource: String? = null,
 )
 
 /**
@@ -322,5 +326,14 @@ enum class EpisodeClassification(val label: String) {
     FILLER("Filler"), CANON("Canon"), MIXED("Mixed"), ANIME_CANON("Anime canon"), RECAP("Recap"),
 }
 
-fun EpisodeItem.withClassification(value: EpisodeClassification?): EpisodeItem =
-    if (value == null) this else copy(filler = value == EpisodeClassification.FILLER, classification = value)
+fun EpisodeItem.withClassification(value: EpisodeClassification?, source: String? = null): EpisodeItem =
+    if (value == null) this else copy(filler = value == EpisodeClassification.FILLER, classification = value, classificationSource = source)
+
+@Serializable
+data class EpisodeClassificationRecord(val classification: EpisodeClassification, val source: String)
+
+fun SkipTimes.withMetadataSource(source: String): SkipTimes = copy(
+    introSource = introSource ?: source.takeIf { introEnd?.let { end -> end > (introStart ?: 0.0) } == true },
+    outroSource = outroSource ?: source.takeIf { outroStart?.let { start -> outroEnd?.let { end -> end > start } } == true },
+    recapSource = recapSource ?: source.takeIf { recapStart?.let { start -> recapEnd?.let { end -> end > start } } == true },
+)

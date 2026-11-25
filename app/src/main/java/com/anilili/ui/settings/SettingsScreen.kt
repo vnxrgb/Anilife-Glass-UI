@@ -3153,6 +3153,7 @@ fun SettingsScreen(
                     item { MidnightInlineNotice(message, tone = MidnightNoticeTone.SUCCESS) }
                 }
                 item(key = "Re-download metadata") { MetadataRefreshRow(title = "Re-download metadata") }
+                item(key = "Metadata Diagnostics") { MetadataDiagnosticsRow(title = "Metadata Diagnostics") }
                 item(key = "Clear viewing history") {
                     MidnightSettingRow(
                         title = "Clear viewing history",
