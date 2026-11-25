@@ -1,9 +1,9 @@
 <div align="center">
-  <img src="docs/assets/anilumos-ambient-showcase.png" alt="Anilumos app preview" width="100%">
+  <img src="docs/assets/anilumos-logo.svg" alt="AniLumos logo" width="112">
 
-  # Anilumos
+  # AniLumos
 
-  An anime app for Android, based on [AniLife](https://github.com/anilifecommunity/android-and-tv), with a new look and a reworked video player.
+  An anime app for Android phones and tablets, based on [AniLife](https://github.com/anilifecommunity/android-and-tv), with a redesigned Glass UI, personalised discovery and cinematic playback.
 
   [Download APK](https://github.com/vnxrgb/Anilumos/releases/latest) · [All releases](https://github.com/vnxrgb/Anilumos/releases) · [Report a bug](https://github.com/vnxrgb/Anilumos/issues)
 </div>
@@ -14,24 +14,33 @@
   <a href="https://github.com/vnxrgb/Anilumos/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/vnxrgb/Anilumos?style=for-the-badge"></a>
 </p>
 
-## Why this fork?
+## About AniLumos
 
-I liked what AniLife offered, but wanted to try a different design. Anilumos started with that idea: keep the anime features I already liked, clean up the interface, and make watching something feel a bit nicer.
+AniLumos builds on AniLife with its own visual identity, a redesigned interface and an emphasis on discovery, playback and everyday usability.
 
-The biggest changes are the glass-style UI and the video player. I also added ambient lighting around the video, based on code from [Morphe](https://github.com/MorpheApp/morphe-patches).
+## Features
 
-## What's different?
+| Feature | What's included |
+| --- | --- |
+| **Glass UI** | Redesigned translucent navigation, cards, menus and controls, with glass material presets and light/dark themes. |
+| **New branding** | Updated AniLumos logo, launcher icons, splash screen and theme-specific artwork. |
+| **Discover** | Mood-based anime discovery, swipeable recommendations and a responsive landscape layout. |
+| **Recommendations** | Improved personalised anime suggestions and community metadata. |
+| **AniLumos Wrapped** | Anime viewing highlights and shareable artwork-based summaries. |
+| **Cinematic player** | Ambient Cinema lighting, rounded playback controls, fullscreen and picture-in-picture support. |
+| **Skip intro and outro** | Timed, dismissing skip controls when episode timestamps are available. |
+| **Filler episodes** | Episode classification badges and optional filler filtering/skipping where metadata is available. |
+| **Accounts and library** | AniList, MyAnimeList and Simkl integration, Discord Rich Presence, watch history and downloads. |
+| **Adaptive layout** | Phone and tablet layouts, improved landscape navigation and readable status bars. |
+| **Updates and diagnostics** | Direct in-app updates, metadata diagnostics and an in-app introduction to new features. |
 
-- **Glass UI:** Translucent navigation, cards, menus and buttons, with a neutral look that works with different themes.
-- **Video player:** Rounder controls, updated seek bar and overlays, and changes to the mini-player.
-- **Ambient lighting:** Colors from the video glow around the player. Results can vary depending on the device.
-- **New branding:** Anilumos icon, launch screen and app name.
-
-The original AniLife features are still here, including anime search and browsing, streaming sources, watch history, downloads, subtitles, external players, and AniList/MyAnimeList support.
+Anime search, browsing, streaming sources, subtitles and external-player support are retained from AniLife. Availability of community metadata and connected services depends on the provider and title.
 
 I've also set up a way to track streaming-provider changes from upstream. Those changes still need review and a new app release before they reach installed versions. More on that [here](docs/UPSTREAM_PROVIDER_SYNC.md).
 
 ## Screenshots
+
+The existing screenshots show earlier app builds and may not reflect the latest v2.0.0 interface.
 
 <p align="center">
   <a href="docs/store/screenshots/01-home.jpg"><img src="docs/store/screenshots/01-home.jpg" width="18%" alt="Home screen"></a>
@@ -49,9 +58,9 @@ Grab the [latest stable APK](https://github.com/vnxrgb/Anilumos/releases/latest)
   <a href="https://rookieenough.github.io/Orion-Data/app/?id=anilumos"><img src="https://raw.githubusercontent.com/RookieEnough/Orion-Store/refs/heads/main/assets/orion-badge.png" alt="Get it on Orion Store" height="60"></a>
 </p>
 
-The stable app uses `com.anilumos.app`. [Preview builds](https://github.com/vnxrgb/Anilumos/releases/tag/anilumos-preview) use `com.anilumos.app.debug`, so they can be installed separately. AniLife also keeps its own app data.
+The stable app uses `com.anilumos.app`. Some signed preview builds use the same package and may replace an installed stable build; check the release notes before installing. AniLife keeps its own app data.
 
-Anilumos is currently intended for Android phones and tablets. I haven't verified a separate TV release.
+Stable releases are intended for Android phones and tablets. Android TV builds are experimental and are not part of this stable mobile release.
 
 ## Building it yourself
 
