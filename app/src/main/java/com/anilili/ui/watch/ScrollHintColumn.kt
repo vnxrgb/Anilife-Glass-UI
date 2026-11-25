@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -71,11 +72,11 @@ internal fun ScrollHintColumn(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .height(36.dp)
                     .background(
                         Brush.verticalGradient(
                             0f to fadeColor.copy(alpha = 0f),
-                            1f to fadeColor,
+                            1f to fadeColor.copy(alpha = .70f),
                         ),
                     ),
                 contentAlignment = Alignment.BottomCenter,

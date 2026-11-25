@@ -418,7 +418,7 @@ private fun PlayerModalSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = playerPanelBackground().copy(alpha = 0.96f),
-        contentColor = Midnight.Text,
+        contentColor = playerPanelForeground(),
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
         dragHandle = null,
         tonalElevation = 0.dp,
@@ -1294,7 +1294,9 @@ private fun Long.formatSubtitleDelay(): String =
  */
 @Composable
 internal fun midnightSliderColors() = SliderDefaults.colors(
-    thumbColor = Color(0xFF9E9E9E),
-    activeTrackColor = MaterialTheme.colorScheme.primary,
-    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f),
+    thumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    activeTrackColor = MaterialTheme.colorScheme.onSurface,
+    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.20f),
+    activeTickColor = MaterialTheme.colorScheme.surface,
+    inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant,
 )

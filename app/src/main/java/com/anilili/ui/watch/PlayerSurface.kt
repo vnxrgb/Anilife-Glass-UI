@@ -2254,7 +2254,7 @@ fun PlayerSurface(
         // Phone controls, shown: the shared control bar (identical to the embed player). Empty
         // video space is handled by the stable PlayerGestureControls surface underneath it.
         CompiledSeparately {
-        if (controller != null && !device.isTv && phoneControlsVisible && !screenLocked) {
+        if (controller != null && !device.isTv && phoneControlsVisible && !screenLocked && !settingsExpanded) {
             PlayerControlsScaffold(
                 seriesTitle = seriesTitle,
                 episodeTitle = episodeTitle,

@@ -1,1 +1,1 @@
-Build metadata API repair: independent episode mapping, multi-window parsing and bounded Jikan page retry.
+Build preview with legible player sliders, hidden transport chrome behind settings and lighter scroll fade.

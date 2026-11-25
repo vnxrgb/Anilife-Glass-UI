@@ -1946,7 +1946,7 @@ fun EmbedWebView(
             )
         }
 
-        if (touchControlsActive && touchControlsVisible && !screenLocked) {
+        if (touchControlsActive && touchControlsVisible && !screenLocked && !settingsSheetVisible) {
             EmbedTouchControls(
                 seriesTitle = seriesTitle,
                 episodeTitle = episodeTitle,
@@ -2154,7 +2154,7 @@ fun EmbedWebView(
         // Reduced native bar for old WebView builds that cannot report cross-origin position or
         // duration. Provider controls remain suppressed, so seeking is unavailable in this rare
         // compatibility mode instead of exposing the page UI.
-        if (fallbackControlsActive && fallbackControlsVisible) Row(
+        if (fallbackControlsActive && fallbackControlsVisible && !settingsSheetVisible) Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
