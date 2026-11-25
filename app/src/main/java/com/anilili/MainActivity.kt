@@ -325,10 +325,12 @@ class MainActivity : FragmentActivity() {
                 // the Appearance canvas rather than staying the AMOLED black it starts as.
                 val canvas = MaterialTheme.colorScheme.background.toArgb()
                 val lightCanvas = MaterialTheme.colorScheme.background.luminance() > .5f
+                var homeArtworkStatusBar by remember { mutableStateOf(false) }
+                val darkStatusIcons = lightCanvas && !homeArtworkStatusBar
                 SideEffect {
                     window.decorView.setBackgroundColor(canvas)
                     WindowCompat.getInsetsController(window, window.decorView).apply {
-                        isAppearanceLightStatusBars = lightCanvas
+                        isAppearanceLightStatusBars = darkStatusIcons
                         isAppearanceLightNavigationBars = lightCanvas
                     }
                 }
@@ -367,6 +369,7 @@ class MainActivity : FragmentActivity() {
                                 onRouteConsumed = { pendingRoute = null },
                                 pendingLink = pendingLink,
                                 onLinkConsumed = { pendingLink = null },
+                                onHomeArtworkStatusBarChanged = { homeArtworkStatusBar = it },
                             )
                             AllAnimeCaptchaHost()
                             CloudflareChallengeHost()
@@ -773,11 +776,17 @@ private fun MiruroRoot(
     onRouteConsumed: () -> Unit,
     pendingLink: AnililiLink?,
     onLinkConsumed: () -> Unit,
+    onHomeArtworkStatusBarChanged: (Boolean) -> Unit,
 ) {
     val deviceProfile = rememberAppDeviceProfile()
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = Routes.tabRoute(backStack?.destination?.route)
+    var homeHeroUnderBars by remember { mutableStateOf(false) }
+    SideEffect {
+        onHomeArtworkStatusBarChanged(!deviceProfile.isTv && !inPictureInPicture &&
+            currentRoute == Routes.HOME && homeHeroUnderBars)
+    }
     val showBottomBar = currentRoute in Routes.tabRoutes
     // The anime page keeps the phone's tab bar (and the tablet's rail): it is where most browsing
     // lands, and without the bar every jump to another tab from there cost a Back first. No tab is
@@ -1082,6 +1091,7 @@ private fun MiruroRoot(
                             tvDetailRefresh = tvDetailRefresh,
                             tabSwipe = tabSwipe,
                             onMoodDiscovery = { randomVm.ensurePick(); showRandomPick = true },
+                            onHomeHeroUnderBarsChanged = { homeHeroUnderBars = it },
                             modifier = Modifier
                                 .weight(1f)
                                 .swipeBetweenTabs(
@@ -1892,6 +1902,7 @@ private fun AppNavHost(
     /** Makes a swipe between tabs hand over sideways; every other navigation keeps the fade. */
     tabSwipe: TabSwipeState? = null,
     onMoodDiscovery: () -> Unit = {},
+    onHomeHeroUnderBarsChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -1923,6 +1934,7 @@ private fun AppNavHost(
                     },
                     onNotificationsClick = { nav.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
                     onMoodDiscovery = onMoodDiscovery,
+                    onHeroUnderBarsChanged = onHomeHeroUnderBarsChanged,
                     tvPrimaryFocusTarget = tvHomePrimaryFocusTarget,
                     tvRefreshRequest = tvHomeRefresh,
                 )

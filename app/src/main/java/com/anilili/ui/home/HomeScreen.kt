@@ -29,6 +29,9 @@ import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -87,6 +90,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -196,6 +200,7 @@ fun HomeScreen(
     onGenreClick: (String?) -> Unit,
     onNotificationsClick: () -> Unit,
     onMoodDiscovery: () -> Unit = {},
+    onHeroUnderBarsChanged: (Boolean) -> Unit = {},
     tvPrimaryFocusTarget: TvFocusTarget? = null,
     /** Raised by a hold on the television's Home tab; a phone refreshes by pulling instead. */
     tvRefreshRequest: TvRefreshRequest? = null,
@@ -302,10 +307,18 @@ fun HomeScreen(
     // glass switched off, which takes the recording away along with the blur.
     val homeGlass = glassEnabled(GlassSection.HOME)
     val homeBackdrop = if (homeGlass) remember { HazeState() } else null
-    val chromeOverHero by remember(hasSpotlight, device.isTv) {
-        derivedStateOf { hasSpotlight && homeListState.firstVisibleItemIndex == 0 &&
-            homeListState.firstVisibleItemScrollOffset < 120 }
+    // The first list item also contains the genre chips and the fading artwork tail.
+    // Keep white status/header icons while the sharp artwork still sits under them,
+    // then restore the normal light/dark canvas policy before the pale tail reaches the top.
+    val fadeClearancePx = with(LocalDensity.current) { 168.dp.roundToPx() }
+    val chromeOverHero by remember(hasSpotlight, fadeClearancePx) {
+        derivedStateOf {
+            val heroSize = homeListState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == 0 }?.size
+            hasSpotlight && homeListState.firstVisibleItemIndex == 0 &&
+                (heroSize == null || homeListState.firstVisibleItemScrollOffset < (heroSize - fadeClearancePx).coerceAtLeast(0))
+        }
     }
+    SideEffect { onHeroUnderBarsChanged(chromeOverHero) }
 
     Scaffold(
         modifier = modifier.then(if (device.isTv) Modifier.appCanvas() else Modifier.glassAtmosphere()),
@@ -371,6 +384,7 @@ fun HomeScreen(
                     onGenreClick = onGenreClick,
                     onResume = onResume,
                     onOpenDetails = onOpenDetails,
+                    artworkUnderStatusBar = chromeOverHero,
                     listState = homeListState,
                     contentPadding = padding,
                 )
@@ -536,6 +550,7 @@ private fun HomeContent(
     onGenreClick: (String?) -> Unit,
     onResume: (HistoryEntry) -> Unit,
     onOpenDetails: (HistoryEntry) -> Unit,
+    artworkUnderStatusBar: Boolean = false,
     listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
@@ -759,6 +774,16 @@ private fun HomeContent(
                         }
                     }
                 }
+            }
+            // Remains in place even if the scroll-aware app header slides away.
+            // Only paint the actual status inset, never an opaque full header.
+            if (artworkUnderStatusBar) {
+                Box(Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .background(Brush.verticalGradient(
+                        0f to Color.Black.copy(alpha = .50f),
+                        1f to Color.Black.copy(alpha = .20f),
+                    )))
             }
         }
     }
@@ -1190,40 +1215,48 @@ private fun HeroCard(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    OutlinedButton(
-                        onClick = { onWatch(media.id) },
-                        // Shared glass hierarchy: brighter primary over the dark artwork scrim.
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.White.copy(alpha = .88f),
-                            contentColor = Color(0xFF20212A),
-                        ),
-                        border = androidx.compose.foundation.BorderStroke(.6.dp, Color.White.copy(alpha = .58f)),
-                        modifier = Modifier.heightIn(min = 44.dp),
-                        shape = RoundedCornerShape(50),
-                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
-                    ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(19.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Watch Now", fontWeight = FontWeight.SemiBold, maxLines = 1)
-                    }
-                    OutlinedButton(
-                        modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape)
-                            .backdropBlur(heroArt, tint = Color.White.copy(alpha = .13f), radius = 9.dp),
-                        onClick = { onAnimeClick(media.id) },
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.White.copy(alpha = .10f),
-                            contentColor = Color.White,
-                        ),
-                        border = cinematicSecondaryButtonBorder(onArtwork = true),
-                        shape = RoundedCornerShape(50),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    ) {
-                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(5.dp))
-                        Text("Details", maxLines = 1)
-                    }
+                    HomeHeroAction(
+                        label = "Watch Now", icon = Icons.Default.PlayArrow,
+                        primary = true, backdrop = heroArt, onClick = { onWatch(media.id) },
+                    )
+                    HomeHeroAction(
+                        label = "Details", icon = Icons.Default.Info,
+                        primary = false, backdrop = heroArt, onClick = { onAnimeClick(media.id) },
+                    )
                 }
             }
+        }
+    }
+}
+
+/** Shared measured glass surface: identical touch targets, rim, text baseline and padding.
+ * Blur is inside the same painted pill, rather than decorating Material's larger touch bounds.
+ */
+@Composable
+private fun HomeHeroAction(
+    label: String,
+    icon: ImageVector,
+    primary: Boolean,
+    backdrop: HazeState?,
+    onClick: () -> Unit,
+) {
+    val shape = CircleShape
+    val foreground = if (primary) Color(0xFF20212A) else Color.White
+    Box(Modifier.heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
+        Row(
+            Modifier.heightIn(min = 44.dp)
+                .clip(shape)
+                .then(if (!primary) Modifier.backdropBlur(backdrop, tint = Color.White.copy(alpha = .13f), radius = 9.dp) else Modifier)
+                .background(Color.White.copy(alpha = if (primary) .88f else .16f), shape)
+                .border(.6.dp, Color.White.copy(alpha = if (primary) .58f else .28f), shape)
+                .clickable(role = Role.Button, onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = foreground)
+            Text(label, style = MaterialTheme.typography.labelLarge,
+                color = foreground, fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
     }
 }
