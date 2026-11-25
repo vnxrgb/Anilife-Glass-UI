@@ -58,3 +58,12 @@ TV update selection now requires both metadata and APK asset URLs to match the s
 - TV CI [45690628564](https://github.com/vnxrgb/Anilumos/actions/runs/45690628564) passed at 75040c3. Main remains ebe374e; TV divergence is 223 behind / 103 ahead, so no wholesale merge.
 - TV update metadata fetch now refuses responses redirected away from exact official GitHub release API or selected metadata URL, with unit regression checks. Await new CI for this change.
 - Current signed TV preview remains at ac24c1e; physical TV and Fire TV behavior remains unverified.
+
+## 2026-11-25 branch reconciliation checkpoint (TV run 11)
+
+- Actual current stable main head: `74794e7ee98e572a1322b040aac5ecae32233c5f` (upstream attribution notice), newer than the previous tracker reference `ebe374e`. Review attribution text before adapting TV credits; do not cherry-pick blindly.
+- Actual TV head: `893e0ded2a3b24cb1dee91db36c795c60eba7101`. Comparison against main: **107 ahead, 224 behind**, merge base `b1ede5586b63166ef9da3dfe06cdef0e7e59d757`. No branch merge was performed.
+- Source review confirms the TV update selector requires TV-only release tags, matching APK/metadata assets, package identity, version/build, SHA-256 and bounded sizes. The fetcher now allows approved GitHub CDN redirects for metadata, but rejects redirects for the releases API. The selected asset is not an installable update until the existing package/signature and checksum checks pass.
+- Outstanding verification: CI for `893e0de` and later; current preview release signed asset provenance and certificate; end-to-end update installation; actual Android TV/Fire TV remote navigation and playback. Prior passing CI for older commits cannot validate this head.
+- Current mobile-source audit is **incomplete**. Before declaring parity, compare latest main source screen-by-screen (especially attribution, v2.0.1 light-mode contrast, integrations, player and settings), then validate every TV-only path with D-pad/Back/remote-only tests. Do not mark shared source as TV-validated.
+- No newly signed TV release should be announced without verified unit tests, lint, release assembly, package/launcher, signer and published standalone APK checks.
