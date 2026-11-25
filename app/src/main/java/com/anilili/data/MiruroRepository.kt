@@ -1815,16 +1815,17 @@ class MiruroRepository(
 
     /** Use the mirror during a slow live lookup; enrich from the cached live result on later opens. */
     suspend fun episodeClassifications(anilistId: Int?, malId: Int?): Map<Int, EpisodeClassification> {
-        val mirrored = if (anilistId != null && anilistId > 0) {
-            runCatching { konoha.fillerIndex() }
+        val mirrored: Map<Int, EpisodeClassification> = if (anilistId != null && anilistId > 0) {
+            val numbers = runCatching { konoha.fillerIndex() }
                 .onFailure { it.rethrowIfCancellation(); DiagnosticsLog.throwable("Filler index failed", it) }
-                .getOrNull()?.get(anilistId).orEmpty().associateWith { EpisodeClassification.FILLER }
+                .getOrNull()?.get(anilistId) ?: emptySet<Int>()
+            numbers.associateWith { EpisodeClassification.FILLER }
         } else emptyMap()
-        val live = withTimeoutOrNull(2_000L) {
+        val live: Map<Int, EpisodeClassification> = withTimeoutOrNull(2_000L) {
             runCatching { malEpisodeClassifications(malId) }
                 .onFailure { it.rethrowIfCancellation(); DiagnosticsLog.throwable("Classification lookup failed", it) }
                 .getOrNull()
-        }.orEmpty()
+        } ?: emptyMap()
         return mirrored + live
     }
 
@@ -1848,7 +1849,12 @@ class MiruroRepository(
                     val lists = attempt { jikan.fillerListsEpisodes(malId) }
                     val pedia = if (lists.isNullOrEmpty()) attempt { jikan.aniFillerPediaEpisodes(malId) } else null
                     if (primary == null && lists == null && pedia == null) failure?.let { throw it }
-                    primary.orEmpty() + pedia.orEmpty() + lists.orEmpty()
+                    // Explicit map defaults avoid the repository's Any?.orEmpty() string helper.
+                    buildMap<Int, EpisodeClassification> {
+                        if (primary != null) putAll(primary)
+                        if (pedia != null) putAll(pedia)
+                        if (lists != null) putAll(lists)
+                    }
                 }
             }.also { deferred -> deferred.invokeOnCompletion { fillerFetches.remove(malId, deferred) } }
         }

@@ -1,1 +1,1 @@
-Signed mobile preview: theme-aware navigation contrast over artwork.
+Rebuild signed preview after fixing episode classification map type errors.
