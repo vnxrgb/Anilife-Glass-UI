@@ -1,6 +1,7 @@
 package com.anilili.data.wasm
 
 import android.content.Context
+import kotlinx.coroutines.CancellationException
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
@@ -89,10 +90,14 @@ internal class WasmSourceResolver(context: Context) {
     suspend fun resolve(language: String, query: WasmEpisodeQuery, disabled: Set<String>): List<WasmPlaybackSource> {
         for (provider in WasmRegistry.select(WasmRegistry.bundled, language)) {
             if (provider.id in disabled) continue
-            val sources = runCatching {
+            val sources = try {
                 val result = loader.resolve(provider.id, language, query)
                 WasmPlaybackSource.fromValidated(provider, result, query.dub)
-            }.getOrDefault(emptyList())
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                emptyList()
+            }
             if (sources.isNotEmpty()) return sources
         }
         return emptyList()

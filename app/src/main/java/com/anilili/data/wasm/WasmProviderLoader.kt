@@ -9,6 +9,7 @@ import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import com.anilili.BuildConfig
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -30,7 +31,7 @@ internal class WasmProviderLoader(context: Context) {
         val approved = WasmRegistry.select(WasmRegistry.bundled, language)
             .singleOrNull { it.id == providerId } ?: return JSONArray()
         return withContext(Dispatchers.IO) {
-            val bytes = runCatching {
+            val bytes = try {
                 app.assets.open("wasm/providers/${approved.id}.wasm").use { input ->
                     val output = java.io.ByteArrayOutputStream()
                     val chunk = ByteArray(8192)
@@ -42,7 +43,11 @@ internal class WasmProviderLoader(context: Context) {
                     }
                     output.toByteArray()
                 }
-            }.getOrNull() ?: return@withContext JSONArray()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                return@withContext JSONArray()
+            }
             resolveVerified(approved, bytes, query)
         }
     }
@@ -85,7 +90,8 @@ internal class WasmProviderLoader(context: Context) {
                                     reply.readException()
                                     WasmResultPolicy.validated(reply.readString().orEmpty(), approved, query.dub)
                                 }
-                            } catch (_: Exception) { JSONArray() }
+                            } catch (cancelled: CancellationException) { throw cancelled }
+                            catch (_: Exception) { JSONArray() }
                             finally { data.recycle(); reply.recycle(); broker.revoke() }
                         } finally { runCatching { app.unbindService(connection) } }
                     }

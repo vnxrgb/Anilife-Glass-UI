@@ -22,6 +22,7 @@ internal object WasmMediaTransport {
         // The request properties may also come from internal callers; enforce the same
         // restrictions as the validated WASM result rather than trusting the caller.
         require(headers.keys.all { it.lowercase(java.util.Locale.ROOT) in allowedHeaders })
+        require(headers.keys.map { it.lowercase(java.util.Locale.ROOT) }.distinct().size == headers.size)
         require(headers.values.all { it.length <= 4096 && '\r' !in it && '\n' !in it })
         for ((name, value) in headers) {
             if (name.equals("referer", true) || name.equals("origin", true)) {
