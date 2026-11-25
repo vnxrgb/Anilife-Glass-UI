@@ -198,3 +198,30 @@ pub fn resolve(bytes: &[u8], community: bool, query: EpisodeQuery, broker: Box<d
     };
     Ok(result)
 }
+
+/** Bounded response framing: BE metadata length, UTF-8 JSON metadata, raw body. */
+pub fn decode_broker_reply(bytes: &[u8]) -> std::result::Result<HttpReply, String> {
+    if bytes.len() < 4 || bytes.len() > (4 << 20) + (64 << 10) + 4 { return Err("invalid broker reply".into()); }
+    let n = u32::from_be_bytes(bytes[..4].try_into().unwrap()) as usize;
+    if n == 0 || n > (64 << 10) || n > bytes.len() - 4 || bytes.len() - 4 - n > (4 << 20) { return Err("invalid reply length".into()); }
+    #[derive(serde::Deserialize)]
+    struct Metadata { status: u16, headers: Vec<(String, String)> }
+    let metadata: Metadata = serde_json::from_slice(&bytes[4..4+n]).map_err(|e| e.to_string())?;
+    Ok(HttpReply { status: metadata.status, headers: metadata.headers, body: bytes[4+n..].to_vec() })
+}
+#[cfg(test)]
+mod framing_tests {
+    use super::*;
+    #[test]
+    fn binary_body_roundtrip_and_invalid_length() {
+        let metadata = br#"{"status":200,"headers":[]}"#;
+        let mut bytes = (metadata.len() as u32).to_be_bytes().to_vec();
+        bytes.extend_from_slice(metadata);
+        bytes.extend_from_slice(&vec![42; 256 * 1024]);
+        let reply = decode_broker_reply(&bytes).unwrap();
+        assert_eq!(reply.status, 200);
+        assert_eq!(reply.body, vec![42; 256 * 1024]);
+        assert!(decode_broker_reply(&[0, 0, 0, 10, 0]).is_err());
+        assert!(decode_broker_reply(&[]).is_err());
+    }
+}

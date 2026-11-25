@@ -85,7 +85,7 @@ internal class WasmProviderLoader(context: Context) {
                             val binder = withTimeoutOrNull(5000) { connected.await() } ?: return@withLock JSONArray()
                             val data = Parcel.obtain()
                             val reply = Parcel.obtain()
-                            val broker = WasmBroker(approved)
+                            val broker = WasmBroker(approved, app.cacheDir)
                             try {
                                 data.writeInterfaceToken(ProviderSandboxService.DESCRIPTOR)
                                 fd.writeToParcel(data, 0)

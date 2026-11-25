@@ -77,13 +77,11 @@ mod android_bridge {
             let result = env.call_static_method(
                 <&JClass>::from(self.bridge.as_obj()),
                 "fetchRemote",
-                "(Landroid/os/IBinder;Ljava/lang/String;)Ljava/lang/String;",
+                "(Landroid/os/IBinder;Ljava/lang/String;)[B",
                 &[JValue::Object(self.binder.as_obj()), JValue::Object(input.as_ref())],
             ).and_then(|v| v.l()).map_err(|e| e.to_string())?;
-            let result = JString::from(result);
-            let output: String = env.get_string(&result).map_err(|e| e.to_string())?.into();
-            if output.is_empty() || output.len() > 200000 { return Err("broker denied request".into()); }
-            serde_json::from_str(&output).map_err(|e| e.to_string())
+            let output = env.convert_byte_array(JByteArray::from(result)).map_err(|e| e.to_string())?;
+            super::adapter::decode_broker_reply(&output)
         }
     }
 
