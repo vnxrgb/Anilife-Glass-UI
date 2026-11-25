@@ -344,17 +344,10 @@ object UpdateManager {
     }
 
     /**
-     * Where the version is read from: the mirrored manifest, then the relays that back it up.
-     *
-     * Both carry the same signed event and both verify it, so the order is a latency choice and
-     * not a trust one — the mirror is one CDN request, while the relay scan waits on several
-     * sockets and routinely sits through timeouts.
-     *
-     * GitHub is no longer consulted. The release keeps its notes but carries no APK, so the call
-     * could only ever fail, and asking it first is what made every check pay for a doomed request.
+     * TV uses only the dedicated AniLumos TV preview release metadata and APK channel.
+     * Mobile retains its signed Nostr stable/beta manifests and mirror fallback.
      */
     private suspend fun fetchLatest(includeBeta: Boolean): UpdateInfo = coroutineScope {
-        // TV must never consult the unrelated AniLife release channel.
         if (BuildConfig.FLAVOR == "tv") {
             return@coroutineScope GithubTvUpdateSource.fetch(AppGraph.httpClient, json)
         }
@@ -364,17 +357,6 @@ object UpdateManager {
                     DiagnosticsLog.throwable("Manifest mirror failed; falling back to Nostr relays", mirrorError)
                     NostrUpdateSource.fetchManifest(AppGraph.httpClient, json)
                 }
-        }
-        val stable = async {
-            runCatching { NostrUpdateSource.fetchManifestFromMirror(AppGraph.httpClient, json) }
-                .recoverCatching { mirrorError ->
-                    DiagnosticsLog.throwable("Manifest mirror failed; falling back to Nostr relays", mirrorError)
-                    NostrUpdateSource.fetchManifest(AppGraph.httpClient, json)
-                }
-        }
-        // TV must never consult the unrelated AniLife release channel.
-        if (BuildConfig.FLAVOR == "tv") {
-            return@coroutineScope GithubTvUpdateSource.fetch(AppGraph.httpClient, json)
         }
         if (!includeBeta) return@coroutineScope stable.await().getOrThrow()
 
