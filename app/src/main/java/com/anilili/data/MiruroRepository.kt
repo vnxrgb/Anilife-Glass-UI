@@ -5,6 +5,8 @@ import com.anilili.data.model.AiringSchedule
 import com.anilili.data.model.Category
 import com.anilili.data.model.SubtitleItem
 import com.anilili.data.model.EpisodeItem
+import com.anilili.data.model.EpisodeClassification
+import com.anilili.data.model.withClassification
 import com.anilili.data.model.EpisodeMetadata
 import com.anilili.data.model.EpisodesResult
 import com.anilili.data.model.alignMetadataToSeason
@@ -97,6 +99,7 @@ import kotlin.math.roundToLong
 import android.os.SystemClock
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.SetSerializer
 import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
@@ -1807,58 +1810,45 @@ class MiruroRepository(
             .associate { it.episode to it.airingAt }
     }
 
-    suspend fun fillerEpisodes(anilistId: Int?, malId: Int?): Set<Int> {
-        if (anilistId != null && anilistId > 0) {
-            val index = runCatching { konoha.fillerIndex() }
+    suspend fun fillerEpisodes(anilistId: Int?, malId: Int?): Set<Int> =
+        episodeClassifications(anilistId, malId).filterValues { it == EpisodeClassification.FILLER }.keys
+
+    /** Use the mirror during a slow live lookup; enrich from the cached live result on later opens. */
+    suspend fun episodeClassifications(anilistId: Int?, malId: Int?): Map<Int, EpisodeClassification> {
+        val mirrored = if (anilistId != null && anilistId > 0) {
+            runCatching { konoha.fillerIndex() }
                 .onFailure { it.rethrowIfCancellation(); DiagnosticsLog.throwable("Filler index failed", it) }
+                .getOrNull()?.get(anilistId).orEmpty().associateWith { EpisodeClassification.FILLER }
+        } else emptyMap()
+        val live = withTimeoutOrNull(2_000L) {
+            runCatching { malEpisodeClassifications(malId) }
+                .onFailure { it.rethrowIfCancellation(); DiagnosticsLog.throwable("Classification lookup failed", it) }
                 .getOrNull()
-            index?.get(anilistId)?.let { return it }
-        }
-        return malFillerEpisodes(malId)
+        }.orEmpty()
+        return mirrored + live
     }
 
-    /** MAL filler episode numbers via Jikan; cached a week, empty with no MAL id. Throws on failure. */
-    private suspend fun malFillerEpisodes(malId: Int?): Set<Int> {
-        if (malId == null || malId <= 0) return emptySet()
-        // Every caller waits at most a few seconds, and Naruto's list is three Jikan pages while One
-        // Piece's is twelve — so a fetch tied to the caller was cancelled by its timeout every time,
-        // nothing was ever cached, and the next visit started from page one again. The fetch runs
-        // on its own scope instead: the caller stops waiting, the fetch finishes and is cached for
-        // the next open. One fetch per title at a time.
+    private suspend fun malEpisodeClassifications(malId: Int?): Map<Int, EpisodeClassification> {
+        if (malId == null || malId <= 0) return emptyMap()
         val fetch = fillerFetches.getOrPut(malId) {
             fillerScope.async(start = CoroutineStart.LAZY) {
                 cache.getOrFetch(
-                    key = "filler:v2:$malId",
-                    serializer = SetSerializer(Int.serializer()),
+                    key = "episode-classifications:v1:$malId",
+                    serializer = MapSerializer(Int.serializer(), EpisodeClassification.serializer()),
                     ttlMs = OPTIONS_TTL,
                 ) {
                     var failure: Exception? = null
-                    val primary = try {
-                        jikan.fillerEpisodes(malId)
-                    } catch (error: Exception) {
-                        error.rethrowIfCancellation()
-                        failure = error
-                        null
-                    }
-                    if (!primary.isNullOrEmpty()) primary else {
-                        val fromLists = try {
-                            jikan.fillerListsEpisodes(malId)
-                        } catch (error: Exception) {
+                    fun attempt(block: () -> Map<Int, EpisodeClassification>?): Map<Int, EpisodeClassification>? =
+                        try { block() } catch (error: Exception) {
                             error.rethrowIfCancellation()
                             failure = error
                             null
                         }
-                        if (fromLists != null) fromLists else {
-                            val fromPedia = try {
-                                jikan.aniFillerPediaEpisodes(malId)
-                            } catch (error: Exception) {
-                                error.rethrowIfCancellation()
-                                failure = error
-                                null
-                            }
-                            fromPedia ?: primary ?: throw (failure ?: IllegalStateException("No filler data available"))
-                        }
-                    }
+                    val primary = attempt { jikan.episodeClassifications(malId) }
+                    val lists = attempt { jikan.fillerListsEpisodes(malId) }
+                    val pedia = if (lists.isNullOrEmpty()) attempt { jikan.aniFillerPediaEpisodes(malId) } else null
+                    if (primary == null && lists == null && pedia == null) failure?.let { throw it }
+                    primary.orEmpty() + pedia.orEmpty() + lists.orEmpty()
                 }
             }.also { deferred -> deferred.invokeOnCompletion { fillerFetches.remove(malId, deferred) } }
         }
@@ -1867,7 +1857,7 @@ class MiruroRepository(
     }
 
     private val fillerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val fillerFetches = ConcurrentHashMap<Int, Deferred<Set<Int>>>()
+    private val fillerFetches = ConcurrentHashMap<Int, Deferred<Map<Int, EpisodeClassification>>>()
 
     /** Community intro/outro markers via AniSkip; cached when known, with service failures exposed. */
     suspend fun skipTimes(
@@ -2423,13 +2413,14 @@ class MiruroRepository(
      */
     private suspend fun EpisodesResult.withFillerMarks(anilistId: Int): EpisodesResult {
         if (isEmpty) return this
-        val fillers = kotlinx.coroutines.withTimeoutOrNull(FILLER_FETCH_TIMEOUT_MS) {
-            runCatching { fillerEpisodes(anilistId, animeInfo(anilistId)?.idMal) }.getOrDefault(emptySet())
+        val classifications = kotlinx.coroutines.withTimeoutOrNull(FILLER_FETCH_TIMEOUT_MS) {
+            runCatching { episodeClassifications(anilistId, animeInfo(anilistId)?.idMal) }
+                .onFailure(Throwable::rethrowIfCancellation).getOrDefault(emptyMap())
         } ?: return this
-        if (fillers.isEmpty()) return this
+        if (classifications.isEmpty()) return this
         fun mark(episodes: List<EpisodeItem>): List<EpisodeItem> = episodes.map { episode ->
-            val isFiller = episode.number % 1.0 == 0.0 && episode.number.toInt() in fillers
-            if (isFiller && !episode.filler) episode.copy(filler = true) else episode
+            if (episode.number % 1.0 != 0.0) episode
+            else episode.withClassification(classifications[episode.number.toInt()])
         }
         return EpisodesResult(providers.map { it.copy(sub = mark(it.sub), dub = mark(it.dub)) })
     }

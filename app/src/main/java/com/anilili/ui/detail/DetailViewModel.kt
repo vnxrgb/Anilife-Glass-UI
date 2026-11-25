@@ -10,6 +10,7 @@ import com.anilili.data.SERIES_AIRING_ORDER
 import com.anilili.data.seasonNeighbors
 import com.anilili.data.model.Category
 import com.anilili.data.model.EpisodeItem
+import com.anilili.data.model.withClassification
 import com.anilili.data.model.EpisodeMetadata
 import com.anilili.data.model.EpisodesResult
 import com.anilili.data.model.Media
@@ -528,9 +529,9 @@ class DetailViewModel : ViewModel() {
             }
             val fillerRequest = async {
                 withTimeoutOrNull(DETAIL_FILLER_TIMEOUT_MS) {
-                    runCatching { repo.fillerEpisodes(seasonId, malId) }
+                    runCatching { repo.episodeClassifications(seasonId, malId) }
                         .onFailure(Throwable::rethrowIfCancellation)
-                        .getOrDefault(emptySet())
+                        .getOrDefault(emptyMap())
                 }.orEmpty()
             }
             val meta = metadataRequest.await()
@@ -546,7 +547,10 @@ class DetailViewModel : ViewModel() {
             val withMetadata = mergeEpisodeMetadata(data.episodes, meta, seasonId)
             _state.value = UiState.Success(
                 data.copy(
-                    episodes = markDubbedEpisodes(mergeEpisodeFillerMarks(withMetadata, fillers), dubbedThrough),
+                    episodes = markDubbedEpisodes(withMetadata.map { episode ->
+                        if (episode.number % 1.0 != 0.0) episode
+                        else episode.withClassification(fillers[episode.number.toInt()])
+                    }, dubbedThrough),
                 ),
             )
         }

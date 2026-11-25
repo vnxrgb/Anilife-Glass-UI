@@ -88,6 +88,7 @@ data class EpisodeItem(
      * question a bare catalogue date cannot answer. See [episodeIsUnaired].
      */
     val airingAt: Long? = null,
+    val classification: EpisodeClassification? = null,
 ) {
     val displayNumber: String get() = if (number % 1.0 == 0.0) number.toInt().toString() else number.toString()
 
@@ -314,3 +315,12 @@ data class SourcesResult(
     val hlsStreams: List<StreamItem> get() = streams.filter { it.isHls }
     val embedStreams: List<StreamItem> get() = streams.filter { it.isEmbed }
 }
+
+/** An explicit classification; null means unknown, not canon. */
+@Serializable
+enum class EpisodeClassification(val label: String) {
+    FILLER("Filler"), CANON("Canon"), MIXED("Mixed"), ANIME_CANON("Anime canon"), RECAP("Recap"),
+}
+
+fun EpisodeItem.withClassification(value: EpisodeClassification?): EpisodeItem =
+    if (value == null) this else copy(filler = value == EpisodeClassification.FILLER, classification = value)

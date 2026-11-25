@@ -1,5 +1,6 @@
 package com.anilili.data.remote
 
+import com.anilili.data.model.EpisodeClassification
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonElement
@@ -28,8 +29,10 @@ class JikanClient(
      * week, and a Jikan outage (it answers 504 whenever MAL refuses it) used to be stored as
      * "no filler" — or as the first page's fillers only — for that whole week.
      */
-    fun fillerEpisodes(malId: Int): Set<Int> {
-        val fillers = mutableSetOf<Int>()
+    fun fillerEpisodes(malId: Int): Set<Int> = episodeClassifications(malId).filterValues { it == EpisodeClassification.FILLER }.keys
+
+    internal fun episodeClassifications(malId: Int): Map<Int, EpisodeClassification> {
+        val fillers = mutableMapOf<Int, EpisodeClassification>()
         var page = 1
         while (page <= MAX_PAGES) {
             // Jikan allows three requests a second; a long series is a dozen pages back to back.
@@ -40,7 +43,7 @@ class JikanClient(
                 .build()
             val root = client.newCall(request).execute().use { response ->
                 // MAL has no episode list for this id: an answer, not a failure.
-                if (response.code == 404 && page == 1) return emptySet()
+                if (response.code == 404 && page == 1) return emptyMap()
                 if (response.code == 404) error("Jikan episode pagination incomplete")
                 if (!response.isSuccessful) error("Jikan HTTP ${response.code}")
                 json.parseToJsonElement(response.body?.string().orEmpty()).jsonObject
@@ -48,8 +51,10 @@ class JikanClient(
             val episodes = root["data"]?.jsonArray ?: error("Jikan episode data missing")
             episodes.forEach { element ->
                 val episode = element.jsonObject
-                if (episode["filler"]?.jsonPrimitive?.booleanOrNull == true) {
-                    episode["mal_id"]?.jsonPrimitive?.intOrNull?.let(fillers::add)
+                val number = episode["mal_id"]?.jsonPrimitive?.intOrNull?.takeIf { it > 0 } ?: return@forEach
+                when {
+                    episode["recap"]?.jsonPrimitive?.booleanOrNull == true -> fillers[number] = EpisodeClassification.RECAP
+                    episode["filler"]?.jsonPrimitive?.booleanOrNull == true -> fillers[number] = EpisodeClassification.FILLER
                 }
             }
             val hasNext = root["pagination"]?.jsonObject
@@ -66,20 +71,21 @@ class JikanClient(
      * FillerLists uses absolute broadcast numbering, so only explicitly mapped whole-run MAL
      * entries can use it. Split seasons must never inherit another season's filler flags.
      */
-    internal fun fillerListsEpisodes(malId: Int): Set<Int>? {
+    internal fun fillerListsEpisodes(malId: Int): Map<Int, EpisodeClassification>? {
         val slug = WHOLE_RUN_SLUGS[malId] ?: return null
         val root = publicJson("https://fillerlists.com/data/$slug.json") as? JsonObject ?: return null
         val rows = root["episodes"] as? JsonArray ?: return null
         if (rows.isEmpty()) return null
         return rows.mapNotNull { item ->
             val row = item as? JsonObject ?: return@mapNotNull null
-            if (row["type"]?.jsonPrimitive?.contentOrNull != "filler") return@mapNotNull null
-            row["n"]?.jsonPrimitive?.intOrNull?.takeIf { it > 0 }
-        }.toSet()
+            val kind = classify(row["type"]?.jsonPrimitive?.contentOrNull) ?: return@mapNotNull null
+            val number = row["n"]?.jsonPrimitive?.intOrNull?.takeIf { it > 0 } ?: return@mapNotNull null
+            number to kind
+        }.toMap()
     }
 
     /** Public, cited episode classifications; restricted to known whole-run mappings. */
-    internal fun aniFillerPediaEpisodes(malId: Int): Set<Int>? {
+    internal fun aniFillerPediaEpisodes(malId: Int): Map<Int, EpisodeClassification>? {
         if (malId !in WHOLE_RUN_SLUGS) return null
         val root = publicJson("https://anifillerpedia.wiki/api/v1/series?mal_id=$malId") as? JsonObject ?: return null
         val series = (root["items"] as? JsonArray)?.mapNotNull { it as? JsonObject }
@@ -90,11 +96,21 @@ class JikanClient(
         return rows.mapNotNull { item ->
             val row = item as? JsonObject ?: return@mapNotNull null
             if (row["series_id"]?.jsonPrimitive?.intOrNull != id ||
-                row["status"]?.jsonPrimitive?.contentOrNull != "filler" ||
                 row["citation"] !is JsonObject ||
                 row["has_pending_contribution"]?.jsonPrimitive?.booleanOrNull == true) return@mapNotNull null
-            row["episode_number"]?.jsonPrimitive?.intOrNull?.takeIf { it > 0 }
-        }.toSet()
+            val kind = classify(row["status"]?.jsonPrimitive?.contentOrNull) ?: return@mapNotNull null
+            val number = row["episode_number"]?.jsonPrimitive?.intOrNull?.takeIf { it > 0 } ?: return@mapNotNull null
+            number to kind
+        }.toMap()
+    }
+
+    private fun classify(value: String?): EpisodeClassification? = when (value) {
+        "filler" -> EpisodeClassification.FILLER
+        "mixed" -> EpisodeClassification.MIXED
+        "canon" -> EpisodeClassification.CANON
+        "anime-canon" -> EpisodeClassification.ANIME_CANON
+        "recap" -> EpisodeClassification.RECAP
+        else -> null
     }
 
     private fun publicJson(url: String): JsonElement? {
