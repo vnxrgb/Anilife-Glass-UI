@@ -18,7 +18,7 @@ class WasmInstalledModulesInstrumentedTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val id = "fixture-update-test"
         val dir = File(context.noBackupFilesDir, "reviewed-wasm")
-        File(dir, "$id.wasm").delete()
+        File(dir, "$id.signed").delete()
         File(dir, "$id.json").delete()
         val module = byteArrayOf(0, 97, 115, 109, 13, 0, 1, 0)
         val digest = MessageDigest.getInstance("SHA-256").digest(module).joinToString("") { "%02x".format(it.toInt() and 255) }
@@ -34,12 +34,14 @@ class WasmInstalledModulesInstrumentedTest {
         try {
             val update = manifest(2)
             assertTrue(WasmInstalledModules.install(context, bundled, update, sign(update), module, keys.public))
-            assertEquals(2L, WasmInstalledModules.load(context, bundled)?.first?.version)
-            assertFalse(WasmInstalledModules.install(context, bundled, manifest(1), sign(manifest(1)), module, keys.public))
-            File(dir, "$id.wasm").writeBytes(module + byteArrayOf(42))
+            assertEquals(2L, WasmInstalledModules.load(context, bundled, keys.public)?.first?.version)
             assertNull(WasmInstalledModules.load(context, bundled))
+            assertNull(WasmInstalledModules.load(context, bundled, KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair().public))
+            assertFalse(WasmInstalledModules.install(context, bundled, manifest(1), sign(manifest(1)), module, keys.public))
+            File(dir, "$id.signed").writeBytes(module + byteArrayOf(42))
+            assertNull(WasmInstalledModules.load(context, bundled, keys.public))
         } finally {
-            File(dir, "$id.wasm").delete()
+            File(dir, "$id.signed").delete()
             File(dir, "$id.json").delete()
         }
     }

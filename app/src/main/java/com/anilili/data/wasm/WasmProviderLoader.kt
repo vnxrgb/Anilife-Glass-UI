@@ -31,8 +31,9 @@ internal class WasmProviderLoader(context: Context) {
         val approved = WasmRegistry.select(WasmRegistry.bundled, language)
             .singleOrNull { it.id == providerId } ?: return JSONArray()
         return withContext(Dispatchers.IO) {
-            val installed = WasmInstalledModules.load(app, approved)
+            val installed = WasmInstalledModules.load(app, approved, WasmUpdateConfiguration.endpoint?.pinnedKey)
             val selected = installed?.first ?: approved
+            if (language !in selected.languages) return@withContext JSONArray()
             val bytes = try {
                 if (installed != null) installed.second else app.assets.open("wasm/providers/${approved.id}.wasm").use { input ->
                     val output = java.io.ByteArrayOutputStream()

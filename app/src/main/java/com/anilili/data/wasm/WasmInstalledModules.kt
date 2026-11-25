@@ -2,100 +2,66 @@ package com.anilili.data.wasm
 
 import android.content.Context
 import android.util.AtomicFile
-import org.json.JSONArray
-import org.json.JSONObject
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.File
 import java.security.PublicKey
 
-/**
- * Private, versioned module storage. The registry remains the authority: installed updates
- * can only narrow capabilities and must have been signed by the application's pinned key.
- * No URL fetch, user-selected key or exported installer is provided.
- */
+/** A single atomic signed envelope. Re-authenticate the original manifest on every load. */
 internal object WasmInstalledModules {
     private const val MAX_BYTES = 4 * 1024 * 1024
+    private fun directory(context: Context) = File(context.noBackupFilesDir, "reviewed-wasm")
+    private fun approved(p: ApprovedWasmProvider) =
+        WasmRegistry.select(listOf(p), p.languages.firstOrNull().orEmpty()) == listOf(p)
 
-    private fun directory(context: Context): File = File(context.noBackupFilesDir, "reviewed-wasm")
-
-    fun install(
-        context: Context,
-        bundled: ApprovedWasmProvider,
-        manifest: ByteArray,
-        signature: ByteArray,
-        module: ByteArray,
-        pinnedKey: PublicKey,
-    ): Boolean {
-        if (!com.anilili.BuildConfig.DEBUG) return false
-        if (WasmRegistry.select(listOf(bundled), bundled.languages.firstOrNull() ?: "") != listOf(bundled)) return false
-        val existing = load(context, bundled)?.first ?: bundled
+    @Synchronized
+    fun install(context: Context, bundled: ApprovedWasmProvider, manifest: ByteArray,
+                signature: ByteArray, module: ByteArray, pinnedKey: PublicKey): Boolean {
+        if (!com.anilili.BuildConfig.DEBUG || !approved(bundled)) return false
+        val existing = load(context, bundled, pinnedKey)?.first ?: bundled
         val candidate = WasmUpdatePolicy.verifiedCandidate(existing, manifest, signature, module, pinnedKey) ?: return false
         if (!WasmRegistry.permitsUpdate(bundled, candidate)) return false
         return runCatching {
             val dir = directory(context)
             require(dir.isDirectory || dir.mkdirs())
-            val payload = AtomicFile(File(dir, "${bundled.id}.wasm"))
-            var stream = payload.startWrite()
+            val file = AtomicFile(File(dir, "${bundled.id}.signed"))
+            val stream = file.startWrite()
             try {
-                stream.write(module)
-                payload.finishWrite(stream)
+                val output = DataOutputStream(stream)
+                output.writeInt(1)
+                for (part in listOf(manifest, signature, module)) {
+                    output.writeInt(part.size)
+                    output.write(part)
+                }
+                output.flush()
+                file.finishWrite(stream)
             } catch (error: Exception) {
-                payload.failWrite(stream)
-                throw error
-            }
-            val metadata = JSONObject()
-                .put("id", candidate.id).put("version", candidate.version)
-                .put("sha256", candidate.digest)
-                .put("abi", if (candidate.communityAbi) "community" else "desktop")
-                .put("hosts", JSONArray(candidate.hosts.sorted()))
-                .put("languages", JSONArray(candidate.languages.sorted()))
-            val metaFile = AtomicFile(File(dir, "${bundled.id}.json"))
-            stream = metaFile.startWrite()
-            try {
-                stream.write(metadata.toString().toByteArray(Charsets.UTF_8))
-                metaFile.finishWrite(stream)
-            } catch (error: Exception) {
-                metaFile.failWrite(stream)
+                file.failWrite(stream)
                 throw error
             }
             true
         }.getOrDefault(false)
     }
 
-    fun load(context: Context, bundled: ApprovedWasmProvider): Pair<ApprovedWasmProvider, ByteArray>? {
-        if (!com.anilili.BuildConfig.DEBUG) return null
-        if (WasmRegistry.select(listOf(bundled), bundled.languages.firstOrNull() ?: "") != listOf(bundled)) return null
+    @Synchronized
+    fun load(context: Context, bundled: ApprovedWasmProvider, pinnedKey: PublicKey? = null): Pair<ApprovedWasmProvider, ByteArray>? {
+        if (!com.anilili.BuildConfig.DEBUG || pinnedKey == null || !approved(bundled)) return null
         return runCatching {
-            val dir = directory(context)
-            val metadata = AtomicFile(File(dir, "${bundled.id}.json")).openRead().use {
-                val bounded = it.readBytes(128 * 1024 + 1)
-                require(bounded.size <= 128 * 1024)
-                JSONObject(bounded.toString(Charsets.UTF_8))
-            }
-            fun strings(key: String): Set<String> {
-                val array = metadata.getJSONArray(key)
-                return (0 until array.length()).map { array.getString(it) }.toSet()
-            }
-            val candidate = ApprovedWasmProvider(
-                metadata.getString("id"), metadata.getLong("version"),
-                metadata.getString("sha256"), metadata.getString("abi") == "community",
-                strings("hosts"), strings("languages"),
-            )
-            require(WasmRegistry.permitsUpdate(bundled, candidate))
-            require(WasmRegistry.select(listOf(candidate), candidate.languages.first()) == listOf(candidate))
-            val file = AtomicFile(File(dir, "${bundled.id}.wasm"))
-            val bytes = file.openRead().use { input ->
-                val out = java.io.ByteArrayOutputStream()
-                val chunk = ByteArray(8192)
-                while (true) {
-                    val n = input.read(chunk)
-                    if (n < 0) break
-                    require(out.size() + n <= MAX_BYTES)
-                    out.write(chunk, 0, n)
+            val file = AtomicFile(File(directory(context), "${bundled.id}.signed"))
+            DataInputStream(file.openRead()).use { input ->
+                require(input.readInt() == 1)
+                fun part(max: Int): ByteArray {
+                    val length = input.readInt()
+                    require(length in 1..max)
+                    return ByteArray(length).also { input.readFully(it) }
                 }
-                out.toByteArray()
+                val manifest = part(128 * 1024)
+                val signature = part(1024)
+                val module = part(MAX_BYTES)
+                require(input.read() == -1)
+                val candidate = requireNotNull(WasmUpdatePolicy.verifiedCandidate(bundled, manifest, signature, module, pinnedKey))
+                candidate to module
             }
-            require(WasmPolicy.verify(bytes, candidate.digest))
-            candidate to bytes
         }.getOrNull()
     }
 }
