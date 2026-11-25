@@ -1,1 +1,1 @@
-Signed mobile preview: equal compact hero button widths and reduced gap above category chips.
+Mobile preview: restore system status bar at window focus and prefer HD AniZip/TMDB hero artwork.

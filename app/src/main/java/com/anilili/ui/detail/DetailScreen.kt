@@ -525,6 +525,12 @@ private fun DetailContent(
     contentPadding: PaddingValues = PaddingValues(),
 ) {
     val info = data.info
+    var hdArtwork by remember(info.id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(info.id) {
+        hdArtwork = try { AppGraph.repository.hdHeroArtwork(info, portrait = false) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { null }
+    }
     // The episode rows belong to the season the chips selected, not to the anime the page was
     // opened on, so what has aired has to be read from that one — `info.nextAiringEpisode` is the
     // schedule of a different season as soon as the viewer switches.
@@ -646,7 +652,7 @@ private fun DetailContent(
                 }
             } ?: MaterialTheme.colorScheme.primary
             DetailAmbient(
-                artwork = info.bannerImage ?: info.coverImage.best,
+                artwork = hdArtwork ?: info.bannerImage ?: info.coverImage.best,
                 fallback = coverTint,
                 modifier = Modifier.matchParentSize(),
             )
@@ -667,6 +673,7 @@ private fun DetailContent(
             item {
                 DetailHero(
                     info = info,
+                    hdArtwork = hdArtwork,
                     // This hero always shows the page's own title and cover, so it takes the page's
                     // logo rather than the selected season's — which used to leave it with none at
                     // all as soon as another season chip was picked. See DetailData.pageLogo.
@@ -970,6 +977,7 @@ private fun DetailContent(
 @Composable
 private fun DetailHero(
     info: Media,
+    hdArtwork: String? = null,
     /** The series' own wordmark, drawn in place of the title where the metadata tree has one. */
     logo: String?,
     onStudioClick: (StudioNode) -> Unit,
@@ -984,7 +992,8 @@ private fun DetailHero(
     topInset: Dp = 0.dp,
 ) {
     val device = LocalAppDeviceProfile.current
-    val banner = info.bannerImage ?: info.coverImage.best
+    var hdFailed by remember(hdArtwork) { mutableStateOf(false) }
+    val banner = hdArtwork.takeUnless { hdFailed } ?: info.bannerImage ?: info.coverImage.best
     val bannerHeight = topInset + if (device.isExpanded) 258.dp else if (device.isTablet) 224.dp else 195.dp
     Box(
         Modifier.fillMaxWidth().height(
@@ -994,6 +1003,7 @@ private fun DetailHero(
         AsyncImage(
             model = banner,
             contentDescription = null,
+            onError = { if (hdArtwork != null) hdFailed = true },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(bannerHeight)

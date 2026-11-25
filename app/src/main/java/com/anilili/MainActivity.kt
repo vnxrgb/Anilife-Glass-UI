@@ -263,6 +263,18 @@ class MainActivity : FragmentActivity() {
     private var pendingRoute by mutableStateOf<String?>(null)
     private var pendingLink by mutableStateOf<AnililiLink?>(null)
     private var pictureInPictureReady = false
+    // Non-null only when a browsing destination owns the status bar.
+    private var browsingDarkStatusIcons: Boolean? = null
+
+    private fun restoreBrowsingStatusBar() {
+        val darkIcons = browsingDarkStatusIcons ?: return
+        if (isInPictureInPictureMode) return
+        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            show(WindowInsetsCompat.Type.statusBars())
+            isAppearanceLightStatusBars = darkIcons
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val launchStartedAt = SystemClock.elapsedRealtime()
@@ -329,17 +341,18 @@ class MainActivity : FragmentActivity() {
                 var artworkStatusBar by remember { mutableStateOf(false) }
                 var browsingStatusBar by remember { mutableStateOf(false) }
                 val darkStatusIcons = lightCanvas && !artworkStatusBar
-                // A return from immersive playback must not leave browsing bars hidden.
-                LaunchedEffect(browsingStatusBar) {
-                    if (browsingStatusBar) WindowCompat.getInsetsController(window, window.decorView)
-                        .show(WindowInsetsCompat.Type.statusBars())
-                }
                 SideEffect {
+                    val nextBrowsingPolicy = darkStatusIcons.takeIf { browsingStatusBar }
+                    if (nextBrowsingPolicy != browsingDarkStatusIcons) {
+                        browsingDarkStatusIcons = nextBrowsingPolicy
+                        DiagnosticsLog.event("Browsing status bar darkIcons=$nextBrowsingPolicy")
+                    }
                     window.decorView.setBackgroundColor(canvas)
                     WindowCompat.getInsetsController(window, window.decorView).apply {
                         isAppearanceLightStatusBars = darkStatusIcons
                         isAppearanceLightNavigationBars = lightCanvas
                     }
+                    restoreBrowsingStatusBar()
                 }
                 // Outside everything that measures, so the viewer's chosen interface size and
                 // overscan reach every screen from one place (the size reaches dialogs and popups too).
@@ -625,6 +638,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) restoreBrowsingStatusBar()
         DiagnosticsLog.event(
             "MainActivity.onWindowFocusChanged hasFocus=$hasFocus " +
                 "decorShown=${window.decorView.isShown} size=${window.decorView.width}x${window.decorView.height}",
@@ -798,8 +812,10 @@ private fun MiruroRoot(
     val browsingBars = !deviceProfile.isTv && !inPictureInPicture &&
         (currentRoute == Routes.HOME || currentRoute == Routes.DETAIL)
     SideEffect {
-        onArtworkStatusBarChanged(browsingBars && artworkBarReport?.first == backStack?.id &&
-            artworkBarReport?.second == true, browsingBars)
+        // Default to white during the transition into an artwork route. The visible entry
+        // then reports whether its artwork has actually scrolled clear.
+        val overArtwork = artworkBarReport?.takeIf { it.first == backStack?.id }?.second ?: true
+        onArtworkStatusBarChanged(browsingBars && overArtwork, browsingBars)
     }
     val showBottomBar = currentRoute in Routes.tabRoutes
     // The anime page keeps the phone's tab bar (and the tablet's rail): it is where most browsing
@@ -1951,7 +1967,7 @@ private fun AppNavHost(
                     onNotificationsClick = { nav.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
                     onMoodDiscovery = onMoodDiscovery,
                     onHeroUnderBarsChanged = { overArtwork ->
-                        if (nav.currentBackStackEntry == entry) onArtworkUnderBarsChanged(entry.id, overArtwork)
+                        if (nav.currentBackStackEntry?.id == entry.id) onArtworkUnderBarsChanged(entry.id, overArtwork)
                     },
                     tvPrimaryFocusTarget = tvHomePrimaryFocusTarget,
                     tvRefreshRequest = tvHomeRefresh,
@@ -2072,7 +2088,7 @@ private fun AppNavHost(
                     animeId = id,
                     focusEpisode = returnEpisode,
                     onHeroUnderBarsChanged = { overArtwork ->
-                        if (nav.currentBackStackEntry == entry) onArtworkUnderBarsChanged(entry.id, overArtwork)
+                        if (nav.currentBackStackEntry?.id == entry.id) onArtworkUnderBarsChanged(entry.id, overArtwork)
                     },
                     onBack = { nav.popBackStack() },
                     onAnimeClick = { relatedId ->

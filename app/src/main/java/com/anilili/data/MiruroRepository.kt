@@ -1291,6 +1291,21 @@ class MiruroRepository(
         return tmdb.backdrops(media, hint).firstOrNull()
     }
 
+    /** Mobile artwork: prefer a full-size portrait or landscape image with an exact title mapping.
+     * Do not force a narrow AniList banner to cover the whole screen when better fanart exists.
+     */
+    suspend fun hdHeroArtwork(media: Media, portrait: Boolean): String? {
+        if (media.id <= 0 || media.isAdult) return null
+        val tvdb = runCatching { aniZip.heroArtwork(media.id, portrait) }
+            .onFailure { it.rethrowIfCancellation(); DiagnosticsLog.throwable("HD hero artwork failed id=${media.id}", it) }
+            .getOrDefault(emptyList())
+        tvdb.firstOrNull()?.let { return it }
+        if (portrait) return null
+        val hint = withContext(Dispatchers.IO) { konoha.tmdbRefFor(media.id) }
+        return tmdb.backdrops(media, hint).firstOrNull()
+            ?.replace("https://image.tmdb.org/t/p/w1280/", "https://image.tmdb.org/t/p/original/")
+    }
+
     suspend fun discoverOptions(): DiscoverOptions {
         val adultHidden = hideAdult
         return cache.getOrFetch(

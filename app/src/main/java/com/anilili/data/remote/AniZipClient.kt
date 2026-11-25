@@ -48,6 +48,34 @@ class AniZipClient(
             .getOrDefault(emptyList())
     }
 
+    /** Exact AniList mapping, using original TVDB artwork rather than a thumbnail. */
+    suspend fun heroArtwork(anilistId: Int, portrait: Boolean): List<String> = withContext(Dispatchers.IO) {
+        if (anilistId <= 0) return@withContext emptyList()
+        cache.getOrFetch(
+            key = "anizip-hero-art:v1:$anilistId:$portrait",
+            serializer = ListSerializer(String.serializer()),
+            ttlMs = FANART_TTL_MS,
+            cacheIf = { it.isNotEmpty() },
+        ) {
+            val request = Request.Builder().url("$API_BASE/mappings?anilist_id=$anilistId")
+                .header("Accept", "application/json").build()
+            client.newCall(request).apply { timeout().timeout(4, java.util.concurrent.TimeUnit.SECONDS) }
+                .execute().use { response ->
+                    if (response.code == 404) return@use emptyList()
+                    if (!response.isSuccessful) error("AniZip HTTP ${response.code}")
+                    val body = json.parseToJsonElement(response.body?.string().orEmpty()) as? JsonObject
+                        ?: return@use emptyList()
+                    val mapping = body["mappings"] as? JsonObject
+                    if (mapping?.get("anilist_id")?.jsonPrimitive?.intOrNull != anilistId) return@use emptyList()
+                    val images = json.decodeFromString(AniZipMappings.serializer(), body.toString()).images
+                    val type = if (portrait) "Poster" else "Fanart"
+                    images.filter { it.coverType.equals(type, ignoreCase = true) }
+                        .mapNotNull { it.url?.takeIf { url -> url.startsWith("https://") } }
+                        .distinct()
+                }
+        }
+    }
+
     private fun fetchFanart(anilistId: Int): List<String> {
         val request = Request.Builder()
             .url("$API_BASE/mappings?anilist_id=$anilistId")

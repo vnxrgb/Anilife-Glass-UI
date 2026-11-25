@@ -592,8 +592,17 @@ private fun HomeContent(
         val spotlightIds = remember(spotlight) { spotlight.map(Media::id) }
         var activeHeroId by remember(spotlightIds) { mutableStateOf(spotlight.firstOrNull()?.id) }
         val activeHero = spotlight.firstOrNull { it.id == activeHeroId } ?: spotlight.firstOrNull()
+        val portraitHero = !device.isTablet && !device.isExpanded && !device.isTv
+        val hdArt = remember(spotlightIds, portraitHero) { mutableStateMapOf<Int, String?>() }
+        LaunchedEffect(activeHero?.id, portraitHero) {
+            val media = activeHero ?: return@LaunchedEffect
+            if (device.isTv || hdArt.containsKey(media.id)) return@LaunchedEffect
+            hdArt[media.id] = try { AppGraph.repository.hdHeroArtwork(media, portraitHero) }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (_: Exception) { null }
+        }
         val ambientArtwork = activeHero?.let {
-            if (device.isTablet || device.isExpanded) it.wideHeroArtwork() ?: it.coverImage.best
+            hdArt[it.id] ?: if (device.isTablet || device.isExpanded) it.wideHeroArtwork() ?: it.coverImage.best
             else it.coverImage.best ?: it.wideHeroArtwork()
         }
         val topOverlay = contentPadding.calculateTopPadding()
@@ -660,6 +669,7 @@ private fun HomeContent(
                     Column {
                     HeroPager(
                         items = spotlight,
+                        hdArtwork = hdArt,
                         onActiveMediaChanged = { activeHeroId = it },
                         onAnimeClick = onAnimeClick,
                         onWatch = { id ->
@@ -852,6 +862,7 @@ private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, 
 @Composable
 private fun HeroPager(
     items: List<Media>,
+    hdArtwork: Map<Int, String?> = emptyMap(),
     onActiveMediaChanged: (Int) -> Unit = {},
     onAnimeClick: (Int) -> Unit,
     onWatch: (Int) -> Unit,
@@ -942,6 +953,7 @@ private fun HeroPager(
             ) { page ->
                 HeroCard(
                     media = items[page],
+                    hdArtwork = hdArtwork[items[page].id],
                     logo = heroLogos[items[page].id],
                     pageIndex = page,
                     pageCount = items.size,
@@ -1021,6 +1033,7 @@ internal fun heroVisibleIndicatorIndices(page: Int, pageCount: Int, maxDots: Int
 @Composable
 private fun HeroCard(
     media: Media,
+    hdArtwork: String? = null,
     logo: String?,
     pageIndex: Int,
     pageCount: Int,
@@ -1093,7 +1106,7 @@ private fun HeroCard(
                     ), blendMode = BlendMode.DstIn)
                 })
             .then(if (heroArt != null) Modifier.hazeSource(heroArt) else Modifier)) {
-            HeroBackdrop(media, topInset)
+            HeroBackdrop(media, topInset, hdArtwork = hdArtwork)
             Box(
                 Modifier.fillMaxSize().appCanvasFade { canvas ->
                     Brush.verticalGradient(
@@ -1306,13 +1319,17 @@ private val HERO_BANNER_FADE = Brush.verticalGradient(
  * the sharp band still on top of it.
  */
 @Composable
-private fun HeroBackdrop(media: Media, topInset: Dp, modifier: Modifier = Modifier) {
+private fun HeroBackdrop(media: Media, topInset: Dp, modifier: Modifier = Modifier, hdArtwork: String? = null) {
     val device = LocalAppDeviceProfile.current
-    val cover = media.coverImage.best
-    if (!device.isTv && !device.isTablet && !device.isExpanded && cover != null) {
+    val portrait = !device.isTv && !device.isTablet && !device.isExpanded
+    var hdFailed by remember(hdArtwork) { mutableStateOf(false) }
+    val enhanced = hdArtwork.takeUnless { hdFailed }
+    val cover = if (portrait) enhanced ?: media.coverImage.best else media.coverImage.best
+    if (portrait && cover != null) {
         AsyncImage(
             model = cover,
             contentDescription = null,
+            onError = { if (enhanced != null) hdFailed = true },
             modifier = modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
             // Centred, so the crop takes an even slice off the top and the bottom rather than
@@ -1324,7 +1341,7 @@ private fun HeroBackdrop(media: Media, topInset: Dp, modifier: Modifier = Modifi
     // Never the trailer frame: YouTube's hqdefault is 480x360, so a hero magnifies it several times
     // over into an unrecognisable close-up — the television dropped it for that reason. A large box
     // with no banner falls back to covering with the cover, which is what it did before.
-    val banner = media.wideHeroArtwork()
+    val banner = enhanced ?: media.wideHeroArtwork()
     if (banner == null) {
         AsyncImage(
             model = cover,
@@ -1340,6 +1357,7 @@ private fun HeroBackdrop(media: Media, topInset: Dp, modifier: Modifier = Modifi
         AsyncImage(
             model = banner,
             contentDescription = null,
+            onError = { if (enhanced != null) hdFailed = true },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 // Under the chrome rather than behind it. Starting at the top would put the band's
