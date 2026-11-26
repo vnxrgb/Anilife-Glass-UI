@@ -145,15 +145,15 @@ private fun mobileReleaseSteps() = listOf(
     TourStep(TourTarget.FRANCHISE_CARD, "Franchise Watch Order", "Let's explore Fate/stay night: Unlimited Blade Works. Open Franchise Watch Order from an anime's details or Related tab to see its seasons, movies and extras.", whenMissing = "The card appears when related titles are available. If the catalogue is offline, try again later.", destination = "franchise-card"),
     TourStep(TourTarget.FRANCHISE_GUIDE, "Find your next chapter", "Switch between Timeline and Watch order, choose a curated viewing order when available, and track completed titles. The guide shows your next unfinished anime without changing your progress.", whenMissing = "Viewing orders depend on the catalogue and community sources. You can open the guide later from a related series.", destination = "franchise-guide"),
     TourStep(TourTarget.NAV_HOME, "Smart Resume", "Continue Watching takes you back to unfinished episodes.", destination = "home"),
-    TourStep(TourTarget.NAV_LIST, "Your anime library", "Find collections and AniLumos Wrapped in your library.", destination = "more"),
+    TourStep(TourTarget.NAV_LIST, "Your anime library", "Find collections and AniLumos Wrapped in My List. Personalize your Wrapped with the same name or nickname as your journal.", destination = "more"),
     TourStep(null, "Personalized Calendar", "Choose Following only on the schedule to focus on releases from your list.", destination = "schedule"),
     TourStep(TourTarget.NAV_DOWNLOADS, "Download queue", "Manage active, paused and failed downloads in one place.", destination = "downloads"),
     TourStep(null, "Cinema and episode tools", "Open an episode to find cinema lighting, episode notes and stream recovery options. Playback is not started during this tour."),
     TourStep(TourTarget.JOURNAL_FLOATING, "Meet Anime Journal", "Tap the floating journal to write notes, private reviews, ratings and favorite moments. Drag it to a comfortable spot. It remembers its position and saves entries locally as you edit.", whenMissing = "The button may be hidden or disabled. Your journal is always available in My List.", destination = "home"),
     TourStep(TourTarget.JOURNAL_FLOATING, "Keep the screen clear", "Long-press the journal button to tuck it into a small glass handle above the bottom-right navigation area. Tap that handle to restore the button. It stays out of Settings and fullscreen video.", whenMissing = "Enable the floating button in Settings → Appearance → Floating Anime Journal.", destination = "home"),
-    TourStep(TourTarget.JOURNAL_LIBRARY, "Your private anime diary", "Open Anime Journal in My List to find and edit saved entries, even with the floating button switched off. Use Settings → Appearance → Floating Anime Journal to turn the floating control on or off.", whenMissing = "Scroll through My List to find Anime Journal.", destination = "more"),
-    TourStep(null, "Share your memories", "Open an entry and tap Share. Choose artwork, episode details, ratings and any writing you want included in your image or text. Private notes, reviews and favorite moments are excluded by default. Export keeps a full TXT copy on your device."),
-    TourStep(TourTarget.NAV_PROFILE, "Make it yours", "Find themes and account options in your profile. Link a TV from Accounts & sync.", destination = "appearance"),
+    TourStep(TourTarget.JOURNAL_LIBRARY, "Your private anime diary", "Open Anime Journal in My List, even if the floating button is off. Group by anime or view all entries, search and sort by date, title or rating. Long-press to select multiple entries. Delete with confirmation, then Undo if needed.", whenMissing = "Scroll through My List to find Anime Journal.", destination = "more"),
+    TourStep(null, "Share your memories", "Tap Share to choose artwork, ratings, episode details and writing. Private writing is excluded by default. Share or save a PNG, or export selected entries as TXT. Choose whether to include your name on shared Journal and Wrapped images."),
+    TourStep(TourTarget.NAV_PROFILE, "Make it yours", "In Settings → Appearance → Personalization, set your shared display name, journal grouping and name-sharing defaults. Toggle, reset or restore the floating button. Themes and TV linking are still available in Settings.", destination = "appearance"),
     TourStep(TourTarget.NAV_HOME, "You're ready", "Enjoy AniLumos. Replay this walkthrough from About whenever you like.", destination = "home"),
 )
 
@@ -167,7 +167,7 @@ private fun mobileReleaseSteps() = listOf(
  */
 object WhatsNewTour {
     /** Change this for the next release's tour; every install then shows it once more. */
-    const val TOUR_ID = "anime-journal-mobile-2026-11-v1"
+    const val TOUR_ID = "anime-journal-mobile-2026-11-v2"
     const val FRANCHISE_DEMO_ID = 19603
     val journalButtonDemo: Boolean get() = active && mobileReleaseSteps().getOrNull(step)?.target == TourTarget.JOURNAL_FLOATING
     val franchiseCardDemo: Boolean get() = active && mobileReleaseSteps().getOrNull(step)?.target == TourTarget.FRANCHISE_CARD
