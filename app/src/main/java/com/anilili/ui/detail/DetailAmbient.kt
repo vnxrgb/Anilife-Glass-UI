@@ -60,7 +60,7 @@ internal fun DetailAmbient(artwork: String?, fallback: Color, modifier: Modifier
         }
     }
     val tint by animateColorAsState(target, tween(650), label = "detailArtworkAmbient")
-    val strength = if (MaterialTheme.colorScheme.background.luminance() > .5f) .55f else 1f
+    val strength = (if (MaterialTheme.colorScheme.background.luminance() > .5f) .55f else 1f) * (if (com.anilili.ui.adaptive.LocalAppDeviceProfile.current.isTablet) .55f else 1f)
     Box(modifier.drawBehind {
         if (size.width <= 0f || size.height <= 0f) return@drawBehind
         val reach = maxOf(size.width * 1.25f, size.height * .92f)

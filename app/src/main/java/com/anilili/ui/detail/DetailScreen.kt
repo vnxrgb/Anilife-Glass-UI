@@ -723,7 +723,7 @@ private fun DetailContent(
         LazyColumn(
             state = detailListState,
             // Keep content above the floating navigation instead of covering the next card.
-            modifier = Modifier.fillMaxSize().padding(
+            modifier = Modifier.align(Alignment.TopCenter).then(if (device.isTablet) Modifier.widthIn(max = 920.dp) else Modifier).fillMaxSize().padding(
                 bottom = if (device.isTv) 0.dp else LocalAppChromeBottomInset.current,
             ),
             // Scroll padding, not layout padding, so rows travel under the bar as it retreats. The
@@ -1327,9 +1327,10 @@ private fun DetailActions(
     }
     Column(
         modifier = Modifier.fillMaxWidth().padding(start = pad, end = pad, bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.then(if (device.isTablet) Modifier.widthIn(max = 560.dp) else Modifier).fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(if (device.isTv) 10.dp else 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1616,7 +1617,7 @@ private fun GenreRow(genres: List<String>) {
 private fun Description(description: String?) {
     if (description.isNullOrBlank()) return
     var expanded by remember { mutableStateOf(false) }
-    val clean = remember(description) { description.replace(Regex.cached("<[^>]*>"), "").trim() }
+    val clean = remember(description) { androidx.core.text.HtmlCompat.fromHtml(description, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString().trim() }
     Column(
         modifier = Modifier
             .fillMaxWidth()

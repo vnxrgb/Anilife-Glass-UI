@@ -213,7 +213,8 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
             .clickable(enabled = open, onClickLabel = "Close journal") { close() })
     }
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-    BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding().padding(bottom = if (imeVisible || open) 0.dp else bottomSpace)) {
+    val tablet = com.anilili.ui.adaptive.LocalAppDeviceProfile.current.isTablet
+    BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding().padding(bottom = if (imeVisible || open) 0.dp else bottomSpace).then(if (tablet && !open) Modifier.padding(horizontal = 16.dp, vertical = 12.dp) else Modifier)) {
         val density = LocalDensity.current
         val maxX = with(density) { (maxWidth - 58.dp).toPx().coerceAtLeast(1f) }
         val maxY = with(density) { (maxHeight - 58.dp).toPx().coerceAtLeast(1f) }

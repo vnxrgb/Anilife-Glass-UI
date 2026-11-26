@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -32,7 +33,7 @@ internal object HiddenSparks {
     private var prefs: android.content.SharedPreferences? = null
     private var theme: String? = null
     private var started = false
-    private var lastTap = 0L
+    private val lastTaps = mutableMapOf<String, Long>()
     private var lastEndedKey = ""
     private var lastEndedAt = 0L
     private var backgroundTheme: String? = null
@@ -132,12 +133,12 @@ internal object HiddenSparks {
 
     fun secretTap(key: String) {
         val now = SystemClock.elapsedRealtime()
-        if (now - lastTap > 2500) { counts.remove("logo"); counts.remove("version") }
-        lastTap = now
+        if (now - (lastTaps[key] ?: 0L) > 5_000L) counts.remove(key)
+        lastTaps[key] = now
         val n = (counts[key] ?: 0) + 1
         counts[key] = n
         when {
-            key == "logo" && n == 7 -> show("Congratulations. You've unlocked absolutely nothing.")
+            key == "logo" && (n == 7 || n == 14) -> show("Congratulations. You've unlocked absolutely nothing.")
             key == "logo" && n >= 20 -> { counts[key] = 0; show("Okay, now you're just bullying the logo.") }
             key == "version" && n >= 10 -> { counts[key] = 0; show("Powered by caffeine and questionable sleep schedules.") }
         }
@@ -170,12 +171,17 @@ internal fun HiddenSparkText(modifier: Modifier = Modifier, enabled: Boolean = t
         if (!enabled) return@LaunchedEffect
         if (SystemClock.elapsedRealtime() - current.createdAt > 30 * 60_000L) { HiddenSparks.clear(current.sequence); return@LaunchedEffect }
         lastText.value = current.text
-        delay(5000)
+        delay(5300)
         HiddenSparks.clear(current.sequence)
     }
-    AnimatedVisibility(visible = spark != null && enabled, modifier = modifier, enter = fadeIn(), exit = fadeOut()) {
+    val canvas = MaterialTheme.colorScheme.background
+    val light = androidx.compose.ui.graphics.Color.White
+    val dark = androidx.compose.ui.graphics.Color.Black
+    val ink = if (canvas.luminance() > .5f) dark else light
+    val outline = if (ink == dark) light else dark
+    AnimatedVisibility(visible = spark != null && enabled, modifier = modifier, enter = fadeIn(androidx.compose.animation.core.tween(150)), exit = fadeOut(androidx.compose.animation.core.tween(180))) {
         Text(spark?.text ?: lastText.value, modifier = Modifier.widthIn(max = 420.dp).padding(horizontal = 24.dp),
-            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, shadow = androidx.compose.ui.graphics.Shadow(outline, androidx.compose.ui.geometry.Offset(0f, 1f), 5f)), color = ink,
             textAlign = TextAlign.Center)
     }
 }

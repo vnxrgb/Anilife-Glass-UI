@@ -1544,7 +1544,7 @@ private fun WatchContent(
                     Modifier
                         .fillMaxSize()
                         .graphicsLayer { alpha = loadingOverlayAlpha }
-                        .background(Color.Black.copy(alpha = 0.55f)),
+                        .background(Color.Black.copy(alpha = if (device.isTablet) 1f else 0.55f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(

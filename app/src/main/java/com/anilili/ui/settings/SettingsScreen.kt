@@ -2139,7 +2139,7 @@ fun SettingsScreen(
                         )
                     }
                 }
-                val columns = if (device.isTv) 5 else 2
+                val columns = when { device.isTv -> 5; device.isTablet && device.widthDp >= 1100 -> 4; device.isTablet && device.widthDp >= 780 -> 3; else -> 2 }
                 items(sectionTiles.chunked(columns), key = { it.first().id }) { row ->
                     Row(
                         Modifier.fillMaxWidth().padding(vertical = 5.dp),
@@ -3377,8 +3377,8 @@ fun SettingsScreen(
             settingsSection("about", openSectionId) {
                 if (!device.isTv) item(key = "hidden-brand-version") {
                     Column(Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("AniLumos", style = MaterialTheme.typography.titleLarge, modifier = Modifier.clickable(indication = null, interactionSource = null) { HiddenSparks.secretTap("logo") })
-                        Text("v${UpdateManager.currentVersion}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.clickable(indication = null, interactionSource = null) { HiddenSparks.secretTap("version") })
+                        Text("AniLumos", style = MaterialTheme.typography.titleLarge, modifier = Modifier.clickable(indication = null, interactionSource = null) { HiddenSparks.secretTap("logo") }.padding(horizontal = 28.dp, vertical = 12.dp))
+                        Text("v${UpdateManager.currentVersion}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.clickable(indication = null, interactionSource = null) { HiddenSparks.secretTap("version") }.padding(horizontal = 24.dp, vertical = 10.dp))
                     }
                 }
                 item(key = "What's new") {

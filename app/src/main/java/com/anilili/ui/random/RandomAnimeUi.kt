@@ -225,7 +225,7 @@ fun RandomAnimeDialog(
                     .then(if (isTv) Modifier.padding(horizontal = 48.dp, vertical = 27.dp) else Modifier),
             ) {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
-                if (!isTv && maxWidth > maxHeight && maxHeight < 520.dp) {
+                if (!isTv && maxWidth > maxHeight && (maxHeight < 520.dp || LocalAppDeviceProfile.current.isTablet)) {
                     LandscapeDiscover(state, swipe, onSkip, onOpen, onSource, onDismiss)
                 } else Column(
                     modifier = Modifier.fillMaxSize(),
@@ -621,8 +621,11 @@ private fun AnimeCard(
             }
             return@Box
         }
+        val tablet = LocalAppDeviceProfile.current.isTablet
+        var coverFailed by remember(media.id, media.coverImage.best) { mutableStateOf(false) }
         AsyncImage(
-            model = media.coverImage.best,
+            model = if (tablet && (coverFailed || media.coverImage.best.isNullOrBlank())) media.bannerImage else media.coverImage.best,
+            onError = { if (tablet) coverFailed = true },
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
