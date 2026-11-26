@@ -384,7 +384,10 @@ fun SettingsScreen(
     val themeAccent by SettingsStore.themeAccent.collectAsState()
     val themeStyle by SettingsStore.themeStyle.collectAsState()
     LaunchedEffect(themeBackground, themeAccent, themeStyle) {
-        HiddenSparks.themeChanged(Triple(themeBackground, themeAccent, themeStyle).toString())
+        if (!device.isTv) {
+            HiddenSparks.themeChanged(Triple(themeBackground, themeAccent, themeStyle).toString())
+            HiddenSparks.backgroundChanged(themeBackground.toString())
+        }
     }
     val themeContrast by SettingsStore.themeContrast.collectAsState()
     val playerAccent by SettingsStore.playerAccent.collectAsState()

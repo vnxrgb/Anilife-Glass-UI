@@ -663,6 +663,12 @@ private fun DetailContent(
         franchiseRemote.filterValues { it == "COMPLETED" }.keys.forEach { ids.add(it) }
         ids.toSet()
     }
+    LaunchedEffect(franchiseEntries, completedFranchiseIds) {
+        if (!device.isTv && franchiseEntries.size > 1 && franchiseEntries.all { it.media.id in completedFranchiseIds }) {
+            val key = franchiseEntries.map { it.media.id }.minOrNull()
+            com.anilili.ui.easteregg.HiddenSparks.say("franchise:$key", "You didn't skip a single chapter of this universe.")
+        }
+    }
     var franchiseOpen by rememberSaveable(info.id) { mutableStateOf(false) }
     var initialFranchiseHandled by rememberSaveable(info.id) { mutableStateOf(false) }
     LaunchedEffect(openFranchiseInitially, franchiseEntries.size) {

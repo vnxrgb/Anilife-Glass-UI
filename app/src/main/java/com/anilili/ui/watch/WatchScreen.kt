@@ -1483,6 +1483,7 @@ private fun WatchContent(
                         episode = data.current.displayNumber,
                         autoAdvanced = data.autoAdvanced,
                         onEnded = {
+                            if (!device.isTv && !afterglowPip) HiddenSparks.episodeEnded(data.anilistId, data.current.displayNumber, afterglowSeriesComplete(data.declaredSeriesStatus, data.declaredEpisodeCount, data.current.number.toDouble(), isMovie), data.declaredEpisodeCount)
                             if (!SleepTimer.consumeEpisodeEnd()) {
                                 if (data.canAdvance && SettingsStore.autoplay.value) onAutoAdvance()
                                 else if (!data.canAdvance && !device.isTv && afterglowEnabled && !afterglowPip &&

@@ -23,7 +23,7 @@ import java.util.Locale
 
 /** Local-only, in-memory session state; no analytics, account data or network work. */
 internal object HiddenSparks {
-    data class Spark(val text: String, val sequence: Long)
+    data class Spark(val text: String, val sequence: Long, val createdAt: Long)
     val message = MutableStateFlow<Spark?>(null)
     private val counts = mutableMapOf<String, Int>()
     private val shown = mutableSetOf<String>()
@@ -33,6 +33,9 @@ internal object HiddenSparks {
     private var theme: String? = null
     private var started = false
     private var lastTap = 0L
+    private var lastEndedKey = ""
+    private var lastEndedAt = 0L
+    private var backgroundTheme: String? = null
     private val searches = mapOf(
         "anilumos" to "That's me. Hi.",
         "one piece" to "The One Piece is real!",
@@ -92,6 +95,35 @@ internal object HiddenSparks {
         if (n >= threshold && say(key, text, daily)) counts[key] = 0
     }
 
+    fun episodeEnded(animeId: Int, episode: String, seriesComplete: Boolean, total: Int?) {
+        if (!started) return
+        val key = "$animeId:$episode"
+        val now = SystemClock.elapsedRealtime()
+        if (key == lastEndedKey && now - lastEndedAt < 15_000L) return
+        lastEndedKey = key
+        lastEndedAt = now
+        val replayKey = "replay:$key"
+        val times = (counts[replayKey] ?: 0) + 1
+        counts[replayKey] = times
+        if (times >= 3 && say(replayKey, "The ending isn't going to change.", daily = true)) counts[replayKey] = 0
+        if (seriesComplete) {
+            val n = (prefs?.getInt("finished_runs", 0) ?: 0) + 1
+            prefs?.edit()?.putInt("finished_runs", n)?.apply()
+            when {
+                n % 100 == 0 -> say("milestone:$n", "You came for the anime. You stayed for the stories.")
+                total != null && total >= 100 -> say("long-series:$animeId", "You survived an entire character arc.")
+                Calendar.getInstance().get(Calendar.HOUR_OF_DAY) == 0 -> say("midnight", "A story ends. A new day begins.", daily = true)
+                else -> say("series-finished", "Every ending is a new beginning.")
+            }
+        }
+    }
+
+    fun backgroundChanged(value: String) {
+        val previous = backgroundTheme
+        backgroundTheme = value
+        if (previous != null && previous != value) hit("background", 5, "Choose your side, young protagonist.")
+    }
+
     fun themeChanged(value: String) {
         val old = theme
         theme = value
@@ -114,6 +146,7 @@ internal object HiddenSparks {
     fun say(key: String, text: String, daily: Boolean = false): Boolean {
         if (!started || key in shown) return false
         val now = SystemClock.elapsedRealtime()
+        if (message.value?.let { now - it.createdAt > 30 * 60_000L } == true) message.value = null
         if (now - lastAutomatic < 120_000L || message.value != null) return false
         val wall = System.currentTimeMillis()
         if (daily && wall - (prefs?.getLong("last:$key", 0L) ?: 0L) < 86_400_000L) return false
@@ -124,7 +157,7 @@ internal object HiddenSparks {
         return true
     }
 
-    private fun show(text: String) { message.value = Spark(text, ++sequence) }
+    private fun show(text: String) { message.value = Spark(text, ++sequence, SystemClock.elapsedRealtime()) }
     fun clear(id: Long) { if (message.value?.sequence == id) message.value = null }
 }
 
@@ -132,14 +165,16 @@ internal object HiddenSparks {
 internal fun HiddenSparkText(modifier: Modifier = Modifier, enabled: Boolean = true) {
     val spark by HiddenSparks.message.collectAsState()
     val lastText = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-    LaunchedEffect(spark?.sequence) {
+    LaunchedEffect(spark?.sequence, enabled) {
         val current = spark ?: return@LaunchedEffect
+        if (!enabled) return@LaunchedEffect
+        if (SystemClock.elapsedRealtime() - current.createdAt > 30 * 60_000L) { HiddenSparks.clear(current.sequence); return@LaunchedEffect }
         lastText.value = current.text
         delay(5000)
         HiddenSparks.clear(current.sequence)
     }
     AnimatedVisibility(visible = spark != null && enabled, modifier = modifier, enter = fadeIn(), exit = fadeOut()) {
-        Text(lastText.value, modifier = Modifier.widthIn(max = 420.dp).padding(horizontal = 24.dp),
+        Text(spark?.text ?: lastText.value, modifier = Modifier.widthIn(max = 420.dp).padding(horizontal = 24.dp),
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center)
     }

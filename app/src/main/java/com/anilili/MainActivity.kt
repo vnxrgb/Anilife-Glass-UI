@@ -1275,7 +1275,10 @@ private fun MiruroRoot(
                         nav.navigate(Routes.detail(id)) { launchSingleTop = true }
                         randomVm.opened()
                     },
-                    onSource = randomVm::selectSource,
+                    onSource = { key ->
+                        if (!deviceProfile.isTv && key.startsWith("mood:") && key != randomState.source.key) HiddenSparks.hit("mood", 5, "Character development in progress.")
+                        randomVm.selectSource(key)
+                    },
                     onDismiss = { showRandomPick = false },
                 )
             }

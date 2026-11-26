@@ -2236,6 +2236,7 @@ fun PlayerSurface(
                     if (zone == PlayerDoubleTapZone.PlayPause) {
                         val active = controller ?: return@PlayerGestureControls
                         playbackGestureIsPlaying = togglePlayerPlayback(active)
+                        if (!device.isTv) com.anilili.ui.easteregg.HiddenSparks.hit("pause", 5, "Even filler episodes have better pacing.", daily = true)
                     } else {
                         phoneControlsInteraction++
                     }
@@ -2279,6 +2280,7 @@ fun PlayerSurface(
                     phoneControlsInteraction++
                 },
                 onPlayPause = {
+                    if (controller != null && !device.isTv) com.anilili.ui.easteregg.HiddenSparks.hit("pause", 5, "Even filler episodes have better pacing.", daily = true)
                     controller?.let(::togglePlayerPlayback)
                     phoneControlsInteraction++
                 },
@@ -3037,7 +3039,10 @@ fun PlayerSurface(
             // See TIMED_SKIP_POPUP_MS.
             introEndMs != null && (controlsVisible || introPopup.showing) &&
                 skipWindows.intro ->
-                "Skip Intro" to { requestSkipSeek(introEndMs, "manual-intro") }
+                "Skip Intro" to {
+                    if (!device.isTv) com.anilili.ui.easteregg.HiddenSparks.hit("intro", 5, "The opening theme will remember this.", daily = true)
+                    requestSkipSeek(introEndMs, "manual-intro")
+                }
             nextEpisodeCardVisible -> null
             // Only an outro that reaches the end of this file: a window from the first half of it is
             // not the credits. See outroWindowIsCredits. This was "Next Episode", which threw away

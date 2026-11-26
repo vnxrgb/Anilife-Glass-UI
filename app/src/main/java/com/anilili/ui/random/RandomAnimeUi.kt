@@ -268,6 +268,7 @@ fun RandomAnimeDialog(
                     SwipeHint(isTv)
                 }
                 }
+                if (!isTv) com.anilili.ui.easteregg.HiddenSparkText(Modifier.align(Alignment.TopCenter).padding(top = 64.dp))
             }
         }
     }
