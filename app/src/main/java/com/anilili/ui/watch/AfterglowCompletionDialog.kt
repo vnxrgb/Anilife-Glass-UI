@@ -41,6 +41,7 @@ internal fun AfterglowCompletionDialog(
     }
     var editing by remember { mutableStateOf(false) }
     var noteStatus by remember { mutableStateOf("") }
+    var rating by remember(data.anilistId) { mutableStateOf(JournalStore.find(data.anilistId, "")?.rating ?: 0) }
     LaunchedEffect(data.anilistId) {
         suggestions = try { withTimeoutOrNull(7000L) { Recommendations.afterglow(data.anilistId) }.orEmpty() }
         catch (e: CancellationException) { throw e }
@@ -67,6 +68,12 @@ internal fun AfterglowCompletionDialog(
                     }
                 }
                 if (!loading && suggestions.isEmpty()) Text("Recommendations are unavailable right now.", style = MaterialTheme.typography.bodySmall)
+                Text(if (rating == 0) "Rate this anime (optional)" else "Your rating: $rating/10", style = MaterialTheme.typography.labelMedium)
+                Slider(value = rating.toFloat(), onValueChange = { rating = it.toInt() }, valueRange = 0f..10f, steps = 9)
+                TextButton(onClick = {
+                    val entry = JournalStore.find(data.anilistId, "") ?: com.anilili.data.journal.JournalEntry(animeId = data.anilistId, animeTitle = data.seriesTitle, artwork = data.artworkUrl)
+                    noteStatus = if (JournalStore.save(entry.copy(rating = rating, updatedAt = System.currentTimeMillis()))) "Rating saved to Anime Journal" else "Could not save rating"
+                }) { Text("Save rating") }
                 OutlinedButton(onClick = onFranchise, modifier = Modifier.fillMaxWidth()) { Text("Franchise watch order") }
                 if (editing) {
                     OutlinedTextField(value = note, onValueChange = { note = it.take(2000) }, label = { Text("My episode notes") }, modifier = Modifier.fillMaxWidth())
