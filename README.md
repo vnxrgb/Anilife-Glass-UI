@@ -110,11 +110,7 @@ A look at AniLumos on Android, including the Anime Journal and its personalizati
 </p>
 <p align="center">Anime Journal library · Journal image sharing · Journal personalization</p>
 
-## Download
-
-Grab the [latest stable APK](https://github.com/vnxrgb/Anilumos/releases/latest) from GitHub, or find the app on Orion Store.
-
-[**View AniLumos on Orion Store**](https://rookieenough.github.io/Orion-Data/app/?id=anilumos) for an alternative to the direct GitHub APK download.
+## Compatibility
 
 The stable app uses `com.anilumos.app`. Some signed preview builds use the same package and may replace an installed stable build; check the release notes before installing. AniLife keeps its own app data.
 
