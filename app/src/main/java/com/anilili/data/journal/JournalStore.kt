@@ -54,6 +54,24 @@ object JournalStore {
         prefs().edit().putString("journal_name", clean).apply()
         _journalName.value = clean
     }
+    private val _groupedDefault = MutableStateFlow(true)
+    val groupedDefault = _groupedDefault.asStateFlow()
+    fun setGroupedDefault(value: Boolean) {
+        prefs().edit().putBoolean("grouped_default", value).apply()
+        _groupedDefault.value = value
+    }
+    private val _includeNameDefault = MutableStateFlow(false)
+    val includeNameDefault = _includeNameDefault.asStateFlow()
+    fun setIncludeNameDefault(value: Boolean) {
+        prefs().edit().putBoolean("include_name_default", value).apply()
+        _includeNameDefault.value = value
+    }
+    private val _positionRevision = MutableStateFlow(0)
+    val positionRevision = _positionRevision.asStateFlow()
+    fun resetPosition() {
+        position(1f, .65f)
+        _positionRevision.value += 1
+    }
     private val _floatingEnabled = MutableStateFlow(true)
     val floatingEnabled = _floatingEnabled.asStateFlow()
     private val _minimized = MutableStateFlow(false)
@@ -70,6 +88,8 @@ object JournalStore {
     fun init(ctx: Context) {
         context = ctx.applicationContext
         _journalName.value = prefs().getString("journal_name", "").orEmpty()
+        _groupedDefault.value = prefs().getBoolean("grouped_default", true)
+        _includeNameDefault.value = prefs().getBoolean("include_name_default", false)
         _floatingEnabled.value = prefs().getBoolean("floating_enabled", true)
         _minimized.value = prefs().getBoolean("minimized", false)
         val raw = prefs().getString("entries", null)

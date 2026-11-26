@@ -198,7 +198,14 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
             if (isTv) add("Overscan" to listOf("overscan", "edges", "cut off", "cropped", "bounds", "margin", "border", "fit"))
             if (BuildConfig.FLAVOR != "mobile") add("Layout" to listOf("layout", "tv", "tablet", "phone", "form factor", "leanback"))
             add("App layout" to listOf("layout", "legacy", "cinema", "navigation", "icons"))
-            if (!isTv) add("Floating Anime Journal" to listOf("journal", "notes", "diary", "floating", "minimize", "hide", "restore"))
+            if (!isTv) {
+                add("Floating Anime Journal" to listOf("journal", "notes", "diary", "floating", "minimize", "hide", "restore"))
+                add("Display name" to listOf("personalization", "nickname", "wrapped", "journal"))
+                add("Group journal by anime" to listOf("journal", "group", "entries"))
+                add("Include name when sharing" to listOf("privacy", "share", "wrapped", "journal"))
+                add("Reset journal button position" to listOf("journal", "drag", "position", "reset"))
+                add("Restore journal button" to listOf("journal", "minimized", "restore"))
+            }
             add(
                 (if (isTv) "Keep the bars on screen" else "Keep the header on screen") to listOf(
                     "bar", "chrome", "hide", "scroll", "menu", "top", "nav", "navigation", "fade",

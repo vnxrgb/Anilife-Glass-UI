@@ -131,7 +131,12 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
     var includeEpisode by remember { mutableStateOf(true) }
     var includeArtwork by remember { mutableStateOf(true) }
     var sharing by remember { mutableStateOf(false) }
-    var grouped by remember { mutableStateOf(true) }
+    val groupedDefault by JournalStore.groupedDefault.collectAsState()
+    val includeNameDefault by JournalStore.includeNameDefault.collectAsState()
+    val positionRevision by JournalStore.positionRevision.collectAsState()
+    var grouped by remember { mutableStateOf(groupedDefault) }
+    LaunchedEffect(groupedDefault) { grouped = groupedDefault }
+    LaunchedEffect(positionRevision) { val pos = JournalStore.position(); fx = pos.first.coerceIn(0f, 1f); fy = pos.second.coerceIn(0f, 1f) }
     var sorting by remember { mutableStateOf("Recent") }
     var sortMenu by remember { mutableStateOf(false) }
     var expandedGroups by remember { mutableStateOf(emptySet<String>()) }
@@ -336,7 +341,7 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
                 Text(if(saved) "Stored locally on this device" else "Could not save: storage limit or unreadable data", style=MaterialTheme.typography.labelSmall, color=if(saved) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     val text=if(library) libraryScope.joinToString("\n----------------\n"){it.asText()} else draft.asText()
-                    Button(onClick={focus.clearFocus(); includeNotes=false; includeReview=false; includeMoments=false; includeRating=true; includeEpisode=true; includeArtwork=true; includeName=false; shareOpen=true}, enabled=if(library) libraryScope.isNotEmpty() else draft.hasContent(), modifier=Modifier.weight(1f)){Text("Share…")}
+                    Button(onClick={focus.clearFocus(); includeNotes=false; includeReview=false; includeMoments=false; includeRating=true; includeEpisode=true; includeArtwork=true; includeName=includeNameDefault; shareOpen=true}, enabled=if(library) libraryScope.isNotEmpty() else draft.hasContent(), modifier=Modifier.weight(1f)){Text("Share…")}
                     OutlinedButton(onClick={focus.clearFocus(); exportText=personalTitle + "\n\n" + text; export.launch("AniLumos-Journal.txt")}, enabled=if(library) libraryScope.isNotEmpty() else draft.hasContent(), modifier=Modifier.weight(1f)){Text(if (library && selecting) "Export selected" else "Export")}
                 }
             }

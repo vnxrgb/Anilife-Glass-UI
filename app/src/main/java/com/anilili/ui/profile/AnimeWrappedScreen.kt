@@ -155,6 +155,7 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
     var renameOpen by remember { mutableStateOf(false) }
     var nameDraft by remember { mutableStateOf("") }
     var shareOpen by remember { mutableStateOf(false) }
+    val includeNameDefault by JournalStore.includeNameDefault.collectAsState()
     var includeName by remember { mutableStateOf(false) }
     if (renameOpen) {
         AlertDialog(onDismissRequest = { renameOpen = false },
@@ -198,7 +199,7 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
         PageTitleBar(title = "AniLumos Wrapped", subtitle = if (journalName.isBlank()) "${stats.year} · Your viewing activity" else wrappedTitle(journalName, stats.year),
             leading = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
             trailing = {
-                IconButton(enabled = !exporting, onClick = { includeName = false; shareOpen = true }) {
+                IconButton(enabled = !exporting, onClick = { includeName = includeNameDefault; shareOpen = true }) {
                     if (exporting) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
                     else Icon(Icons.Default.Share, contentDescription = "Share recap image")
                 }

@@ -3005,6 +3005,24 @@ fun SettingsScreen(
                     }
                 }
                 if (!device.isTv) {
+                    item(key = "Personalization") {
+                        Text("Personalization", style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+                    }
+                    item(key = "Display name") {
+                        val name by com.anilili.data.journal.JournalStore.journalName.collectAsState()
+                        var editing by remember { mutableStateOf(false) }
+                        var draft by remember { mutableStateOf("") }
+                        MidnightSettingRow(title = "Display name", description = "Shared by Anime Journal and AniLumos Wrapped",
+                            value = name.ifBlank { "Not set" }, onClick = { draft = name; editing = true })
+                        if (editing) androidx.compose.material3.AlertDialog(onDismissRequest = { editing = false },
+                            title = { Text("Display name") },
+                            text = { OutlinedTextField(draft, { draft = it.filterNot { ch -> ch.isISOControl() }.take(48) },
+                                label = { Text("Name or nickname") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)) },
+                            confirmButton = { androidx.compose.material3.Button(onClick = { com.anilili.data.journal.JournalStore.setJournalName(draft); editing = false }) { Text("Save") } },
+                            dismissButton = { androidx.compose.material3.TextButton(onClick = { editing = false }) { Text("Cancel") } })
+                    }
                     item(key = "Floating Anime Journal") {
                         val journalEnabled by com.anilili.data.journal.JournalStore.floatingEnabled.collectAsState()
                         MidnightSettingSwitchRow(
@@ -3013,6 +3031,25 @@ fun SettingsScreen(
                             checked = journalEnabled,
                             onCheckedChange = com.anilili.data.journal.JournalStore::setFloatingEnabled,
                         )
+                    }
+                    item(key = "Group journal by anime") {
+                        val grouped by com.anilili.data.journal.JournalStore.groupedDefault.collectAsState()
+                        MidnightSettingSwitchRow(title = "Group journal by anime", description = "Default to expandable anime groups in the journal library",
+                            checked = grouped, onCheckedChange = com.anilili.data.journal.JournalStore::setGroupedDefault)
+                    }
+                    item(key = "Include name when sharing") {
+                        val include by com.anilili.data.journal.JournalStore.includeNameDefault.collectAsState()
+                        MidnightSettingSwitchRow(title = "Include name when sharing", description = "Preselect your name in Journal and Wrapped share previews; you can change it before each share",
+                            checked = include, onCheckedChange = com.anilili.data.journal.JournalStore::setIncludeNameDefault)
+                    }
+                    item(key = "Reset journal button position") {
+                        MidnightSettingRow(title = "Reset journal button position", description = "Return the floating control to its original position",
+                            value = "Reset", onClick = com.anilili.data.journal.JournalStore::resetPosition)
+                    }
+                    item(key = "Restore journal button") {
+                        val minimized by com.anilili.data.journal.JournalStore.minimized.collectAsState()
+                        MidnightSettingRow(title = "Restore journal button", description = "Expand the minimized handle without changing the floating toggle",
+                            value = if (minimized) "Minimized" else "Expanded", onClick = { com.anilili.data.journal.JournalStore.setMinimized(false) })
                     }
                 }
                 item(key = "Search as you type") {
