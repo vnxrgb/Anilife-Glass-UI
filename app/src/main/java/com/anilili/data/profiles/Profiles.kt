@@ -84,6 +84,8 @@ object Profiles {
         "miruro_library",
         SecureTokenStore.PREFS_NAME,
         "anilili_search_history",
+        "anilumos_journal",
+        "anilumos_episode_notes",
     )
 
     /**

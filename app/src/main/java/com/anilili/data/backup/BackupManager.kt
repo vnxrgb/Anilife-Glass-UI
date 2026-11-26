@@ -46,6 +46,7 @@ object BackupManager {
             searchHistory = SearchHistoryStore.history.value,
             customLists = com.anilili.data.library.CustomListStore.lists.value,
             watched = com.anilili.data.library.LocalWatchedStore.entries.value,
+            journal = com.anilili.data.journal.JournalStore.entries.value,
         )
         if (passphrase.isNullOrEmpty()) return document
         val credentials = collectCredentials(malHandoff)
@@ -105,6 +106,7 @@ object BackupManager {
         // Logins before the library, so the merge below pushes the restored saves to the account
         // this backup signs the device in to rather than to the one it is replacing.
         val logins = applyCredentials(credentials)
+        com.anilili.data.journal.JournalStore.merge(document.journal)
         val summary = RestoreSummary(
             settings = settings,
             watchlist = LibraryStore.importWatchlist(document.watchlist),

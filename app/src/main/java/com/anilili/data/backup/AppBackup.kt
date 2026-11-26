@@ -55,6 +55,7 @@ data class BackupDocument(
     val watched: List<com.anilili.data.library.WatchedEntry> = emptyList(),
     /** Present only when the viewer asked for logins and set a passphrase. */
     val credentials: SealedCredentials? = null,
+    val journal: List<com.anilili.data.journal.JournalEntry> = emptyList(),
 ) {
     /** "31 settings · 12 saved · 8 continue watching", skipping whatever the file has none of. */
     fun describe(): String = describeCounts(
