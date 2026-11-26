@@ -97,4 +97,16 @@ class DpadPressTrackerTest {
         assertEquals(DpadPress.CLICK, tracker.onKeyUp(100))
     }
 
+    @Test
+    fun `interleaved menu and OK presses remain independent`() {
+        val ok = tracker()
+        val menu = tracker()
+        menu.onKeyDown(0)
+        ok.onKeyDown(0)
+        assertEquals(DpadPress.CLICK, menu.onKeyUp(80))
+        assertEquals(DpadPress.CLICK, ok.onKeyUp(100))
+        assertEquals(null, menu.onKeyUp(120))
+        assertEquals(null, ok.onKeyUp(120))
+    }
+
 }
