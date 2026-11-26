@@ -42,6 +42,8 @@ internal class DpadPressTracker(private val longPressTimeoutMs: Long) {
     }
 
     fun onKeyDown(heldMs: Long) {
+        // A repeat after focus loss cannot start a new press on another card.
+        if (!pressActive && heldMs > 0L) return
         pressActive = true
         if (heldMs >= longPressTimeoutMs) heldLongEnough = true
     }
