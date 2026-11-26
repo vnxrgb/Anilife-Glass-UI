@@ -314,7 +314,7 @@ object UpdateManager {
                             // The instruction is the detail rather than the line, because the line
                             // has to fit a row and this one only makes sense in the dialog: there is
                             // no button the app can offer once its own settings intent has failed.
-                            detail = "Allow \"install unknown apps\" for Anilife in Android's settings, " +
+                            detail = "Allow \"install unknown apps\" for AniLumos in Android's settings, " +
                                 "then try the update again.",
                             cause = error,
                             attributes = mapOf("version" to ready.update.version, "stage" to "permission_settings"),
