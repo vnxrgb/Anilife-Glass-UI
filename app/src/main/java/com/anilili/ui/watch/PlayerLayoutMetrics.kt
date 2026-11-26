@@ -50,8 +50,11 @@ internal object PlayerWidthTier {
 
 internal fun playerLayoutMetrics(widthDp: Int, heightDp: Int): PlayerLayoutMetrics {
     val compactHeight = heightDp < 300
+    // Multiwindow and short embedded players can be wide but too shallow for
+    // full-size transport controls. Use the available height, not device class.
+    val effectiveWidth = if (compactHeight) minOf(widthDp, PlayerWidthTier.MEDIUM_DP - 1) else widthDp
     return when {
-        widthDp >= PlayerWidthTier.LARGE_DP -> PlayerLayoutMetrics(
+        effectiveWidth >= PlayerWidthTier.LARGE_DP -> PlayerLayoutMetrics(
             horizontalPadding = 28.dp,
             barTopPadding = 26.dp,
             centerGap = 34.dp,
@@ -65,7 +68,7 @@ internal fun playerLayoutMetrics(widthDp: Int, heightDp: Int): PlayerLayoutMetri
             showPillLabels = !compactHeight,
             compactHeight = compactHeight,
         )
-        widthDp >= PlayerWidthTier.MEDIUM_DP -> PlayerLayoutMetrics(
+        effectiveWidth >= PlayerWidthTier.MEDIUM_DP -> PlayerLayoutMetrics(
             horizontalPadding = 22.dp,
             barTopPadding = 24.dp,
             centerGap = 26.dp,
@@ -79,7 +82,7 @@ internal fun playerLayoutMetrics(widthDp: Int, heightDp: Int): PlayerLayoutMetri
             showPillLabels = !compactHeight,
             compactHeight = compactHeight,
         )
-        widthDp >= PlayerWidthTier.COMPACT_DP -> PlayerLayoutMetrics(
+        effectiveWidth >= PlayerWidthTier.COMPACT_DP -> PlayerLayoutMetrics(
             horizontalPadding = 16.dp,
             barTopPadding = if (compactHeight) 8.dp else 24.dp,
             centerGap = 16.dp,
