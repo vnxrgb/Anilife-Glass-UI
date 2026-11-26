@@ -81,13 +81,7 @@ Stable AniLumos releases are for Android phones and tablets; TV previews are exp
 
 ## Screenshots
 
-<p align="center">
-  <a href="docs/store/screenshots/afterglow.jpg"><img src="docs/store/screenshots/afterglow.jpg" width="30%" alt="Afterglow anime completion recommendations"></a>
-  <a href="docs/store/screenshots/up-next.jpg"><img src="docs/store/screenshots/up-next.jpg" width="30%" alt="Up Next episode countdown and episode details"></a>
-</p>
-<p align="center">Afterglow recommendations · Up Next countdown</p>
-
-A look at AniLumos on Android, including the Anime Journal and its personalization and sharing options.
+Explore AniLumos on Android — from discovering anime and cinematic playback to Afterglow, Up Next, and your personal Anime Journal.
 
 <p align="center">
   <a href="docs/store/screenshots/01-home.jpg"><img src="docs/store/screenshots/01-home.jpg" width="23%" alt="Home and Glass UI"></a>
@@ -95,28 +89,30 @@ A look at AniLumos on Android, including the Anime Journal and its personalizati
   <a href="docs/store/screenshots/franchise-watch-order-entry.jpg"><img src="docs/store/screenshots/franchise-watch-order-entry.jpg" width="23%" alt="Franchise guide entry"></a>
   <a href="docs/store/screenshots/franchise-watch-order-screen.jpg"><img src="docs/store/screenshots/franchise-watch-order-screen.jpg" width="23%" alt="Franchise watch order"></a>
 </p>
-<p align="center">Home and Glass UI · Anime details · Franchise guide entry · Franchise watch order</p>
+<p align="center">Home · Anime details · Franchise guide · Watch order</p>
 
 <p align="center">
   <a href="docs/store/screenshots/03-player.jpg"><img src="docs/store/screenshots/03-player.jpg" width="23%" alt="Ambient player and Skip Intro"></a>
+  <a href="docs/store/screenshots/up-next.jpg"><img src="docs/store/screenshots/up-next.jpg" width="23%" alt="Up Next episode countdown"></a>
+  <a href="docs/store/screenshots/afterglow.jpg"><img src="docs/store/screenshots/afterglow.jpg" width="23%" alt="Afterglow anime completion recommendations"></a>
   <a href="docs/store/screenshots/04-discover.jpg"><img src="docs/store/screenshots/04-discover.jpg" width="23%" alt="Mood-based Discover"></a>
-  <a href="docs/store/screenshots/05-notifications.jpg"><img src="docs/store/screenshots/05-notifications.jpg" width="23%" alt="Notifications"></a>
 </p>
-<p align="center">Ambient player and Skip Intro · Mood-based Discover · Notifications</p>
+<p align="center">Ambient player · Up Next · Afterglow · Discover</p>
 
 <p align="center">
+  <a href="docs/store/screenshots/05-notifications.jpg"><img src="docs/store/screenshots/05-notifications.jpg" width="23%" alt="Notifications"></a>
   <a href="docs/store/screenshots/06-schedule.jpg"><img src="docs/store/screenshots/06-schedule.jpg" width="23%" alt="Airing schedule"></a>
   <a href="docs/store/screenshots/07-accounts.jpg"><img src="docs/store/screenshots/07-accounts.jpg" width="23%" alt="Accounts and integrations"></a>
   <a href="docs/store/screenshots/08-appearance.jpg"><img src="docs/store/screenshots/08-appearance.jpg" width="23%" alt="Appearance and themes"></a>
 </p>
-<p align="center">Airing schedule · Accounts and integrations · Appearance and themes</p>
+<p align="center">Notifications · Schedule · Accounts · Appearance</p>
 
 <p align="center">
   <a href="docs/store/screenshots/journal-library.jpg"><img src="docs/store/screenshots/journal-library.jpg" width="23%" alt="Anime Journal library"></a>
   <a href="docs/store/screenshots/journal-share.jpg"><img src="docs/store/screenshots/journal-share.jpg" width="23%" alt="Journal image sharing"></a>
   <a href="docs/store/screenshots/journal-personalization.jpg"><img src="docs/store/screenshots/journal-personalization.jpg" width="23%" alt="Journal personalization"></a>
 </p>
-<p align="center">Anime Journal library · Journal image sharing · Journal personalization</p>
+<p align="center">Anime Journal · Image sharing · Personalization</p>
 
 ## Compatibility
 
