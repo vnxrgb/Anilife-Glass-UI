@@ -80,8 +80,8 @@ internal fun EmbedTouchControls(
         bottomLeftIcons = {
             onLock?.let { lock -> PlayerLockButton(onLock = lock) }
         },
-    ) {
-        onEpisodes?.let { openEpisodes ->
+        bottomRightIcons = {
+            onEpisodes?.let { openEpisodes ->
             PlayerControlIconButton(
                 "Episode list",
                 Icons.AutoMirrored.Filled.ViewList,
