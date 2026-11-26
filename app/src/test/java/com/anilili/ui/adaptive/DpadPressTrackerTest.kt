@@ -108,5 +108,22 @@ class DpadPressTrackerTest {
         assertEquals(null, menu.onKeyUp(120))
         assertEquals(null, ok.onKeyUp(120))
     }
+    @Test
+    fun `orphaned auto repeats cannot arm a card after focus moves`() {
+        val tracker = tracker()
+        tracker.onKeyDown(0)
+        tracker.cancel()
+        tracker.onKeyDown(650)
+        assertEquals(null, tracker.onKeyUp(700))
+        tracker.onKeyDown(0)
+        assertEquals(DpadPress.CLICK, tracker.onKeyUp(100))
+    }
+
+    @Test
+    fun `repeat without an initial down is ignored`() {
+        val tracker = tracker()
+        tracker.onKeyDown(700)
+        assertEquals(null, tracker.onKeyUp(800))
+    }
 
 }
