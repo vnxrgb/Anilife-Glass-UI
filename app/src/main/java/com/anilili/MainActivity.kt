@@ -282,6 +282,22 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    @Suppress("DEPRECATION")
+    private fun applyTransparentSystemBars() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.navigationBarDividerColor = Color.TRANSPARENT
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Android may otherwise insert an opaque/translucent contrast scrim, particularly
+            // on older tablets. The themed canvas and icon appearance are owned by Compose.
+            window.isStatusBarContrastEnforced = false
+            window.isNavigationBarContrastEnforced = false
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val launchStartedAt = SystemClock.elapsedRealtime()
         DiagnosticsLog.event("MainActivity.onCreate start savedState=${savedInstanceState != null}")
@@ -292,6 +308,7 @@ class MainActivity : FragmentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+        applyTransparentSystemBars()
         // Before the activity starts, so a result for a recreated activity is still delivered.
         com.anilili.playback.ExternalPlaybackReturns.register(this)
         DiagnosticsJankMonitor.install(this)
@@ -354,6 +371,7 @@ class MainActivity : FragmentActivity() {
                         DiagnosticsLog.event("Browsing status bar darkIcons=$nextBrowsingPolicy")
                     }
                     window.decorView.setBackgroundColor(canvas)
+                    applyTransparentSystemBars()
                     WindowCompat.getInsetsController(window, window.decorView).apply {
                         isAppearanceLightStatusBars = darkStatusIcons
                         isAppearanceLightNavigationBars = lightCanvas
@@ -1043,6 +1061,8 @@ private fun MiruroRoot(
         LocalAppChromeReveal provides revealChrome,
         LocalAppChromeBottomInset provides if (hasPhoneBottomBarForChrome) {
             PhoneNavigationBarHeight + navBarInsetForChrome
+        } else if (!deviceProfile.isTv && deviceProfile.useNavigationRail && showPhoneNavigation) {
+            navBarInsetForChrome
         } else {
             0.dp
         },
@@ -1109,7 +1129,7 @@ private fun MiruroRoot(
                         Modifier
                             .fillMaxSize()
                             .padding(
-                                bottom = if (hasPhoneBottomBar) 0.dp else innerPadding.calculateBottomPadding(),
+                                bottom = if (hasPhoneBottomBar || (!deviceProfile.isTv && deviceProfile.useNavigationRail && showPhoneNavigation)) 0.dp else innerPadding.calculateBottomPadding(),
                             ),
                     ) {
                         if (!chromeTakeover.active && showPhoneNavigation &&
