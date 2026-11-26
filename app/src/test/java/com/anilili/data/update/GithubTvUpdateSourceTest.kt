@@ -42,6 +42,7 @@ class GithubTvUpdateSourceTest {
         assertNull(GithubTvUpdateSource.select(releases().replace("tv-alpha-signed-abcdef123456-run2", "tv-alpha-signed-../../other"), json) { payload })
         assertNull(GithubTvUpdateSource.select(releases().replace("tv-alpha-signed-abcdef123456-run2", "tv-alpha-signed-abcdef123456-run2-extra"), json) { payload })
         assertNull(GithubTvUpdateSource.select(releases().replace("\"size\":256", "\"size\":9000"), json) { payload })
+        assertNull(GithubTvUpdateSource.select(releases().replace("\"name\":\"TV-UPDATE.json\"", "\"name\":\"TV-UPDATE.json\",\"state\":\"starter\""), json) { payload })
         assertNull(GithubTvUpdateSource.select(releases().replace("\"size\":2048", "\"state\":\"starter\",\"size\":2048"), json) { payload })
     }
     @Test fun rejectsWrongIdentityAndHash() {
