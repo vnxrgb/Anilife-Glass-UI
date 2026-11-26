@@ -102,11 +102,17 @@ fun Modifier.dpadClickable(
     // The platform's own definition, so a hold that opens a menu everywhere else on the
     // television opens this one after the same wait.
     val tracker = remember { DpadPressTracker(ViewConfiguration.getLongPressTimeout().toLong()) }
+    // Menu and OK are independent physical keys. Their down/up sequences must not
+    // complete one another when a remote sends interleaved events.
+    val menuTracker = remember { DpadPressTracker(ViewConfiguration.getLongPressTimeout().toLong()) }
     return this
         .onFocusChanged { state ->
             // Remote key-up may be delivered to a different card after a focus change.
             // Never let a stale hold activate this card when focus returns.
-            if (!state.isFocused) tracker.cancel()
+            if (!state.isFocused) {
+                tracker.cancel()
+                menuTracker.cancel()
+            }
         }
         .onPreviewKeyEvent { event ->
         if (!enabled) return@onPreviewKeyEvent false
@@ -114,8 +120,8 @@ fun Modifier.dpadClickable(
             // A Menu key-up can land on a different card after focus moves.
             // Require its key-down on this card before opening the menu.
             when (event.type) {
-                KeyEventType.KeyDown -> tracker.onKeyDown(0L)
-                KeyEventType.KeyUp -> if (tracker.onKeyUp(0L) != null) onLongClick()
+                KeyEventType.KeyDown -> menuTracker.onKeyDown(0L)
+                KeyEventType.KeyUp -> if (menuTracker.onKeyUp(0L) != null) onLongClick()
                 else -> return@onPreviewKeyEvent false
             }
             return@onPreviewKeyEvent true
