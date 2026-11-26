@@ -44,7 +44,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
@@ -88,8 +87,6 @@ internal class PlaybackCacheBypassGate {
 @OptIn(UnstableApi::class)
 class PlaybackService : MediaSessionService() {
     private lateinit var player: ExoPlayer
-    private val audioStudio = com.anilili.experience.AudioStudioSession()
-    private var upscaleApplied = false
     private var castRoute: CastRoute? = null
     private lateinit var session: MediaSession
     private val transportScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -356,49 +353,6 @@ class PlaybackService : MediaSessionService() {
         activePlayer = player
         PlaybackDiagnostics.attach(player)
         AudioOutputMonitor.attach(player)
-        com.anilili.experience.AudioStudioPreferences.init(this)
-        sleepTimerScope.launch {
-            com.anilili.experience.AudioStudioPreferences.config.collect { config ->
-                audioStudio.apply(player.audioSessionId, config)
-            }
-        }
-        player.addListener(object : Player.Listener {
-            override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                audioStudio.apply(audioSessionId, com.anilili.experience.AudioStudioPreferences.config.value)
-            }
-        })
-        com.anilili.experience.AnimeUpscalePreferences.init(this)
-        sleepTimerScope.launch {
-            com.anilili.experience.AnimeUpscalePreferences.mode.collect { mode ->
-                upscaleApplied = false
-                try {
-                    val enabled = android.os.Build.VERSION.SDK_INT >= 26 &&
-                        mode != com.anilili.experience.AnimeUpscaleMode.OFF
-                    player.setVideoEffects(if (enabled) listOf(if (mode == com.anilili.experience.AnimeUpscaleMode.PERFORMANCE) com.anilili.experience.AnimeDogEffect(mode) else com.anilili.experience.AnimeCnnEffect(mode)) else emptyList())
-                    upscaleApplied = enabled
-                    com.anilili.experience.AnimeUpscalePreferences.report(
-                        if (enabled) "Requested for compatible local SDR playback" else "Off / unsupported device")
-                } catch (failure: Exception) {
-                    DiagnosticsLog.throwable("Anime upscaling setup failed", failure)
-                    runCatching { player.setVideoEffects(emptyList()) }
-                    com.anilili.experience.AnimeUpscalePreferences.disableAfterFailure()
-                }
-            }
-        }
-        player.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
-            private var badWindows = 0
-            private var lastChange = 0L
-            override fun onDroppedVideoFrames(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) {
-                if (!upscaleApplied || activePlayer !== player || !player.isPlaying) { badWindows = 0; return }
-                val now = android.os.SystemClock.elapsedRealtime()
-                if (elapsedMs >= 1000 && droppedFrames * 1000L / elapsedMs >= 5) badWindows++ else badWindows = 0
-                if (badWindows >= 2 && now - lastChange >= 15000L) {
-                    badWindows = 0
-                    lastChange = now
-                    com.anilili.experience.AnimeUpscalePreferences.fallback()
-                }
-            }
-        })
         player.addListener(playbackListener(player))
         castRoute?.let { it.player.addListener(playbackListener(it.player)) }
         bindSleepTimer()
@@ -557,18 +511,6 @@ class PlaybackService : MediaSessionService() {
                     override fun onPlayerError(error: PlaybackException) {
                         if (activePlayer !== source) return
                         DiagnosticsLog.throwable("PlaybackService player error code=${error.errorCodeName}", error)
-                        if (source === player && upscaleApplied &&
-                            (error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSOR_INIT_FAILED ||
-                             error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED)) {
-                            upscaleApplied = false
-                            val item = player.currentMediaItem
-                            mainHandler.post {
-                                if (activePlayer !== player || player.currentMediaItem != item) return@post
-                                runCatching { player.setVideoEffects(emptyList()) }
-                                com.anilili.experience.AnimeUpscalePreferences.fallback()
-                                if (player.playerError != null) runCatching { player.prepare() }
-                            }
-                        }
                     }
 
                     override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
@@ -936,7 +878,6 @@ class PlaybackService : MediaSessionService() {
         if (::session.isInitialized) session.release()
         castRoute?.release()
         if (::player.isInitialized) {
-            audioStudio.close()
             AudioOutputMonitor.detach(player)
             player.release()
         }
