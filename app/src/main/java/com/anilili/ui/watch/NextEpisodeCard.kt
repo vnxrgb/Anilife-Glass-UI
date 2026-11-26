@@ -11,6 +11,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -18,6 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.anilili.data.settings.SettingsStore
+import com.anilili.ui.components.EpisodeArtwork
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -153,6 +161,9 @@ internal fun NextEpisodeCard(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
     playNowFocusRequester: FocusRequester? = null,
+    afterglow: Boolean = false,
+    artworkUrl: String? = null,
+    seriesTitle: String = "",
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -163,12 +174,34 @@ internal fun NextEpisodeCard(
         Column(
             modifier = Modifier
                 .widthIn(max = 340.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color.Black.copy(alpha = 0.86f))
-                .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(16.dp))
+                .then(if (afterglow) {
+                    Modifier.playerLiquidGlass(RoundedCornerShape(22.dp), PlayerLiquidGlassTone.PRIMARY)
+                        .background(Color.Black.copy(alpha = 0.60f))
+                } else {
+                    Modifier.clip(RoundedCornerShape(16.dp))
+                        .background(Color.Black.copy(alpha = 0.86f))
+                        .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(16.dp))
+                })
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            if (afterglow) {
+                Text(
+                    text = "AFTERGLOW",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = 0.68f),
+                )
+                if (!artworkUrl.isNullOrBlank()) {
+                    val blurEpisodeImages by SettingsStore.blurEpisodeImages.collectAsState()
+                    Box(Modifier.fillMaxWidth().height(76.dp).clip(RoundedCornerShape(12.dp))) {
+                        EpisodeArtwork(image = artworkUrl, blurred = blurEpisodeImages, compact = true, modifier = Modifier.fillMaxSize())
+                    }
+                }
+                if (seriesTitle.isNotBlank()) {
+                    Text(seriesTitle, style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.78f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
             Text(
                 text = "Up next",
                 style = MaterialTheme.typography.labelMedium,
@@ -205,7 +238,13 @@ internal fun NextEpisodeCard(
                     onClick = onPlayNow,
                     modifier = playNowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
                 )
-                NextEpisodeAction(text = "Stay", filled = false, onClick = onCancel)
+                NextEpisodeAction(text = if (afterglow) "Stay here" else "Stay", filled = false, onClick = onCancel)
+            }
+            if (afterglow) {
+                val fraction = (secondsRemaining.toFloat() / NEXT_EPISODE_COUNTDOWN_SECONDS).coerceIn(0f, 1f)
+                Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.16f))) {
+                    Box(Modifier.fillMaxWidth(fraction).height(3.dp).background(Color.White.copy(alpha = 0.85f)))
+                }
             }
         }
     }

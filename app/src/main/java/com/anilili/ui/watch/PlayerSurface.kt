@@ -2960,6 +2960,9 @@ fun PlayerSurface(
                 DiagnosticsLog.event("PlayerSurface next-episode card dismissed")
             },
             playNowFocusRequester = nextEpisodePlayNowFocus.takeIf { device.isTv },
+            afterglow = !device.isTv,
+            artworkUrl = nextEpisodeItem?.image ?: artworkUrl.takeIf { nextSeasonLabel == null },
+            seriesTitle = seriesTitle,
             modifier = Modifier
                 .onFocusChanged { nextEpisodeCardFocused = it.hasFocus }
                 .align(Alignment.BottomEnd)
