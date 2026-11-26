@@ -363,6 +363,7 @@ internal fun PlayerControlsScaffold(
     // Read here rather than threaded through both callers: the bar is shared by the native and embed
     // players, and this is a statement about the chrome, not about either source.
     val showPlayerClock by SettingsStore.playerClock.collectAsState()
+    val tablet = LocalAppDeviceProfile.current.isTablet
     PlayerChromeBox(modifier.fillMaxSize()) {
         val metrics = playerLayoutMetrics(maxWidth.value.toInt(), maxHeight.value.toInt())
         val compactHeight = metrics.compactHeight
@@ -397,7 +398,7 @@ internal fun PlayerControlsScaffold(
             ) {
                 if (showBack) PlayerBackArrow()
                 if (showTitle) {
-                    Column(Modifier.padding(top = if (showBack) 10.dp else 0.dp)) {
+                    Column(Modifier.padding(start = if (tablet && !showBack) 44.dp else 0.dp, top = if (showBack) 10.dp else 0.dp)) {
                         PlayerTitleCard(
                             seriesTitle = seriesTitle,
                             episodeTitle = episodeTitle,
@@ -593,7 +594,7 @@ internal fun PlayerControlsScaffold(
                 ) {
                     PlayerTimePill(formatPlayerTime(shownMs), fontSize = metrics.timeTextSize)
                     PlayerTimePill(
-                        text = if (durationMs > 0L) "-${formatPlayerTime((durationMs - shownMs).coerceAtLeast(0L))}" else "LIVE",
+                        text = if (durationMs > 0L) "-${formatPlayerTime((durationMs - shownMs).coerceAtLeast(0L))}" else if (tablet) "--:--" else "LIVE",
                         fontSize = metrics.timeTextSize,
                         emphasis = 0.68f,
                     )

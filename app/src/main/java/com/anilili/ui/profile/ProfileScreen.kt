@@ -643,7 +643,7 @@ fun ProfileScreen(
                 TvCentredScrollSpec {
                     LazyColumn(
                         state = profileListState,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.align(Alignment.TopCenter).then(if (device.isTablet) Modifier.widthIn(max = 920.dp) else Modifier).fillMaxSize(),
                         contentPadding = PaddingValues(
                             top = if (device.isTv) padding.calculateTopPadding() else 8.dp,
                             bottom = padding.calculateBottomPadding()

@@ -63,6 +63,16 @@ fun SeriesLogo(
             .transformations(TrimTransparentEdges)
             .build()
     }
+    if (com.anilili.ui.adaptive.LocalAppDeviceProfile.current.isTablet) {
+        var loaded by remember(url) { mutableStateOf(false) }
+        androidx.compose.foundation.layout.Box(modifier, contentAlignment = alignment) {
+            if (!loaded) fallback()
+            AsyncImage(model = request, contentDescription = contentDescription, contentScale = ContentScale.Fit,
+                alignment = alignment, onSuccess = { loaded = true }, onError = { failed = true },
+                modifier = Modifier.matchParentSize())
+        }
+        return
+    }
     AsyncImage(
         model = request,
         contentDescription = contentDescription,

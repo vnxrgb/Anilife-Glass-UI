@@ -65,6 +65,7 @@ internal fun HomeAmbient(artwork: String, listState: LazyListState, modifier: Mo
     val a by animateColorAsState(left, tween(750), label = "homeAmbientLeft")
     val b by animateColorAsState(right, tween(750), label = "homeAmbientRight")
     val light = MaterialTheme.colorScheme.background.luminance() > .5f
+    val tabletStrength = if (com.anilili.ui.adaptive.LocalAppDeviceProfile.current.isTablet) .48f else 1f
     Box(modifier.drawBehind {
         if (size.width <= 0f || size.height <= 0f) return@drawBehind
         // Read scroll in draw, not composition. Once the spotlight leaves the first item,
@@ -72,7 +73,7 @@ internal fun HomeAmbient(artwork: String, listState: LazyListState, modifier: Mo
         val fade = if (listState.firstVisibleItemIndex != 0) 0f
             else (1f - listState.firstVisibleItemScrollOffset / 360.dp.toPx()).coerceIn(0f, 1f)
         if (fade <= 0f) return@drawBehind
-        val strength = fade * if (light) .26f else .44f
+        val strength = fade * tabletStrength * (if (light) .26f else .44f)
         val y = size.height * .60f - listState.firstVisibleItemScrollOffset * .45f
         drawRect(Brush.radialGradient(
             0f to a.copy(alpha = a.alpha * strength),

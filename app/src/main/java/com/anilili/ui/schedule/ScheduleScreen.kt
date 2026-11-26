@@ -602,11 +602,12 @@ private fun ScheduleList(
         return
     }
     val zone = ZoneId.systemDefault()
+    val tablet = LocalAppDeviceProfile.current.isTablet
     val groups = remember(items) { items.sortedBy(AiringSchedule::airingAt).groupBy(AiringSchedule::airingAt) }
     // On TV the focused card comes to rest mid-screen, going up as well as down.
     TvCentredScrollSpec {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.then(if (tablet) Modifier.widthIn(max = 920.dp) else Modifier).fillMaxSize(),
             // 28dp of breathing room plus whatever the floating navigation capsule covers — it draws
             // over this list rather than displacing it, so the last slot has to reserve its own space.
             // The day stepper floats the same way, above the capsule.
@@ -717,8 +718,10 @@ private fun ScheduleCard(
             .padding(if (device.isTv) 9.dp else 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        var coverFailed by remember(media.id, media.coverImage.best) { mutableStateOf(false) }
         AsyncImage(
-            model = media.coverImage.best,
+            model = if (device.isTablet && (coverFailed || media.coverImage.best.isNullOrBlank())) media.bannerImage else media.coverImage.best,
+            onError = { if (device.isTablet) coverFailed = true },
             contentDescription = media.title.preferred,
             modifier = Modifier
                 .size(width = if (device.isTv) 60.dp else 54.dp, height = if (device.isTv) 78.dp else 74.dp)

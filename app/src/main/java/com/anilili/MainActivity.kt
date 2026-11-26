@@ -117,6 +117,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.zIndex
+import com.anilili.ui.components.opticalGlass
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -1254,7 +1256,7 @@ private fun MiruroRoot(
                 )
             }
             if (!deviceProfile.isTv) {
-                com.anilili.ui.easteregg.HiddenSparkText(Modifier.align(Alignment.BottomCenter).padding(bottom = navBarInsetForChrome + (if (showPhoneCapsule) PhoneNavigationBarHeight + 12.dp else 20.dp)), enabled = !inPictureInPicture && !Routes.hostsPlayer(currentRoute) && !showRandomPick && !chromeTakeover.active)
+                com.anilili.ui.easteregg.HiddenSparkText(Modifier.align(Alignment.BottomCenter).zIndex(20f).padding(bottom = navBarInsetForChrome + (if (showPhoneCapsule) PhoneNavigationBarHeight + 12.dp else 20.dp)), enabled = !inPictureInPicture && !Routes.hostsPlayer(currentRoute) && !showRandomPick && !chromeTakeover.active)
             }
             com.anilili.ui.journal.JournalOverlay(
                 visible = !deviceProfile.isTv && !inPictureInPicture && currentRoute != null &&
@@ -1263,7 +1265,7 @@ private fun MiruroRoot(
                     (!com.anilili.ui.tour.WhatsNewTour.active || com.anilili.ui.tour.WhatsNewTour.journalButtonDemo),
                 anime = journalContext,
                 openRequest = journalOpenRequest,
-                bottomSpace = if (showPhoneCapsule) PhoneNavigationBarHeight else 0.dp,
+                bottomSpace = if (showPhoneCapsule) PhoneNavigationBarHeight else if (deviceProfile.isTablet) 24.dp else 0.dp,
             )
             if (showRandomPick) {
                 val randomState by randomVm.state.collectAsState()
@@ -1858,7 +1860,9 @@ private fun AppNavigationRail(
     val device = LocalAppDeviceProfile.current
     if (!device.isTv) {
         BoxWithConstraints(modifier) {
-            if (maxHeight < 520.dp) {
+            if (device.isTablet) {
+                CompactLandscapeRail(currentRoute, menuLanguage, tabs, cinema, onNavigate)
+            } else if (maxHeight < 520.dp) {
                 CompactLandscapeRail(currentRoute, menuLanguage, compactTabs, cinema, onNavigate)
             } else {
                 StandardNavigationRail(currentRoute, menuLanguage, tabs, cinema, onNavigate,
@@ -1881,15 +1885,16 @@ private fun CompactLandscapeRail(
 ) {
     val statusInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val shape = RoundedCornerShape(30.dp)
+    val tablet = LocalAppDeviceProfile.current.isTablet
     BoxWithConstraints(
-        Modifier.fillMaxHeight().width(68.dp)
+        Modifier.fillMaxHeight().width(if (tablet) 80.dp else 68.dp)
             .padding(top = statusInset + 4.dp, bottom = 4.dp, start = 6.dp, end = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
         val itemHeight = ((maxHeight - 12.dp) / tabs.size.coerceAtLeast(1)).coerceIn(44.dp, 58.dp)
         Column(
             Modifier.fillMaxWidth().clip(shape)
-                .background(com.anilili.ui.components.glassPanelColor())
+                .then(if (tablet) Modifier.opticalGlass(shape, navigation = true) else Modifier.background(com.anilili.ui.components.glassPanelColor()))
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .65f), shape)
                 .verticalScroll(rememberScrollState()).padding(vertical = 6.dp, horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
