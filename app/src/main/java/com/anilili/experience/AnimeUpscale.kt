@@ -60,6 +60,7 @@ internal object AnimeUpscalePreferences {
     }
 }
 
+@UnstableApi
 internal fun upscaleSize(width: Int, height: Int, mode: AnimeUpscaleMode, maxTexture: Int, hdr: Boolean): Size {
     if (hdr || mode == AnimeUpscaleMode.OFF || width <= 0 || height <= 0 ||
         height >= 1080 || width >= 1920 || maxTexture <= 0) return Size(width, height)
