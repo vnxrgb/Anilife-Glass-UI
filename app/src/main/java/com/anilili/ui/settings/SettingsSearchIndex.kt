@@ -198,6 +198,7 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
             if (isTv) add("Overscan" to listOf("overscan", "edges", "cut off", "cropped", "bounds", "margin", "border", "fit"))
             if (BuildConfig.FLAVOR != "mobile") add("Layout" to listOf("layout", "tv", "tablet", "phone", "form factor", "leanback"))
             add("App layout" to listOf("layout", "legacy", "cinema", "navigation", "icons"))
+            if (!isTv) add("Floating Anime Journal" to listOf("journal", "notes", "diary", "floating", "minimize", "hide", "restore"))
             add(
                 (if (isTv) "Keep the bars on screen" else "Keep the header on screen") to listOf(
                     "bar", "chrome", "hide", "scroll", "menu", "top", "nav", "navigation", "fade",

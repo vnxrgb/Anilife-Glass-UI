@@ -82,7 +82,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** The things on screen a tour step can point at. Each is tagged where it is drawn ([tourTarget]). */
-enum class TourTarget { FOR_YOU, BECAUSE, ROW_HANDLE, DICE, ARRANGE_SETTINGS, NAV_HOME, NAV_LIST, NAV_BROWSE, NAV_DOWNLOADS, NAV_PROFILE }
+enum class TourTarget { FOR_YOU, BECAUSE, ROW_HANDLE, DICE, ARRANGE_SETTINGS, NAV_HOME, NAV_LIST, NAV_BROWSE, NAV_DOWNLOADS, NAV_PROFILE, JOURNAL_FLOATING, JOURNAL_LIBRARY }
 
 /**
  * One step: what it points at (null for a card on its own), what it says, and what it adds when
@@ -145,6 +145,10 @@ private fun mobileReleaseSteps() = listOf(
     TourStep(null, "Personalized Calendar", "Choose Following only on the schedule to focus on releases from your list.", destination = "schedule"),
     TourStep(TourTarget.NAV_DOWNLOADS, "Download queue", "Manage active, paused and failed downloads in one place.", destination = "downloads"),
     TourStep(null, "Cinema and episode tools", "Open an episode to find cinema lighting, episode notes and stream recovery options. Playback is not started during this tour."),
+    TourStep(TourTarget.JOURNAL_FLOATING, "Meet Anime Journal", "Tap the floating journal to write notes, private reviews, ratings and favorite moments. Drag it to a comfortable spot. It remembers its position and saves entries locally as you edit.", whenMissing = "The button may be hidden or disabled. Your journal is always available in My List.", destination = "home"),
+    TourStep(TourTarget.JOURNAL_FLOATING, "Keep the screen clear", "Long-press the journal button to tuck it into a small glass handle above the bottom-right navigation area. Tap that handle to restore the button. It stays out of Settings and fullscreen video.", whenMissing = "Enable the floating button in Settings → Appearance → Floating Anime Journal.", destination = "home"),
+    TourStep(TourTarget.JOURNAL_LIBRARY, "Your private anime diary", "Open Anime Journal in My List to find and edit saved entries, even with the floating button switched off. Use Settings → Appearance → Floating Anime Journal to turn the floating control on or off.", whenMissing = "Scroll through My List to find Anime Journal.", destination = "more"),
+    TourStep(null, "Share your memories", "Open an entry and tap Share. Choose artwork, episode details, ratings and any writing you want included in your image or text. Private notes, reviews and favorite moments are excluded by default. Export keeps a full TXT copy on your device."),
     TourStep(TourTarget.NAV_PROFILE, "Make it yours", "Find themes and account options in your profile. Link a TV from Accounts & sync.", destination = "appearance"),
     TourStep(TourTarget.NAV_HOME, "You're ready", "Enjoy AniLumos. Replay this walkthrough from About whenever you like.", destination = "home"),
 )
@@ -159,7 +163,8 @@ private fun mobileReleaseSteps() = listOf(
  */
 object WhatsNewTour {
     /** Change this for the next release's tour; every install then shows it once more. */
-    const val TOUR_ID = "optical-mobile-2026-11-v3"
+    const val TOUR_ID = "anime-journal-mobile-2026-11-v1"
+    private const val TV_TOUR_ID = "optical-mobile-2026-11-v3"
     private const val SEEN_FILE = "whats-new-seen"
 
     var active by mutableStateOf(false)
@@ -173,15 +178,16 @@ object WhatsNewTour {
     /** Set by the Home that is on screen: scrolls a target's row into view. */
     internal var bringIntoView: (suspend (TourTarget) -> Unit)? = null
 
-    fun startIfDue(context: Context) {
+    fun startIfDue(context: Context, isTv: Boolean = false) {
+        val tourId = if (isTv) TV_TOUR_ID else TOUR_ID
         if (active) return
         val file = File(context.applicationContext.filesDir, SEEN_FILE)
-        if (runCatching { file.readText().trim() }.getOrNull() == TOUR_ID) return
-        runCatching { file.writeText(TOUR_ID) }
+        if (runCatching { file.readText().trim() }.getOrNull() == tourId) return
+        runCatching { file.writeText(tourId) }
             .onFailure { DiagnosticsLog.throwable("WhatsNewTour could not record itself as seen", it) }
         step = 0
         active = true
-        DiagnosticsLog.event("WhatsNewTour started id=$TOUR_ID")
+        DiagnosticsLog.event("WhatsNewTour started id=$tourId")
     }
 
     fun reopen() {
@@ -225,10 +231,11 @@ fun StartWhatsNewTourWhenSettled() {
     val context = LocalContext.current
     val introDone by ProfilesUi.launchIntroDone.collectAsState()
     val profileOverlay by ProfilesUi.overlay.collectAsState()
-    LaunchedEffect(introDone, profileOverlay) {
+    val isTv = LocalAppDeviceProfile.current.isTv
+    LaunchedEffect(introDone, profileOverlay, isTv) {
         if (!introDone || profileOverlay != null) return@LaunchedEffect
         delay(TOUR_START_DELAY_MS)
-        WhatsNewTour.startIfDue(context)
+        WhatsNewTour.startIfDue(context, isTv)
     }
 }
 

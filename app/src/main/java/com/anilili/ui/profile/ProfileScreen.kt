@@ -77,6 +77,8 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import com.anilili.ui.tour.TourTarget
+import com.anilili.ui.tour.tourTarget
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
@@ -772,7 +774,7 @@ fun ProfileScreen(
                                 val journalEntries by com.anilili.data.journal.JournalStore.entries.collectAsState()
                                 Row(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = device.pagePadding, vertical = 6.dp)
-                                        .glassCard(RoundedCornerShape(22.dp)).clickable(onClick = openJournal).padding(16.dp),
+                                        .tourTarget(TourTarget.JOURNAL_LIBRARY).glassCard(RoundedCornerShape(22.dp)).clickable(onClick = openJournal).padding(16.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 ) {

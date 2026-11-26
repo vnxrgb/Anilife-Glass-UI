@@ -1,6 +1,8 @@
 package com.anilili.ui.journal
 
 import android.content.Intent
+import com.anilili.ui.tour.TourTarget
+import com.anilili.ui.tour.tourTarget
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
@@ -151,7 +153,7 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
         val dockT = dockProgress.coerceIn(0f, 1f)
         if (floatingEnabled && expansion < .98f) {
             Box(Modifier.offset { IntOffset((((if (dragging) fx else animatedX) * (1f-dockT) + dockT) * maxX).roundToInt(), ((fy * (1f-dockT) + dockT) * maxY).roundToInt()) }
-                .size(54.dp).graphicsLayer { alpha = (1f - expansion).coerceIn(0f, 1f); scaleX = (1f - expansion * .2f) * (1f - .12f*dockT); scaleY = (1f - expansion * .2f) * (1f - .48f*dockT) }
+                .size(54.dp).tourTarget(TourTarget.JOURNAL_FLOATING).graphicsLayer { alpha = (1f - expansion).coerceIn(0f, 1f); scaleX = (1f - expansion * .2f) * (1f - .12f*dockT); scaleY = (1f - expansion * .2f) * (1f - .48f*dockT) }
                 .opticalGlass(CircleShape, navigation = true)
                 .border(.5.dp, rim, CircleShape)
                 .pointerInput(maxX, maxY, minimized, open) {
