@@ -38,6 +38,8 @@ fun journalEpisodeLabel(value: String): String = value.trim().let { raw ->
 
 fun journalTitle(name: String): String = name.trim().takeIf { it.isNotBlank() }?.let { "$it's Anime Journal" } ?: "My Anime Journal"
 
+fun wrappedTitle(name: String, year: Int): String = name.trim().takeIf { it.isNotBlank() }?.let { "$it's $year Wrapped" } ?: "AniLumos Wrapped"
+
 object JournalStore {
     const val PREFS = "anilumos_journal"
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }

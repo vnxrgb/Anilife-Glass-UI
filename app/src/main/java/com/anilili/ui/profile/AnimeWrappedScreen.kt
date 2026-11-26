@@ -1,6 +1,9 @@
 package com.anilili.ui.profile
 
 import android.widget.Toast
+import com.anilili.data.journal.JournalStore
+import com.anilili.data.journal.wrappedTitle
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.graphics.toArgb
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
@@ -67,6 +70,7 @@ internal fun wrappedStats(days: Map<Long, Int>, today: LocalDate): WrappedStats 
 
 @Composable
 internal fun WrappedSummaryCard(stats: WrappedStats, artwork: String?, onOpen: (() -> Unit)?, modifier: Modifier = Modifier) {
+    val journalName by JournalStore.journalName.collectAsState()
     val shape = RoundedCornerShape(28.dp)
     Box(modifier.fillMaxWidth().glassCard(shape).then(if (onOpen != null) Modifier.clickable(onClickLabel = "View AniLumos Wrapped", onClick = onOpen) else Modifier)) {
         if (!artwork.isNullOrBlank()) {
@@ -79,7 +83,7 @@ internal fun WrappedSummaryCard(stats: WrappedStats, artwork: String?, onOpen: (
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("AniLumos Wrapped", color = foreground, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(wrappedTitle(journalName, stats.year), maxLines = 2, overflow = TextOverflow.Ellipsis, color = foreground, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text("Your anime journey in ${stats.year}", color = foreground.copy(alpha = .78f), style = MaterialTheme.typography.bodySmall)
                 }
                 if (onOpen != null) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "View statistics", tint = foreground)
@@ -147,25 +151,54 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
     val scope = rememberCoroutineScope()
     val accent = MaterialTheme.colorScheme.primary.toArgb()
     var exporting by remember { mutableStateOf(false) }
+    val journalName by JournalStore.journalName.collectAsState()
+    var renameOpen by remember { mutableStateOf(false) }
+    var nameDraft by remember { mutableStateOf("") }
+    var shareOpen by remember { mutableStateOf(false) }
+    var includeName by remember { mutableStateOf(false) }
+    if (renameOpen) {
+        AlertDialog(onDismissRequest = { renameOpen = false },
+            title = { Text("Personalize your Wrapped") },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("This name is shared with your Anime Journal. Leave it blank for the default branding.")
+                OutlinedTextField(nameDraft, { nameDraft = it.filterNot { ch -> ch.isISOControl() }.take(48) },
+                    label = { Text("Name or nickname") }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp))
+                Text(wrappedTitle(nameDraft, stats.year), style = MaterialTheme.typography.titleMedium)
+            } },
+            confirmButton = { Button(onClick = { JournalStore.setJournalName(nameDraft); renameOpen = false }) { Text("Save") } },
+            dismissButton = { TextButton(onClick = { renameOpen = false }) { Text("Cancel") } })
+    }
+    if (shareOpen) {
+        AlertDialog(onDismissRequest = { shareOpen = false },
+            title = { Text("Share your Wrapped") },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Your name is optional on the shared recap.")
+                if (journalName.isNotBlank()) Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(includeName, onCheckedChange = { includeName = it })
+                    Text("Include my name")
+                }
+                Text(wrappedTitle(if (includeName) journalName else "", stats.year), style = MaterialTheme.typography.titleMedium)
+            } },
+            confirmButton = { Button(onClick = {
+                val sharedName = if (includeName) journalName else ""
+                shareOpen = false
+                exporting = true
+                scope.launch {
+                    try {
+                        shareWrappedImage(context, stats, formatWrappedTime(totalMs), annualTime.size,
+                            topTitles, genreTime.map { it.key }, personality, accent, sharedName)
+                    } catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { Toast.makeText(context, "Could not create recap image", Toast.LENGTH_SHORT).show() }
+                    finally { exporting = false }
+                }
+            }) { Text("Share image") } },
+            dismissButton = { TextButton(onClick = { shareOpen = false }) { Text("Cancel") } })
+    }
     Column(Modifier.fillMaxSize().glassAtmosphere()) {
-        PageTitleBar(title = "AniLumos Wrapped", subtitle = "${stats.year} · Your viewing activity",
+        PageTitleBar(title = "AniLumos Wrapped", subtitle = if (journalName.isBlank()) "${stats.year} · Your viewing activity" else wrappedTitle(journalName, stats.year),
             leading = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
             trailing = {
-                IconButton(enabled = !exporting, onClick = {
-                    exporting = true
-                    scope.launch {
-                        try {
-                            shareWrappedImage(context, stats, formatWrappedTime(totalMs), annualTime.size,
-                                topTitles, genreTime.map { it.key }, personality, accent)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (_: Exception) {
-                            Toast.makeText(context, "Could not create recap image", Toast.LENGTH_SHORT).show()
-                        } finally {
-                            exporting = false
-                        }
-                    }
-                }) {
+                IconButton(enabled = !exporting, onClick = { includeName = false; shareOpen = true }) {
                     if (exporting) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
                     else Icon(Icons.Default.Share, contentDescription = "Share recap image")
                 }
@@ -175,6 +208,11 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
                 WrappedSummaryCard(stats, localHistory.firstOrNull()?.cover, onOpen = null)
+                TextButton(onClick = { nameDraft = journalName; renameOpen = true }) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Personalize name")
+                }
             }
             item {
                 Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(26.dp)).padding(16.dp),
@@ -273,7 +311,7 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
                     Text(personality.symbol, style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text("Your viewing personality", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(personality.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(if (journalName.isBlank()) personality.title else "$journalName — ${personality.title}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(personality.description, style = MaterialTheme.typography.bodySmall)
                     }
                 }
