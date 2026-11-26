@@ -80,6 +80,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var moreLoading by remember { mutableStateOf(false) }
+    var catalogGeneration by remember { mutableIntStateOf(0) }
     var hasMore by remember { mutableStateOf(false) }
     var offset by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<MangaTitle?>(null) }
@@ -97,6 +98,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     val device = LocalAppDeviceProfile.current
     val bottom = LocalAppChromeBottomInset.current
     val revealChrome = LocalAppChromeReveal.current
+    val listState = rememberLazyListState()
     val back: () -> Unit = {
         if (chapter != null) { chapter = null; saved = store.all() }
         else if (selected != null) { selected = null; saved = store.all(); revealChrome() }
@@ -107,6 +109,8 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     LaunchedEffect(sourceId, query, kind, order, retry, section) {
         if (!home && !browse) { loading = false; return@LaunchedEffect }
         if (browse && query.isNotBlank()) delay(350)
+        listState.scrollToItem(0)
+        catalogGeneration++; moreLoading = false
         loading = true; error = null; results = emptyList(); recent = emptyList(); offset = 0; hasMore = false
         if (provider == null) error = "Source unavailable"
         else resultOf { provider.catalog(if (browse) query.trim() else "", kind, order, limit = 24) }
@@ -171,7 +175,6 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     ) { padding ->
         val side = device.pagePadding
         val filtered = results.filter { genre == null || genre in it.genres }
-        val listState = rememberLazyListState()
         val list = saved.filter { entry -> when (libraryFilter) {
             LibraryFilter.ALL -> entry.bookmarked || entry.chapterId != null
             LibraryFilter.READING -> entry.chapterId != null
@@ -189,7 +192,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                         val pager = rememberPagerState(pageCount = { features.size })
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth()) { index ->
-                                MangaHero(features[index], "Read now", onRead = { selected = features[index] })
+                                MangaHero(features[index], "Details", onRead = { selected = features[index] })
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                                 features.indices.forEach { i ->
@@ -218,7 +221,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                             }
                             val genres = results.flatMap { it.genres }.distinct().sorted()
                             if (genres.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                item { FilterChip(selected = genre == null, onClick = { genre = null }, label = { Text("All genres") }, colors = cinematicFilterChipColors(), shape = CircleShape) }
+                                item { FilterChip(selected = genre == null, onClick = { genre = null }, label = { Text("Genres in results") }, colors = cinematicFilterChipColors(), shape = CircleShape) }
                                 items(genres) { option -> FilterChip(selected = genre == option, onClick = { genre = if (genre == option) null else option }, label = { Text(option) }, colors = cinematicFilterChipColors(), shape = CircleShape) }
                             }
                         }
@@ -251,11 +254,12 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                         if (hasMore && genre == null) item("more") {
                             OutlinedButton(onClick = {
                                 if (provider != null && !moreLoading) scope.launch {
+                                    val generation = catalogGeneration
                                     moreLoading = true
                                     resultOf { provider.catalog(query.trim(), kind, order, offset, 24) }.onSuccess { batch ->
-                                        results = (results + batch).distinctBy { it.identity() }; offset += batch.size; hasMore = batch.size == 24
-                                    }.onFailure { error = it.message ?: "Unable to load more" }
-                                    moreLoading = false
+                                        if (generation == catalogGeneration) { results = (results + batch).distinctBy { it.identity() }; offset += batch.size; hasMore = batch.size == 24 }
+                                    }.onFailure { if (generation == catalogGeneration) error = it.message ?: "Unable to load more" }
+                                    if (generation == catalogGeneration) moreLoading = false
                                 }
                             }, enabled = !moreLoading, modifier = Modifier.fillMaxWidth(), colors = cinematicSecondaryButtonColors(), border = cinematicSecondaryButtonBorder()) { Text(if (moreLoading) "Loading…" else "Load more") }
                         }
@@ -299,14 +303,14 @@ private fun MangaEmpty(title: String, body: String) {
 }
 
 @Composable
-private fun MangaHero(title: MangaTitle, action: String, onRead: () -> Unit) {
+private fun MangaHero(title: MangaTitle, action: String, enabled: Boolean = true, onRead: () -> Unit) {
     Box(Modifier.fillMaxWidth().height(280.dp).clip(RoundedCornerShape(26.dp)).background(MaterialTheme.colorScheme.surfaceContainer)) {
         AsyncImage(title.coverUrl, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .08f), Color.Black.copy(alpha = .82f), Color.Black.copy(alpha = .95f)))))
         Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title.title, color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(listOf(title.metadata(), title.genres.take(2).joinToString(" · ")).filter { it.isNotBlank() }.joinToString(" · "), color = Color.White.copy(alpha = .88f), style = MaterialTheme.typography.labelMedium, maxLines = 1)
-            Button(onClick = onRead, colors = cinematicPrimaryButtonColors(true), border = cinematicPrimaryButtonBorder(true), shape = CircleShape) {
+            Button(onClick = onRead, enabled = enabled, colors = cinematicPrimaryButtonColors(true), border = cinematicPrimaryButtonBorder(true), shape = CircleShape) {
                 Icon(Icons.Default.Book, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(action)
             }
         }
@@ -371,7 +375,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
             val tablet = maxWidth >= 720.dp
             val overview: @Composable () -> Unit = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    MangaHero(title, if (resume != null) "Continue reading" else "Read now") { first?.let { onChapter(it, chapters) } }
+                    MangaHero(title, if (resume != null) "Continue reading" else "Read now", enabled = first != null) { first?.let { onChapter(it, chapters) } }
                     OutlinedButton(onClick = { onBookmark(saved?.bookmarked != true) }, modifier = Modifier.fillMaxWidth(), colors = cinematicSecondaryButtonColors(), border = cinematicSecondaryButtonBorder(), shape = CircleShape) {
                         Icon(if (saved?.bookmarked == true) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, null)
                         Spacer(Modifier.width(8.dp)); Text(if (saved?.bookmarked == true) "Bookmarked" else "Add to My List")
@@ -465,8 +469,8 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
             }
         }
         if (loading) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        else if (error != null) MangaError(error.orEmpty()) { retry++ }
-        else if (pages.isEmpty()) Text("No pages available.", Modifier.padding(16.dp))
+        else if (error != null) Surface(color = MaterialTheme.colorScheme.surface) { MangaError(error.orEmpty()) { retry++ } }
+        else if (pages.isEmpty()) Surface(color = MaterialTheme.colorScheme.surface) { Text("No pages available.", Modifier.padding(16.dp)) }
         else key(chapter.id, mode) {
             val scope = rememberCoroutineScope()
             val list = rememberLazyListState(initialFirstVisibleItemIndex = position.coerceIn(0, pages.lastIndex))
