@@ -42,6 +42,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
@@ -167,6 +169,7 @@ object WhatsNewTour {
     /** Change this for the next release's tour; every install then shows it once more. */
     const val TOUR_ID = "anime-journal-mobile-2026-11-v1"
     const val FRANCHISE_DEMO_ID = 19603
+    val journalButtonDemo: Boolean get() = active && mobileReleaseSteps().getOrNull(step)?.target == TourTarget.JOURNAL_FLOATING
     val franchiseCardDemo: Boolean get() = active && mobileReleaseSteps().getOrNull(step)?.target == TourTarget.FRANCHISE_CARD
     val franchiseGuideDemo: Boolean get() = active && mobileReleaseSteps().getOrNull(step)?.target == TourTarget.FRANCHISE_GUIDE
     private const val TV_TOUR_ID = "optical-mobile-2026-11-v3"
@@ -223,7 +226,12 @@ object WhatsNewTour {
 fun Modifier.tourTarget(target: TourTarget): Modifier = composed {
     if (!WhatsNewTour.active) return@composed this
     DisposableEffect(target) { onDispose { WhatsNewTour.bounds.remove(target) } }
-    onGloballyPositioned { WhatsNewTour.bounds[target] = it.boundsInWindow() }
+    onGloballyPositioned { coordinates ->
+        val rect = coordinates.boundsInWindow()
+        if (rect.width >= coordinates.size.width * .75f && rect.height >= coordinates.size.height * .75f && rect.width > 0f && rect.height > 0f) {
+            WhatsNewTour.bounds[target] = rect
+        } else WhatsNewTour.bounds.remove(target)
+    }
 }
 
 /**
@@ -280,17 +288,18 @@ fun WhatsNewTourOverlay(onNavigate: (String) -> Unit = {}) {
         val target = step.target
         if (target == null) { settled = true; return@LaunchedEffect }
         WhatsNewTour.bringIntoView?.invoke(target)
-        withTimeoutOrNull(TARGET_WAIT_MS) { snapshotFlow { WhatsNewTour.bounds[target] }.first { it != null } }
+        withTimeoutOrNull(if (target == TourTarget.FRANCHISE_CARD || target == TourTarget.FRANCHISE_GUIDE) 5000L else TARGET_WAIT_MS) { snapshotFlow { WhatsNewTour.bounds[target] }.first { it != null } }
         delay(SCROLL_SETTLE_MS)
         settled = true
     }
 
     var origin by remember { mutableStateOf(Offset.Zero) }
+    var overlaySize by remember { mutableStateOf(IntSize.Zero) }
     val padding = with(density) { 8.dp.toPx() }
     val found = step.target?.let { WhatsNewTour.bounds[it] }
         ?.translate(-origin)
         ?.inflate(padding)
-        ?.takeIf { settled }
+        ?.takeIf { settled && it.width > 0 && it.height > 0 && it.top >= 0f && it.bottom <= overlaySize.height.toFloat() && it.left >= -padding && it.right <= overlaySize.width + padding }
     val holeAlpha by animateFloatAsState(if (found != null) 1f else 0f, tween(220), label = "tour-hole-alpha")
     var lastHole by remember { mutableStateOf(Rect.Zero) }
     if (found != null) lastHole = found
@@ -299,6 +308,8 @@ fun WhatsNewTourOverlay(onNavigate: (String) -> Unit = {}) {
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
+            .zIndex(30f)
+            .onSizeChanged { overlaySize = it }
             .onGloballyPositioned { origin = it.positionInWindow() },
     ) {
         val corner = with(density) { 18.dp.toPx() }

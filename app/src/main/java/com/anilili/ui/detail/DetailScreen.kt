@@ -661,10 +661,12 @@ private fun DetailContent(
     var franchiseOpen by rememberSaveable(info.id) { mutableStateOf(false) }
     val demoCard = !device.isTv && info.id == WhatsNewTour.FRANCHISE_DEMO_ID && WhatsNewTour.franchiseCardDemo
     val demoGuide = !device.isTv && info.id == WhatsNewTour.FRANCHISE_DEMO_ID && WhatsNewTour.franchiseGuideDemo
-    LaunchedEffect(demoCard, franchiseEntries.size, resume != null) {
+    LaunchedEffect(demoCard, franchiseEntries.size, resume != null, selectedTab) {
         if (demoCard && franchiseEntries.size > 1) {
             selectedTab = DetailTab.HOME
-            detailListState.scrollToItem(if (resume != null) 5 else 4)
+            // The sticky tabs occupy their own lazy item; leave QuickFacts above the card
+            // so the spotlight never lands on a card clipped behind the pinned header.
+            detailListState.scrollToItem(if (resume != null) 4 else 3)
         }
     }
     if (franchiseOpen && !demoGuide && franchiseEntries.size > 1) {

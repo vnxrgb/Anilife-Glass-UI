@@ -210,11 +210,14 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
         val animatedX by animateFloatAsState(fx, spring(dampingRatio = .85f, stiffness = 450f), label = "journal dock")
         val dockProgress by animateFloatAsState(if (minimized) 1f else 0f, spring(dampingRatio = .86f, stiffness = 390f), label = "journal minimize")
         val dockT = dockProgress.coerceIn(0f, 1f)
+        val dockWidth = (54f - 10f * dockT).dp
+        val dockHeight = (54f - 26f * dockT).dp
+        val dockX = with(density) { (maxWidth - dockWidth - 12.dp).toPx().coerceAtLeast(0f) }
+        val dockY = with(density) { (maxHeight - 48.dp - 12.dp).toPx().coerceAtLeast(0f) }
+        val dockShape = RoundedCornerShape(50)
         if (floatingEnabled && expansion < .98f) {
-            Box(Modifier.offset { IntOffset((((if (dragging) fx else animatedX) * (1f-dockT) + dockT) * maxX).roundToInt(), ((fy * (1f-dockT) + dockT) * maxY).roundToInt()) }
-                .size(54.dp).tourTarget(TourTarget.JOURNAL_FLOATING).graphicsLayer { alpha = (1f - expansion).coerceIn(0f, 1f); scaleX = (1f - expansion * .2f) * (1f - .12f*dockT); scaleY = (1f - expansion * .2f) * (1f - .48f*dockT) }
-                .opticalGlass(CircleShape, navigation = true)
-                .border(.5.dp, rim, CircleShape)
+            Box(Modifier.offset { IntOffset(((if (dragging) fx else animatedX) * maxX * (1f-dockT) + dockX * dockT).roundToInt(), (fy * maxY * (1f-dockT) + dockY * dockT).roundToInt()) }
+                .size(dockWidth, (54f - 6f * dockT).dp).tourTarget(TourTarget.JOURNAL_FLOATING).graphicsLayer { alpha = (1f - expansion).coerceIn(0f, 1f) }
                 .pointerInput(maxX, maxY, minimized, open) {
                     if (minimized || open) return@pointerInput
                     detectDragGestures(onDragStart = { dragging = true }, onDragEnd = {
@@ -227,8 +230,11 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
                     onLongClick = if (minimized) null else ({ haptics.performHapticFeedback(HapticFeedbackType.LongPress); JournalStore.setMinimized(true) }),
                     onClick = { if (minimized) { JournalStore.setMinimized(false) } else begin() }),
                 contentAlignment = Alignment.Center) {
-                Icon(if (minimized) Icons.Default.KeyboardArrowUp else Icons.Default.Edit, contentDescription = if (minimized) "Restore Anime Journal" else "Anime Journal", tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.graphicsLayer { scaleY = if (minimized) 1.5f else 1f })
+                Box(Modifier.size(dockWidth, dockHeight).opticalGlass(dockShape, navigation = true)
+                    .border(.75.dp, rim, dockShape), contentAlignment = Alignment.Center) {
+                    Icon(if (minimized) Icons.Default.KeyboardArrowUp else Icons.Default.Edit, contentDescription = if (minimized) "Restore Anime Journal" else "Anime Journal", tint = colors.onSurface,
+                        modifier = Modifier.size(if (minimized) 18.dp else 24.dp))
+                }
             }
         }
         if (expansion > .01f) {

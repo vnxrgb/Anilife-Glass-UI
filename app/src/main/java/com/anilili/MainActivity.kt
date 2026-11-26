@@ -1225,7 +1225,8 @@ private fun MiruroRoot(
             com.anilili.ui.journal.JournalOverlay(
                 visible = !deviceProfile.isTv && !inPictureInPicture && currentRoute != null &&
                     currentRoute != Routes.SETTINGS && currentRoute != Routes.DOWNLOAD &&
-                    !journalContext.fullscreen && journalProfileOverlay == null && !showRandomPick && !chromeTakeover.active,
+                    !journalContext.fullscreen && journalProfileOverlay == null && !showRandomPick && !chromeTakeover.active &&
+                    (!com.anilili.ui.tour.WhatsNewTour.active || com.anilili.ui.tour.WhatsNewTour.journalButtonDemo),
                 anime = journalContext,
                 openRequest = journalOpenRequest,
                 bottomSpace = if (showPhoneCapsule) PhoneNavigationBarHeight else 0.dp,
