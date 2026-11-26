@@ -3268,6 +3268,9 @@ fun SettingsScreen(
             }
 
             settingsSection("app", openSectionId) {
+                item(key = "experience_privacy_lock") {
+                    com.anilili.experience.PrivacyLockSetting()
+                }
                 item {
                     MidnightSettingRow(
                         title = if (menuLanguage.usesSpanish()) "Idioma del menú" else "Menu language",

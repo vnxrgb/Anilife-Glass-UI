@@ -301,6 +301,25 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    private var experienceLocked by mutableStateOf(false)
+    private var experienceAuthenticating = false
+    private val experienceAuthLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        experienceAuthenticating = false
+        if (result.resultCode == android.app.Activity.RESULT_OK) experienceLocked = false
+    }
+    private fun unlockExperience() {
+        if (experienceAuthenticating) return
+        val keyguard = getSystemService(android.app.KeyguardManager::class.java)
+        val request = keyguard?.createConfirmDeviceCredentialIntent("Unlock AniLumos", "Confirm your device screen lock")
+        if (request == null) {
+            Toast.makeText(this, "Device authentication is unavailable", Toast.LENGTH_SHORT).show()
+            return
+        }
+        experienceAuthenticating = true
+        try { experienceAuthLauncher.launch(request) }
+        catch (_: Exception) { experienceAuthenticating = false }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val launchStartedAt = SystemClock.elapsedRealtime()
         DiagnosticsLog.event("MainActivity.onCreate start savedState=${savedInstanceState != null}")
@@ -313,6 +332,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         applyTransparentSystemBars()
         com.anilili.experience.ExperienceShortcuts.install(this)
+        experienceLocked = com.anilili.experience.PrivacyLockPreferences.enabled(this)
         // Before the activity starts, so a result for a recreated activity is still delivered.
         com.anilili.playback.ExternalPlaybackReturns.register(this)
         DiagnosticsJankMonitor.install(this)
@@ -361,6 +381,9 @@ class MainActivity : FragmentActivity() {
                 DiagnosticsLog.event("MainActivity content composed")
             }
             MiruroTheme {
+                if (experienceLocked) {
+                    com.anilili.experience.PrivacyLockScreen(onUnlock = ::unlockExperience)
+                } else {
                 // The window shows through during transitions and before first draw, so it follows
                 // the Appearance canvas rather than staying the AMOLED black it starts as.
                 val canvas = MaterialTheme.colorScheme.background.toArgb()
@@ -483,6 +506,7 @@ class MainActivity : FragmentActivity() {
                         }
                     }
                 } }
+                }
             }
         }
         DiagnosticsLog.event("MainActivity.setContent complete")
@@ -654,6 +678,10 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         super.onStop()
+        if (!experienceAuthenticating && !isChangingConfigurations &&
+            !(android.os.Build.VERSION.SDK_INT >= 26 && isInPictureInPictureMode)) {
+            experienceLocked = com.anilili.experience.PrivacyLockPreferences.enabled(this)
+        }
         DiagnosticsLog.event("MainActivity.onStop")
         PlaybackService.pauseActivePlayback()
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
