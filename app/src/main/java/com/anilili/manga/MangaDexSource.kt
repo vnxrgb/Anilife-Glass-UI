@@ -18,9 +18,20 @@ class MangaDexSource : MangaSource {
     override val id = "mangadex"
     override val displayName = "MangaDex"
 
-    override suspend fun search(query: String, limit: Int): List<MangaTitle> {
-        val filter = if (query.isBlank()) "&order%5BfollowedCount%5D=desc" else "&title=${enc(query.trim())}"
-        val response = request("/manga?limit=${limit.coerceIn(1, 100)}&includes%5B%5D=cover_art&contentRating%5B%5D=safe&contentRating%5B%5D=suggestive$filter")
+    override suspend fun search(query: String, limit: Int): List<MangaTitle> =
+        catalog(query, limit = limit)
+
+    override suspend fun catalog(query: String, kind: MangaKind, order: MangaOrder, offset: Int, limit: Int): List<MangaTitle> {
+        val filter = if (query.isBlank()) {
+            if (order == MangaOrder.RECENT) "&order%5BupdatedAt%5D=desc" else "&order%5BfollowedCount%5D=desc"
+        } else "&title=${enc(query.trim())}"
+        val language = when (kind) {
+            MangaKind.MANGA -> "&originalLanguage%5B%5D=ja"
+            MangaKind.MANHWA -> "&originalLanguage%5B%5D=ko"
+            MangaKind.MANHUA -> "&originalLanguage%5B%5D=zh&originalLanguage%5B%5D=zh-hk"
+            else -> ""
+        }
+        val response = request("/manga?limit=${limit.coerceIn(1, 100)}&offset=${offset.coerceIn(0, 9900)}&includes%5B%5D=cover_art&contentRating%5B%5D=safe&contentRating%5B%5D=suggestive$filter$language")
         return response.getJSONArray("data").objects().map { manga ->
             val attributes = manga.getJSONObject("attributes")
             val title = attributes.getJSONObject("title")
@@ -30,8 +41,14 @@ class MangaDexSource : MangaSource {
             MangaTitle(
                 sourceId = id,
                 id = manga.getString("id"),
-                title = title.optString("en").ifBlank { title.keys().asSequence().firstOrNull()?.let { title.optString(it) }.orEmpty() },
+                title = title.optString("en").takeIf { it.isNotBlank() && it != "null" }
+                    ?: attributes.optJSONArray("altTitles")?.objects()?.map { it.optString("en") }?.firstOrNull { it.isNotBlank() && it != "null" }
+                    ?: title.keys().asSequence().firstOrNull()?.let { title.optString(it) }.orEmpty().ifBlank { "Untitled" },
                 description = attributes.optJSONObject("description")?.optString("en").orEmpty(),
+                kind = MangaKind.fromLanguage(attributes.optString("originalLanguage")),
+                genres = attributes.optJSONArray("tags")?.objects()?.mapNotNull { tag -> tag.optJSONObject("attributes")?.takeIf { it.optString("group") == "genre" }?.optJSONObject("name")?.optString("en")?.takeIf { it.isNotBlank() } }.orEmpty(),
+                status = attributes.optString("status").takeUnless { it == "null" }.orEmpty(),
+                year = attributes.optInt("year").takeIf { it > 0 },
                 coverUrl = cover?.takeIf(String::isNotBlank)?.let {
                     "https://uploads.mangadex.org/covers/${manga.getString("id")}/$it"
                 },
