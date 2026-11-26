@@ -24,6 +24,11 @@ import com.anilili.ui.components.opticalGlass
 import com.anilili.ui.theme.LocalThemeSpec
 import com.anilili.data.settings.ThemeBackground
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -49,11 +54,16 @@ import kotlin.math.roundToInt
 
 data class JournalContext(val animeId: Int? = null, val title: String = "", val episode: String = "", val fullscreen: Boolean = false, val artwork: String? = null)
 val LocalJournalReport = compositionLocalOf<(JournalContext) -> Unit> { {} }
+val LocalOpenJournal = compositionLocalOf<() -> Unit> { {} }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: androidx.compose.ui.unit.Dp = 0.dp) {
+fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: androidx.compose.ui.unit.Dp = 0.dp, openRequest: Int = 0) {
     val context = LocalContext.current
     val focus = LocalFocusManager.current
+    val haptics = LocalHapticFeedback.current
+    val floatingEnabled by JournalStore.floatingEnabled.collectAsState()
+    val minimized by JournalStore.minimized.collectAsState()
     val scope = rememberCoroutineScope()
     val history by LibraryStore.history.collectAsState()
     val watchlist by LibraryStore.watchlist.collectAsState()
@@ -118,6 +128,14 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
         saved = true
         open = true
     }
+    var handledRequest by remember { mutableStateOf(0) }
+    LaunchedEffect(openRequest, visible) {
+        if (visible && openRequest != handledRequest) {
+            handledRequest = openRequest
+            begin()
+            library = true
+        }
+    }
     fun close() { focus.clearFocus(); if (!library && draft.hasContent()) edit(draft); if (saved) open = false }
     LaunchedEffect(visible) { if (!visible) { open = false; dragging = false; shareOpen = false } }
     BackHandler(visible && open) { close() }
@@ -129,20 +147,27 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
         val maxX = with(density) { (maxWidth - 58.dp).toPx().coerceAtLeast(1f) }
         val maxY = with(density) { (maxHeight - 58.dp).toPx().coerceAtLeast(1f) }
         val animatedX by animateFloatAsState(fx, spring(dampingRatio = .85f, stiffness = 450f), label = "journal dock")
-        if (expansion < .98f) {
-            Box(Modifier.offset { IntOffset(((if (dragging) fx else animatedX) * maxX).roundToInt(), (fy * maxY).roundToInt()) }
-                .size(54.dp).graphicsLayer { alpha = (1f - expansion).coerceIn(0f, 1f); scaleX = 1f - expansion * .2f; scaleY = scaleX }
+        val dockProgress by animateFloatAsState(if (minimized) 1f else 0f, spring(dampingRatio = .86f, stiffness = 390f), label = "journal minimize")
+        val dockT = dockProgress.coerceIn(0f, 1f)
+        if (floatingEnabled && expansion < .98f) {
+            Box(Modifier.offset { IntOffset((((if (dragging) fx else animatedX) * (1f-dockT) + dockT) * maxX).roundToInt(), ((fy * (1f-dockT) + dockT) * maxY).roundToInt()) }
+                .size(54.dp).graphicsLayer { alpha = (1f - expansion).coerceIn(0f, 1f); scaleX = (1f - expansion * .2f) * (1f - .12f*dockT); scaleY = (1f - expansion * .2f) * (1f - .48f*dockT) }
                 .opticalGlass(CircleShape, navigation = true)
                 .border(.5.dp, rim, CircleShape)
-                .pointerInput(maxX, maxY) {
+                .pointerInput(maxX, maxY, minimized, open) {
+                    if (minimized || open) return@pointerInput
                     detectDragGestures(onDragStart = { dragging = true }, onDragEnd = {
                         dragging = false; fx = if (fx < .5f) 0f else 1f; JournalStore.position(fx, fy)
                     }, onDragCancel = { dragging = false; JournalStore.position(fx, fy) }) { change, delta ->
                         change.consume(); fx = (fx + delta.x / maxX).coerceIn(0f, 1f); fy = (fy + delta.y / maxY).coerceIn(0f, 1f)
                     }
-                }.clickable(enabled = !open, onClickLabel = "Open Anime Journal") { begin() },
+                }.combinedClickable(enabled = !open, onClickLabel = if (minimized) "Restore floating journal" else "Open Anime Journal",
+                    onLongClickLabel = if (minimized) null else "Minimize journal",
+                    onLongClick = if (minimized) null else ({ haptics.performHapticFeedback(HapticFeedbackType.LongPress); JournalStore.setMinimized(true) }),
+                    onClick = { if (minimized) { JournalStore.setMinimized(false) } else begin() }),
                 contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Edit, contentDescription = "Anime Journal", tint = MaterialTheme.colorScheme.onSurface)
+                Icon(if (minimized) Icons.Default.KeyboardArrowUp else Icons.Default.Edit, contentDescription = if (minimized) "Restore Anime Journal" else "Anime Journal", tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.graphicsLayer { scaleY = if (minimized) 1.5f else 1f })
             }
         }
         if (expansion > .01f) {

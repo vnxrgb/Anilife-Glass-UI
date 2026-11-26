@@ -3004,6 +3004,17 @@ fun SettingsScreen(
                         )
                     }
                 }
+                if (!device.isTv) {
+                    item(key = "Floating Anime Journal") {
+                        val journalEnabled by com.anilili.data.journal.JournalStore.floatingEnabled.collectAsState()
+                        MidnightSettingSwitchRow(
+                            title = "Floating Anime Journal",
+                            description = "Show the draggable journal button. Long press to minimize; notes remain available in My List.",
+                            checked = journalEnabled,
+                            onCheckedChange = com.anilili.data.journal.JournalStore::setFloatingEnabled,
+                        )
+                    }
+                }
                 item(key = "Search as you type") {
                     MidnightSettingSwitchRow(
                         title = "Search as you type",

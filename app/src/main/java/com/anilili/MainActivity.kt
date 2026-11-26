@@ -1009,6 +1009,7 @@ private fun MiruroRoot(
     // clock and Schedule's air times.
     val systemUses24Hour = rememberSystemUses24Hour()
     val clockFormat by SettingsStore.clockFormat.collectAsState()
+    var journalOpenRequest by remember { mutableStateOf(0) }
     var journalReport by remember { mutableStateOf<Pair<String?, com.anilili.ui.journal.JournalContext>?>(null) }
     val journalEntryId = backStack?.id
     val journalContext = journalReport?.takeIf { it.first == journalEntryId }?.second
@@ -1022,6 +1023,7 @@ private fun MiruroRoot(
     val opticalBackdrop = rememberLayerBackdrop()
     CompositionLocalProvider(
         LocalAppChromeTakeover provides chromeTakeover,
+        com.anilili.ui.journal.LocalOpenJournal provides { journalOpenRequest++ },
         com.anilili.ui.journal.LocalJournalReport provides { report -> journalReport = journalEntryId to report },
         LocalOpticalBackdrop provides if (!deviceProfile.isTv && !inPictureInPicture) opticalBackdrop else null,
         LocalAppDeviceProfile provides deviceProfile,
@@ -1225,6 +1227,7 @@ private fun MiruroRoot(
                     currentRoute != Routes.SETTINGS && currentRoute != Routes.DOWNLOAD &&
                     !journalContext.fullscreen && journalProfileOverlay == null && !showRandomPick && !chromeTakeover.active,
                 anime = journalContext,
+                openRequest = journalOpenRequest,
                 bottomSpace = if (showPhoneCapsule) PhoneNavigationBarHeight else 0.dp,
             )
             if (showRandomPick) {

@@ -43,9 +43,23 @@ object JournalStore {
     private lateinit var context: Context
     private val _entries = MutableStateFlow<List<JournalEntry>>(emptyList())
     val entries = _entries.asStateFlow()
+    private val _floatingEnabled = MutableStateFlow(true)
+    val floatingEnabled = _floatingEnabled.asStateFlow()
+    private val _minimized = MutableStateFlow(false)
+    val minimized = _minimized.asStateFlow()
+    fun setFloatingEnabled(enabled: Boolean) {
+        prefs().edit().putBoolean("floating_enabled", enabled).apply()
+        _floatingEnabled.value = enabled
+    }
+    fun setMinimized(minimized: Boolean) {
+        prefs().edit().putBoolean("minimized", minimized).apply()
+        _minimized.value = minimized
+    }
     private var readable = true
     fun init(ctx: Context) {
         context = ctx.applicationContext
+        _floatingEnabled.value = prefs().getBoolean("floating_enabled", true)
+        _minimized.value = prefs().getBoolean("minimized", false)
         val raw = prefs().getString("entries", null)
         val parsed = runCatching { raw?.let { json.decodeFromString(serializer, it) }.orEmpty() }
         readable = parsed.isSuccess
