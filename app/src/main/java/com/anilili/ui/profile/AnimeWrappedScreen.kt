@@ -84,10 +84,22 @@ internal fun WrappedSummaryCard(stats: WrappedStats, artwork: String?, onOpen: (
                 }
                 if (onOpen != null) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "View statistics", tint = foreground)
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                WrappedMetric(stats.episodes.toString(), "Episodes", Modifier.weight(1f), foreground)
-                WrappedMetric(stats.activeDays.toString(), "Active days", Modifier.weight(1f), foreground)
-                WrappedMetric(stats.streak.toString(), "Day streak", Modifier.weight(1f), foreground)
+            // Use the actual card width, not the device class: split-screen can leave
+            // a tablet card narrower than a phone card without changing its styling.
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                if (maxWidth < 300.dp) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        WrappedMetric(stats.episodes.toString(), "Episodes", Modifier.fillMaxWidth(), foreground)
+                        WrappedMetric(stats.activeDays.toString(), "Active days", Modifier.fillMaxWidth(), foreground)
+                        WrappedMetric(stats.streak.toString(), "Day streak", Modifier.fillMaxWidth(), foreground)
+                    }
+                } else {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        WrappedMetric(stats.episodes.toString(), "Episodes", Modifier.weight(1f), foreground)
+                        WrappedMetric(stats.activeDays.toString(), "Active days", Modifier.weight(1f), foreground)
+                        WrappedMetric(stats.streak.toString(), "Day streak", Modifier.weight(1f), foreground)
+                    }
+                }
             }
         }
     }
