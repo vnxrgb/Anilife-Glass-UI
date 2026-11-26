@@ -1,5 +1,6 @@
 package com.anilili.ui.settings
 
+import com.anilili.ui.easteregg.HiddenSparks
 import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassAtmosphere
 import com.anilili.ui.theme.drawAppCanvas
@@ -382,6 +383,9 @@ fun SettingsScreen(
     val themeBackground by SettingsStore.themeBackground.collectAsState()
     val themeAccent by SettingsStore.themeAccent.collectAsState()
     val themeStyle by SettingsStore.themeStyle.collectAsState()
+    LaunchedEffect(themeBackground, themeAccent, themeStyle) {
+        HiddenSparks.themeChanged(Triple(themeBackground, themeAccent, themeStyle).toString())
+    }
     val themeContrast by SettingsStore.themeContrast.collectAsState()
     val playerAccent by SettingsStore.playerAccent.collectAsState()
     val appIconMatchesTheme by SettingsStore.appIconMatchesTheme.collectAsState()
@@ -579,7 +583,10 @@ fun SettingsScreen(
     // did), and an id with no tile would strand the page on a screen with no title and no rows.
     // A section is a view in place, not a route, so the root's per-route reset never fires here.
     val revealChrome = LocalAppChromeReveal.current
-    LaunchedEffect(openSectionId) { revealChrome() }
+    LaunchedEffect(openSectionId) {
+        revealChrome()
+        if (!device.isTv && openSectionId == "about") HiddenSparks.hit("about", 4, "Yes, we're still AniLumos.")
+    }
     LaunchedEffect(openSectionId, openSection) {
         if (openSectionId != null && openSection == null) goToSection(null)
     }
@@ -3365,6 +3372,12 @@ fun SettingsScreen(
             }
 
             settingsSection("about", openSectionId) {
+                if (!device.isTv) item(key = "hidden-brand-version") {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("AniLumos", style = MaterialTheme.typography.titleLarge, modifier = Modifier.clickable(indication = null, interactionSource = null) { HiddenSparks.secretTap("logo") })
+                        Text("v${UpdateManager.currentVersion}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.clickable(indication = null, interactionSource = null) { HiddenSparks.secretTap("version") })
+                    }
+                }
                 item(key = "What's new") {
                     MidnightSettingRow(
                         title = "What's new",

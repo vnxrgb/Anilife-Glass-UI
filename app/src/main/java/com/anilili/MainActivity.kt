@@ -1,5 +1,6 @@
 package com.anilili
 
+import com.anilili.ui.easteregg.HiddenSparks
 import com.anilili.ui.theme.appCanvas
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -967,6 +968,16 @@ private fun MiruroRoot(
     }
 
     val context = LocalContext.current
+    LaunchedEffect(deviceProfile.isTv) { if (!deviceProfile.isTv) HiddenSparks.start(context) }
+    LaunchedEffect(backStack?.id) {
+        if (!deviceProfile.isTv) {
+            when (currentRoute) {
+                Routes.SEARCH -> HiddenSparks.hit("discover", 5, "Another side quest?")
+                Routes.SETTINGS -> HiddenSparks.hit("settings", 5, "Still looking for the secret ending?")
+                Routes.DETAIL -> backStack?.arguments?.getInt(Routes.Arg.ID)?.let { HiddenSparks.hit("detail:$it", 4, "Just watch it already.") }
+            }
+        }
+    }
     val pipeResolverRequired by PipeBridge.resolverRequired.collectAsState()
     val pipeHumanCheck by PipeBridge.humanCheck.collectAsState()
     val flixcloudResolverRequired by FlixcloudBridge.resolverRequired.collectAsState()
@@ -1159,7 +1170,7 @@ private fun MiruroRoot(
                             tvHomeRefresh = tvHomeRefresh,
                             tvDetailRefresh = tvDetailRefresh,
                             tabSwipe = tabSwipe,
-                            onMoodDiscovery = { randomVm.ensurePick(); showRandomPick = true },
+                            onMoodDiscovery = { HiddenSparks.hit("random", 5, "You don't trust destiny, do you?"); randomVm.ensurePick(); showRandomPick = true },
                             onArtworkUnderBarsChanged = { entryId, overArtwork ->
                                 artworkBarReport = entryId to overArtwork
                             },
@@ -1242,6 +1253,9 @@ private fun MiruroRoot(
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
+            if (!deviceProfile.isTv) {
+                com.anilili.ui.easteregg.HiddenSparkText(Modifier.align(Alignment.BottomCenter).padding(bottom = navBarInsetForChrome + (if (showPhoneCapsule) PhoneNavigationBarHeight + 12.dp else 20.dp)), enabled = !inPictureInPicture && !Routes.hostsPlayer(currentRoute) && !showRandomPick && !chromeTakeover.active)
+            }
             com.anilili.ui.journal.JournalOverlay(
                 visible = !deviceProfile.isTv && !inPictureInPicture && currentRoute != null &&
                     currentRoute != Routes.SETTINGS && currentRoute != Routes.DOWNLOAD &&
@@ -1255,7 +1269,7 @@ private fun MiruroRoot(
                 val randomState by randomVm.state.collectAsState()
                 RandomAnimeDialog(
                     state = randomState,
-                    onSkip = { randomVm.skipped() },
+                    onSkip = { if (!deviceProfile.isTv) HiddenSparks.hit("random", 5, "You don't trust destiny, do you?"); randomVm.skipped() },
                     onOpen = { id ->
                         showRandomPick = false
                         nav.navigate(Routes.detail(id)) { launchSingleTop = true }

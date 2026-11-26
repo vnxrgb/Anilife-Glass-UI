@@ -3,6 +3,7 @@ package com.anilili.ui.watch
 
 
 
+import com.anilili.ui.easteregg.HiddenSparks
 import com.anilili.data.model.hasUsableWindow
 import android.Manifest
 import android.app.Activity
@@ -584,7 +585,10 @@ fun WatchScreen(
                     onNext = vm::next,
                     onAutoAdvance = vm::autoAdvance,
                     onSkipFiller = vm::skipFiller,
-                    onChangeSource = vm::changeSource,
+                    onChangeSource = { provider, category ->
+                        if (!device.isTv) HiddenSparks.hit("server", 5, "Searching for the promised server.", daily = true)
+                        vm.changeSource(provider, category)
+                    },
                     onChangeCategory = vm::changeCategory,
                     onRequestAllSources = vm::validateRemainingSources,
                     onRetryMiruroSources = vm::retryMiruroServers,
