@@ -1,0 +1,28 @@
+name: Shorten release notes
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/shorten-release-notes.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  edit:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Edit release notes only
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view v2.0.3 --json body --jq .body > before.txt
+          python - <<'PY'
+          from pathlib import Path
+          s = Path('before.txt').read_text()
+          s = s.replace('AniLife: https://github.com/anilifecommunity/android-and-tv', 'Based on AniLife.')
+          s = s.replace('This app uses code from Morphe. To learn more, visit https://morphe.software', 'This app uses code from Morphe.')
+          Path('notes.txt').write_text(s)
+          PY
+          gh release edit v2.0.3 --notes-file notes.txt
