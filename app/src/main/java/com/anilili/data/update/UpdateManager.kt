@@ -400,7 +400,7 @@ object UpdateManager {
             )
         }
         dir.listFiles()?.forEach { it.delete() }
-        val file = File(dir, "Anilife-${info.version}.apk")
+        val file = File(dir, "AniLumos-${info.version}.apk")
         // No call timeout: the release APK takes longer than the API client's 45s cap on slow links.
         val client = AppGraph.httpClient.newBuilder()
             .cache(null)
