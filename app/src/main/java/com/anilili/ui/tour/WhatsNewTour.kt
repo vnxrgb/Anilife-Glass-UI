@@ -82,7 +82,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** The things on screen a tour step can point at. Each is tagged where it is drawn ([tourTarget]). */
-enum class TourTarget { FOR_YOU, BECAUSE, ROW_HANDLE, DICE, ARRANGE_SETTINGS, NAV_HOME, NAV_LIST, NAV_BROWSE, NAV_DOWNLOADS, NAV_PROFILE, JOURNAL_FLOATING, JOURNAL_LIBRARY }
+enum class TourTarget { FOR_YOU, BECAUSE, ROW_HANDLE, DICE, ARRANGE_SETTINGS, NAV_HOME, NAV_LIST, NAV_BROWSE, NAV_DOWNLOADS, NAV_PROFILE, JOURNAL_FLOATING, JOURNAL_LIBRARY, FRANCHISE_CARD, FRANCHISE_GUIDE }
 
 /**
  * One step: what it points at (null for a card on its own), what it says, and what it adds when
@@ -140,7 +140,8 @@ private fun mobileReleaseSteps() = listOf(
     TourStep(TourTarget.NAV_HOME, "Welcome to AniLumos", "The new optical glass navigation reflects the content behind it. Switch sections from here.", destination = "home"),
     TourStep(TourTarget.DICE, "Discover by mood", "Open Discover on Home and choose a mood, from Comfort to Suspense. Swipe for another matching anime.", destination = "home"),
     TourStep(TourTarget.NAV_BROWSE, "Explore anime", "Browse for a series. Anime details now borrow ambient colours from the artwork.", destination = "browse"),
-    TourStep(null, "Franchise Watch Order", "Open a series with related seasons or movies, then tap Franchise Watch Order on its details page or Related tab. Explore the recommended viewing order or timeline where available, track completed titles and choose what to watch next. Availability varies by franchise."),
+    TourStep(TourTarget.FRANCHISE_CARD, "Franchise Watch Order", "Let's explore Fate/stay night: Unlimited Blade Works. Open Franchise Watch Order from an anime's details or Related tab to see its seasons, movies and extras.", whenMissing = "The card appears when related titles are available. If the catalogue is offline, try again later.", destination = "franchise-card"),
+    TourStep(TourTarget.FRANCHISE_GUIDE, "Find your next chapter", "Switch between Timeline and Watch order, choose a curated viewing order when available, and track completed titles. The guide shows your next unfinished anime without changing your progress.", whenMissing = "Viewing orders depend on the catalogue and community sources. You can open the guide later from a related series.", destination = "franchise-guide"),
     TourStep(TourTarget.NAV_HOME, "Smart Resume", "Continue Watching takes you back to unfinished episodes.", destination = "home"),
     TourStep(TourTarget.NAV_LIST, "Your anime library", "Find collections and AniLumos Wrapped in your library.", destination = "more"),
     TourStep(null, "Personalized Calendar", "Choose Following only on the schedule to focus on releases from your list.", destination = "schedule"),
@@ -165,6 +166,9 @@ private fun mobileReleaseSteps() = listOf(
 object WhatsNewTour {
     /** Change this for the next release's tour; every install then shows it once more. */
     const val TOUR_ID = "anime-journal-mobile-2026-11-v1"
+    const val FRANCHISE_DEMO_ID = 19603
+    val franchiseCardDemo: Boolean get() = active && mobileReleaseSteps().getOrNull(step)?.target == TourTarget.FRANCHISE_CARD
+    val franchiseGuideDemo: Boolean get() = active && mobileReleaseSteps().getOrNull(step)?.target == TourTarget.FRANCHISE_GUIDE
     private const val TV_TOUR_ID = "optical-mobile-2026-11-v3"
     private const val SEEN_FILE = "whats-new-seen"
 

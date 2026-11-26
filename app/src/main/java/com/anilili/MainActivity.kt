@@ -1283,6 +1283,9 @@ private fun MiruroRoot(
                             randomVm.ensurePick()
                             showRandomPick = true
                         }
+                        "franchise-card", "franchise-guide" -> {
+                            nav.navigate(Routes.detail(com.anilili.ui.tour.WhatsNewTour.FRANCHISE_DEMO_ID)) { launchSingleTop = true }
+                        }
                         "browse" -> nav.navigateTab(Routes.SEARCH)
                         "more" -> nav.navigateTab(Routes.MORE)
                         "schedule" -> nav.navigateTab(Routes.SCHEDULE)
