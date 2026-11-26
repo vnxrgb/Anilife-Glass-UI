@@ -2614,6 +2614,13 @@ private fun RelatedRow(media: Media, onOpen: () -> Unit, onWatch: () -> Unit) {
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 )
             }
+            Box(Modifier.align(Alignment.Center).size(40.dp).clip(RoundedCornerShape(50))
+                .background(Color.Black.copy(alpha = .58f))
+                .border(.75.dp, Color.White.copy(alpha = .65f), RoundedCornerShape(50))
+                .clickable(onClickLabel = "Watch ${media.title.preferred}", onClick = onWatch),
+                contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+            }
         }
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
             Text(media.title.preferred, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -2623,11 +2630,6 @@ private fun RelatedRow(media: Media, onOpen: () -> Unit, onWatch: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
-        }
-        val controlFocus17 = rememberFocusFill()
-        IconButton(
-            colors = controlFocus17.iconButtonColors(IconButtonDefaults.iconButtonColors()),onClick = onWatch, modifier = Modifier.focusFill(controlFocus17, RoundedCornerShape(20.dp))) {
-            Icon(Icons.Default.PlayArrow, contentDescription = "Watch ${media.title.preferred}")
         }
     }
 }

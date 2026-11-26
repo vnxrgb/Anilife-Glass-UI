@@ -2318,6 +2318,11 @@ private fun AppNavHost(
                     },
                     onOpenAnime = { nav.navigate(Routes.detail(watchId)) },
                     onOpenRecommendation = { id -> nav.navigate(Routes.detail(id)) { popUpTo(Routes.WATCH) { inclusive = true } } },
+                    onPlayRecommendation = { id ->
+                        val saved = LibraryStore.historyFor(id)
+                        val route = resumeRoute(context, id, saved?.provider ?: "auto", saved?.category ?: if (SettingsStore.preferDub.value) "dub" else "sub", saved?.episodeLabel ?: "1")
+                        nav.navigate(route) { popUpTo(Routes.WATCH) { inclusive = true } }
+                    },
                     onOpenFranchise = { nav.navigate(Routes.franchise(watchId)) { popUpTo(Routes.WATCH) { inclusive = true } } },
                     onAfterglowHome = { nav.popBackStack(Routes.HOME, false); nav.navigateTab(Routes.HOME) },
                     autoAdvanced = args.getBoolean(Routes.Arg.AUTO_ADVANCED),

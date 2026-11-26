@@ -7,6 +7,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -40,6 +45,7 @@ internal fun AfterglowCompletionDialog(
     data: WatchData,
     onDismiss: () -> Unit,
     onOpenRecommendation: (Int) -> Unit,
+    onPlayRecommendation: (Int) -> Unit,
     onFranchise: () -> Unit,
     onHome: () -> Unit,
 ) {
@@ -78,7 +84,7 @@ internal fun AfterglowCompletionDialog(
             val availableHeight = maxHeight
             Column(Modifier.widthIn(max = if (landscape) 680.dp else 380.dp).fillMaxWidth()
                 .heightIn(max = availableHeight)
-                .clip(shape).background(colors.surface.copy(alpha = .94f))
+                .clip(shape).background(colors.surface)
                 .border(.75.dp, Brush.verticalGradient(listOf(colors.onSurface.copy(alpha = .22f), colors.onSurface.copy(alpha = .08f))), shape)
                 .padding(if (landscape) 12.dp else 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -91,12 +97,12 @@ internal fun AfterglowCompletionDialog(
                                 AfterglowActions(hasFranchise, { ratingExpanded = !ratingExpanded; editing = false }, { editing = !editing; ratingExpanded = false }, onFranchise)
                             }
                             Column(Modifier.weight(1.15f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                AfterglowRecommendations(data.seriesTitle, suggestions, loading, true, onOpenRecommendation)
+                                AfterglowRecommendations(data.seriesTitle, suggestions, loading, true, onOpenRecommendation, onPlayRecommendation)
                             }
                         }
                     } else {
                         AfterglowHeading(data.seriesTitle)
-                        AfterglowRecommendations(data.seriesTitle, suggestions, loading, false, onOpenRecommendation)
+                        AfterglowRecommendations(data.seriesTitle, suggestions, loading, false, onOpenRecommendation, onPlayRecommendation)
                         AfterglowActions(hasFranchise, { ratingExpanded = !ratingExpanded; editing = false }, { editing = !editing; ratingExpanded = false }, onFranchise)
                     }
                     if (ratingExpanded) {
@@ -120,7 +126,7 @@ internal fun AfterglowCompletionDialog(
                     if (noteStatus.isNotEmpty()) Text(noteStatus, style = MaterialTheme.typography.labelSmall)
                 }
                 // Always outside the scroll region, even with the keyboard or expanded journal.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.align(Alignment.CenterHorizontally).widthIn(max = if (landscape) 360.dp else 380.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = onHome, modifier = Modifier.weight(1f).heightIn(min = 44.dp), shape = RoundedCornerShape(50), contentPadding = PaddingValues(horizontal = 4.dp)) { Text("Return to Home", style = MaterialTheme.typography.labelMedium) }
                     OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f).heightIn(min = 44.dp), shape = RoundedCornerShape(50), contentPadding = PaddingValues(horizontal = 4.dp)) { Text("Stay here", style = MaterialTheme.typography.labelMedium) }
                 }
@@ -150,19 +156,31 @@ private fun AfterglowActions(hasFranchise: Boolean, onRate: () -> Unit, onNote: 
 }
 
 @Composable
-private fun AfterglowRecommendations(title: String, suggestions: List<Media>, loading: Boolean, landscape: Boolean, onOpen: (Int) -> Unit) {
+private fun AfterglowRecommendations(title: String, suggestions: List<Media>, loading: Boolean, landscape: Boolean, onOpen: (Int) -> Unit, onPlay: (Int) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Because you watched $title", style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (!loading && suggestions.isEmpty()) Text("Recommendations are unavailable right now.", style = MaterialTheme.typography.bodySmall)
         if (suggestions.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             suggestions.take(3).forEach { media ->
-                Column(Modifier.weight(1f).clip(MaterialTheme.shapes.small).clickable { onOpen(media.id) },
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    EpisodeArtwork(image = media.coverImage.best, blurred = false,
-                        modifier = Modifier.widthIn(max = if (landscape) 78.dp else 100.dp).fillMaxWidth().aspectRatio(.72f).clip(MaterialTheme.shapes.small))
-                    Text(media.title.preferred, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.labelSmall,
-                        maxLines = 2, minLines = 2, overflow = TextOverflow.Ellipsis)
+                Column(Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Box(Modifier.widthIn(max = if (landscape) 78.dp else 100.dp).fillMaxWidth().aspectRatio(.72f)
+                        .clip(MaterialTheme.shapes.small), contentAlignment = Alignment.Center) {
+                        EpisodeArtwork(image = media.coverImage.best, blurred = false, modifier = Modifier.fillMaxSize())
+                        Box(Modifier.size(44.dp).clip(CircleShape)
+                            .background(Color.Black.copy(alpha = .58f))
+                            .border(1.dp, Color.White.copy(alpha = .72f), CircleShape)
+                            .clickable(role = Role.Button, onClickLabel = "Play ${media.title.preferred}") { onPlay(media.id) },
+                            contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                        }
+                    }
+                    // Keep text outside the rounded poster clip; allow complete line metrics.
+                    Text(media.title.preferred,
+                        modifier = Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = "Details for ${media.title.preferred}") { onOpen(media.id) }.padding(vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center,
+                        maxLines = 3, overflow = TextOverflow.Ellipsis)
                 }
             }
         }

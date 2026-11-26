@@ -252,6 +252,7 @@ fun WatchScreen(
     /** Where an `anilili://watch/…?t=` link asked to start [episode]; null plays from the saved position. */
     startAtMs: Long? = null,
     onOpenRecommendation: (Int) -> Unit = {},
+    onPlayRecommendation: (Int) -> Unit = {},
     onOpenFranchise: () -> Unit = onOpenAnime,
     onAfterglowHome: () -> Unit = onBack,
     vm: WatchViewModel = viewModel(),
@@ -576,6 +577,7 @@ fun WatchScreen(
                     onBack = pauseAndBack,
                     onOpenAnime = onOpenAnime,
                     onOpenRecommendation = onOpenRecommendation,
+                    onPlayRecommendation = onPlayRecommendation,
                     onOpenFranchise = onOpenFranchise,
                     onAfterglowHome = onAfterglowHome,
                     onPrev = vm::prev,
@@ -693,6 +695,7 @@ private fun WatchContent(
     onPrev: () -> Unit,
     onNext: () -> Unit,
     onOpenRecommendation: (Int) -> Unit,
+    onPlayRecommendation: (Int) -> Unit,
     onOpenFranchise: () -> Unit,
     onAfterglowHome: () -> Unit,
     /** The player continuing on its own after the credits, as opposed to [onNext]'s press. */
@@ -732,6 +735,7 @@ private fun WatchContent(
     if (afterglowFinished && afterglowEnabled && !device.isTv && !afterglowPip && !data.canAdvance) {
         AfterglowCompletionDialog(data = data, onDismiss = { afterglowFinished = false },
             onOpenRecommendation = { afterglowFinished = false; onOpenRecommendation(it) },
+            onPlayRecommendation = { afterglowFinished = false; onPlayRecommendation(it) },
             onFranchise = { afterglowFinished = false; onOpenFranchise() },
             onHome = { afterglowFinished = false; onAfterglowHome() })
     }
