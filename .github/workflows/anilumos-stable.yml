@@ -50,10 +50,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'val appVersionCode = 18' app/build.gradle.kts
-          grep -Fq 'val appVersionName = "2.0.3"' app/build.gradle.kts
-          if gh release view "v2.0.3" >/dev/null 2>&1; then
-            echo "::error::Release v2.0.3 already exists; refusing overwrite."
+          grep -Fq 'val appVersionCode = 19' app/build.gradle.kts
+          grep -Fq 'val appVersionName = "2.1.0"' app/build.gradle.kts
+          if gh release view "v2.1.0" >/dev/null 2>&1; then
+            echo "::error::Release v2.1.0 already exists; refusing overwrite."
             exit 1
           fi
 
@@ -163,12 +163,12 @@ jobs:
           test "${fingerprint,,}" = "${ANDROID_SIGNING_CERT_SHA256,,}"
           package_line="$("$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$apk" | head -n 1)"
           [[ "$package_line" == *"name='com.anilumos.app'"* ]]
-          [[ "$package_line" == *"versionName='2.0.3'"* ]]
-          [[ "$package_line" == *"versionCode='18'"* ]]
+          [[ "$package_line" == *"versionName='2.1.0'"* ]]
+          [[ "$package_line" == *"versionCode='19'"* ]]
           cp "$apk" dist/Anilumos.apk
           printf '%s\n' "$fingerprint" > dist/SIGNING-CERTIFICATE-SHA256.txt
           (cd dist && sha256sum Anilumos.apk SIGNING-CERTIFICATE-SHA256.txt > SHA256SUMS)
-          printf '%s\n' "Anilumos 2.0.3 release: main commit $GITHUB_SHA" > dist/BUILD-REVISION.txt
+          printf '%s\n' "Anilumos 2.1.0 release: main commit $GITHUB_SHA" > dist/BUILD-REVISION.txt
 
       - name: Verify release checksum manifest
         shell: bash
@@ -181,18 +181,18 @@ jobs:
         run: |
           set -euo pipefail
           cat > release-notes.txt <<'EOF'
-          # AniLumos v2.0.3
+          # AniLumos v2.1.0 — Afterglow
 
-          - Added Anime Journal with image sharing.
-          - Added Franchise Watch Order.
-          - Added personalization options.
-          - Updated guided tour.
-          - UI improvements and bug fixes.
+          - Afterglow: a new anime completion experience with recommendations, quick ratings, journal access and franchise navigation.
+          - Redesigned Up Next countdown with smoother transitions.
+          - Start recommended anime directly from their posters.
+          - Smarter caching and batched AniList requests.
+          - Improved tablet and landscape layouts, system bars and interface polish.
 
           Based on [AniLife](https://github.com/anilifecommunity/android-and-tv).
           This app uses code from [Morphe](https://morphe.software).
           See LICENSE and notices for applicable terms.
           EOF
-          gh release create "v2.0.3" dist/Anilumos.apk \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "AniLumos v2.0.3" --notes-file release-notes.txt --latest
-          echo "Stable APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v2.0.3/Anilumos.apk" >> "$GITHUB_STEP_SUMMARY"
+          gh release create "v2.1.0" dist/Anilumos.apk \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "AniLumos v2.1.0 — Afterglow" --notes-file release-notes.txt --latest
+          echo "Stable APK: https://github.com/$GITHUB_REPOSITORY/releases/download/v2.1.0/Anilumos.apk" >> "$GITHUB_STEP_SUMMARY"
