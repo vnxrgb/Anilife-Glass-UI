@@ -189,15 +189,6 @@ fun SearchScreen(
     initialGenre: String? = null,
     initialQuery: String? = null,
 ) {
-    val voiceContext = LocalContext.current
-    val voiceLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.takeIf { it.isNotBlank() }?.let {
-                vm.onQueryChange(it)
-                vm.commitTypedQuery()
-            }
-        }
-    }
     val state by vm.state.collectAsState()
     val isRefreshing by vm.isRefreshing.collectAsState()
     val isLoadingMore by vm.isLoadingMore.collectAsState()
@@ -487,6 +478,15 @@ private fun SearchTopBar(
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val filterFocusRequester = remember { FocusRequester() }
+    val voiceContext = LocalContext.current
+    val voiceLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.takeIf { it.isNotBlank() }?.let {
+                vm.onQueryChange(it)
+                vm.commitTypedQuery()
+            }
+        }
+    }
     Surface(
         color = if (translucent) Color.Transparent else canvasColor(),
         contentColor = MaterialTheme.colorScheme.onBackground,
