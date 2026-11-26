@@ -12,6 +12,14 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
@@ -171,37 +179,18 @@ internal fun NextEpisodeCard(
         exit = fadeOut() + slideOutVertically { it / 2 },
         modifier = modifier,
     ) {
+        if (afterglow) {
+            AfterglowUpNext(artworkUrl, seriesTitle, nextEpisodeLabel, secondsRemaining, onPlayNow, onCancel)
+        } else {
         Column(
             modifier = Modifier
                 .widthIn(max = 340.dp)
-                .then(if (afterglow) {
-                    Modifier.playerLiquidGlass(RoundedCornerShape(22.dp), PlayerLiquidGlassTone.PRIMARY)
-                        .background(Color.Black.copy(alpha = 0.60f))
-                } else {
-                    Modifier.clip(RoundedCornerShape(16.dp))
-                        .background(Color.Black.copy(alpha = 0.86f))
-                        .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(16.dp))
-                })
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.Black.copy(alpha = 0.86f))
+                .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(16.dp))
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            if (afterglow) {
-                Text(
-                    text = "AFTERGLOW",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White.copy(alpha = 0.68f),
-                )
-                if (!artworkUrl.isNullOrBlank()) {
-                    val blurEpisodeImages by SettingsStore.blurEpisodeImages.collectAsState()
-                    Box(Modifier.fillMaxWidth().height(76.dp).clip(RoundedCornerShape(12.dp))) {
-                        EpisodeArtwork(image = artworkUrl, blurred = blurEpisodeImages, compact = true, modifier = Modifier.fillMaxSize())
-                    }
-                }
-                if (seriesTitle.isNotBlank()) {
-                    Text(seriesTitle, style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.78f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
             Text(
                 text = "Up next",
                 style = MaterialTheme.typography.labelMedium,
@@ -238,14 +227,10 @@ internal fun NextEpisodeCard(
                     onClick = onPlayNow,
                     modifier = playNowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
                 )
-                NextEpisodeAction(text = if (afterglow) "Stay here" else "Stay", filled = false, onClick = onCancel)
+                NextEpisodeAction(text = "Stay", filled = false, onClick = onCancel)
             }
-            if (afterglow) {
-                val fraction = (secondsRemaining.toFloat() / NEXT_EPISODE_COUNTDOWN_SECONDS).coerceIn(0f, 1f)
-                Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.16f))) {
-                    Box(Modifier.fillMaxWidth(fraction).height(3.dp).background(Color.White.copy(alpha = 0.85f)))
-                }
-            }
+
+        }
         }
     }
 }
@@ -285,4 +270,52 @@ private fun NextEpisodeAction(
             .padding(horizontal = 14.dp, vertical = 9.dp)
             .semantics { contentDescription = text },
     )
+}
+
+
+/** Compact mobile-only card. Use the resolved app surface rather than a hard-coded dark tint. */
+@Composable
+private fun AfterglowUpNext(
+    artworkUrl: String?, seriesTitle: String, label: String, seconds: Int,
+    onPlay: () -> Unit, onStay: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    val shape = MaterialTheme.shapes.large
+    val blur by SettingsStore.blurEpisodeImages.collectAsState()
+    val panel = if (colors.background == Color.Black) Color.Black else colors.surface
+    Column(
+        Modifier.widthIn(max = 264.dp).clip(shape)
+            .background(panel.copy(alpha = if (panel == Color.Black) 1f else .96f))
+            .border(.5.dp, colors.onSurface.copy(alpha = .20f), shape)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (!artworkUrl.isNullOrBlank()) {
+                EpisodeArtwork(image = artworkUrl, blurred = blur, compact = true,
+                    modifier = Modifier.size(80.dp, 48.dp).clip(MaterialTheme.shapes.small))
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Up next", style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                Text(label, style = MaterialTheme.typography.titleSmall, color = colors.onSurface,
+                    fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (seriesTitle.isNotBlank()) Text(seriesTitle, style = MaterialTheme.typography.labelSmall,
+                    color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onPlay, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                shape = RoundedCornerShape(50), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                Text(if (seconds > 0) "Play now · ${seconds}s" else "Play now", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+            }
+            OutlinedButton(onClick = onStay, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                shape = RoundedCornerShape(50), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                Text("Stay here", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+            }
+        }
+        Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(50)).background(colors.onSurface.copy(alpha = .12f))) {
+            Box(Modifier.fillMaxWidth((seconds.toFloat() / NEXT_EPISODE_COUNTDOWN_SECONDS).coerceIn(0f, 1f))
+                .height(3.dp).background(colors.primary))
+        }
+    }
 }

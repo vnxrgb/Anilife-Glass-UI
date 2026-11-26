@@ -1,6 +1,8 @@
 package com.anilili.ui.watch
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +42,7 @@ internal fun AfterglowCompletionDialog(
         mutableStateOf(JournalStore.episodeNote(data.anilistId, data.current.number.toString()))
     }
     var editing by remember { mutableStateOf(false) }
+    var ratingExpanded by remember { mutableStateOf(false) }
     var noteStatus by remember { mutableStateOf("") }
     var rating by remember(data.anilistId) { mutableStateOf(JournalStore.find(data.anilistId, "")?.rating ?: 0) }
     LaunchedEffect(data.anilistId) {
@@ -49,32 +52,43 @@ internal fun AfterglowCompletionDialog(
         loading = false
     }
     Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface) {
+        val colors = MaterialTheme.colorScheme
+        val shape = MaterialTheme.shapes.extraLarge
+        Surface(modifier = Modifier.widthIn(max = 400.dp).border(.5.dp, colors.onSurface.copy(alpha = .16f), shape), shape = shape, color = colors.surface) {
             Column(Modifier.fillMaxWidth().heightIn(max = 520.dp)
-                .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = .13f), Color.Transparent)))
-                .verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                .background(if (colors.background == Color.Black) Color.Black else colors.surface)
+                .verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("AFTERGLOW", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                Text("Every story leaves a glow.", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Every story leaves a glow.", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(data.seriesTitle, style = MaterialTheme.typography.bodyMedium)
                 Text("You've reached the end. What will you watch next?", style = MaterialTheme.typography.bodySmall)
                 if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (suggestions.isNotEmpty()) Text("Because you watched", style = MaterialTheme.typography.titleSmall)
-                suggestions.forEach { media ->
-                    TextButton(onClick = { onOpenRecommendation(media.id) }, modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            EpisodeArtwork(image = media.coverImage.best, blurred = false, modifier = Modifier.size(48.dp, 64.dp).clip(RoundedCornerShape(8.dp)))
-                            Text(media.title.preferred, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (suggestions.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    suggestions.take(3).forEach { media ->
+                        Column(Modifier.weight(1f).clip(MaterialTheme.shapes.small)
+                            .clickable { onOpenRecommendation(media.id) }.padding(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            EpisodeArtwork(image = media.coverImage.best, blurred = false,
+                                modifier = Modifier.fillMaxWidth().aspectRatio(.72f).clip(MaterialTheme.shapes.small))
+                            Text(media.title.preferred, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
                 if (!loading && suggestions.isEmpty()) Text("Recommendations are unavailable right now.", style = MaterialTheme.typography.bodySmall)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { ratingExpanded = !ratingExpanded }, modifier = Modifier.weight(1f).heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 4.dp)) { Text("Rate anime", style = MaterialTheme.typography.labelMedium) }
+                    OutlinedButton(onClick = { editing = !editing }, modifier = Modifier.weight(1f).heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 4.dp)) { Text("Journal note", style = MaterialTheme.typography.labelMedium) }
+                }
+                if (ratingExpanded) {
                 Text(if (rating == 0) "Rate this anime (optional)" else "Your rating: $rating/10", style = MaterialTheme.typography.labelMedium)
                 Slider(value = rating.toFloat(), onValueChange = { rating = it.toInt() }, valueRange = 0f..10f, steps = 9)
                 TextButton(onClick = {
                     val entry = JournalStore.find(data.anilistId, "") ?: com.anilili.data.journal.JournalEntry(animeId = data.anilistId, animeTitle = data.seriesTitle, artwork = data.artworkUrl)
                     noteStatus = if (JournalStore.save(entry.copy(rating = rating, updatedAt = System.currentTimeMillis()))) "Rating saved to Anime Journal" else "Could not save rating"
                 }) { Text("Save rating") }
-                OutlinedButton(onClick = onFranchise, modifier = Modifier.fillMaxWidth()) { Text("Franchise watch order") }
+                }
+                OutlinedButton(onClick = onFranchise, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Franchise watch order") }
                 if (editing) {
                     OutlinedTextField(value = note, onValueChange = { note = it.take(2000) }, label = { Text("My episode notes") }, modifier = Modifier.fillMaxWidth())
                     TextButton(onClick = {
@@ -82,10 +96,12 @@ internal fun AfterglowCompletionDialog(
                         noteStatus = if (saved) "Saved to Anime Journal" else "Could not save note"
                         if (saved) editing = false
                     }) { Text("Save note") }
-                } else TextButton(onClick = { editing = true }) { Text("Add a journal note") }
+                }
                 if (noteStatus.isNotEmpty()) Text(noteStatus, style = MaterialTheme.typography.labelSmall)
-                Button(onClick = onHome, modifier = Modifier.fillMaxWidth()) { Text("Return to Home") }
-                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Stay here") }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onHome, modifier = Modifier.weight(1f).heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 4.dp)) { Text("Return to Home", style = MaterialTheme.typography.labelMedium) }
+                    OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f).heightIn(min = 48.dp), contentPadding = PaddingValues(horizontal = 4.dp)) { Text("Stay here", style = MaterialTheme.typography.labelMedium) }
+                }
             }
         }
     }
