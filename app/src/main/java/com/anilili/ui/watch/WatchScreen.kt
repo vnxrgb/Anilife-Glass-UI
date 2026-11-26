@@ -294,7 +294,7 @@ fun WatchScreen(
     val journalData = (state as? UiState.Success)?.data
     androidx.compose.runtime.SideEffect {
         journalReporter(com.anilili.ui.journal.JournalContext(animeId, journalData?.seriesTitle.orEmpty(),
-            journalData?.current?.number ?: episode, fullscreen))
+            journalData?.current?.number?.toString() ?: episode, fullscreen))
     }
     val currentFullscreen by rememberUpdatedState(fullscreen)
     val currentOnOpenNextSeason by rememberUpdatedState(onOpenNextSeason)
@@ -2425,7 +2425,7 @@ private fun MobileWatchDetails(
     }
     val journalEntries by com.anilili.data.journal.JournalStore.entries.collectAsState()
     val savedEpisodeNote = remember(noteKey, journalEntries) {
-        com.anilili.data.journal.JournalStore.episodeNote(data.anilistId, data.current.number)
+        com.anilili.data.journal.JournalStore.episodeNote(data.anilistId, data.current.number.toString())
     }
     var editingEpisodeNote by remember(noteKey) { mutableStateOf(false) }
     var noteDraft by remember(noteKey) { mutableStateOf(savedEpisodeNote) }
@@ -2454,7 +2454,7 @@ private fun MobileWatchDetails(
             confirmButton = {
                 TextButton(onClick = {
                     val value = noteDraft.trim()
-                    if (com.anilili.data.journal.JournalStore.saveEpisodeNote(data.anilistId, data.seriesTitle, data.current.number, value)) {
+                    if (com.anilili.data.journal.JournalStore.saveEpisodeNote(data.anilistId, data.seriesTitle, data.current.number.toString(), value)) {
                         editingEpisodeNote = false
                     }
                 }) { Text("Save note") }
