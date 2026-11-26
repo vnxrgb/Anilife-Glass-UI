@@ -25,12 +25,36 @@ internal fun FormattedNoteEditor(value: String, onChange: (String) -> Unit, modi
         onChange(next)
     }
     Column(Modifier.fillMaxWidth()) {
-        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            TextButton(onClick = { format("**", "**") }) { Text("B", fontWeight = FontWeight.Bold) }
-            TextButton(onClick = { format("*", "*") }) { Text("I", fontStyle = FontStyle.Italic) }
-            TextButton(onClick = { format("\n# ") }) { Text("H") }
-            TextButton(onClick = { format("\n- ") }) { Text("•") }
-            TextButton(onClick = { preview = !preview }) { Text(if (preview) "Edit" else "Preview") }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            @Composable
+            fun Tool(label: String, selected: Boolean = false, weight: Float = 1f, action: () -> Unit) {
+                Surface(
+                    modifier = Modifier.weight(weight),
+                    shape = MaterialTheme.shapes.medium,
+                    color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                ) {
+                    TextButton(
+                        onClick = action,
+                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            label,
+                            maxLines = 1,
+                            softWrap = false,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            Tool("B") { format("**", "**") }
+            Tool("I") { format("*", "*") }
+            Tool("H") { format("\n# ") }
+            Tool("•") { format("\n- ") }
+            Tool(if (preview) "Edit" else "Preview", selected = preview, weight = 1.7f) { preview = !preview }
         }
         if (preview) {
             Text(buildAnnotatedString {
