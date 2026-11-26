@@ -140,6 +140,7 @@ private fun mobileReleaseSteps() = listOf(
     TourStep(TourTarget.NAV_HOME, "Welcome to AniLumos", "The new optical glass navigation reflects the content behind it. Switch sections from here.", destination = "home"),
     TourStep(TourTarget.DICE, "Discover by mood", "Open Discover on Home and choose a mood, from Comfort to Suspense. Swipe for another matching anime.", destination = "home"),
     TourStep(TourTarget.NAV_BROWSE, "Explore anime", "Browse for a series. Anime details now borrow ambient colours from the artwork.", destination = "browse"),
+    TourStep(null, "Franchise Watch Order", "Open a series with related seasons or movies, then tap Franchise Watch Order on its details page or Related tab. Explore the recommended viewing order or timeline where available, track completed titles and choose what to watch next. Availability varies by franchise."),
     TourStep(TourTarget.NAV_HOME, "Smart Resume", "Continue Watching takes you back to unfinished episodes.", destination = "home"),
     TourStep(TourTarget.NAV_LIST, "Your anime library", "Find collections and AniLumos Wrapped in your library.", destination = "more"),
     TourStep(null, "Personalized Calendar", "Choose Following only on the schedule to focus on releases from your list.", destination = "schedule"),
