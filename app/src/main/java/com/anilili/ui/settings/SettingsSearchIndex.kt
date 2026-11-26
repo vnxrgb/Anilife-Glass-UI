@@ -204,7 +204,7 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
                 add("Group journal by anime" to listOf("journal", "group", "entries"))
                 add("Include name when sharing" to listOf("privacy", "share", "wrapped", "journal"))
                 add("Reset journal button position" to listOf("journal", "drag", "position", "reset"))
-                add("Restore journal button" to listOf("journal", "minimized", "restore"))
+                add("Journal button style" to listOf("journal", "minimized", "restore", "floating", "handle"))
             }
             add(
                 (if (isTv) "Keep the bars on screen" else "Keep the header on screen") to listOf(
