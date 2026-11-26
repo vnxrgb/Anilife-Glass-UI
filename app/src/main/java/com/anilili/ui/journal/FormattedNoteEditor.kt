@@ -30,7 +30,7 @@ internal fun FormattedNoteEditor(value: String, onChange: (String) -> Unit, modi
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             @Composable
-            fun Tool(label: String, selected: Boolean = false, weight: Float = 1f, action: () -> Unit) {
+            fun RowScope.Tool(label: String, selected: Boolean = false, weight: Float = 1f, action: () -> Unit) {
                 Surface(
                     modifier = Modifier.weight(weight),
                     shape = MaterialTheme.shapes.medium,
