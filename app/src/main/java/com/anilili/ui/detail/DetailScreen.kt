@@ -264,7 +264,7 @@ fun DetailScreen(
 ) {
     val state by vm.state.collectAsState()
     val journalReporter = com.anilili.ui.journal.LocalJournalReport.current
-    SideEffect { journalReporter(com.anilili.ui.journal.JournalContext(animeId, (state as? UiState.Success)?.data?.info?.title?.preferred.orEmpty())) }
+    SideEffect { journalReporter(com.anilili.ui.journal.JournalContext(animeId, (state as? UiState.Success)?.data?.info?.title?.preferred.orEmpty(), artwork = (state as? UiState.Success)?.data?.info?.coverImage?.best)) }
     // The page's own colour, not the selected season's: switching seasons re-draws the hero, and
     // re-colouring every control under the cursor with it would read as the page flickering.
     ShowColourTheme((state as? UiState.Success)?.data?.info?.coverImage?.color) {

@@ -294,7 +294,7 @@ fun WatchScreen(
     val journalData = (state as? UiState.Success)?.data
     androidx.compose.runtime.SideEffect {
         journalReporter(com.anilili.ui.journal.JournalContext(animeId, journalData?.seriesTitle.orEmpty(),
-            journalData?.current?.number?.toString() ?: episode, fullscreen))
+            journalData?.current?.number?.toString() ?: episode, fullscreen, journalData?.artworkUrl))
     }
     val currentFullscreen by rememberUpdatedState(fullscreen)
     val currentOnOpenNextSeason by rememberUpdatedState(onOpenNextSeason)

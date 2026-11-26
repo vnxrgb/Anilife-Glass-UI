@@ -5,4 +5,5 @@
     <files-path name="download-subtitles" path="episode-download-subtitles/" />
     <cache-path name="imported-subtitles" path="external-subtitles/" />
     <cache-path name="wrapped" path="wrapped/" />
+    <cache-path name="journal" path="journal/" />
 </paths>

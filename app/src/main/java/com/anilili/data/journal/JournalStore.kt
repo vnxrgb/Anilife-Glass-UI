@@ -19,16 +19,21 @@ data class JournalEntry(
     val rating: Int = 0,
     val favoriteMoment: String = "",
     val updatedAt: Long = 0,
+    val artwork: String? = null,
 ) {
     fun hasContent() = notes.isNotBlank() || review.isNotBlank() || rating > 0 || favoriteMoment.isNotBlank()
     fun asText(): String = buildString {
         appendLine(animeTitle.ifBlank { "Personal journal" })
-        if (episode.isNotBlank()) appendLine("Episode: $episode")
+        if (episode.isNotBlank()) appendLine("Episode: ${journalEpisodeLabel(episode)}")
         if (rating > 0) appendLine("Rating: $rating/10")
         if (notes.isNotBlank()) appendLine("\nNotes\n$notes")
         if (review.isNotBlank()) appendLine("\nReview\n$review")
         if (favoriteMoment.isNotBlank()) appendLine("\nFavorite moments\n$favoriteMoment")
     }
+}
+
+fun journalEpisodeLabel(value: String): String = value.trim().let { raw ->
+    raw.toDoubleOrNull()?.takeIf { it.isFinite() && it % 1.0 == 0.0 }?.let { it.toLong().toString() } ?: raw
 }
 
 object JournalStore {
@@ -58,7 +63,7 @@ object JournalStore {
         _entries.value = next
         return true
     }
-    fun find(animeId: Int?, episode: String): JournalEntry? = entries.value.firstOrNull { it.animeId == animeId && it.episode == episode }
+    fun find(animeId: Int?, episode: String): JournalEntry? = entries.value.firstOrNull { it.animeId == animeId && journalEpisodeLabel(it.episode) == journalEpisodeLabel(episode) }
     fun episodeNote(animeId: Int, episode: String): String = find(animeId, episode)?.notes
         ?: context.getSharedPreferences("anilumos_episode_notes", Context.MODE_PRIVATE).getString("$animeId:$episode", "").orEmpty()
     fun saveEpisodeNote(animeId: Int, title: String, episode: String, notes: String): Boolean {
