@@ -830,6 +830,15 @@ private fun MiruroRoot(
     onArtworkStatusBarChanged: (Boolean, Boolean) -> Unit,
 ) {
     val deviceProfile = rememberAppDeviceProfile()
+    val modeContext = LocalContext.current
+    val modeProfile by com.anilili.data.profiles.Profiles.activeId.collectAsState()
+    val modePrefs = remember(modeContext, modeProfile) {
+        modeContext.getSharedPreferences("content_mode_" + (modeProfile ?: "default"), android.content.Context.MODE_PRIVATE)
+    }
+    var savedContentMode by remember(modePrefs) {
+        mutableStateOf(if (modePrefs.getString("mode", "ANIME") == "MANGA") com.anilili.manga.ContentMode.MANGA else com.anilili.manga.ContentMode.ANIME)
+    }
+    val contentMode = if (deviceProfile.isTv) com.anilili.manga.ContentMode.ANIME else savedContentMode
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = Routes.tabRoute(backStack?.destination?.route)
@@ -837,7 +846,7 @@ private fun MiruroRoot(
     // A screen exiting through an animation must not override the screen coming in.
     var artworkBarReport by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     val browsingBars = !deviceProfile.isTv && !inPictureInPicture &&
-        (currentRoute == Routes.HOME || currentRoute == Routes.DETAIL)
+        ((currentRoute == Routes.HOME && contentMode == com.anilili.manga.ContentMode.ANIME) || currentRoute == Routes.DETAIL)
     SideEffect {
         // Default to white during the transition into an artwork route. The visible entry
         // then reports whether its artwork has actually scrolled clear.
@@ -1053,6 +1062,16 @@ private fun MiruroRoot(
     val chromeTakeover = remember { AppChromeTakeover() }
     val opticalBackdrop = rememberLayerBackdrop()
     CompositionLocalProvider(
+        com.anilili.manga.LocalContentMode provides contentMode,
+        com.anilili.manga.LocalSelectContentMode provides { mode ->
+            if (!deviceProfile.isTv && mode != savedContentMode) {
+                savedContentMode = mode
+                modePrefs.edit().putString("mode", mode.name).apply()
+                chromeVisible = true
+                dockCollapsed = false
+                nav.navigateTab(Routes.HOME)
+            }
+        },
         LocalAppChromeTakeover provides chromeTakeover,
         com.anilili.ui.journal.LocalOpenJournal provides { journalOpenRequest++ },
         com.anilili.ui.journal.LocalJournalReport provides { report -> journalReport = journalEntryId to report },
@@ -1308,7 +1327,7 @@ private fun MiruroRoot(
             // Over the app and its bars, the dice included, since it points at them; under the
             // profile screens, which it waits for anyway.
             // Last, so the first-run setup and the profile switcher draw over everything else.
-            if (currentRoute == Routes.HOME && !inPictureInPicture && !showRandomPick && !chromeTakeover.active) {
+            if (currentRoute == Routes.HOME && contentMode == com.anilili.manga.ContentMode.ANIME && !inPictureInPicture && !showRandomPick && !chromeTakeover.active) {
                 com.anilili.ui.tour.StartWhatsNewTourWhenSettled()
             }
             if (!inPictureInPicture) {
@@ -2098,7 +2117,9 @@ private fun AppNavHost(
     ) {
             composable(Routes.HOME) { entry ->
                 LaunchedEffect(Unit) { DiagnosticsLog.event("Route HOME content entered") }
-                HomeScreen(
+                if (com.anilili.manga.LocalContentMode.current == com.anilili.manga.ContentMode.MANGA) {
+                    com.anilili.manga.MangaScreen(onBack = { nav.popBackStack() }, section = com.anilili.manga.MangaSection.HOME)
+                } else HomeScreen(
                     onAnimeClick = { id -> nav.navigate(Routes.detail(id)) },
                     onWatchNow = { id ->
                         val saved = com.anilili.data.library.LibraryStore.historyFor(id)
@@ -2115,16 +2136,12 @@ private fun AppNavHost(
                     },
                     onNotificationsClick = { nav.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
                     onMoodDiscovery = onMoodDiscovery,
-                    onReadClick = { nav.navigate("manga_read") { launchSingleTop = true } },
                     onHeroUnderBarsChanged = { overArtwork ->
                         if (nav.currentBackStackEntry?.id == entry.id) onArtworkUnderBarsChanged(entry.id, overArtwork)
                     },
                     tvPrimaryFocusTarget = tvHomePrimaryFocusTarget,
                     tvRefreshRequest = tvHomeRefresh,
                 )
-            }
-            composable("manga_read") {
-                com.anilili.manga.MangaScreen(onBack = { nav.popBackStack() })
             }
             composable(Routes.NOTIFICATIONS) {
                 LaunchedEffect(Unit) { DiagnosticsLog.event("Route NOTIFICATIONS content entered") }
@@ -2158,7 +2175,9 @@ private fun AppNavHost(
                 ),
             ) { entry ->
                 LaunchedEffect(Unit) { DiagnosticsLog.event("Route SEARCH content entered") }
-                TvTopNavigationInset {
+                if (com.anilili.manga.LocalContentMode.current == com.anilili.manga.ContentMode.MANGA) {
+                    com.anilili.manga.MangaScreen(onBack = { nav.popBackStack() }, section = com.anilili.manga.MangaSection.BROWSE)
+                } else TvTopNavigationInset {
                     SearchScreen(
                         onAnimeClick = { id -> nav.navigate(Routes.detail(id)) },
                         tvFieldFocusTarget = tvSearchFieldFocusTarget,
@@ -2177,7 +2196,9 @@ private fun AppNavHost(
             }
             composable(Routes.MORE) {
                 LaunchedEffect(Unit) { DiagnosticsLog.event("Route MORE content entered") }
-                TvTopNavigationInset {
+                if (com.anilili.manga.LocalContentMode.current == com.anilili.manga.ContentMode.MANGA) {
+                    com.anilili.manga.MangaScreen(onBack = { nav.popBackStack() }, section = com.anilili.manga.MangaSection.LIBRARY)
+                } else TvTopNavigationInset {
                     ProfileScreen(
                         onAnimeClick = { id -> nav.navigate(Routes.detail(id)) },
                         onResume = { e ->
@@ -2192,7 +2213,9 @@ private fun AppNavHost(
             }
             composable(Routes.DOWNLOADS) {
                 LaunchedEffect(Unit) { DiagnosticsLog.event("Route DOWNLOADS content entered") }
-                TvTopNavigationInset {
+                if (com.anilili.manga.LocalContentMode.current == com.anilili.manga.ContentMode.MANGA) {
+                    com.anilili.manga.MangaScreen(onBack = { nav.popBackStack() }, section = com.anilili.manga.MangaSection.DOWNLOADS)
+                } else TvTopNavigationInset {
                     DownloadsScreen(
                         onPlayDownload = { downloadId -> nav.navigate(Routes.download(downloadId)) },
                     )
