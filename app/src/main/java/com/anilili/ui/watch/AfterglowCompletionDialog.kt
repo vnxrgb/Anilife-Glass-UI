@@ -25,6 +25,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
+import android.os.Build
+import com.anilili.ui.dialogs.CoverScreenWithDialogWindow
 import android.content.res.Configuration
 import com.anilili.data.AppGraph
 import com.anilili.data.settings.SettingsStore
@@ -77,10 +82,12 @@ internal fun AfterglowCompletionDialog(
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) { false }
     }
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        CoverScreenWithDialogWindow()
+        AfterglowTransparentBars()
         val colors = MaterialTheme.colorScheme
         val shape = MaterialTheme.shapes.large
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
+        BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 16.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
             val availableHeight = maxHeight
             Column(Modifier.widthIn(max = if (landscape) 680.dp else 380.dp).fillMaxWidth()
                 .heightIn(max = availableHeight)
@@ -182,6 +189,28 @@ private fun AfterglowRecommendations(title: String, suggestions: List<Media>, lo
                         style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center,
                         maxLines = 3, overflow = TextOverflow.Ellipsis)
                 }
+            }
+        }
+    }
+}
+
+
+/** Dialogs own a separate Android window; the activity's transparent bars do not carry over. */
+@Suppress("DEPRECATION")
+@Composable
+private fun AfterglowTransparentBars() {
+    val window = (LocalView.current.parent as? DialogWindowProvider)?.window
+    SideEffect {
+        if (window != null) {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                window.navigationBarDividerColor = android.graphics.Color.TRANSPARENT
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isStatusBarContrastEnforced = false
+                window.isNavigationBarContrastEnforced = false
             }
         }
     }
