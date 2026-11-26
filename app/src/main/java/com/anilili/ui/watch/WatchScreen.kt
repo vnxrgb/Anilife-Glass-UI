@@ -251,6 +251,9 @@ fun WatchScreen(
     onOpenNextSeason: (NextSeasonRequest, Boolean) -> Unit = { _, _ -> },
     /** Where an `anilili://watch/…?t=` link asked to start [episode]; null plays from the saved position. */
     startAtMs: Long? = null,
+    onOpenRecommendation: (Int) -> Unit = {},
+    onOpenFranchise: () -> Unit = onOpenAnime,
+    onAfterglowHome: () -> Unit = onBack,
     vm: WatchViewModel = viewModel(),
 ) {
     // An Episodes route is a browser, not a playback request. It opts in only after a row is
@@ -572,6 +575,9 @@ fun WatchScreen(
                     },
                     onBack = pauseAndBack,
                     onOpenAnime = onOpenAnime,
+                    onOpenRecommendation = onOpenRecommendation,
+                    onOpenFranchise = onOpenFranchise,
+                    onAfterglowHome = onAfterglowHome,
                     onPrev = vm::prev,
                     onNext = vm::next,
                     onAutoAdvance = vm::autoAdvance,
@@ -686,6 +692,9 @@ private fun WatchContent(
     onOpenAnime: () -> Unit,
     onPrev: () -> Unit,
     onNext: () -> Unit,
+    onOpenRecommendation: (Int) -> Unit,
+    onOpenFranchise: () -> Unit,
+    onAfterglowHome: () -> Unit,
     /** The player continuing on its own after the credits, as opposed to [onNext]'s press. */
     onAutoAdvance: () -> Unit,
     /** The FILLER tag's press: on past this filler episode to the next one that is not. */
@@ -717,6 +726,15 @@ private fun WatchContent(
     val context = LocalContext.current
     val device = LocalAppDeviceProfile.current
     val isMovie = isMovieFormat(data.seriesFormat)
+    val afterglowEnabled by SettingsStore.afterglow.collectAsState()
+    val afterglowPip = LocalPlayerInPictureInPicture.current
+    var afterglowFinished by remember(data.anilistId, data.currentIndex, data.chosenStream?.url) { mutableStateOf(false) }
+    if (afterglowFinished && afterglowEnabled && !device.isTv && !afterglowPip && !data.canAdvance) {
+        AfterglowCompletionDialog(data = data, onDismiss = { afterglowFinished = false },
+            onOpenRecommendation = { afterglowFinished = false; onOpenRecommendation(it) },
+            onFranchise = { afterglowFinished = false; onOpenFranchise() },
+            onHome = { afterglowFinished = false; onAfterglowHome() })
+    }
     // Keep ambient colours local to each episode and stream, never behind the entire page.
     var ambientPalette by remember(data.anilistId, data.currentIndex, data.chosenStream?.url) {
         mutableStateOf(VideoAmbientPalette.Empty)
@@ -1457,10 +1475,12 @@ private fun WatchContent(
                         episode = data.current.displayNumber,
                         autoAdvanced = data.autoAdvanced,
                         onEnded = {
-                            if (!SleepTimer.consumeEpisodeEnd() &&
-                                com.anilili.data.settings.SettingsStore.autoplay.value
-                            ) {
-                                onAutoAdvance()
+                            if (!SleepTimer.consumeEpisodeEnd()) {
+                                if (data.canAdvance && SettingsStore.autoplay.value) onAutoAdvance()
+                                else if (!data.canAdvance && !device.isTv && afterglowEnabled && !afterglowPip &&
+                                    afterglowSeriesComplete(data.declaredSeriesStatus, data.declaredEpisodeCount, data.current.number.toDouble(), isMovie)) {
+                                    afterglowFinished = true
+                                }
                             }
                         },
                         onNextEpisode = onNext,

@@ -264,6 +264,7 @@ fun DetailScreen(
     /** The television's reload, raised by a hold on the lit tab in the navigation bar above. */
     tvRefreshRequest: TvRefreshRequest? = null,
     onHeroUnderBarsChanged: (Boolean) -> Unit = {},
+    openFranchiseInitially: Boolean = false,
     vm: DetailViewModel = viewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -283,6 +284,7 @@ fun DetailScreen(
             tvRefreshRequest = tvRefreshRequest,
             onHeroUnderBarsChanged = onHeroUnderBarsChanged,
             vm = vm,
+            openFranchiseInitially = openFranchiseInitially,
         )
     }
 }
@@ -300,6 +302,7 @@ private fun DetailScreenBody(
     tvRefreshRequest: TvRefreshRequest?,
     onHeroUnderBarsChanged: (Boolean) -> Unit,
     vm: DetailViewModel,
+    openFranchiseInitially: Boolean,
 ) {
     LaunchedEffect(animeId) { vm.load(animeId) }
     OnTvRefreshRequest(tvRefreshRequest) { vm.refresh(animeId) }
@@ -504,6 +507,7 @@ private fun DetailScreenBody(
                         onAnimeClick = onAnimeClick,
                         onStudioClick = onStudioClick,
                         onSeasonWatch = onSeasonWatch,
+                        openFranchiseInitially = openFranchiseInitially,
                         onSelectSeason = vm::selectSeason,
                         loadProviderCatalog = vm::providerCatalog,
                         backFocusRequester = backFocusRequester,
@@ -537,6 +541,7 @@ private fun DetailContent(
     onPrimaryFocusAcquired: () -> Unit,
     /** Hoisted so the scaffold's bar, which sits above this in the tree, can watch it. */
     detailListState: LazyListState,
+    openFranchiseInitially: Boolean = false,
     artworkUnderStatusBar: Boolean = false,
     contentPadding: PaddingValues = PaddingValues(),
 ) {
@@ -659,6 +664,13 @@ private fun DetailContent(
         ids.toSet()
     }
     var franchiseOpen by rememberSaveable(info.id) { mutableStateOf(false) }
+    var initialFranchiseHandled by rememberSaveable(info.id) { mutableStateOf(false) }
+    LaunchedEffect(openFranchiseInitially, franchiseEntries.size) {
+        if (openFranchiseInitially && !initialFranchiseHandled && franchiseEntries.size > 1) {
+            initialFranchiseHandled = true
+            franchiseOpen = true
+        }
+    }
     val demoCard = !device.isTv && info.id == WhatsNewTour.FRANCHISE_DEMO_ID && WhatsNewTour.franchiseCardDemo
     val demoGuide = !device.isTv && info.id == WhatsNewTour.FRANCHISE_DEMO_ID && WhatsNewTour.franchiseGuideDemo
     LaunchedEffect(demoCard, franchiseEntries.size, resume != null, selectedTab) {

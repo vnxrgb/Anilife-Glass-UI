@@ -115,6 +115,8 @@ data class WatchData(
     val autoAdvanced: Boolean = false,
     /** The season after this one, once the season chain has been read; see [continuesIntoNextSeason]. */
     val nextSeason: NextSeason? = null,
+    val declaredEpisodeCount: Int? = null,
+    val declaredSeriesStatus: String? = null,
     val playbackGeneration: Int = 0,
     val preferredProvider: String = DEFAULT_PREFERRED_PROVIDER,
     val isResolving: Boolean = false,
@@ -582,6 +584,7 @@ class WatchViewModel : ViewModel() {
         nextSeason = null
         nextSeasonRequested = false
         totalEpisodes = null
+        seriesStatus = null
         seriesTitle = "Anime"
         artworkUrl = null
         seriesFormat = null
@@ -1559,6 +1562,8 @@ class WatchViewModel : ViewModel() {
                 startPositionMs = resume,
                 autoAdvanced = autoAdvanced,
                 nextSeason = nextSeason,
+                declaredEpisodeCount = totalEpisodes,
+                declaredSeriesStatus = seriesStatus,
                 preferredProvider = globalPreferredProvider,
                 isResolving = false,
                 isLoadingMoreSources = !mergedIncludesAnivexa && anivexaMergeJob?.isActive == true,

@@ -718,6 +718,8 @@ object SettingsStore {
 
     private val _autoplay = MutableStateFlow(true)
     val autoplay = _autoplay.asStateFlow()
+    private val _afterglow = MutableStateFlow(true)
+    val afterglow = _afterglow.asStateFlow()
 
     /**
      * Whether opening an episode starts it, or leaves it waiting on the play button.
@@ -1374,6 +1376,7 @@ object SettingsStore {
     }
 
     fun setAutoplay(value: Boolean) = save(AUTOPLAY, value, _autoplay)
+    fun setAfterglow(value: Boolean) = save(AFTERGLOW, value, _afterglow)
     fun setPlayOnOpen(value: Boolean) = save(PLAY_ON_OPEN, value, _playOnOpen)
     fun setOpenEpisodesInExternalPlayer(value: Boolean) =
         save(OPEN_EPISODES_IN_EXTERNAL_PLAYER, value, _openEpisodesInExternalPlayer)
@@ -2094,6 +2097,7 @@ object SettingsStore {
 
     private fun applyPreferences(prefs: Preferences) {
         _autoplay.value = prefs[AUTOPLAY] ?: true
+        _afterglow.value = prefs[AFTERGLOW] ?: true
         _playOnOpen.value = prefs[PLAY_ON_OPEN] ?: true
         _openEpisodesInExternalPlayer.value = prefs[OPEN_EPISODES_IN_EXTERNAL_PLAYER] ?: false
         _externalPlayerPackage.value = prefs[EXTERNAL_PLAYER_PACKAGE].orEmpty()
@@ -2275,6 +2279,7 @@ object SettingsStore {
     }
 
     private val AUTOPLAY = booleanPreferencesKey("autoplay")
+    private val AFTERGLOW = booleanPreferencesKey("afterglow")
     private val PLAY_ON_OPEN = booleanPreferencesKey("play_on_open")
     private val OPEN_EPISODES_IN_EXTERNAL_PLAYER =
         booleanPreferencesKey("open_episodes_in_external_player")
@@ -2426,6 +2431,7 @@ object SettingsStore {
     private val BACKUP_BOOLEAN_KEYS = listOf(
         GLASS_BORDERS,
         AUTOPLAY,
+        AFTERGLOW,
         BROWSE_HEADER_COLLAPSED,
         PLAY_ON_OPEN,
         OPEN_EPISODES_IN_EXTERNAL_PLAYER,

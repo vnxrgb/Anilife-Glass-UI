@@ -345,6 +345,7 @@ fun SettingsScreen(
     val history by LibraryStore.history.collectAsState()
     val watchlist by LibraryStore.watchlist.collectAsState()
     val autoplay by SettingsStore.autoplay.collectAsState()
+    val afterglow by SettingsStore.afterglow.collectAsState()
     val playOnOpen by SettingsStore.playOnOpen.collectAsState()
     val openEpisodesInExternalPlayer by SettingsStore.openEpisodesInExternalPlayer.collectAsState()
     val externalPlayerPackage by SettingsStore.externalPlayerPackage.collectAsState()
@@ -2190,6 +2191,11 @@ fun SettingsScreen(
                         checked = autoplay,
                         onCheckedChange = SettingsStore::setAutoplay,
                     )
+                }
+                if (!device.isTv) {
+                    item(key = "Afterglow") {
+                        MidnightSettingSwitchRow(title = "Afterglow", description = "Cinematic next-episode cards and suggestions after finishing a story", checked = afterglow, onCheckedChange = SettingsStore::setAfterglow)
+                    }
                 }
                 if (miniPlayerSupported) {
                     item(key = "Keep playing in a mini player") {

@@ -555,6 +555,8 @@ fun PlayerSurface(
         controller?.let(::clearVideoSelection)
     }
 
+    val latestEnded by rememberUpdatedState(onEnded)
+    var suppressEndAdvance by remember(activeStream.url) { mutableStateOf(false) }
     DisposableEffect(controller, activeStream.url) {
         val activeController = controller
         if (activeController == null) {
@@ -591,7 +593,7 @@ fun PlayerSurface(
                         PlaybackService.finishUncachedPlaybackRecovery()
                         tracksRevision++
                     }
-                    if (state == Player.STATE_ENDED) onEnded()
+                    if (state == Player.STATE_ENDED && !suppressEndAdvance) latestEnded()
                 }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -1579,6 +1581,7 @@ fun PlayerSurface(
     val autoSkipIntroOutro by SettingsStore.autoSkipIntroOutro.collectAsState()
     val autoSkipFiller by SettingsStore.autoSkipFiller.collectAsState()
     val autoplay by SettingsStore.autoplay.collectAsState()
+    val afterglowEnabled by SettingsStore.afterglow.collectAsState()
     val sleepTimer by SleepTimer.state.collectAsState()
     val pauseDetailsOverlay by SettingsStore.pauseDetailsOverlay.collectAsState()
     val playerClock by SettingsStore.playerClock.collectAsState()
@@ -1834,6 +1837,7 @@ fun PlayerSurface(
             if (playbackIsPlaying) nextEpisodeSecondsLeft -= 1
         }
         nextEpisodeHandled = true
+        suppressEndAdvance = true
         onAutoAdvance()
     }
     }
@@ -2951,16 +2955,18 @@ fun PlayerSurface(
             } ?: nextSeasonLabel?.let { "$it · Episode 1" } ?: "Next episode",
             onPlayNow = {
                 nextEpisodeHandled = true
+                suppressEndAdvance = true
                 onNextEpisode()
             },
             onCancel = {
                 // Suppressed for the rest of this episode rather than re-armed a second later,
                 // which is the whole point of being able to say no to it.
                 nextEpisodeHandled = true
+                suppressEndAdvance = true
                 DiagnosticsLog.event("PlayerSurface next-episode card dismissed")
             },
             playNowFocusRequester = nextEpisodePlayNowFocus.takeIf { device.isTv },
-            afterglow = !device.isTv,
+            afterglow = !device.isTv && afterglowEnabled && isFullscreen,
             artworkUrl = nextEpisodeItem?.image ?: artworkUrl.takeIf { nextSeasonLabel == null },
             seriesTitle = seriesTitle,
             modifier = Modifier

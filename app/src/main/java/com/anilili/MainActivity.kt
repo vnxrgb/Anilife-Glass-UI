@@ -2184,6 +2184,7 @@ private fun AppNavHost(
                         nullable = true
                         defaultValue = null
                     },
+                    navArgument("franchise") { type = NavType.BoolType; defaultValue = false },
                 ),
             ) { entry ->
                 val id = entry.arguments?.getInt(Routes.Arg.ID) ?: return@composable
@@ -2194,6 +2195,7 @@ private fun AppNavHost(
                 DetailScreen(
                     animeId = id,
                     focusEpisode = returnEpisode,
+                    openFranchiseInitially = entry.arguments?.getBoolean("franchise") == true,
                     onHeroUnderBarsChanged = { overArtwork ->
                         if (nav.currentBackStackEntry?.id == entry.id) onArtworkUnderBarsChanged(entry.id, overArtwork)
                     },
@@ -2295,6 +2297,9 @@ private fun AppNavHost(
                         }
                     },
                     onOpenAnime = { nav.navigate(Routes.detail(watchId)) },
+                    onOpenRecommendation = { id -> nav.navigate(Routes.detail(id)) { popUpTo(Routes.WATCH) { inclusive = true } } },
+                    onOpenFranchise = { nav.navigate(Routes.franchise(watchId)) { popUpTo(Routes.WATCH) { inclusive = true } } },
+                    onAfterglowHome = { nav.popBackStack(Routes.HOME, false); nav.navigateTab(Routes.HOME) },
                     autoAdvanced = args.getBoolean(Routes.Arg.AUTO_ADVANCED),
                     startFullscreen = args.getBoolean(Routes.Arg.FULLSCREEN),
                     startAtMs = args.getLong(Routes.Arg.START_MS).takeIf { it > 0 },
