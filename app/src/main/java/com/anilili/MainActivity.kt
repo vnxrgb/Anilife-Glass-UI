@@ -2115,12 +2115,16 @@ private fun AppNavHost(
                     },
                     onNotificationsClick = { nav.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
                     onMoodDiscovery = onMoodDiscovery,
+                    onReadClick = { nav.navigate("manga_read") { launchSingleTop = true } },
                     onHeroUnderBarsChanged = { overArtwork ->
                         if (nav.currentBackStackEntry?.id == entry.id) onArtworkUnderBarsChanged(entry.id, overArtwork)
                     },
                     tvPrimaryFocusTarget = tvHomePrimaryFocusTarget,
                     tvRefreshRequest = tvHomeRefresh,
                 )
+            }
+            composable("manga_read") {
+                com.anilili.manga.MangaScreen(onBack = { nav.popBackStack() })
             }
             composable(Routes.NOTIFICATIONS) {
                 LaunchedEffect(Unit) { DiagnosticsLog.event("Route NOTIFICATIONS content entered") }
