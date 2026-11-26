@@ -18,8 +18,8 @@ class MangaDexSource : MangaSource {
     override val displayName = "MangaDex"
 
     override suspend fun search(query: String, limit: Int): List<MangaTitle> {
-        if (query.isBlank()) return emptyList()
-        val response = request("/manga?title=${enc(query)}&limit=${limit.coerceIn(1, 100)}&includes%5B%5D=cover_art")
+        val filter = if (query.isBlank()) "&order%5BfollowedCount%5D=desc" else "&title=${enc(query.trim())}"
+        val response = request("/manga?limit=${limit.coerceIn(1, 100)}&includes%5B%5D=cover_art&contentRating%5B%5D=safe&contentRating%5B%5D=suggestive$filter")
         return response.getJSONArray("data").objects().map { manga ->
             val attributes = manga.getJSONObject("attributes")
             val title = attributes.getJSONObject("title")
@@ -29,7 +29,7 @@ class MangaDexSource : MangaSource {
             MangaTitle(
                 sourceId = id,
                 id = manga.getString("id"),
-                title = title.optString("en").ifBlank { title.keys().asSequence().firstOrNull()?.let(title::optString).orEmpty() },
+                title = title.optString("en").ifBlank { title.keys().asSequence().firstOrNull()?.let { title.optString(it) }.orEmpty() },
                 description = attributes.optJSONObject("description")?.optString("en").orEmpty(),
                 coverUrl = cover?.takeIf(String::isNotBlank)?.let {
                     "https://uploads.mangadex.org/covers/${manga.getString("id")}/$it"
@@ -39,15 +39,25 @@ class MangaDexSource : MangaSource {
     }
 
     override suspend fun chapters(mangaId: String, language: String): List<MangaChapter> {
-        val response = request("/manga/${enc(mangaId)}/feed?limit=100&translatedLanguage%5B%5D=${enc(language)}&order%5Bchapter%5D=desc&includes%5B%5D=scanlation_group")
-        return response.getJSONArray("data").objects().map { chapter ->
+        val entries = mutableListOf<JSONObject>()
+        var offset = 0
+        var total = 0
+        do {
+            val response = request("/manga/${enc(mangaId)}/feed?limit=100&offset=$offset&translatedLanguage%5B%5D=${enc(language)}&order%5Bchapter%5D=desc&includes%5B%5D=scanlation_group&includeExternalUrl=0")
+            total = response.optInt("total")
+            val batch = response.getJSONArray("data").objects()
+            entries.addAll(batch)
+            offset += batch.size
+            if (batch.isEmpty()) break
+        } while (offset < total && offset < 10000)
+        return entries.distinctBy { it.getString("id") }.map { chapter ->
             val attributes = chapter.getJSONObject("attributes")
             MangaChapter(
                 sourceId = id,
                 id = chapter.getString("id"),
                 mangaId = mangaId,
-                title = attributes.optString("title"),
-                chapterNumber = attributes.optString("chapter").takeIf(String::isNotBlank),
+                title = attributes.optString("title").takeUnless { it == "null" }.orEmpty(),
+                chapterNumber = attributes.optString("chapter").takeUnless { it.isBlank() || it == "null" },
                 language = attributes.optString("translatedLanguage", language),
                 scanlationGroups = chapter.optJSONArray("relationships")?.objects()
                     ?.filter { it.optString("type") == "scanlation_group" }
@@ -60,6 +70,7 @@ class MangaDexSource : MangaSource {
     override suspend fun pages(chapterId: String): List<MangaPage> {
         val response = request("/at-home/server/${enc(chapterId)}")
         val base = response.getString("baseUrl")
+        require(base.startsWith("https://")) { "Insecure page server" }
         val chapter = response.getJSONObject("chapter")
         val hash = chapter.getString("hash")
         return chapter.getJSONArray("data").strings().mapIndexed { index, filename ->
