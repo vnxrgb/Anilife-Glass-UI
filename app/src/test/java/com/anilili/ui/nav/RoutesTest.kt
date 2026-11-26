@@ -40,7 +40,14 @@ class RoutesTest {
         // which is a stub in a JVM unit test and answers null. What matters to the host is the
         // pattern and that the stack still reports the argument-free route, because that is what
         // every currentRoute comparison reads.
-        assertEquals("detail/{id}?episode={episode}", Routes.DETAIL_DESTINATION)
+        assertEquals("detail/{id}?episode={episode}&franchise={franchise}", Routes.DETAIL_DESTINATION)
+        assertEquals(Routes.DETAIL, Routes.tabRoute(Routes.DETAIL_DESTINATION))
+        assertEquals("detail/153567", Routes.detail(153567))
+    }
+
+    @Test
+    fun `franchise opens the existing detail destination with optional flag`() {
+        assertEquals("detail/153567?franchise=true", Routes.franchise(153567))
         assertEquals(Routes.DETAIL, Routes.tabRoute(Routes.DETAIL_DESTINATION))
         assertEquals("detail/153567", Routes.detail(153567))
     }
