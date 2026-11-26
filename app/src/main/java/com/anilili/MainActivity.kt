@@ -302,6 +302,7 @@ class MainActivity : FragmentActivity() {
     }
 
     private var experienceLocked by mutableStateOf(false)
+    private var experienceBackgroundAt: Long = 0L
     private var experienceAuthenticating = false
     private val experienceAuthLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         experienceAuthenticating = false
@@ -537,6 +538,11 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         super.onStart()
+        if (com.anilili.experience.PrivacyLockPreferences.enabled(this) && experienceBackgroundAt > 0L) {
+            val elapsed = SystemClock.elapsedRealtime() - experienceBackgroundAt
+            val delay = com.anilili.experience.PrivacyLockPreferences.delayMinutes(this) * 60_000L
+            experienceLocked = elapsed >= delay
+        }
         DiagnosticsLog.event("MainActivity.onStart")
         PlaybackService.allowMediaButtonResume()
         LibraryStore.refreshRemoteLibrary()
@@ -680,7 +686,9 @@ class MainActivity : FragmentActivity() {
         super.onStop()
         if (!experienceAuthenticating && !isChangingConfigurations &&
             !(android.os.Build.VERSION.SDK_INT >= 26 && isInPictureInPictureMode)) {
-            experienceLocked = com.anilili.experience.PrivacyLockPreferences.enabled(this)
+            experienceBackgroundAt = SystemClock.elapsedRealtime()
+            experienceLocked = com.anilili.experience.PrivacyLockPreferences.enabled(this) &&
+                com.anilili.experience.PrivacyLockPreferences.delayMinutes(this) == 0
         }
         DiagnosticsLog.event("MainActivity.onStop")
         PlaybackService.pauseActivePlayback()
