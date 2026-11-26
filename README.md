@@ -81,6 +81,12 @@ Stable AniLumos releases are for Android phones and tablets; TV previews are exp
 
 ## Screenshots
 
+<p align="center">
+  <a href="docs/store/screenshots/afterglow.jpg"><img src="docs/store/screenshots/afterglow.jpg" width="30%" alt="Afterglow anime completion recommendations"></a>
+  <a href="docs/store/screenshots/up-next.jpg"><img src="docs/store/screenshots/up-next.jpg" width="30%" alt="Up Next episode countdown and episode details"></a>
+</p>
+<p align="center">Afterglow recommendations · Up Next countdown</p>
+
 A look at AniLumos on Android, including the Anime Journal and its personalization and sharing options.
 
 <p align="center">
