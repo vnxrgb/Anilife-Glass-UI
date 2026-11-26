@@ -444,6 +444,9 @@ fun PlayerSurface(
     val currentOnFinalProgress by rememberUpdatedState(onFinalProgress)
     val perStream = remember(stream.url) { PlayerStreamState(stream, startPositionMs) }
     var activeStream by perStream.activeStream
+    // Shared by the media listener and the Up Next controls, across compiled sections.
+    val latestEnded by rememberUpdatedState(onEnded)
+    var suppressEndAdvance by remember(animeId, episode, activeStream.url) { mutableStateOf(false) }
     var nextStartPositionMs by perStream.nextStartPositionMs
     var playbackIsPlaying by perSurface.playbackIsPlaying
     val perController = remember(controller) { PlayerControllerState() }
@@ -555,8 +558,6 @@ fun PlayerSurface(
         controller?.let(::clearVideoSelection)
     }
 
-    val latestEnded by rememberUpdatedState(onEnded)
-    var suppressEndAdvance by remember(activeStream.url) { mutableStateOf(false) }
     DisposableEffect(controller, activeStream.url) {
         val activeController = controller
         if (activeController == null) {
