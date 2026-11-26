@@ -4,6 +4,7 @@ import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -43,12 +44,13 @@ class MangaDexSource : MangaSource {
         var offset = 0
         var total = 0
         do {
-            val response = request("/manga/${enc(mangaId)}/feed?limit=100&offset=$offset&translatedLanguage%5B%5D=${enc(language)}&order%5Bchapter%5D=desc&includes%5B%5D=scanlation_group&includeExternalUrl=0")
+            val response = request("/manga/${enc(mangaId)}/feed?limit=500&offset=$offset&translatedLanguage%5B%5D=${enc(language)}&order%5Bchapter%5D=desc&includes%5B%5D=scanlation_group&includeExternalUrl=0")
             total = response.optInt("total")
             val batch = response.getJSONArray("data").objects()
             entries.addAll(batch)
             offset += batch.size
             if (batch.isEmpty()) break
+            if (offset < total) delay(300)
         } while (offset < total && offset < 10000)
         return entries.distinctBy { it.getString("id") }.map { chapter ->
             val attributes = chapter.getJSONObject("attributes")
