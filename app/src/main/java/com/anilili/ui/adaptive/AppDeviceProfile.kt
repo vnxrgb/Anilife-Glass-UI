@@ -122,8 +122,9 @@ data class AppDeviceProfile(
      * landscape split-screen windows. Other form factors keep their existing columns.
      */
     fun homePosterColumns(availableWidth: Dp, spacing: Dp): Int {
-        if (!isTablet) return posterColumns
-        // A narrow split-screen pane may fit only one readable poster.
+        if (isTv) return posterColumns
+        // A tablet in split screen can report a phone-sized configuration.
+        // Size the grid to its actual content width on all handheld windows.
         val width = availableWidth.value.coerceAtLeast(0f)
         val gap = spacing.value.coerceAtLeast(0f)
         val fitting = ((width + gap) / (gridMinWidth.value + gap)).toInt()
