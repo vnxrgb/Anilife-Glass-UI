@@ -30,7 +30,9 @@ AniLumos is built on [AniLife](https://github.com/anilifecommunity/android-and-t
 | **Ambient Cinema** | Video-reactive ambient lighting using adapted Morphe code, integrated into the built-in player. |
 | **Ambient Home & details** | Artwork-driven background colors and transitions on Home and anime details. |
 | **Mood Discovery** | Choose a mood and swipe through matching anime suggestions. |
-| **AniLumos Wrapped** | Viewing statistics and artwork-based shareable summaries. |
+| **Anime Journal** | Private on-device anime and episode notes, reviews, ratings and favorite moments; searchable, sortable and grouped entries with multi-select and text or artwork-based image sharing. |
+| **Journal personalization** | Draggable floating journal or minimized handle, a permanent My List shortcut, shared display name and optional name inclusion in shares. |
+| **AniLumos Wrapped** | Viewing statistics and artwork-based shareable summaries, with a shared customizable display name. |
 | **Curated franchise guides** | Dedicated Franchise Watch Order screen with chronological, recommended and alternative routes where available, timeline/list views, completion tracking and next unfinished anime. |
 | **Metadata diagnostics** | Inspect metadata availability and troubleshoot community service failures. |
 
@@ -45,7 +47,7 @@ AniLumos is built on [AniLife](https://github.com/anilifecommunity/android-and-t
 | **Navigation and screens** | Floating glass navigation, redesigned Home, details, search, settings and dialogs. |
 | **Appearance and accessibility** | Glass material choices, custom background readability and artwork-aware status bar contrast. |
 | **Adaptive layouts** | Improved phone/tablet landscape navigation and discovery layouts. |
-| **Guided tour** | Expanded the existing What's New walkthrough to cover AniLumos additions. |
+| **Guided tour** | Expanded the existing What's New walkthrough to cover the franchise guide, Anime Journal and personalization. |
 | **In-app updates** | Uses AniLumos's own GitHub stable releases and verifies downloaded APKs before installation. |
 
 ### Additional integrations
