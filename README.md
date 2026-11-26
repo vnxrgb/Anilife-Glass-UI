@@ -73,7 +73,7 @@ Stable AniLumos releases are for Android phones and tablets; TV previews are exp
 
 ## Screenshots
 
-A look at AniLumos on Android, including Franchise Watch Order introduced in v2.0.2.
+A look at AniLumos on Android, including the Anime Journal and its personalization and sharing options.
 
 <p align="center">
   <a href="docs/store/screenshots/01-home.jpg"><img src="docs/store/screenshots/01-home.jpg" width="23%" alt="Home and Glass UI"></a>
@@ -96,6 +96,13 @@ A look at AniLumos on Android, including Franchise Watch Order introduced in v2.
   <a href="docs/store/screenshots/08-appearance.jpg"><img src="docs/store/screenshots/08-appearance.jpg" width="23%" alt="Appearance and themes"></a>
 </p>
 <p align="center">Airing schedule · Accounts and integrations · Appearance and themes</p>
+
+<p align="center">
+  <a href="docs/store/screenshots/journal-library.jpg"><img src="docs/store/screenshots/journal-library.jpg" width="23%" alt="Anime Journal library"></a>
+  <a href="docs/store/screenshots/journal-share.jpg"><img src="docs/store/screenshots/journal-share.jpg" width="23%" alt="Journal image sharing"></a>
+  <a href="docs/store/screenshots/journal-personalization.jpg"><img src="docs/store/screenshots/journal-personalization.jpg" width="23%" alt="Journal personalization"></a>
+</p>
+<p align="center">Anime Journal library · Journal image sharing · Journal personalization</p>
 
 ## Download
 
