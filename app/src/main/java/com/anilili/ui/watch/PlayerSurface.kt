@@ -1763,13 +1763,14 @@ fun PlayerSurface(
     // Derived, so the clock's twice-a-second tick only recomposes this screen when the answer
     // changes — which is twice an episode. Read straight off the position, it made every tick
     // recompose the whole player, controls hidden or not.
-    val nextEpisodeTrigger by remember(outroStartMs, outroEndMs) {
+    val nextEpisodeTrigger by remember(outroStartMs, outroEndMs, afterglowEnabled, device.isTv, isFullscreen) {
         derivedStateOf {
             nextEpisodeTrigger(
                 positionMs = positionMs,
                 durationMs = durationMs,
                 outroStartMs = outroStartMs,
                 outroEndMs = outroEndMs,
+                tailWindowMs = if (afterglowEnabled && !device.isTv && isFullscreen) 8_000L else NEXT_EPISODE_TAIL_WINDOW_MS,
             )
         }
     }
