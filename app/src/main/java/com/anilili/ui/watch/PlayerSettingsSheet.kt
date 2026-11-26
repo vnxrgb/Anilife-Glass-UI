@@ -655,6 +655,8 @@ private fun ColumnScope.SheetSections(
 ) {
     MidnightSectionLabel("Volume")
     PlayerSliderRow { MediaVolumeSlider(modifier = Modifier.weight(1f), showPercentLabel = true) }
+    MidnightSectionLabel("Audio Studio")
+    com.anilili.experience.AudioStudioControls()
 
     speed?.let { current ->
         MidnightSectionLabel("Playback speed")

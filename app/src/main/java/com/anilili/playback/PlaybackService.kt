@@ -87,6 +87,7 @@ internal class PlaybackCacheBypassGate {
 @OptIn(UnstableApi::class)
 class PlaybackService : MediaSessionService() {
     private lateinit var player: ExoPlayer
+    private val audioStudio = com.anilili.experience.AudioStudioSession()
     private var castRoute: CastRoute? = null
     private lateinit var session: MediaSession
     private val transportScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -353,6 +354,17 @@ class PlaybackService : MediaSessionService() {
         activePlayer = player
         PlaybackDiagnostics.attach(player)
         AudioOutputMonitor.attach(player)
+        com.anilili.experience.AudioStudioPreferences.init(this)
+        sleepTimerScope.launch {
+            com.anilili.experience.AudioStudioPreferences.config.collect { config ->
+                audioStudio.apply(player.audioSessionId, config)
+            }
+        }
+        player.addListener(object : Player.Listener {
+            override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                audioStudio.apply(audioSessionId, com.anilili.experience.AudioStudioPreferences.config.value)
+            }
+        })
         player.addListener(playbackListener(player))
         castRoute?.let { it.player.addListener(playbackListener(it.player)) }
         bindSleepTimer()
@@ -878,6 +890,7 @@ class PlaybackService : MediaSessionService() {
         if (::session.isInitialized) session.release()
         castRoute?.release()
         if (::player.isInitialized) {
+            audioStudio.close()
             AudioOutputMonitor.detach(player)
             player.release()
         }
