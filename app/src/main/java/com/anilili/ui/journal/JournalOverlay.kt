@@ -40,6 +40,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.focus.onFocusChanged
+import kotlinx.coroutines.delay
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
@@ -208,7 +212,8 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
         Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (if (light) .26f else .38f) * expansion.coerceIn(0f, 1f)))
             .clickable(enabled = open, onClickLabel = "Close journal") { close() })
     }
-    BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding().padding(bottom = bottomSpace)) {
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding().padding(bottom = if (imeVisible || open) 0.dp else bottomSpace)) {
         val density = LocalDensity.current
         val maxX = with(density) { (maxWidth - 58.dp).toPx().coerceAtLeast(1f) }
         val maxY = with(density) { (maxHeight - 58.dp).toPx().coerceAtLeast(1f) }
@@ -243,7 +248,7 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
             }
         }
         if (expansion > .01f) {
-            Column(Modifier.align(Alignment.Center).padding(12.dp).widthIn(max = 520.dp).fillMaxWidth().fillMaxHeight(.94f)
+            Column(Modifier.align(Alignment.Center).padding(if (imeVisible) 6.dp else 12.dp).widthIn(max = 520.dp).fillMaxWidth().fillMaxHeight(if (imeVisible) 1f else .94f)
                 .graphicsLayer {
                     val t = expansion.coerceIn(0f,1f)
                     scaleX = .22f + .78f*t; scaleY = scaleX; alpha = t
@@ -255,7 +260,7 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
                     IconButton(onClick = { focus.clearFocus(); nameDraft = journalName; renameOpen = true }) { Icon(Icons.Default.Edit, "Personalize journal name", tint = colors.onSurface) }
                     TextButton(onClick = { close() }, colors = ButtonDefaults.textButtonColors(contentColor = colors.onSurface)) { Text("Close") }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!imeVisible) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { focus.clearFocus(); if (!library && draft.hasContent()) edit(draft); library = true }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = if (library) colors.onSurface else colors.surfaceContainerHigh, contentColor = if (library) colors.surface else colors.onSurface)) { Text("Journal library") }
                     Button(onClick = { focus.clearFocus(); draft = JournalEntry(animeId=anime.animeId, animeTitle=anime.title, episode=journalEpisodeLabel(anime.episode), artwork=anime.artwork); library = false; saved = true; selecting = false; selection = emptySet() }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = if (!library) colors.onSurface else colors.surfaceContainerHigh, contentColor = if (!library) colors.surface else colors.onSurface)) { Text("New entry") }
                 }
@@ -332,15 +337,16 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
                             }
                         } else filtered.forEach { entryCard(it, false) }
                     } else {
-                        OutlinedTextField(draft.animeTitle, { edit(draft.copy(animeTitle=it.take(180))) }, label={ Text("Anime title") }, singleLine=false, minLines=1, maxLines=3, modifier=Modifier.fillMaxWidth(), colors = fieldColors, shape = fieldShape)
-                        OutlinedTextField(draft.episode, { edit(draft.copy(episode=it.take(40))) }, label={ Text("Episode (optional)") }, singleLine=true, modifier=Modifier.fillMaxWidth(), colors = fieldColors, shape = fieldShape)
+                        OutlinedTextField(draft.animeTitle, { edit(draft.copy(animeTitle=it.take(180))) }, label={ Text("Anime title") }, singleLine=false, minLines=1, maxLines=3, modifier=Modifier.fillMaxWidth().journalBringFocusedIntoView(imeVisible), colors = fieldColors, shape = fieldShape)
+                        OutlinedTextField(draft.episode, { edit(draft.copy(episode=it.take(40))) }, label={ Text("Episode (optional)") }, singleLine=true, modifier=Modifier.fillMaxWidth().journalBringFocusedIntoView(imeVisible), colors = fieldColors, shape = fieldShape)
                         Text("Personal rating: " + if(draft.rating==0) "Unrated" else "${draft.rating}/10")
                         Slider(value=draft.rating.toFloat(), onValueChange={edit(draft.copy(rating=it.roundToInt()))}, valueRange=0f..10f, steps=9, colors = SliderDefaults.colors(thumbColor = colors.primary, activeTrackColor = colors.primary, inactiveTrackColor = colors.surfaceContainerHighest), thumb = { Box(Modifier.size(22.dp).background(colors.onSurface, CircleShape).border(2.dp, colors.primary, CircleShape)) })
-                        OutlinedTextField(draft.notes, { edit(draft.copy(notes=it.take(8000))) }, label={ Text("Your thoughts") }, minLines=3, modifier=Modifier.fillMaxWidth(), colors = fieldColors, shape = fieldShape)
-                        OutlinedTextField(draft.review, { edit(draft.copy(review=it.take(8000))) }, label={ Text("Private review") }, minLines=3, modifier=Modifier.fillMaxWidth(), colors = fieldColors, shape = fieldShape)
-                        OutlinedTextField(draft.favoriteMoment, { edit(draft.copy(favoriteMoment=it.take(4000))) }, label={ Text("Favorite moments / timestamps") }, minLines=2, modifier=Modifier.fillMaxWidth(), colors = fieldColors, shape = fieldShape)
+                        OutlinedTextField(draft.notes, { edit(draft.copy(notes=it.take(8000))) }, label={ Text("Your thoughts") }, minLines=3, modifier=Modifier.fillMaxWidth().journalBringFocusedIntoView(imeVisible), colors = fieldColors, shape = fieldShape)
+                        OutlinedTextField(draft.review, { edit(draft.copy(review=it.take(8000))) }, label={ Text("Private review") }, minLines=3, modifier=Modifier.fillMaxWidth().journalBringFocusedIntoView(imeVisible), colors = fieldColors, shape = fieldShape)
+                        OutlinedTextField(draft.favoriteMoment, { edit(draft.copy(favoriteMoment=it.take(4000))) }, label={ Text("Favorite moments / timestamps") }, minLines=2, modifier=Modifier.fillMaxWidth().journalBringFocusedIntoView(imeVisible), colors = fieldColors, shape = fieldShape)
                     }
                 }
+                if (!imeVisible) {
                 SnackbarHost(snackbar)
                 if (library && selecting) {
                     OutlinedButton(onClick = { deleteIds = selection }, enabled = selection.isNotEmpty(), modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.error)) { Text("Delete selected") }
@@ -352,6 +358,7 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
                     val text=if(library) libraryScope.joinToString("\n----------------\n"){it.asText()} else draft.asText()
                     Button(onClick={focus.clearFocus(); includeNotes=false; includeReview=false; includeMoments=false; includeRating=true; includeEpisode=true; includeArtwork=true; includeName=includeNameDefault; shareOpen=true}, enabled=if(library) libraryScope.isNotEmpty() else draft.hasContent(), modifier=Modifier.weight(1f)){Text("Share…")}
                     OutlinedButton(onClick={focus.clearFocus(); exportText=personalTitle + "\n\n" + text; export.launch("AniLumos-Journal.txt")}, enabled=if(library) libraryScope.isNotEmpty() else draft.hasContent(), modifier=Modifier.weight(1f)){Text(if (library && selecting) "Export selected" else "Export")}
+                }
                 }
             }
         }
@@ -443,4 +450,16 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
         )
     }
 
+}
+
+/** Reposition the focused field after IME layout, without moving the entire journal. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun Modifier.journalBringFocusedIntoView(imeVisible: Boolean): Modifier {
+    val requester = remember { BringIntoViewRequester() }
+    var focused by remember { mutableStateOf(false) }
+    LaunchedEffect(focused, imeVisible) {
+        if (focused && imeVisible) { delay(280); requester.bringIntoView() }
+    }
+    return this.bringIntoViewRequester(requester).onFocusChanged { focused = it.isFocused || it.hasFocus }
 }

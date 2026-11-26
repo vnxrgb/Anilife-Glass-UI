@@ -196,7 +196,7 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
             dismissButton = { TextButton(onClick = { shareOpen = false }) { Text("Cancel") } })
     }
     Column(Modifier.fillMaxSize().glassAtmosphere()) {
-        PageTitleBar(title = "AniLumos Wrapped", subtitle = if (journalName.isBlank()) "${stats.year} · Your viewing activity" else wrappedTitle(journalName, stats.year),
+        PageTitleBar(title = "Wrapped", subtitle = "${stats.year} · AniLumos",
             leading = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
             trailing = {
                 IconButton(enabled = !exporting, onClick = { includeName = includeNameDefault; shareOpen = true }) {
@@ -209,7 +209,7 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
                 WrappedSummaryCard(stats, localHistory.firstOrNull()?.cover, onOpen = null)
-                TextButton(onClick = { nameDraft = journalName; renameOpen = true }) {
+                TextButton(onClick = { nameDraft = journalName; renameOpen = true }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) {
                     Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Personalize name")
