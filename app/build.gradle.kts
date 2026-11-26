@@ -306,6 +306,7 @@ dependencies {
     // scoping it here is what actually makes the TV build smaller, not just tidier.
     "mobileImplementation"(libs.androidx.media3.cast)
     implementation(libs.androidx.media3.transformer)
+    implementation(libs.androidx.media3.effect)
     implementation(libs.play.services.cronet)
     implementation(libs.androidx.appcompat)
     // Pinned, and not by accident. It arrived held back from GeckoView's own requirement when the
