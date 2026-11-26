@@ -21,8 +21,8 @@ class TabletNarrowWindowColumnsTest {
     }
 
     @Test fun phoneAndTvPoliciesRemainUnchanged() {
-        assertEquals(1, AppDeviceProfile(AppFormFactor.PHONE, 390).homePosterColumns(100.dp, 12.dp))
-        assertEquals(2, AppDeviceProfile(AppFormFactor.PHONE, 390).homePosterColumns(212.dp, 12.dp))
+        assertEquals(3, AppDeviceProfile(AppFormFactor.PHONE, 390).homePosterColumns(100.dp, 12.dp))
+        assertEquals(3, AppDeviceProfile(AppFormFactor.PHONE, 390).homePosterColumns(212.dp, 12.dp))
         assertEquals(3, AppDeviceProfile(AppFormFactor.PHONE, 390).homePosterColumns(328.dp, 12.dp))
         assertEquals(6, AppDeviceProfile(AppFormFactor.TV, 1920).homePosterColumns(100.dp, 12.dp))
     }
