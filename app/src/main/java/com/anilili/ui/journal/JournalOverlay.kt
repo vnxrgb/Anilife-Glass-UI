@@ -39,6 +39,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.animation.AnimatedVisibility
+import java.util.Locale
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -105,6 +110,33 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
     var includeEpisode by remember { mutableStateOf(true) }
     var includeArtwork by remember { mutableStateOf(true) }
     var sharing by remember { mutableStateOf(false) }
+    var grouped by remember { mutableStateOf(true) }
+    var sorting by remember { mutableStateOf("Recent") }
+    var sortMenu by remember { mutableStateOf(false) }
+    var expandedGroups by remember { mutableStateOf(emptySet<String>()) }
+    var selecting by remember { mutableStateOf(false) }
+    var selection by remember { mutableStateOf(emptySet<String>()) }
+    var deleteIds by remember { mutableStateOf(emptySet<String>()) }
+    val snackbar = remember { SnackbarHostState() }
+    val selectedEntries = entries.filter { it.id in selection }
+    val libraryScope = if (selecting) selectedEntries else entries
+    fun select(id: String) { selection = if (id in selection) selection - id else selection + id }
+    fun deleteSelected(ids: Set<String>) {
+        val removed = JournalStore.delete(ids)
+        if (removed == null) {
+            Toast.makeText(context, "Could not delete entries", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (removed.isEmpty()) return
+        if (!library && draft.id in ids) { draft = JournalEntry(); library = true; saved = true }
+        selection = selection - ids
+        if (selection.isEmpty()) selecting = false
+        scope.launch {
+            if (snackbar.showSnackbar(if (removed.size == 1) "Entry deleted" else "${removed.size} entries deleted", "Undo", duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) {
+                if (!JournalStore.restore(removed)) Toast.makeText(context, "Could not restore entries", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         if (uri != null) {
             val success = runCatching {
@@ -126,6 +158,7 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
         val found = if (anime.animeId != null) JournalStore.find(anime.animeId, anime.episode) else null
         draft = found?.copy(artwork = found.artwork ?: anime.artwork, episode = journalEpisodeLabel(found.episode)) ?: JournalEntry(animeId = anime.animeId, animeTitle = anime.title, episode = journalEpisodeLabel(anime.episode), artwork = anime.artwork,
             notes = if (anime.animeId != null && anime.episode.isNotBlank()) JournalStore.episodeNote(anime.animeId, anime.episode) else "")
+        selection = emptySet(); selecting = false
         library = anime.animeId == null
         saved = true
         open = true
@@ -139,8 +172,8 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
         }
     }
     fun close() { focus.clearFocus(); if (!library && draft.hasContent()) edit(draft); if (saved) open = false }
-    LaunchedEffect(visible) { if (!visible) { open = false; dragging = false; shareOpen = false } }
-    BackHandler(visible && open) { close() }
+    LaunchedEffect(visible) { if (!visible) { open = false; dragging = false; shareOpen = false; deleteIds = emptySet() } }
+    BackHandler(visible && open) { if (selecting) { selecting = false; selection = emptySet() } else close() }
     val expansion by animateFloatAsState(if (open && visible) 1f else 0f, spring(dampingRatio = .86f, stiffness = 370f), label = "journal expansion")
     if (!visible) return
     CompositionLocalProvider(LocalContentColor provides colors.onSurface) {
@@ -188,27 +221,80 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalButton(onClick = { focus.clearFocus(); if (!library && draft.hasContent()) edit(draft); library = true }, modifier = Modifier.weight(1f)) { Text("My journal") }
-                    FilledTonalButton(onClick = { focus.clearFocus(); draft = JournalEntry(animeId=anime.animeId, animeTitle=anime.title, episode=journalEpisodeLabel(anime.episode), artwork=anime.artwork); library = false; saved = true }, modifier = Modifier.weight(1f)) { Text("New entry") }
+                    FilledTonalButton(onClick = { focus.clearFocus(); draft = JournalEntry(animeId=anime.animeId, animeTitle=anime.title, episode=journalEpisodeLabel(anime.episode), artwork=anime.artwork); library = false; saved = true; selecting = false; selection = emptySet() }, modifier = Modifier.weight(1f)) { Text("New entry") }
                 }
                 Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (library) {
                         OutlinedTextField(query, { query = it }, label = { Text("Search journal") }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = fieldColors, shape = fieldShape)
-                        val filtered = entries.filter { it.asText().contains(query, ignoreCase = true) }
-                        Text("${filtered.size} journal entries", style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
-                        if (filtered.isEmpty()) Text("No entries yet. Start a new note.")
-                        filtered.forEach { entry ->
-                            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(colors.surfaceContainerLow).border(.5.dp, rim, RoundedCornerShape(18.dp)).clickable { draft = entry.copy(episode = journalEpisodeLabel(entry.episode)); saved = true; library = false }.padding(12.dp)) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    AsyncImage(model = cover(entry), contentDescription = null, contentScale = ContentScale.Crop,
-                                        modifier = Modifier.size(46.dp, 66.dp).clip(RoundedCornerShape(10.dp)).background(colors.surfaceContainerHighest))
-                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                        Text(entry.animeTitle.ifBlank { "Personal journal" }, style = MaterialTheme.typography.titleMedium)
-                                        Text(listOfNotNull(entry.episode.takeIf { it.isNotBlank() }?.let { "Episode ${journalEpisodeLabel(it)}" }, entry.rating.takeIf { it > 0 }?.let { "$it/10" }).joinToString(" · "), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
-                                        Text(entry.notes.ifBlank { entry.review.ifBlank { entry.favoriteMoment } }.take(100), style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                        val matches = entries.filter { it.asText().contains(query, ignoreCase = true) }
+                        val filtered = when (sorting) {
+                            "Title" -> matches.sortedBy { it.animeTitle.lowercase(Locale.ROOT) }
+                            "Rating" -> matches.sortedWith(compareByDescending<JournalEntry> { it.rating }.thenByDescending { it.updatedAt })
+                            else -> matches.sortedByDescending { it.updatedAt }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            FilterChip(selected = grouped, onClick = { grouped = true }, label = { Text("By anime") })
+                            FilterChip(selected = !grouped, onClick = { grouped = false }, label = { Text("All") })
+                            Spacer(Modifier.weight(1f))
+                            Box {
+                                TextButton(onClick = { sortMenu = true }) { Text(sorting); Icon(Icons.Default.ExpandMore, null) }
+                                DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                                    listOf("Recent", "Title", "Rating").forEach { order ->
+                                        DropdownMenuItem(text = { Text(order) }, onClick = { sorting = order; sortMenu = false })
                                     }
                                 }
                             }
                         }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (selecting) "${selection.size} selected" else "${filtered.size} journal entries", style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant, modifier = Modifier.weight(1f))
+                            if (selecting) {
+                                TextButton(onClick = { selection = selection + filtered.map { it.id } }) { Text("Select all") }
+                                TextButton(onClick = { selecting = false; selection = emptySet() }) { Text("Cancel") }
+                            } else TextButton(onClick = { selecting = true }, enabled = filtered.isNotEmpty()) { Text("Select") }
+                        }
+                        if (filtered.isEmpty()) Text(if (query.isBlank()) "No entries yet. Start a new note." else "No matching entries.")
+                        val entryCard: @Composable (JournalEntry, Boolean) -> Unit = { entry, insideGroup ->
+                            val checked = entry.id in selection
+                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                                .background(if (checked) colors.secondaryContainer else colors.surfaceContainerLow)
+                                .border(.5.dp, if (checked) colors.primary else rim, RoundedCornerShape(18.dp))
+                                .combinedClickable(onClick = {
+                                    if (selecting) select(entry.id) else { draft = entry.copy(episode = journalEpisodeLabel(entry.episode)); saved = true; library = false }
+                                }, onLongClick = { selecting = true; selection = selection + entry.id })
+                                .padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                if (selecting) Checkbox(checked, onCheckedChange = { select(entry.id) })
+                                if (!insideGroup) AsyncImage(model = cover(entry), contentDescription = null, contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(44.dp, 64.dp).clip(RoundedCornerShape(10.dp)).background(colors.surfaceContainerHighest))
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text(if (insideGroup) entry.episode.takeIf { it.isNotBlank() }?.let { "Episode ${journalEpisodeLabel(it)}" } ?: "Series entry" else entry.animeTitle.ifBlank { "Personal journal" }, style = MaterialTheme.typography.titleMedium)
+                                    Text(listOfNotNull(entry.episode.takeIf { !insideGroup && it.isNotBlank() }?.let { "Episode ${journalEpisodeLabel(it)}" }, entry.rating.takeIf { it > 0 }?.let { "$it/10" }).joinToString(" · "), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                                    Text(entry.notes.ifBlank { entry.review.ifBlank { entry.favoriteMoment } }.take(100), style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                                }
+                                if (!selecting) IconButton(onClick = { deleteIds = setOf(entry.id) }) { Icon(Icons.Default.Delete, "Delete entry", tint = colors.onSurfaceVariant) }
+                            }
+                        }
+                        if (grouped) {
+                            filtered.groupBy { entry -> entry.animeId?.let { "id:$it" } ?: "title:" + entry.animeTitle.trim().lowercase(Locale.ROOT) }.forEach { (key, group) ->
+                                val first = group.first()
+                                val expanded = key in expandedGroups || query.isNotBlank()
+                                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(colors.surfaceContainerLow).border(.5.dp, rim, RoundedCornerShape(22.dp)).padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable {
+                                        expandedGroups = if (key in expandedGroups) expandedGroups - key else expandedGroups + key
+                                    }.padding(6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        AsyncImage(model = group.firstNotNullOfOrNull { cover(it) }, contentDescription = null, contentScale = ContentScale.Crop,
+                                            modifier = Modifier.size(46.dp, 66.dp).clip(RoundedCornerShape(10.dp)).background(colors.surfaceContainerHighest))
+                                        Column(Modifier.weight(1f)) {
+                                            Text(first.animeTitle.ifBlank { "Personal journal" }, style = MaterialTheme.typography.titleMedium)
+                                            Text("${group.size} " + if (group.size == 1) "entry" else "entries", style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                                        }
+                                        Icon(if (expanded) Icons.Default.ExpandMore else Icons.Default.KeyboardArrowRight, if (expanded) "Collapse entries" else "Expand entries")
+                                    }
+                                    AnimatedVisibility(visible = expanded) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { group.forEach { entryCard(it, true) } }
+                                    }
+                                }
+                            }
+                        } else filtered.forEach { entryCard(it, false) }
                     } else {
                         OutlinedTextField(draft.animeTitle, { edit(draft.copy(animeTitle=it.take(180))) }, label={ Text("Anime title") }, singleLine=true, modifier=Modifier.fillMaxWidth(), colors = fieldColors, shape = fieldShape)
                         OutlinedTextField(draft.episode, { edit(draft.copy(episode=it.take(40))) }, label={ Text("Episode (optional)") }, singleLine=true, modifier=Modifier.fillMaxWidth(), colors = fieldColors, shape = fieldShape)
@@ -219,18 +305,31 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
                         OutlinedTextField(draft.favoriteMoment, { edit(draft.copy(favoriteMoment=it.take(4000))) }, label={ Text("Favorite moments / timestamps") }, minLines=2, modifier=Modifier.fillMaxWidth(), colors = fieldColors, shape = fieldShape)
                     }
                 }
+                SnackbarHost(snackbar)
+                if (library && selecting) {
+                    OutlinedButton(onClick = { deleteIds = selection }, enabled = selection.isNotEmpty(), modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.error)) { Text("Delete selected") }
+                } else if (!library && entries.any { it.id == draft.id }) {
+                    TextButton(onClick = { focus.clearFocus(); deleteIds = setOf(draft.id) }, colors = ButtonDefaults.textButtonColors(contentColor = colors.error), modifier = Modifier.align(Alignment.End)) { Text("Delete entry") }
+                }
                 Text(if(saved) "Stored locally on this device" else "Could not save: storage limit or unreadable data", style=MaterialTheme.typography.labelSmall, color=if(saved) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    val text=if(library) entries.joinToString("\n----------------\n"){it.asText()} else draft.asText()
-                    Button(onClick={focus.clearFocus(); includeNotes=false; includeReview=false; includeMoments=false; includeRating=true; includeEpisode=true; includeArtwork=true; shareOpen=true}, enabled=if(library) entries.isNotEmpty() else draft.hasContent(), modifier=Modifier.weight(1f)){Text("Share…")}
-                    OutlinedButton(onClick={focus.clearFocus(); exportText=text; export.launch("AniLumos-Journal.txt")}, enabled=if(library) entries.isNotEmpty() else draft.hasContent(), modifier=Modifier.weight(1f)){Text("Export")}
+                    val text=if(library) libraryScope.joinToString("\n----------------\n"){it.asText()} else draft.asText()
+                    Button(onClick={focus.clearFocus(); includeNotes=false; includeReview=false; includeMoments=false; includeRating=true; includeEpisode=true; includeArtwork=true; shareOpen=true}, enabled=if(library) libraryScope.isNotEmpty() else draft.hasContent(), modifier=Modifier.weight(1f)){Text("Share…")}
+                    OutlinedButton(onClick={focus.clearFocus(); exportText=text; export.launch("AniLumos-Journal.txt")}, enabled=if(library) libraryScope.isNotEmpty() else draft.hasContent(), modifier=Modifier.weight(1f)){Text(if (library && selecting) "Export selected" else "Export")}
                 }
             }
         }
     }
 }
+    if (visible && open && deleteIds.isNotEmpty()) {
+        AlertDialog(onDismissRequest = { deleteIds = emptySet() },
+            title = { Text(if (deleteIds.size == 1) "Delete journal entry?" else "Delete ${deleteIds.size} entries?") },
+            text = { Text("These entries will be removed from your journal. You can undo immediately after deleting.") },
+            confirmButton = { TextButton(onClick = { val ids = deleteIds; deleteIds = emptySet(); deleteSelected(ids) }, colors = ButtonDefaults.textButtonColors(contentColor = colors.error)) { Text("Delete") } },
+            dismissButton = { TextButton(onClick = { deleteIds = emptySet() }) { Text("Cancel") } })
+    }
     if (visible && open && shareOpen) {
-        val selected = (if (library) entries else listOf(draft)).map { entry ->
+        val selected = (if (library) libraryScope else listOf(draft)).map { entry ->
             entry.copy(notes = if (includeNotes) entry.notes else "", review = if (includeReview) entry.review else "",
                 favoriteMoment = if (includeMoments) entry.favoriteMoment else "", rating = if (includeRating) entry.rating else 0,
                 episode = if (includeEpisode) journalEpisodeLabel(entry.episode) else "", artwork = if (includeArtwork) cover(entry) else null)

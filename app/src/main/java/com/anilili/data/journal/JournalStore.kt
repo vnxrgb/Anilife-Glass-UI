@@ -70,12 +70,36 @@ object JournalStore {
         if (!readable) return false
         val next = (_entries.value.filterNot { it.id == entry.id } + listOfNotNull(entry.takeIf { it.hasContent() }))
             .sortedByDescending { it.updatedAt }
-        if (next.size > 1000) return false
+        return persist(next)
+    }
+    private fun persist(next: List<JournalEntry>): Boolean {
+        if (!readable || next.size > 1000) return false
         val raw = json.encodeToString(serializer, next)
         if (raw.length > 1_500_000) return false
         prefs().edit().putString("entries", raw).apply()
         _entries.value = next
         return true
+    }
+    @Synchronized fun delete(ids: Set<String>): List<JournalEntry>? {
+        val removed = _entries.value.filter { it.id in ids }
+        if (removed.isEmpty()) return emptyList()
+        if (!persist(_entries.value.filterNot { it.id in ids })) return null
+        val legacy = context.getSharedPreferences("anilumos_episode_notes", Context.MODE_PRIVATE)
+        val edit = legacy.edit()
+        removed.forEach { entry ->
+            val id = entry.animeId
+            if (id != null && entry.episode.isNotBlank()) {
+                legacy.all.keys.filter { key -> key.startsWith("$id:") &&
+                    journalEpisodeLabel(key.substringAfter(':')) == journalEpisodeLabel(entry.episode) }.forEach { edit.remove(it) }
+            }
+        }
+        edit.apply()
+        return removed
+    }
+    @Synchronized fun restore(removed: List<JournalEntry>): Boolean {
+        val current = _entries.value
+        val ids = current.mapTo(hashSetOf()) { it.id }
+        return persist((current + removed.filterNot { it.id in ids }).sortedByDescending { it.updatedAt })
     }
     fun find(animeId: Int?, episode: String): JournalEntry? = entries.value.firstOrNull { it.animeId == animeId && journalEpisodeLabel(it.episode) == journalEpisodeLabel(episode) }
     fun episodeNote(animeId: Int, episode: String): String = find(animeId, episode)?.notes
