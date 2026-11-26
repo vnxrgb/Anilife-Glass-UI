@@ -69,7 +69,9 @@ internal object GithubTvUpdateSource {
         if (requested == actual) return true
         return destination.scheme == "https" && destination.host in setOf(
             "release-assets.githubusercontent.com", "objects.githubusercontent.com"
-        ) && destination.encodedPath.isNotBlank() && destination.encodedPath != "/"
+        ) && destination.port == 443 && destination.username.isEmpty() && destination.password.isEmpty() &&
+            destination.encodedPath.startsWith("/github-production-release-asset/") &&
+            destination.encodedPath.length > "/github-production-release-asset/".length
     }
 
     fun fetch(client: OkHttpClient, json: Json): UpdateManager.UpdateInfo {
