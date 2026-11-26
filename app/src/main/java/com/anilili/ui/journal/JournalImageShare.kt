@@ -20,9 +20,9 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /** Private text enters this renderer only after explicit share-preview selection. */
-internal suspend fun shareJournalImage(context: Context, entries: List<JournalEntry>, accent: Int) {
+internal suspend fun renderJournalImage(context: Context, entries: List<JournalEntry>, accent: Int, title: String): File {
     require(entries.isNotEmpty())
-    val file = withContext(Dispatchers.IO) {
+    return withContext(Dispatchers.IO) {
         val directory = File(context.cacheDir, "journal").apply { mkdirs() }
         directory.listFiles()?.filter { System.currentTimeMillis() - it.lastModified() > 86_400_000 }?.forEach { it.delete() }
         val posters = entries.map { entry ->
@@ -48,7 +48,10 @@ internal suspend fun shareJournalImage(context: Context, entries: List<JournalEn
         val titles = entries.mapIndexed { i, e -> layout(e.animeTitle.ifBlank { "Personal journal" }, headline, if (posters[i] == null) 900 else 640, 4) }
         val bodies = details.map { layout(it, body, 900, 18) }
         val heights = entries.indices.map { i -> maxOf(240, if (posters[i] != null) 300 else 0, titles[i].height + 75) + bodies[i].height + 60 }
-        val height = 230 + heights.sum() + 26 * (entries.size - 1) + 135
+        val titlePaint = TextPaint(headline).apply { textSize = 64f }
+        val header = layout(title, titlePaint, 968, 4)
+        val headerHeight = 140 + header.height + 35
+        val height = headerHeight + heights.sum() + 26 * (entries.size - 1) + 135
         val bitmap = Bitmap.createBitmap(1080, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
@@ -63,8 +66,8 @@ internal suspend fun shareJournalImage(context: Context, entries: List<JournalEn
             }
             fun drawText(layout: StaticLayout, x: Float, y: Float) { canvas.save(); canvas.translate(x,y); layout.draw(canvas); canvas.restore() }
             label("ANILUMOS",60f,90f,28f,Color.rgb(207,184,255))
-            label("Anime Journal",56f,172f,72f)
-            var y=220f
+            drawText(header,56f,120f)
+            var y=headerHeight.toFloat()
             entries.forEachIndexed { i, _ ->
                 val rect=RectF(56f,y,1024f,y+heights[i])
                 paint.color=0x24FFFFFF; canvas.drawRoundRect(rect,32f,32f,paint)
@@ -86,6 +89,10 @@ internal suspend fun shareJournalImage(context: Context, entries: List<JournalEn
             File(directory,"AniLumos-Journal-${System.currentTimeMillis()}.png").also { out -> out.outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG,100,it)) } }
         } finally { bitmap.recycle() }
     }
+}
+
+internal suspend fun shareJournalImage(context: Context, entries: List<JournalEntry>, accent: Int, title: String) {
+    val file = renderJournalImage(context, entries, accent, title)
     val uri=FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",file)
     context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
         type="image/png"; putExtra(Intent.EXTRA_STREAM,uri); clipData=ClipData.newUri(context.contentResolver,"AniLumos Journal",uri)

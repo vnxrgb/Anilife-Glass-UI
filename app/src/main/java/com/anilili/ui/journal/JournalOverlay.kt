@@ -9,6 +9,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.toArgb
 import com.anilili.data.library.LibraryStore
 import com.anilili.data.journal.journalEpisodeLabel
+import com.anilili.data.journal.journalTitle
+import androidx.compose.ui.text.style.TextOverflow
+import java.io.File
 import kotlinx.coroutines.launch
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -102,6 +105,24 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
     var query by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(true) }
     var exportText by remember { mutableStateOf("") }
+    val journalName by JournalStore.journalName.collectAsState()
+    val personalTitle = journalTitle(journalName)
+    var renameOpen by remember { mutableStateOf(false) }
+    var nameDraft by remember { mutableStateOf("") }
+    var includeName by remember { mutableStateOf(false) }
+    var pendingImage by remember { mutableStateOf<File?>(null) }
+    val saveImage = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("image/png")) { uri ->
+        val file = pendingImage
+        pendingImage = null
+        if (uri != null && file != null) {
+            scope.launch {
+                val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching { context.contentResolver.openOutputStream(uri)?.use { out -> file.inputStream().use { it.copyTo(out) } } ?: error("No output") }.isSuccess
+                }
+                Toast.makeText(context, if (ok) "Image saved" else "Could not save image", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     var shareOpen by remember { mutableStateOf(false) }
     var includeNotes by remember { mutableStateOf(false) }
     var includeReview by remember { mutableStateOf(false) }
@@ -172,7 +193,7 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
         }
     }
     fun close() { focus.clearFocus(); if (!library && draft.hasContent()) edit(draft); if (saved) open = false }
-    LaunchedEffect(visible) { if (!visible) { open = false; dragging = false; shareOpen = false; deleteIds = emptySet() } }
+    LaunchedEffect(visible) { if (!visible) { open = false; dragging = false; shareOpen = false; deleteIds = emptySet(); renameOpen = false } }
     BackHandler(visible && open) { if (selecting) { selecting = false; selection = emptySet() } else close() }
     val expansion by animateFloatAsState(if (open && visible) 1f else 0f, spring(dampingRatio = .86f, stiffness = 370f), label = "journal expansion")
     if (!visible) return
@@ -216,11 +237,12 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
                 }.clip(RoundedCornerShape(28.dp)).background(editorSurface).border(.75.dp, rim, RoundedCornerShape(28.dp)).clickable(enabled = open) {}.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Anime Journal", style = MaterialTheme.typography.titleLarge, color = colors.onSurface, modifier = Modifier.weight(1f))
+                    Text(personalTitle, style = MaterialTheme.typography.titleLarge, color = colors.onSurface, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    IconButton(onClick = { focus.clearFocus(); nameDraft = journalName; renameOpen = true }) { Icon(Icons.Default.Edit, "Personalize journal name", tint = colors.onSurface) }
                     TextButton(onClick = { close() }, colors = ButtonDefaults.textButtonColors(contentColor = colors.onSurface)) { Text("Close") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(onClick = { focus.clearFocus(); if (!library && draft.hasContent()) edit(draft); library = true }, modifier = Modifier.weight(1f)) { Text("My journal") }
+                    FilledTonalButton(onClick = { focus.clearFocus(); if (!library && draft.hasContent()) edit(draft); library = true }, modifier = Modifier.weight(1f)) { Text("Journal library") }
                     FilledTonalButton(onClick = { focus.clearFocus(); draft = JournalEntry(animeId=anime.animeId, animeTitle=anime.title, episode=journalEpisodeLabel(anime.episode), artwork=anime.artwork); library = false; saved = true; selecting = false; selection = emptySet() }, modifier = Modifier.weight(1f)) { Text("New entry") }
                 }
                 Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -314,13 +336,27 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
                 Text(if(saved) "Stored locally on this device" else "Could not save: storage limit or unreadable data", style=MaterialTheme.typography.labelSmall, color=if(saved) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     val text=if(library) libraryScope.joinToString("\n----------------\n"){it.asText()} else draft.asText()
-                    Button(onClick={focus.clearFocus(); includeNotes=false; includeReview=false; includeMoments=false; includeRating=true; includeEpisode=true; includeArtwork=true; shareOpen=true}, enabled=if(library) libraryScope.isNotEmpty() else draft.hasContent(), modifier=Modifier.weight(1f)){Text("Share…")}
-                    OutlinedButton(onClick={focus.clearFocus(); exportText=text; export.launch("AniLumos-Journal.txt")}, enabled=if(library) libraryScope.isNotEmpty() else draft.hasContent(), modifier=Modifier.weight(1f)){Text(if (library && selecting) "Export selected" else "Export")}
+                    Button(onClick={focus.clearFocus(); includeNotes=false; includeReview=false; includeMoments=false; includeRating=true; includeEpisode=true; includeArtwork=true; includeName=false; shareOpen=true}, enabled=if(library) libraryScope.isNotEmpty() else draft.hasContent(), modifier=Modifier.weight(1f)){Text("Share…")}
+                    OutlinedButton(onClick={focus.clearFocus(); exportText=personalTitle + "\n\n" + text; export.launch("AniLumos-Journal.txt")}, enabled=if(library) libraryScope.isNotEmpty() else draft.hasContent(), modifier=Modifier.weight(1f)){Text(if (library && selecting) "Export selected" else "Export")}
                 }
             }
         }
     }
 }
+    if (visible && open && renameOpen) {
+        AlertDialog(onDismissRequest = { renameOpen = false },
+            title = { Text("Personalize your journal") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Use your name or a nickname. Leave blank to restore the default.")
+                    OutlinedTextField(nameDraft, { nameDraft = it.filterNot { ch -> ch.isISOControl() }.take(48) },
+                        label = { Text("Name or nickname") }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = fieldShape, colors = fieldColors)
+                    Text(journalTitle(nameDraft), style = MaterialTheme.typography.titleMedium)
+                }
+            },
+            confirmButton = { Button(onClick = { JournalStore.setJournalName(nameDraft); renameOpen = false }) { Text("Save") } },
+            dismissButton = { TextButton(onClick = { renameOpen = false }) { Text("Cancel") } })
+    }
     if (visible && open && deleteIds.isNotEmpty()) {
         AlertDialog(onDismissRequest = { deleteIds = emptySet() },
             title = { Text(if (deleteIds.size == 1) "Delete journal entry?" else "Delete ${deleteIds.size} entries?") },
@@ -335,6 +371,7 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
                 episode = if (includeEpisode) journalEpisodeLabel(entry.episode) else "", artwork = if (includeArtwork) cover(entry) else null)
         }
         val accent = colors.primary.toArgb()
+        val sharedTitle = journalTitle(if (includeName) journalName else "")
         AlertDialog(onDismissRequest = { if (!sharing) shareOpen = false },
             title = { Text("Share journal") },
             text = {
@@ -350,7 +387,25 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
                             Checkbox(checked, onCheckedChange = update); Text(label, modifier = Modifier.weight(1f))
                         }
                     }
+                    if (journalName.isNotBlank()) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(includeName, onCheckedChange = { includeName = it }); Text("Include my name")
+                        }
+                    }
                     HorizontalDivider()
+                    Text(sharedTitle, style = MaterialTheme.typography.titleMedium)
+                    OutlinedButton(enabled = !sharing && selected.isNotEmpty(), onClick = {
+                        sharing = true
+                        scope.launch {
+                            try {
+                                pendingImage = renderJournalImage(context, selected.take(3), accent, sharedTitle)
+                                saveImage.launch("AniLumos-Journal.png")
+                                shareOpen = false
+                            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                            catch (_: Exception) { Toast.makeText(context, "Could not save image", Toast.LENGTH_SHORT).show() }
+                            finally { sharing = false }
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("Save image") }
                     selected.take(3).forEach { item ->
                         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(colors.surfaceContainerLow).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             if (item.artwork != null) AsyncImage(model = item.artwork, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.size(48.dp, 70.dp).clip(RoundedCornerShape(8.dp)))
@@ -363,13 +418,13 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
             confirmButton = { Button(enabled = !sharing && selected.isNotEmpty(), onClick = {
                 sharing = true
                 scope.launch {
-                    try { shareJournalImage(context, selected.take(3), accent); shareOpen = false }
+                    try { shareJournalImage(context, selected.take(3), accent, sharedTitle); shareOpen = false }
                     catch (e: kotlinx.coroutines.CancellationException) { throw e }
                     catch (_: Exception) { Toast.makeText(context, "Couldn't create journal image", Toast.LENGTH_SHORT).show() }
                     finally { sharing = false }
                 }
             }) { Text(if (sharing) "Creating…" else "Share image") } },
-            dismissButton = { TextButton(enabled = !sharing, onClick = { share(selected.joinToString("\n----------------\n") { it.asText() }); shareOpen = false }) { Text("Share text") } }
+            dismissButton = { TextButton(enabled = !sharing, onClick = { share(sharedTitle + "\n\n" + selected.joinToString("\n----------------\n") { it.asText() }); shareOpen = false }) { Text("Share text") } }
         )
     }
 

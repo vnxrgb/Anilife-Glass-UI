@@ -36,6 +36,8 @@ fun journalEpisodeLabel(value: String): String = value.trim().let { raw ->
     raw.toDoubleOrNull()?.takeIf { it.isFinite() && it % 1.0 == 0.0 }?.let { it.toLong().toString() } ?: raw
 }
 
+fun journalTitle(name: String): String = name.trim().takeIf { it.isNotBlank() }?.let { "$it's Anime Journal" } ?: "My Anime Journal"
+
 object JournalStore {
     const val PREFS = "anilumos_journal"
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -43,6 +45,13 @@ object JournalStore {
     private lateinit var context: Context
     private val _entries = MutableStateFlow<List<JournalEntry>>(emptyList())
     val entries = _entries.asStateFlow()
+    private val _journalName = MutableStateFlow("")
+    val journalName = _journalName.asStateFlow()
+    fun setJournalName(name: String) {
+        val clean = name.filterNot { it.isISOControl() }.trim().take(48)
+        prefs().edit().putString("journal_name", clean).apply()
+        _journalName.value = clean
+    }
     private val _floatingEnabled = MutableStateFlow(true)
     val floatingEnabled = _floatingEnabled.asStateFlow()
     private val _minimized = MutableStateFlow(false)
@@ -58,6 +67,7 @@ object JournalStore {
     private var readable = true
     fun init(ctx: Context) {
         context = ctx.applicationContext
+        _journalName.value = prefs().getString("journal_name", "").orEmpty()
         _floatingEnabled.value = prefs().getBoolean("floating_enabled", true)
         _minimized.value = prefs().getBoolean("minimized", false)
         val raw = prefs().getString("entries", null)

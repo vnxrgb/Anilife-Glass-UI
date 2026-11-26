@@ -772,6 +772,7 @@ fun ProfileScreen(
                         if (!device.isTv) {
                             item(key = "anilumos-journal") {
                                 val journalEntries by com.anilili.data.journal.JournalStore.entries.collectAsState()
+                                val journalName by com.anilili.data.journal.JournalStore.journalName.collectAsState()
                                 Row(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = device.pagePadding, vertical = 6.dp)
                                         .tourTarget(TourTarget.JOURNAL_LIBRARY).glassCard(RoundedCornerShape(22.dp)).clickable(onClick = openJournal).padding(16.dp),
@@ -779,7 +780,7 @@ fun ProfileScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 ) {
                                     Column(Modifier.weight(1f)) {
-                                        Text("Anime Journal", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                        Text(com.anilili.data.journal.journalTitle(journalName), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                         Text("${journalEntries.size} saved entries · Private, on-device", style = MaterialTheme.typography.bodySmall)
                                     }
                                     Text("Open ›", color = MaterialTheme.colorScheme.onSurface)
