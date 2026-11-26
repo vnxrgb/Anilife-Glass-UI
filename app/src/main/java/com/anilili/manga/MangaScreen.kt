@@ -52,6 +52,7 @@ fun MangaScreen(onBack: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<MangaTitle?>(null) }
     var chapter by remember { mutableStateOf<MangaChapter?>(null) }
+    var availableChapters by remember { mutableStateOf<List<MangaChapter>>(emptyList()) }
     var saved by remember(store) { mutableStateOf(store.all()) }
     var libraryOnly by rememberSaveable { mutableStateOf(false) }
     var sourceMenu by remember { mutableStateOf(false) }
@@ -99,11 +100,15 @@ fun MangaScreen(onBack: () -> Unit) {
         val activeChapter = chapter
         val source = title?.let { registry.byId(it.sourceId) }
         if (title != null && source != null && activeChapter != null) {
-            MangaReader(title, activeChapter, source, store, Modifier.padding(padding))
+            val distinctChapters = availableChapters.distinctBy { it.chapterNumber ?: it.id }
+            val index = distinctChapters.indexOfFirst { it.chapterNumber == activeChapter.chapterNumber && it.chapterNumber != null || it.id == activeChapter.id }
+            MangaReader(title, activeChapter, source, store, Modifier.padding(padding),
+                previousChapter = distinctChapters.getOrNull(index + 1)?.takeIf { index >= 0 }?.let { previous -> { chapter = previous } },
+                nextChapter = distinctChapters.getOrNull(index - 1)?.let { next -> { chapter = next } })
         } else if (title != null && source != null) {
             MangaDetails(title, source, store, saved.firstOrNull { it.title.id == title.id && it.title.sourceId == title.sourceId },
                 onBookmark = { value -> store.bookmark(title, value); saved = store.all() },
-                onChapter = { chapter = it }, modifier = Modifier.padding(padding))
+                onChapter = { entry, entries -> availableChapters = entries; chapter = entry }, modifier = Modifier.padding(padding))
         } else {
             LazyColumn(
                 Modifier.fillMaxSize().padding(padding),
@@ -141,7 +146,7 @@ fun MangaScreen(onBack: () -> Unit) {
                     if (loading) item { CircularProgressIndicator() }
                     error?.let { message -> item { MangaError(message) { retry++ } } }
                     if (!loading && error == null && results.isEmpty()) item { Text("No titles found.") }
-                    items(results, key = { it.sourceId + ":" + it.id }) { manga -> MangaTile(manga, "MangaDex") { selected = manga } }
+                    items(results, key = { it.sourceId + ":" + it.id }) { manga -> MangaTile(manga, registry.byId(manga.sourceId)?.displayName.orEmpty()) { selected = manga } }
                 }
                 item { Text("Catalog and chapters supplied by MangaDex and contributing scanlation groups. Availability varies by title.", style = MaterialTheme.typography.bodySmall) }
             }
@@ -163,7 +168,7 @@ private fun MangaTile(title: MangaTitle, subtitle: String, onClick: () -> Unit) 
 }
 
 @Composable
-private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaReadingStore, saved: MangaSaved?, onBookmark: (Boolean) -> Unit, onChapter: (MangaChapter) -> Unit, modifier: Modifier = Modifier) {
+private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaReadingStore, saved: MangaSaved?, onBookmark: (Boolean) -> Unit, onChapter: (MangaChapter, List<MangaChapter>) -> Unit, modifier: Modifier = Modifier) {
     var chapters by remember(title) { mutableStateOf<List<MangaChapter>>(emptyList()) }
     var loading by remember(title) { mutableStateOf(true) }
     var error by remember(title) { mutableStateOf<String?>(null) }
@@ -183,7 +188,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
                     Text(source.displayName, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedButton(onClick = { onBookmark(saved?.bookmarked != true) }) { Text(if (saved?.bookmarked == true) "Bookmarked" else "Bookmark") }
                     val resume = chapters.firstOrNull { it.id == saved?.chapterId }
-                    if (resume != null) Button(onClick = { onChapter(resume) }) { Text("Resume") }
+                    if (resume != null) Button(onClick = { onChapter(resume, chapters) }) { Text("Resume") }
                 }
             }
         }
@@ -200,7 +205,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
         error?.let { message -> item { MangaError(message) { retry++ } } }
         if (!loading && error == null && chapters.isEmpty()) item { Text("No readable chapters in this language.") }
         items(chapters, key = { it.id }) { entry ->
-            Card(onClick = { onChapter(entry) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+            Card(onClick = { onChapter(entry, chapters) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
                 Column(Modifier.padding(14.dp)) {
                     Text(listOfNotNull(entry.chapterNumber?.let { "Chapter $it" }, entry.title.takeIf { it.isNotBlank() }).joinToString(" · ").ifBlank { "Chapter" }, style = MaterialTheme.typography.titleMedium)
                     Text(entry.scanlationGroups.joinToString(", ").ifBlank { source.displayName }, style = MaterialTheme.typography.bodySmall)
@@ -213,7 +218,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
 }
 
 @Composable
-private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaSource, store: MangaReadingStore, modifier: Modifier = Modifier) {
+private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaSource, store: MangaReadingStore, modifier: Modifier = Modifier, previousChapter: (() -> Unit)? = null, nextChapter: (() -> Unit)? = null) {
     var pages by remember(chapter.id) { mutableStateOf<List<MangaPage>>(emptyList()) }
     var loading by remember(chapter.id) { mutableStateOf(true) }
     var error by remember(chapter.id) { mutableStateOf<String?>(null) }
@@ -280,7 +285,11 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
                 }
             }
             LinearProgressIndicator(progress = { (position + 1f) / pages.size }, modifier = Modifier.fillMaxWidth())
-            Text("Page ${position + 1} / ${pages.size}", Modifier.align(Alignment.CenterHorizontally).padding(6.dp), style = MaterialTheme.typography.bodySmall)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                TextButton(enabled = previousChapter != null, onClick = { previousChapter?.invoke() }) { Text("Prev chapter") }
+                Text("Page ${position + 1} / ${pages.size}", style = MaterialTheme.typography.bodySmall)
+                TextButton(enabled = nextChapter != null, onClick = { nextChapter?.invoke() }) { Text("Next chapter") }
+            }
         }
     }
 }
