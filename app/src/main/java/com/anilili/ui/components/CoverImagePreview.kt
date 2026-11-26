@@ -1,6 +1,16 @@
 package com.anilili.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,6 +47,8 @@ fun CoverImagePreview(
     onDismiss: () -> Unit,
 ) {
     if (imageUrl.isNullOrBlank()) return
+    var zoom by remember(imageUrl) { mutableFloatStateOf(1f) }
+    var pan by remember(imageUrl) { mutableStateOf(Offset.Zero) }
     val closeFocusRequester = remember { FocusRequester() }
 
     Dialog(
@@ -47,12 +59,29 @@ fun CoverImagePreview(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.97f))
-                .clickable(onClickLabel = "Close cover preview", onClick = onDismiss),
+                .clipToBounds()
+                .pointerInput(imageUrl) {
+                    detectTransformGestures { _, movement, factor, _ ->
+                        zoom = (zoom * factor).coerceIn(1f, 4f)
+                        val x = size.width * (zoom - 1f) / 2f
+                        val y = size.height * (zoom - 1f) / 2f
+                        pan = if (zoom == 1f) Offset.Zero else Offset(
+                            (pan.x + movement.x).coerceIn(-x, x),
+                            (pan.y + movement.y).coerceIn(-y, y))
+                    }
+                }
+                .pointerInput(imageUrl) {
+                    detectTapGestures(onDoubleTap = {
+                        zoom = if (zoom > 1f) 1f else 2f
+                        pan = Offset.Zero
+                    })
+                },
         ) {
             AsyncImage(
                 model = imageUrl,
                 contentDescription = "$title cover",
-                modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 36.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 36.dp)
+                    .graphicsLayer { scaleX = zoom; scaleY = zoom; translationX = pan.x; translationY = pan.y },
                 contentScale = ContentScale.Fit,
             )
             val controlFocus1 = rememberFocusFill()

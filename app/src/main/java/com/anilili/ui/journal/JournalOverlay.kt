@@ -342,7 +342,13 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
                         OutlinedTextField(draft.episode, { edit(draft.copy(episode=it.take(40))) }, label={ Text("Episode (optional)") }, singleLine=true, modifier=Modifier.fillMaxWidth().journalBringFocusedIntoView(imeVisible), colors = fieldColors, shape = fieldShape)
                         Text("Personal rating: " + if(draft.rating==0) "Unrated" else "${draft.rating}/10")
                         Slider(value=draft.rating.toFloat(), onValueChange={edit(draft.copy(rating=it.roundToInt()))}, valueRange=0f..10f, steps=9, colors = SliderDefaults.colors(thumbColor = colors.primary, activeTrackColor = colors.primary, inactiveTrackColor = colors.surfaceContainerHighest), thumb = { Box(Modifier.size(22.dp).background(colors.onSurface, CircleShape).border(2.dp, colors.primary, CircleShape)) })
-                        OutlinedTextField(draft.notes, { edit(draft.copy(notes=it.take(8000))) }, label={ Text("Your thoughts") }, minLines=3, modifier=Modifier.fillMaxWidth().journalBringFocusedIntoView(imeVisible), colors = fieldColors, shape = fieldShape)
+                        com.anilili.ui.journal.FormattedNoteEditor(
+                            value = draft.notes,
+                            onChange = { edit(draft.copy(notes = it.take(8000))) },
+                            modifier = Modifier.fillMaxWidth().journalBringFocusedIntoView(imeVisible),
+                            colors = fieldColors,
+                            shape = fieldShape,
+                        )
                         OutlinedTextField(draft.review, { edit(draft.copy(review=it.take(8000))) }, label={ Text("Private review") }, minLines=3, modifier=Modifier.fillMaxWidth().journalBringFocusedIntoView(imeVisible), colors = fieldColors, shape = fieldShape)
                         OutlinedTextField(draft.favoriteMoment, { edit(draft.copy(favoriteMoment=it.take(4000))) }, label={ Text("Favorite moments / timestamps") }, minLines=2, modifier=Modifier.fillMaxWidth().journalBringFocusedIntoView(imeVisible), colors = fieldColors, shape = fieldShape)
                     }

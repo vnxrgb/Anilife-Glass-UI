@@ -8,6 +8,14 @@ import com.anilili.ui.theme.appCanvas
 import android.view.KeyEvent as AndroidKeyEvent
 import android.view.inputmethod.EditorInfo
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.content.Intent
+import android.speech.RecognizerIntent
+import android.app.Activity
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -181,6 +189,15 @@ fun SearchScreen(
     initialGenre: String? = null,
     initialQuery: String? = null,
 ) {
+    val voiceContext = LocalContext.current
+    val voiceLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.takeIf { it.isNotBlank() }?.let {
+                vm.onQueryChange(it)
+                vm.commitTypedQuery()
+            }
+        }
+    }
     val state by vm.state.collectAsState()
     val isRefreshing by vm.isRefreshing.collectAsState()
     val isLoadingMore by vm.isLoadingMore.collectAsState()
@@ -587,12 +604,24 @@ private fun SearchTopBar(
                                 placeholder = { Text("Search anime…", maxLines = 1) },
                                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                                 trailingIcon = {
+                                    Row {
+                                    IconButton(onClick = {
+                                        try {
+                                            voiceLauncher.launch(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                                putExtra(RecognizerIntent.EXTRA_PROMPT, "Search anime")
+                                            })
+                                        } catch (_: android.content.ActivityNotFoundException) {
+                                            Toast.makeText(voiceContext, "Voice search is unavailable on this device", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }) { Icon(Icons.Default.Mic, contentDescription = "Voice search") }
                                     if (vm.query.isNotEmpty()) {
                                         val extraFocus2 = rememberFocusFill()
                                         IconButton(
                                             colors = extraFocus2.iconButtonColors(IconButtonDefaults.iconButtonColors()),onClick = { vm.onQueryChange("") }, modifier = Modifier.size(48.dp).focusFill(extraFocus2, CircleShape)) {
                                             Icon(Icons.Default.Close, contentDescription = "Clear search")
                                         }
+                                    }
                                     }
                                 },
                                 shape = RoundedCornerShape(28.dp),

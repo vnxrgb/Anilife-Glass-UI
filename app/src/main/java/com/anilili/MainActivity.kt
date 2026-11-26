@@ -312,6 +312,7 @@ class MainActivity : FragmentActivity() {
         )
         super.onCreate(savedInstanceState)
         applyTransparentSystemBars()
+        com.anilili.experience.ExperienceShortcuts.install(this)
         // Before the activity starts, so a result for a recreated activity is still delivered.
         com.anilili.playback.ExternalPlaybackReturns.register(this)
         DiagnosticsJankMonitor.install(this)
