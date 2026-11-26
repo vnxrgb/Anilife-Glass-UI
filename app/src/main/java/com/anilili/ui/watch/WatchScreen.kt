@@ -290,6 +290,12 @@ fun WatchScreen(
     // showing it again on the way out only put a second, worse copy of it between the viewer and
     // the screen they actually wanted. Everything it offered lives in the player's own panels.
     var fullscreen by remember(animeId, device.isTv) { mutableStateOf(device.isTv || startFullscreen) }
+    val journalReporter = com.anilili.ui.journal.LocalJournalReport.current
+    val journalData = (state as? UiState.Success)?.data
+    androidx.compose.runtime.SideEffect {
+        journalReporter(com.anilili.ui.journal.JournalContext(animeId, journalData?.seriesTitle.orEmpty(),
+            journalData?.current?.number?.toString() ?: episode, fullscreen, journalData?.artworkUrl))
+    }
     val currentFullscreen by rememberUpdatedState(fullscreen)
     val currentOnOpenNextSeason by rememberUpdatedState(onOpenNextSeason)
     LaunchedEffect(vm) {
@@ -2417,11 +2423,9 @@ private fun MobileWatchDetails(
     val noteKey = remember(data.anilistId, data.current.number) {
         "${data.anilistId}:${data.current.number}"
     }
-    val notePreferences = remember(badgeContext) {
-        badgeContext.getSharedPreferences("anilumos_episode_notes", Context.MODE_PRIVATE)
-    }
-    var savedEpisodeNote by remember(noteKey) {
-        mutableStateOf(notePreferences.getString(noteKey, "").orEmpty())
+    val journalEntries by com.anilili.data.journal.JournalStore.entries.collectAsState()
+    val savedEpisodeNote = remember(noteKey, journalEntries) {
+        com.anilili.data.journal.JournalStore.episodeNote(data.anilistId, data.current.number.toString())
     }
     var editingEpisodeNote by remember(noteKey) { mutableStateOf(false) }
     var noteDraft by remember(noteKey) { mutableStateOf(savedEpisodeNote) }
@@ -2450,11 +2454,9 @@ private fun MobileWatchDetails(
             confirmButton = {
                 TextButton(onClick = {
                     val value = noteDraft.trim()
-                    notePreferences.edit().apply {
-                        if (value.isEmpty()) remove(noteKey) else putString(noteKey, value)
-                    }.apply()
-                    savedEpisodeNote = value
-                    editingEpisodeNote = false
+                    if (com.anilili.data.journal.JournalStore.saveEpisodeNote(data.anilistId, data.seriesTitle, data.current.number.toString(), value)) {
+                        editingEpisodeNote = false
+                    }
                 }) { Text("Save note") }
             },
             dismissButton = {

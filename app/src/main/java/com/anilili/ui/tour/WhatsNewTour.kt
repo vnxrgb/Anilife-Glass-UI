@@ -42,6 +42,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
@@ -82,7 +84,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** The things on screen a tour step can point at. Each is tagged where it is drawn ([tourTarget]). */
-enum class TourTarget { FOR_YOU, BECAUSE, ROW_HANDLE, DICE, ARRANGE_SETTINGS, NAV_HOME, NAV_LIST, NAV_BROWSE, NAV_DOWNLOADS, NAV_PROFILE }
+enum class TourTarget { FOR_YOU, BECAUSE, ROW_HANDLE, DICE, ARRANGE_SETTINGS, NAV_HOME, NAV_LIST, NAV_BROWSE, NAV_DOWNLOADS, NAV_PROFILE, JOURNAL_FLOATING, JOURNAL_LIBRARY, FRANCHISE_CARD, FRANCHISE_GUIDE }
 
 /**
  * One step: what it points at (null for a card on its own), what it says, and what it adds when
@@ -140,12 +142,18 @@ private fun mobileReleaseSteps() = listOf(
     TourStep(TourTarget.NAV_HOME, "Welcome to AniLumos", "The new optical glass navigation reflects the content behind it. Switch sections from here.", destination = "home"),
     TourStep(TourTarget.DICE, "Discover by mood", "Open Discover on Home and choose a mood, from Comfort to Suspense. Swipe for another matching anime.", destination = "home"),
     TourStep(TourTarget.NAV_BROWSE, "Explore anime", "Browse for a series. Anime details now borrow ambient colours from the artwork.", destination = "browse"),
+    TourStep(TourTarget.FRANCHISE_CARD, "Franchise Watch Order", "Let's explore Fate/stay night: Unlimited Blade Works. Open Franchise Watch Order from an anime's details or Related tab to see its seasons, movies and extras.", whenMissing = "The card appears when related titles are available. If the catalogue is offline, try again later.", destination = "franchise-card"),
+    TourStep(TourTarget.FRANCHISE_GUIDE, "Find your next chapter", "Switch between Timeline and Watch order, choose a curated viewing order when available, and track completed titles. The guide shows your next unfinished anime without changing your progress.", whenMissing = "Viewing orders depend on the catalogue and community sources. You can open the guide later from a related series.", destination = "franchise-guide"),
     TourStep(TourTarget.NAV_HOME, "Smart Resume", "Continue Watching takes you back to unfinished episodes.", destination = "home"),
-    TourStep(TourTarget.NAV_LIST, "Your anime library", "Find collections and AniLumos Wrapped in your library.", destination = "more"),
+    TourStep(TourTarget.NAV_LIST, "Your anime library", "Find collections and AniLumos Wrapped in My List. Personalize your Wrapped with the same name or nickname as your journal.", destination = "more"),
     TourStep(null, "Personalized Calendar", "Choose Following only on the schedule to focus on releases from your list.", destination = "schedule"),
     TourStep(TourTarget.NAV_DOWNLOADS, "Download queue", "Manage active, paused and failed downloads in one place.", destination = "downloads"),
     TourStep(null, "Cinema and episode tools", "Open an episode to find cinema lighting, episode notes and stream recovery options. Playback is not started during this tour."),
-    TourStep(TourTarget.NAV_PROFILE, "Make it yours", "Find themes and account options in your profile. Link a TV from Accounts & sync.", destination = "appearance"),
+    TourStep(TourTarget.JOURNAL_FLOATING, "Meet Anime Journal", "Tap the floating journal to write notes, private reviews, ratings and favorite moments. Drag it to a comfortable spot. It remembers its position and saves entries locally as you edit.", whenMissing = "The button may be hidden or disabled. Your journal is always available in My List.", destination = "home"),
+    TourStep(TourTarget.JOURNAL_FLOATING, "Keep the screen clear", "Long-press the journal button to tuck it into a small glass handle above the bottom-right navigation area. Tap that handle to restore the button. It stays out of Settings and fullscreen video.", whenMissing = "Enable the floating button in Settings → Appearance → Floating Anime Journal.", destination = "home"),
+    TourStep(TourTarget.JOURNAL_LIBRARY, "Your private anime diary", "Open Anime Journal in My List, even if the floating button is off. Group by anime or view all entries, search and sort by date, title or rating. Long-press to select multiple entries. Delete with confirmation, then Undo if needed.", whenMissing = "Scroll through My List to find Anime Journal.", destination = "more"),
+    TourStep(null, "Share your memories", "Tap Share to choose artwork, ratings, episode details and writing. Private writing is excluded by default. Share or save a PNG, or export selected entries as TXT. Choose whether to include your name on shared Journal and Wrapped images."),
+    TourStep(TourTarget.NAV_PROFILE, "Make it yours", "In Settings → Appearance → Personalization, set your shared display name, journal grouping and name-sharing defaults. Toggle the journal, choose its floating or minimized style, or reset its position. Themes and TV linking are still available in Settings.", destination = "appearance"),
     TourStep(TourTarget.NAV_HOME, "You're ready", "Enjoy AniLumos. Replay this walkthrough from About whenever you like.", destination = "home"),
 )
 
@@ -159,7 +167,12 @@ private fun mobileReleaseSteps() = listOf(
  */
 object WhatsNewTour {
     /** Change this for the next release's tour; every install then shows it once more. */
-    const val TOUR_ID = "optical-mobile-2026-11-v3"
+    const val TOUR_ID = "anime-journal-mobile-2026-11-v2"
+    const val FRANCHISE_DEMO_ID = 19603
+    val journalButtonDemo: Boolean get() = active && mobileReleaseSteps().getOrNull(step)?.target == TourTarget.JOURNAL_FLOATING
+    val franchiseCardDemo: Boolean get() = active && mobileReleaseSteps().getOrNull(step)?.target == TourTarget.FRANCHISE_CARD
+    val franchiseGuideDemo: Boolean get() = active && mobileReleaseSteps().getOrNull(step)?.target == TourTarget.FRANCHISE_GUIDE
+    private const val TV_TOUR_ID = "optical-mobile-2026-11-v3"
     private const val SEEN_FILE = "whats-new-seen"
 
     var active by mutableStateOf(false)
@@ -173,15 +186,16 @@ object WhatsNewTour {
     /** Set by the Home that is on screen: scrolls a target's row into view. */
     internal var bringIntoView: (suspend (TourTarget) -> Unit)? = null
 
-    fun startIfDue(context: Context) {
+    fun startIfDue(context: Context, isTv: Boolean = false) {
+        val tourId = if (isTv) TV_TOUR_ID else TOUR_ID
         if (active) return
         val file = File(context.applicationContext.filesDir, SEEN_FILE)
-        if (runCatching { file.readText().trim() }.getOrNull() == TOUR_ID) return
-        runCatching { file.writeText(TOUR_ID) }
+        if (runCatching { file.readText().trim() }.getOrNull() == tourId) return
+        runCatching { file.writeText(tourId) }
             .onFailure { DiagnosticsLog.throwable("WhatsNewTour could not record itself as seen", it) }
         step = 0
         active = true
-        DiagnosticsLog.event("WhatsNewTour started id=$TOUR_ID")
+        DiagnosticsLog.event("WhatsNewTour started id=$tourId")
     }
 
     fun reopen() {
@@ -212,7 +226,12 @@ object WhatsNewTour {
 fun Modifier.tourTarget(target: TourTarget): Modifier = composed {
     if (!WhatsNewTour.active) return@composed this
     DisposableEffect(target) { onDispose { WhatsNewTour.bounds.remove(target) } }
-    onGloballyPositioned { WhatsNewTour.bounds[target] = it.boundsInWindow() }
+    onGloballyPositioned { coordinates ->
+        val rect = coordinates.boundsInWindow()
+        if (rect.width >= coordinates.size.width * .75f && rect.height >= coordinates.size.height * .75f && rect.width > 0f && rect.height > 0f) {
+            WhatsNewTour.bounds[target] = rect
+        } else WhatsNewTour.bounds.remove(target)
+    }
 }
 
 /**
@@ -225,10 +244,11 @@ fun StartWhatsNewTourWhenSettled() {
     val context = LocalContext.current
     val introDone by ProfilesUi.launchIntroDone.collectAsState()
     val profileOverlay by ProfilesUi.overlay.collectAsState()
-    LaunchedEffect(introDone, profileOverlay) {
+    val isTv = LocalAppDeviceProfile.current.isTv
+    LaunchedEffect(introDone, profileOverlay, isTv) {
         if (!introDone || profileOverlay != null) return@LaunchedEffect
         delay(TOUR_START_DELAY_MS)
-        WhatsNewTour.startIfDue(context)
+        WhatsNewTour.startIfDue(context, isTv)
     }
 }
 
@@ -268,17 +288,18 @@ fun WhatsNewTourOverlay(onNavigate: (String) -> Unit = {}) {
         val target = step.target
         if (target == null) { settled = true; return@LaunchedEffect }
         WhatsNewTour.bringIntoView?.invoke(target)
-        withTimeoutOrNull(TARGET_WAIT_MS) { snapshotFlow { WhatsNewTour.bounds[target] }.first { it != null } }
+        withTimeoutOrNull(if (target == TourTarget.FRANCHISE_CARD || target == TourTarget.FRANCHISE_GUIDE) 5000L else TARGET_WAIT_MS) { snapshotFlow { WhatsNewTour.bounds[target] }.first { it != null } }
         delay(SCROLL_SETTLE_MS)
         settled = true
     }
 
     var origin by remember { mutableStateOf(Offset.Zero) }
+    var overlaySize by remember { mutableStateOf(IntSize.Zero) }
     val padding = with(density) { 8.dp.toPx() }
     val found = step.target?.let { WhatsNewTour.bounds[it] }
         ?.translate(-origin)
         ?.inflate(padding)
-        ?.takeIf { settled }
+        ?.takeIf { settled && it.width > 0 && it.height > 0 && it.top >= 0f && it.bottom <= overlaySize.height.toFloat() && it.left >= -padding && it.right <= overlaySize.width + padding }
     val holeAlpha by animateFloatAsState(if (found != null) 1f else 0f, tween(220), label = "tour-hole-alpha")
     var lastHole by remember { mutableStateOf(Rect.Zero) }
     if (found != null) lastHole = found
@@ -287,6 +308,8 @@ fun WhatsNewTourOverlay(onNavigate: (String) -> Unit = {}) {
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
+            .zIndex(30f)
+            .onSizeChanged { overlaySize = it }
             .onGloballyPositioned { origin = it.positionInWindow() },
     ) {
         val corner = with(density) { 18.dp.toPx() }

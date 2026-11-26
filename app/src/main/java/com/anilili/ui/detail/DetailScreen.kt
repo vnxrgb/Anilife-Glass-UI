@@ -81,6 +81,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.LaunchedEffect
+import com.anilili.ui.tour.WhatsNewTour
+import com.anilili.ui.tour.TourTarget
+import com.anilili.ui.tour.tourTarget
+import androidx.compose.ui.zIndex
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -263,6 +267,8 @@ fun DetailScreen(
     vm: DetailViewModel = viewModel(),
 ) {
     val state by vm.state.collectAsState()
+    val journalReporter = com.anilili.ui.journal.LocalJournalReport.current
+    SideEffect { journalReporter(com.anilili.ui.journal.JournalContext(animeId, (state as? UiState.Success)?.data?.info?.title?.preferred.orEmpty(), artwork = (state as? UiState.Success)?.data?.info?.coverImage?.best)) }
     // The page's own colour, not the selected season's: switching seasons re-draws the hero, and
     // re-colouring every control under the cursor with it would read as the page flickering.
     ShowColourTheme((state as? UiState.Success)?.data?.info?.coverImage?.color) {
@@ -653,7 +659,17 @@ private fun DetailContent(
         ids.toSet()
     }
     var franchiseOpen by rememberSaveable(info.id) { mutableStateOf(false) }
-    if (franchiseOpen && franchiseEntries.size > 1) {
+    val demoCard = !device.isTv && info.id == WhatsNewTour.FRANCHISE_DEMO_ID && WhatsNewTour.franchiseCardDemo
+    val demoGuide = !device.isTv && info.id == WhatsNewTour.FRANCHISE_DEMO_ID && WhatsNewTour.franchiseGuideDemo
+    LaunchedEffect(demoCard, franchiseEntries.size, resume != null, selectedTab) {
+        if (demoCard && franchiseEntries.size > 1) {
+            selectedTab = DetailTab.HOME
+            // The sticky tabs occupy their own lazy item; leave QuickFacts above the card
+            // so the spotlight never lands on a card clipped behind the pinned header.
+            detailListState.scrollToItem(if (resume != null) 4 else 3)
+        }
+    }
+    if (franchiseOpen && !demoGuide && franchiseEntries.size > 1) {
         FranchiseWatchOrderDialog(
             info = info,
             entries = franchiseEntries,
@@ -1006,6 +1022,12 @@ private fun DetailContent(
             item { Spacer(Modifier.height(device.pagePadding)) }
         }
         if (artworkUnderStatusBar) ArtworkStatusBarScrim(Modifier.align(Alignment.TopCenter))
+        if (demoGuide && franchiseEntries.size > 1) {
+            Box(Modifier.fillMaxSize().zIndex(10f)) {
+                FranchiseWatchOrderDialog(info, franchiseEntries, completedFranchiseIds,
+                    onDismiss = {}, onOpen = {}, onWatch = {}, inlineDemo = true)
+            }
+        }
     }
 }
 
@@ -2095,6 +2117,7 @@ private fun FranchiseProgressCard(
         Modifier.fillMaxWidth()
             .padding(horizontal = LocalAppDeviceProfile.current.pagePadding, vertical = 8.dp)
             .glassCard(RoundedCornerShape(22.dp))
+            .tourTarget(TourTarget.FRANCHISE_CARD)
             .clickable(onClickLabel = "Open franchise watch order", onClick = onOpen)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -2123,6 +2146,7 @@ private fun FranchiseWatchOrderDialog(
     onDismiss: () -> Unit,
     onOpen: (Int) -> Unit,
     onWatch: (Int) -> Unit,
+    inlineDemo: Boolean = false,
 ) {
     var timeline by rememberSaveable(info.id) { mutableStateOf(true) }
     var showSources by rememberSaveable(info.id) { mutableStateOf(false) }
@@ -2170,7 +2194,7 @@ private fun FranchiseWatchOrderDialog(
     val visible = orderedEntries.filter { groupName == null || it.group.name == groupName }
     val accent = MaterialTheme.colorScheme.primary
     val next = orderedEntries.firstOrNull { it.media.id !in completedIds && it.media.id !in optionalIds }
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    val guideContent: @Composable () -> Unit = {
         Column(Modifier.fillMaxSize().appCanvas().glassAtmosphere().systemBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onDismiss) {
@@ -2198,7 +2222,7 @@ private fun FranchiseWatchOrderDialog(
                 item(key = "franchise-progress") {
                     val done = orderedEntries.count { it.media.id in completedIds }
                     Column(Modifier.fillMaxWidth().padding(horizontal = pad, vertical = 6.dp)
-                        .glassCard(RoundedCornerShape(20.dp)).padding(12.dp)) {
+                        .tourTarget(TourTarget.FRANCHISE_GUIDE).glassCard(RoundedCornerShape(20.dp)).padding(12.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Franchise progress", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                             Text("$done / ${orderedEntries.size}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2287,7 +2311,8 @@ private fun FranchiseWatchOrderDialog(
             }
         }
     }
-    if (showOrders) {
+    if (inlineDemo) guideContent() else Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) { guideContent() }
+    if (showOrders && !inlineDemo) {
         Dialog(onDismissRequest = { showOrders = false }) {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).appCanvas()
                 .glassCard(RoundedCornerShape(24.dp)).padding(16.dp)) {

@@ -119,6 +119,7 @@ class MiruroApp : Application(), ImageLoaderFactory {
         // First of the stores: a profile switch moves the account files into place, and nothing may
         // have opened them yet (Profiles.init).
         diagnosticsStep("Profiles.init") { com.anilili.data.profiles.Profiles.init(this) }
+        com.anilili.data.journal.JournalStore.init(this)
         // Warmed on a background thread; the first challenged request is many seconds away and a
         // request that arrives before this lands simply finds no stored clearance and asks again.
         diagnosticsStep("CloudflareClearanceStore.init") {

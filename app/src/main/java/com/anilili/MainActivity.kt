@@ -1009,10 +1009,22 @@ private fun MiruroRoot(
     // clock and Schedule's air times.
     val systemUses24Hour = rememberSystemUses24Hour()
     val clockFormat by SettingsStore.clockFormat.collectAsState()
+    var journalOpenRequest by remember { mutableStateOf(0) }
+    var journalReport by remember { mutableStateOf<Pair<String?, com.anilili.ui.journal.JournalContext>?>(null) }
+    val journalEntryId = backStack?.id
+    val journalContext = journalReport?.takeIf { it.first == journalEntryId }?.second
+        ?: com.anilili.ui.journal.JournalContext(
+            animeId = if (currentRoute == Routes.DETAIL || Routes.hostsPlayer(currentRoute)) backStack?.arguments?.getInt(Routes.Arg.ID)?.takeIf { it > 0 } else null,
+            episode = backStack?.arguments?.getString(Routes.Arg.EPISODE).orEmpty(),
+            fullscreen = Routes.hostsPlayer(currentRoute) && (currentRoute == Routes.DOWNLOAD || backStack?.arguments?.getBoolean(Routes.Arg.FULLSCREEN) == true),
+        )
+    val journalProfileOverlay by com.anilili.ui.profiles.ProfilesUi.overlay.collectAsState()
     val chromeTakeover = remember { AppChromeTakeover() }
     val opticalBackdrop = rememberLayerBackdrop()
     CompositionLocalProvider(
         LocalAppChromeTakeover provides chromeTakeover,
+        com.anilili.ui.journal.LocalOpenJournal provides { journalOpenRequest++ },
+        com.anilili.ui.journal.LocalJournalReport provides { report -> journalReport = journalEntryId to report },
         LocalOpticalBackdrop provides if (!deviceProfile.isTv && !inPictureInPicture) opticalBackdrop else null,
         LocalAppDeviceProfile provides deviceProfile,
         // Material pads chips, icon buttons, tabs and text buttons out to a 48dp touch target round
@@ -1210,6 +1222,15 @@ private fun MiruroRoot(
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
+            com.anilili.ui.journal.JournalOverlay(
+                visible = !deviceProfile.isTv && !inPictureInPicture && currentRoute != null &&
+                    currentRoute != Routes.SETTINGS && currentRoute != Routes.DOWNLOAD &&
+                    !journalContext.fullscreen && journalProfileOverlay == null && !showRandomPick && !chromeTakeover.active &&
+                    (!com.anilili.ui.tour.WhatsNewTour.active || com.anilili.ui.tour.WhatsNewTour.journalButtonDemo),
+                anime = journalContext,
+                openRequest = journalOpenRequest,
+                bottomSpace = if (showPhoneCapsule) PhoneNavigationBarHeight else 0.dp,
+            )
             if (showRandomPick) {
                 val randomState by randomVm.state.collectAsState()
                 RandomAnimeDialog(
@@ -1262,6 +1283,9 @@ private fun MiruroRoot(
                             nav.navigateTab(Routes.HOME)
                             randomVm.ensurePick()
                             showRandomPick = true
+                        }
+                        "franchise-card", "franchise-guide" -> {
+                            nav.navigate(Routes.detail(com.anilili.ui.tour.WhatsNewTour.FRANCHISE_DEMO_ID)) { launchSingleTop = true }
                         }
                         "browse" -> nav.navigateTab(Routes.SEARCH)
                         "more" -> nav.navigateTab(Routes.MORE)

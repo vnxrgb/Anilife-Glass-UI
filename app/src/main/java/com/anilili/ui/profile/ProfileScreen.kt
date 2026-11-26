@@ -77,6 +77,8 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import com.anilili.ui.tour.TourTarget
+import com.anilili.ui.tour.tourTarget
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
@@ -292,6 +294,7 @@ fun ProfileScreen(
     vm: ProfileViewModel = viewModel(),
 ) {
     val context = LocalContext.current
+    val openJournal = com.anilili.ui.journal.LocalOpenJournal.current
     val device = LocalAppDeviceProfile.current
     val token by AuthManager.token.collectAsState()
     val malLoggedIn by MalAuthManager.loggedIn.collectAsState()
@@ -767,6 +770,22 @@ fun ProfileScreen(
                         }
 
                         if (!device.isTv) {
+                            item(key = "anilumos-journal") {
+                                val journalEntries by com.anilili.data.journal.JournalStore.entries.collectAsState()
+                                val journalName by com.anilili.data.journal.JournalStore.journalName.collectAsState()
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = device.pagePadding, vertical = 6.dp)
+                                        .tourTarget(TourTarget.JOURNAL_LIBRARY).glassCard(RoundedCornerShape(22.dp)).clickable(onClick = openJournal).padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(com.anilili.data.journal.journalTitle(journalName), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                        Text("${journalEntries.size} saved entries · Private, on-device", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    Text("Open ›", color = MaterialTheme.colorScheme.onSurface)
+                                }
+                            }
                             item(key = "anilumos-wrapped") {
                                 val stats = wrappedStats(localActivity, LocalDate.now())
                                 val artwork = history.firstOrNull { !it.fromRemote && !it.cover.isNullOrBlank() }?.cover

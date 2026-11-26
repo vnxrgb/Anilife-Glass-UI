@@ -31,7 +31,7 @@ internal fun wrappedPersonality(stats: WrappedStats, titles: Int, genres: List<S
 
 internal suspend fun shareWrappedImage(
     context: Context, stats: WrappedStats, watchTime: String, titleCount: Int,
-    titles: List<WrappedTitle>, genres: List<String>, personality: WrappedPersonality, accent: Int,
+    titles: List<WrappedTitle>, genres: List<String>, personality: WrappedPersonality, accent: Int, name: String = "",
 ) {
     val file = withContext(Dispatchers.IO) {
         val directory = File(context.cacheDir, "wrapped").apply { mkdirs() }
@@ -125,7 +125,7 @@ internal suspend fun shareWrappedImage(
         text("ANILUMOS",140f,96f,27f,true)
         text(stats.year.toString(),886f,96f,30f,true,gold)
         text("WRAPPED",56f,213f,112f,true,personalityColor)
-        text("YOUR ANIME YEAR IN REVIEW",60f,264f,24f,true,muted)
+        text(if (name.isBlank()) "YOUR ANIME YEAR IN REVIEW" else "$name's anime year in review",60f,264f,30f,true,muted,968f)
         panel(56f,310f,520f,410f,personalityColor)
         text("TIME SPENT IN",86f,369f,26f,true,muted)
         text("ANIME WORLDS",86f,406f,26f,true,muted)
@@ -178,7 +178,7 @@ internal suspend fun shareWrappedImage(
         panel(56f,1460f,968f,260f,personalityColor)
         text("YOUR VIEWING PERSONALITY",86f,1515f,25f,true,personalityColor)
         text(personality.symbol,86f,1600f,62f,true,personalityColor)
-        text(personality.title,170f,1598f,48f,true,white,820f)
+        text(if (name.isBlank()) personality.title else "$name — ${personality.title}",170f,1598f,if (name.isBlank()) 48f else 36f,true,white,820f)
         text(personality.description,86f,1674f,28f,false,muted,910f)
         logo(56f,1775f,60f)
         text("Made with AniLumos",132f,1812f,27f,true)
