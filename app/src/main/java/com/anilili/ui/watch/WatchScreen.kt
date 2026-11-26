@@ -84,6 +84,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -2915,6 +2916,8 @@ private fun SourceSelectors(
         ModalBottomSheet(
             onDismissRequest = { showServerDialog = false },
             sheetState = mobileSheetState,
+            // The list owns vertical gestures; dismissal remains available via Close or outside tap.
+            sheetGesturesEnabled = false,
             containerColor = playerPanelBackground(),
             contentColor = playerPanelForeground(),
         ) {
@@ -3083,18 +3086,28 @@ private fun ServerChoiceRows(
         option.provider == data.provider && option.variant == data.pickerVariant
     }
     options.sortedByDescending(isPlaying).forEach { option ->
-        val selected = isPlaying(option)
-        MidnightChoiceRow(
-            title = serverTitle(option, data),
-            subtitle = serverDescription(option, data, preferredLanguages, selected),
-            selected = selected,
-            // The television panel puts the remote on its close button, as every player panel does.
-            claimInitialFocus = false,
-            // Faded, not removed: a server that just failed may well work on a second try.
-            modifier = Modifier.alpha(if (option.recentlyFailed && !selected) 0.5f else 1f),
-            onSelect = { onSelect(option) },
-        )
+        key(serverPickerKey(option)) {
+            ServerChoiceRow(data, option, preferredLanguages, onSelect)
+        }
     }
+}
+
+@Composable
+private fun ServerChoiceRow(
+    data: WatchData,
+    option: WatchSourceOption,
+    preferredLanguages: Set<String>,
+    onSelect: (WatchSourceOption) -> Unit,
+) {
+    val selected = option.provider == data.provider && option.variant == data.pickerVariant
+    MidnightChoiceRow(
+        title = serverTitle(option, data),
+        subtitle = serverDescription(option, data, preferredLanguages, selected),
+        selected = selected,
+        claimInitialFocus = false,
+        modifier = Modifier.alpha(if (option.recentlyFailed && !selected) 0.5f else 1f),
+        onSelect = { onSelect(option) },
+    )
 }
 
 /** A server's name as every picker shows it, starred when Settings pins it. */
@@ -3198,14 +3211,29 @@ private fun MobileServerPickerContent(
             stillChecking = !languageFilterIsComplete(data.sourceOptions, data.capabilities),
         )
 
-        ScrollHintColumn(
-            fadeColor = playerPanelBackground(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 440.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            ServerChoiceRows(data, options, preferredLanguages, onSelect)
+        // Probes update capabilities, ranking and availability while this sheet is open.
+        // Keep existing row identities/order and append new choices. Explicit filter changes
+        // start a fresh list; ordinary metadata updates must not steal the user's scroll anchor.
+        key(audio, language) {
+            var seenKeys by remember { mutableStateOf<List<String>>(emptyList()) }
+            val rows = stableServerPickerRows(seenKeys, options, data.provider, data.pickerVariant)
+            SideEffect {
+                val updated = (seenKeys + rows.map(::serverPickerKey)).distinct()
+                if (seenKeys != updated) seenKeys = updated
+            }
+            val listState = rememberLazyListState()
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(max = 440.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (rows.isEmpty()) {
+                    item { Text(if (data.isLoadingMoreSources) "Looking for servers…" else "No server matches these filters.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+                items(rows, key = ::serverPickerKey) { option ->
+                    ServerChoiceRow(data, option, preferredLanguages, onSelect)
+                }
+            }
         }
 
         Row(
