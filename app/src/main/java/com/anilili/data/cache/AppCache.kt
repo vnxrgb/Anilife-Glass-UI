@@ -161,11 +161,12 @@ class AppCache(
     }
 
     /** Fresh-only read: the decoded value when [key] exists and has not expired, else null. */
-    suspend fun <T> getIfFresh(key: String, serializer: KSerializer<T>): T? {
+    suspend fun <T> getIfFresh(key: String, serializer: KSerializer<T>, outdated: ((T, Long) -> Boolean)? = null): T? {
         val now = System.currentTimeMillis()
         val entry = read(key) ?: return null
         if (now > entry.expiresAt) return null
         val value = decode(entry, serializer) ?: return null
+        if (outdated?.invoke(value, entry.createdAt) == true) return null
         touch(entry, now)
         return value
     }

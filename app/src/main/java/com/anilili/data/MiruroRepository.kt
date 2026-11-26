@@ -95,6 +95,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToLong
@@ -783,6 +785,8 @@ class MiruroRepository(
     // Bounds the related-seasons walk's AniList fan-out so it can't monopolise the shared,
     // rate-limited connection pool (5/host) and stall playback-critical metadata/catalog lookups.
     private val seriesFetchGate = Semaphore(SERIES_FETCH_CONCURRENCY)
+    private val cardBatchGate = Mutex()
+    private val fullBatchGate = Mutex()
     private val sourceFailureCooldowns = SourceFailureCooldowns()
 
     /**
@@ -1330,20 +1334,56 @@ class MiruroRepository(
      * Fetch saved-title release metadata in AniList's native 50-item batches. This replaces the
      * old one-request-per-title startup sync and keeps successful batches cached for a day.
      */
-    suspend fun mediaByIds(ids: Collection<Int>, force: Boolean = false): List<Media> {
-        val media = mutableListOf<Media>()
-        ids.asSequence().filter { it > 0 }.distinct().sorted().chunked(50).forEach { chunk ->
-            media += cache.getOrFetch(
-                    key = batchCacheKey("anilist_batch:v2:", chunk),
-                    serializer = ListSerializer(Media.serializer()),
-                    ttlMs = INFO_TTL,
-                    forceRefresh = force,
-                ) { aniList.mediaByIds(chunk) }
+    suspend fun mediaByIds(ids: Collection<Int>, force: Boolean = false): List<Media> =
+        cachedMediaCards(ids, force, byMal = false)
+
+    suspend fun mediaByMalIds(malIds: List<Int>): List<Media> =
+        cachedMediaCards(malIds, force = false, byMal = true)
+
+    // Cache each card, not just an exact set of IDs. Overlapping Home, MAL and recommendation
+    // requests now share records; only genuinely missing IDs are sent in native batches.
+    private suspend fun cachedMediaCards(ids: Collection<Int>, force: Boolean, byMal: Boolean): List<Media> =
+        cardBatchGate.withLock {
+            val requested = ids.filter { it > 0 }.distinct().sorted()
+            val serializer = Media.serializer()
+            val prefix = if (byMal) "media-card:mal:v1:" else "media-card:ani:v1:"
+            val available = mutableMapOf<Int, Media>()
+            val ambiguous = mutableListOf<Media>()
+            if (!force) requested.forEach { id ->
+                cache.getIfFresh("$prefix$id", serializer, ::airingRecordOutdated)?.let { available[id] = it }
+            }
+            requested.filterNot { it in available }.chunked(50).forEach { chunk ->
+                val fetched = if (byMal) aniList.mediaByMalIds(chunk) else aniList.mediaByIds(chunk)
+                val records = mutableMapOf<String, String>()
+                fetched.distinctBy(Media::id).forEach { media ->
+                    val encoded = kotlinx.serialization.json.Json.encodeToString(serializer, media)
+                    records["media-card:ani:v1:${media.id}"] = encoded
+                }
+                // MAL IDs can be ambiguous. Only cache unique matches and retain the existing
+                // collection semantics for callers that need to disambiguate.
+                fetched.filter { it.idMal != null }.groupBy { it.idMal!! }.forEach { (id, matches) ->
+                    matches.singleOrNull()?.let {
+                        records["media-card:mal:v1:$id"] = kotlinx.serialization.json.Json.encodeToString(serializer, it)
+                    }
+                }
+                if (records.isNotEmpty()) cache.putBatch(records, INFO_TTL)
+                if (byMal) {
+                    // Preserve ambiguous results in the returned list; never silently pick one.
+                    fetched.groupBy { it.idMal }.forEach { (id, matches) ->
+                        if (id != null && matches.size == 1) available[id] = matches.first()
+                    }
+                    fetched.groupBy { it.idMal }.values.filter { it.size > 1 }.forEach { ambiguous += it }
+
+                } else fetched.forEach { available[it.id] = it }
+            }
+            (requested.mapNotNull(available::get) + ambiguous).distinctBy(Media::id)
         }
-        return media
+
+    private fun airingRecordOutdated(media: Media, fetchedAtMs: Long): Boolean {
+        val airsAt = media.nextAiringEpisode?.airingAt?.times(1000) ?: return false
+        return airsAt > fetchedAtMs && airsAt <= System.currentTimeMillis()
     }
 
-    suspend fun mediaByMalIds(malIds: List<Int>) = aniList.mediaByMalIds(malIds)
     suspend fun notifications(markAllRead: Boolean = false) = aniList.notifications(markAllRead)
     suspend fun favouriteAnime() = aniList.favouriteAnime()
     suspend fun userAnimeList(userId: Int) = aniList.userAnimeList(userId)
@@ -2059,7 +2099,11 @@ class MiruroRepository(
         return record.takeIf { it.id == id && it.status in SETTLED_STATUSES }
     }
 
-    private suspend fun liveAnimeInfo(id: Int, force: Boolean, maxAgeMs: Long? = null): Media? = try {
+    private suspend fun liveAnimeInfo(id: Int, force: Boolean, maxAgeMs: Long? = null): Media? = fullBatchGate.withLock {
+        liveAnimeInfoLocked(id, force, maxAgeMs)
+    }
+
+    private suspend fun liveAnimeInfoLocked(id: Int, force: Boolean, maxAgeMs: Long? = null): Media? = try {
         cache.getOrFetch(
             key = "anime:v4:$id",
             serializer = Media.serializer().nullable,
@@ -2272,7 +2316,7 @@ class MiruroRepository(
             ) {
                 val ids = withContext(Dispatchers.IO) { jikan.recommendationIds(malId) }
                 if (ids.isEmpty()) emptyList() else {
-                    val byMal = aniList.mediaByMalIds(ids).groupBy { it.idMal }
+                    val byMal = mediaByMalIds(ids).groupBy { it.idMal }
                     ids.mapNotNull { byMal[it]?.singleOrNull() }
                 }
             }.filter { it.id != id && (!hideAdult || !it.isAdult) && it.status != "NOT_YET_RELEASED" }
@@ -2293,6 +2337,44 @@ class MiruroRepository(
         return ranks.mapNotNull { all[it] }.filter { it.status != "NOT_YET_RELEASED" && (!hideAdult || !it.isAdult) }
     }
 
+    /** Reuse full records and the static catalogue before batching remaining franchise metadata. */
+    private suspend fun fullSeriesMembers(ids: List<Int>, root: Media): List<Media> {
+        val requested = ids.distinct().filter { it > 0 }
+        val available = mutableMapOf(root.id to root)
+        coroutineScope {
+            requested.filterNot { it == root.id }.map { id ->
+                async {
+                    val settled = seriesFetchGate.withPermit { settledTreeRecord(id) }
+                    id to settled
+                }
+            }.awaitAll().forEach { (id, media) -> if (media != null) available[id] = media }
+        }
+        fullBatchGate.withLock {
+            val serializer = Media.serializer().nullable
+            requested.filterNot { it in available }.forEach { id ->
+                cache.getIfFresh("anime:v4:$id", serializer) { media, fetched ->
+                    media != null && airingRecordOutdated(media, fetched)
+                }?.let { available[id] = it }
+            }
+            requested.filterNot { it in available }.chunked(10).forEach { chunk ->
+                val fetched = try { aniList.fullMediaByIds(chunk) } catch (error: Exception) {
+                    error.rethrowIfCancellation()
+                    emptyList()
+                }
+                val records = fetched.associate { media ->
+                    available[media.id] = media
+                    "anime:v4:${media.id}" to kotlinx.serialization.json.Json.encodeToString(serializer, media)
+                }
+                if (records.isNotEmpty()) cache.putBatch(records, INFO_TTL)
+            }
+        }
+        // Preserve existing fallback behavior when the bulk endpoint misses a member.
+        requested.filterNot { it in available }.forEach { id ->
+            try { animeInfo(id)?.let { available[id] = it } } catch (error: Exception) { error.rethrowIfCancellation() }
+        }
+        return requested.mapNotNull(available::get)
+    }
+
     /** Walks AniList's PREQUEL/SEQUEL chain so every season is reachable from one detail page. */
     suspend fun animeSeries(root: Media): List<Media> {
         // Season chains change rarely, so the walked chain's ids are cached under EVERY member
@@ -2300,9 +2382,7 @@ class MiruroRepository(
         // the animeInfo cache (filled during the walk) instead of re-walking AniList relations.
         val idsSerializer = ListSerializer(Int.serializer())
         cache.getIfFresh("$SERIES_KEY_PREFIX${root.id}", idsSerializer)?.let { ids ->
-            val members = ids.mapNotNull { id ->
-                if (id == root.id) root else runCatching { animeInfo(id) }.getOrNull()
-            }
+            val members = fullSeriesMembers(ids, root)
             if (members.isNotEmpty()) {
                 val withRoot = if (members.none { it.id == root.id }) members + root else members
                 // Two cached ids can resolve to one entry (AniList merges duplicate media), and
@@ -2332,11 +2412,7 @@ class MiruroRepository(
         val ids: List<Int> = detail?.series ?: emptyList()
         if (root.id !in ids) return@coroutineScope null
         val hideAdult = hideAdult
-        val members = ids.map { id ->
-            async {
-                if (id == root.id) root else seriesFetchGate.withPermit { runCatching { animeInfo(id) }.getOrNull() }
-            }
-        }.awaitAll().filterNotNull()
+        val members = fullSeriesMembers(ids, root)
         members
             .filterNot { hideAdult && it.isAdult && it.id != root.id }
             .distinctBy(Media::id)
