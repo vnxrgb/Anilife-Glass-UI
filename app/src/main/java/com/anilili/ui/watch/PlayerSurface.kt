@@ -348,6 +348,7 @@ fun PlayerSurface(
     fillerSkip: PlayerFillerSkip? = null,
 ) {
     val context = LocalContext.current
+    val gestureHaptic = com.anilili.experience.rememberExperienceHaptic()
     val lifecycleOwner = remember(context) { context.findActivity() as? LifecycleOwner }
     val device = LocalAppDeviceProfile.current
     val scope = rememberCoroutineScope()
@@ -2233,6 +2234,7 @@ fun PlayerSurface(
                 // The sides seek by ten seconds (the gesture layer commits that through onSeek);
                 // only the middle toggles playback, which is what double-tap did everywhere before.
                 onDoubleTap = { zone ->
+                    gestureHaptic()
                     if (zone == PlayerDoubleTapZone.PlayPause) {
                         val active = controller ?: return@PlayerGestureControls
                         playbackGestureIsPlaying = togglePlayerPlayback(active)
@@ -2248,6 +2250,7 @@ fun PlayerSurface(
                 onHoldSpeed = { active ->
                     val activeController = controller ?: return@PlayerGestureControls
                     if (active) {
+                        gestureHaptic()
                         preHoldSpeed = activeController.playbackParameters.speed
                         activeController.setPlaybackSpeed(holdPlaybackSpeed)
                     } else {

@@ -323,6 +323,7 @@ private fun MidnightSettingRowScaffold(
     leading: (@Composable () -> Unit)? = null,
 ) {
     val device = LocalAppDeviceProfile.current
+    val haptic = com.anilili.experience.rememberExperienceHaptic()
     var focused by remember { mutableStateOf(false) }
     // The same rounded badge every choice row in the app wears: white under the cursor with its
     // copy and its control inverted, a faint card otherwise. No rule between rows — the gap and
@@ -411,11 +412,13 @@ private fun MidnightSettingRowScaffold(
                         role = Role.Switch,
                         onValueChange = {
                             spotlight?.onReached?.invoke()
+                            haptic()
                             onClick()
                         },
                     )
                     onClick != null -> Modifier.clickable(enabled = enabled, role = role) {
                         spotlight?.onReached?.invoke()
+                        haptic()
                         onClick()
                     }
                     else -> Modifier

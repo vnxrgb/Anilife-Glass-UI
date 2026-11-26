@@ -264,6 +264,7 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
     section(
         "app", "App",
         listOf(
+            "Haptic feedback" to listOf("vibration", "touch", "tactile", "feedback"),
             "Check for updates on launch" to listOf("update", "version", "upgrade"),
             "Receive beta updates" to listOf("update", "beta", "preview", "tester"),
             "Diagnostic detail" to

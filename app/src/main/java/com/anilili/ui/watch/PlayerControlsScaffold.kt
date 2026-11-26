@@ -733,13 +733,14 @@ internal fun PlayerActionPill(
         return
     }
     val shape = CircleShape
+    val haptic = com.anilili.experience.rememberExperienceHaptic()
     val contentAlpha = if (enabled) 1f else 0.35f
     val fillFocus1 = rememberFocusFill()
     Row(
         modifier = modifier
             .focusFill(fillFocus1, shape)
             .playerLiquidGlass(shape)
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(enabled = enabled, onClick = { haptic(); onClick() })
             .heightIn(min = 48.dp)
             .padding(horizontal = if (showLabel) 12.dp else 10.dp, vertical = 8.dp)
             .semantics { contentDescription = label },
@@ -901,12 +902,13 @@ internal fun PlayerControlIconButton(
     // The phone's chrome is deliberately smaller than the TV's. The button stays a full 48dp of
     // touch target — shrinking that would make the overlay harder to hit, not lighter — and only
     // the drawn circle and glyph come down, so the controls stop competing with the picture.
+    val haptic = com.anilili.experience.rememberExperienceHaptic()
     val circle = if (isTv) 48.dp else 36.dp
     val glyph = if (isTv) 24.dp else 19.dp
     val extraFocus2 = rememberFocusFill()
     IconButton(
         colors = extraFocus2.iconButtonColors(IconButtonDefaults.iconButtonColors()),
-        onClick = onClick,
+        onClick = { haptic(); onClick() },
         enabled = enabled,
         modifier = modifier
             .size(48.dp)

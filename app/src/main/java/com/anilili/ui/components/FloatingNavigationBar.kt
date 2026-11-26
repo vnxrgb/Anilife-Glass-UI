@@ -112,6 +112,7 @@ fun FloatingNavigationBar(
     collapsed: Boolean = false,
     compactRoutes: Set<String> = emptySet(),
 ) {
+    val haptic = com.anilili.experience.rememberExperienceHaptic()
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
@@ -176,7 +177,7 @@ fun FloatingNavigationBar(
                                     showLabel = floatingNavShowsCaption(expandedItem),
                                     labelProgress = progress,
                                     interactionEnabled = keep || !compact,
-                                    onClick = { onSelect(item.route) },
+                                    onClick = { if (selectedRoute != item.route) haptic(); onSelect(item.route) },
                                     compactProgress = if (keep) progress else 0f,
                                 )
                             } else if (width > 0.dp && progress < .98f) {
