@@ -22,7 +22,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.roundToInt
 
 internal enum class AnimeUpscaleMode(val label: String, val factor: Float, val strength: Float) {
-    OFF("Off", 1f, 0f), BALANCED("Balanced", 1.5f, 0.45f), HIGH("High quality", 2f, 0.8f)
+    OFF("Off", 1f, 0f), PERFORMANCE("Performance · DoG", 1.5f, 0.45f),
+    BALANCED("Balanced · CNN S", 2f, 0f), HIGH("High quality · CNN M", 2f, 0f)
 }
 
 internal object AnimeUpscalePreferences {
@@ -44,6 +45,15 @@ internal object AnimeUpscalePreferences {
         mutable.value = supported
     }
     fun report(message: String) { mutableStatus.value = message }
+    fun fallback() {
+        val next = when (mutable.value) {
+            AnimeUpscaleMode.HIGH -> AnimeUpscaleMode.BALANCED
+            AnimeUpscaleMode.BALANCED -> AnimeUpscaleMode.PERFORMANCE
+            else -> AnimeUpscaleMode.OFF
+        }
+        select(next)
+        report("Reduced to " + next.label + " after processing trouble")
+    }
     fun disableAfterFailure() {
         select(AnimeUpscaleMode.OFF)
         report("Disabled after a video processing error")
@@ -159,7 +169,7 @@ internal fun AnimeUpscaleControls() {
     val mode by AnimeUpscalePreferences.mode.collectAsState()
     val status by AnimeUpscalePreferences.status.collectAsState()
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("Anime4K DoG · Experimental local GPU enhancement", style = MaterialTheme.typography.labelMedium)
+        Text("Anime4K DoG / CNN · Experimental local GPU enhancement", style = MaterialTheme.typography.labelMedium)
         AnimeUpscaleMode.entries.forEach { option ->
             FilterChip(selected = mode == option, enabled = Build.VERSION.SDK_INT >= 26 || option == AnimeUpscaleMode.OFF,
                 onClick = { AnimeUpscalePreferences.select(option) }, label = { Text(option.label) })

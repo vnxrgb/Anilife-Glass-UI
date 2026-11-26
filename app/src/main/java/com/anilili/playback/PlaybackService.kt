@@ -374,7 +374,7 @@ class PlaybackService : MediaSessionService() {
                 try {
                     val enabled = android.os.Build.VERSION.SDK_INT >= 26 &&
                         mode != com.anilili.experience.AnimeUpscaleMode.OFF
-                    player.setVideoEffects(if (enabled) listOf(com.anilili.experience.AnimeDogEffect(mode)) else emptyList())
+                    player.setVideoEffects(if (enabled) listOf(if (mode == com.anilili.experience.AnimeUpscaleMode.PERFORMANCE) com.anilili.experience.AnimeDogEffect(mode) else com.anilili.experience.AnimeCnnEffect(mode)) else emptyList())
                     upscaleApplied = enabled
                     com.anilili.experience.AnimeUpscalePreferences.report(
                         if (enabled) "Requested for compatible local SDR playback" else "Off / unsupported device")
@@ -385,6 +385,20 @@ class PlaybackService : MediaSessionService() {
                 }
             }
         }
+        player.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
+            private var badWindows = 0
+            private var lastChange = 0L
+            override fun onDroppedVideoFrames(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) {
+                if (!upscaleApplied || activePlayer !== player || !player.isPlaying) { badWindows = 0; return }
+                val now = android.os.SystemClock.elapsedRealtime()
+                if (elapsedMs >= 1000 && droppedFrames * 1000L / elapsedMs >= 5) badWindows++ else badWindows = 0
+                if (badWindows >= 2 && now - lastChange >= 15000L) {
+                    badWindows = 0
+                    lastChange = now
+                    com.anilili.experience.AnimeUpscalePreferences.fallback()
+                }
+            }
+        })
         player.addListener(playbackListener(player))
         castRoute?.let { it.player.addListener(playbackListener(it.player)) }
         bindSleepTimer()
@@ -551,7 +565,7 @@ class PlaybackService : MediaSessionService() {
                             mainHandler.post {
                                 if (activePlayer !== player || player.currentMediaItem != item) return@post
                                 runCatching { player.setVideoEffects(emptyList()) }
-                                com.anilili.experience.AnimeUpscalePreferences.disableAfterFailure()
+                                com.anilili.experience.AnimeUpscalePreferences.fallback()
                                 if (player.playerError != null) runCatching { player.prepare() }
                             }
                         }
