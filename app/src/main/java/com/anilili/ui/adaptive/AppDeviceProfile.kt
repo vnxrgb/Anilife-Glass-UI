@@ -123,8 +123,11 @@ data class AppDeviceProfile(
      */
     fun homePosterColumns(availableWidth: Dp, spacing: Dp): Int {
         if (!isTablet) return posterColumns
-        val fitting = ((availableWidth.value + spacing.value) / (gridMinWidth.value + spacing.value)).toInt()
-        return minOf(posterColumns, fitting.coerceAtLeast(2))
+        // A narrow split-screen pane may fit only one readable poster.
+        val width = availableWidth.value.coerceAtLeast(0f)
+        val gap = spacing.value.coerceAtLeast(0f)
+        val fitting = ((width + gap) / (gridMinWidth.value + gap)).toInt()
+        return minOf(posterColumns, fitting.coerceAtLeast(1))
     }
 
     val episodeColumns: Int
