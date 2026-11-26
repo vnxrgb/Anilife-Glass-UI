@@ -69,7 +69,7 @@ internal fun wrappedStats(days: Map<Long, Int>, today: LocalDate): WrappedStats 
 }
 
 @Composable
-internal fun WrappedSummaryCard(stats: WrappedStats, artwork: String?, onOpen: (() -> Unit)?, modifier: Modifier = Modifier) {
+internal fun WrappedSummaryCard(stats: WrappedStats, artwork: String?, onOpen: (() -> Unit)?, modifier: Modifier = Modifier, onEditName: (() -> Unit)? = null) {
     val journalName by JournalStore.journalName.collectAsState()
     val shape = RoundedCornerShape(28.dp)
     Box(modifier.fillMaxWidth().glassCard(shape).then(if (onOpen != null) Modifier.clickable(onClickLabel = "View AniLumos Wrapped", onClick = onOpen) else Modifier)) {
@@ -87,6 +87,15 @@ internal fun WrappedSummaryCard(stats: WrappedStats, artwork: String?, onOpen: (
                     Text("Your anime journey in ${stats.year}", color = foreground.copy(alpha = .78f), style = MaterialTheme.typography.bodySmall)
                 }
                 if (onOpen != null) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "View statistics", tint = foreground)
+                if (onEditName != null) {
+                    Row(Modifier.clip(RoundedCornerShape(50)).glassCard(RoundedCornerShape(50))
+                        .clickable(onClickLabel = "Edit shared display name", onClick = onEditName)
+                        .heightIn(min = 48.dp).padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Default.Edit, contentDescription = null, tint = foreground, modifier = Modifier.size(18.dp))
+                        Text("Edit name", color = foreground, style = MaterialTheme.typography.labelMedium)
+                    }
+                }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 WrappedMetric(stats.episodes.toString(), "Episodes", Modifier.weight(1f), foreground)
@@ -208,12 +217,8 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
             top = 8.dp, bottom = LocalAppChromeBottomInset.current + 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             item {
-                WrappedSummaryCard(stats, localHistory.firstOrNull()?.cover, onOpen = null)
-                TextButton(onClick = { nameDraft = journalName; renameOpen = true }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Personalize name")
-                }
+                WrappedSummaryCard(stats, localHistory.firstOrNull()?.cover, onOpen = null,
+                    onEditName = { nameDraft = journalName; renameOpen = true })
             }
             item {
                 Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(26.dp)).padding(16.dp),
