@@ -264,7 +264,6 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
     section(
         "app", "App",
         listOf(
-            "Haptic feedback" to listOf("vibration", "touch", "tactile", "feedback"),
             "Check for updates on launch" to listOf("update", "version", "upgrade"),
             "Receive beta updates" to listOf("update", "beta", "preview", "tester"),
             "Diagnostic detail" to
@@ -275,6 +274,7 @@ internal fun settingsSearchEntries(isTv: Boolean): List<SettingsSearchEntry> = b
             "Export diagnostics" to listOf("diagnostics", "logs", "report", "bug", "save", "share"),
         ),
     )
+    if (!isTv) section("app", "App", listOf("Haptic feedback" to listOf("vibration", "touch", "tactile", "feedback")))
     section(
         "about", "About",
         listOf(            "What's new" to listOf("release", "features", "changelog", "guide"),

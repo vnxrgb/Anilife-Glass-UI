@@ -6,10 +6,8 @@ import android.os.SystemClock
 import android.view.HapticFeedbackConstants
 import android.view.View
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import com.anilili.ui.adaptive.LocalAppDeviceProfile
-import com.anilili.ui.dialogs.MidnightSettingSwitchRow
 
 internal object ExperienceHaptics {
     private var lastPulse = 0L
@@ -35,15 +33,3 @@ internal fun rememberExperienceHaptic(): () -> Unit {
     return remember(view, isTv) { { if (!isTv) ExperienceHaptics.pulse(view) } }
 }
 
-@Composable
-internal fun HapticFeedbackSetting() {
-    val context = LocalContext.current
-    if (LocalAppDeviceProfile.current.isTv) return
-    var enabled by remember { mutableStateOf(ExperienceHaptics.enabled(context)) }
-    MidnightSettingSwitchRow(
-        title = "Haptic feedback",
-        description = "Subtle touch feedback on navigation, settings and playback controls",
-        checked = enabled,
-        onCheckedChange = { enabled = it; ExperienceHaptics.setEnabled(context, it) }
-    )
-}

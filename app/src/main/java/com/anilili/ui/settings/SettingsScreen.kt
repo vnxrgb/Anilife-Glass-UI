@@ -3268,8 +3268,20 @@ fun SettingsScreen(
             }
 
             settingsSection("app", openSectionId) {
-                item(key = "experience_haptic_feedback") {
-                    com.anilili.experience.HapticFeedbackSetting()
+                if (!device.isTv) {
+                    item(key = "Haptic feedback") {
+                        val hapticContext = androidx.compose.ui.platform.LocalContext.current
+                        var hapticEnabled by remember { mutableStateOf(com.anilili.experience.ExperienceHaptics.enabled(hapticContext)) }
+                        MidnightSettingSwitchRow(
+                            title = "Haptic feedback",
+                            description = "Subtle touch feedback on navigation, settings and playback controls",
+                            checked = hapticEnabled,
+                            onCheckedChange = {
+                                hapticEnabled = it
+                                com.anilili.experience.ExperienceHaptics.setEnabled(hapticContext, it)
+                            },
+                        )
+                    }
                 }
                 item(key = "experience_privacy_lock") {
                     com.anilili.experience.PrivacyLockSetting()
