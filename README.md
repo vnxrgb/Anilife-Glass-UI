@@ -32,6 +32,7 @@ AniLumos is built on [AniLife](https://github.com/anilifecommunity/android-and-t
 
 | Feature | What's different |
 | --- | --- |
+| **Afterglow** | A cinematic end-of-anime experience with personalized recommendations, quick ratings, journal access and franchise navigation. Play recommendations directly from their posters. |
 | **Optical Glass UI** | Translucent navigation, cards, dialogs and controls, with customizable glass material presets. |
 | **Ambient Cinema** | Video-reactive ambient lighting using adapted Morphe code, integrated into the built-in player. |
 | **Ambient Home & details** | Artwork-driven background colors and transitions on Home and anime details. |
@@ -49,10 +50,11 @@ AniLumos is built on [AniLife](https://github.com/anilifecommunity/android-and-t
 | **Personalized recommendations** | Hybrid ranking combines viewing preferences with AniList and additional community metadata. |
 | **Skip intro/outro** | Redesigned timed, dismissing skip buttons and additional timestamp sources where available. |
 | **Episode classifications** | Expands basic filler flags to canon, mixed, anime canon and recap labels, plus optional filler filtering and skipping. |
-| **Player controls** | Rounded glass playback controls, refined seekbar layout and panels. |
+| **Player controls & Up Next** | Rounded glass playback controls, refined seekbar layout, and a compact animated next-episode countdown. |
 | **Navigation and screens** | Floating glass navigation, redesigned Home, details, search, settings and dialogs. |
 | **Appearance and accessibility** | Glass material choices, custom background readability and artwork-aware status bar contrast. |
-| **Adaptive layouts** | Improved phone/tablet landscape navigation and discovery layouts. |
+| **Adaptive layouts** | Improved phone/tablet landscape navigation, discovery, Afterglow layouts and transparent system bars. |
+| **Metadata performance** | Reuses fresh cached anime metadata and batches compatible AniList requests to reduce redundant calls. |
 | **Guided tour** | Expanded the existing What's New walkthrough to cover the franchise guide, Anime Journal and personalization. |
 | **In-app updates** | Uses AniLumos's own GitHub stable releases and verifies downloaded APKs before installation. |
 
