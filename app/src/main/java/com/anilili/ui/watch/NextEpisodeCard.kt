@@ -1,6 +1,10 @@
 package com.anilili.ui.watch
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -280,41 +284,44 @@ private fun AfterglowUpNext(
     onPlay: () -> Unit, onStay: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    val shape = MaterialTheme.shapes.large
+    val shape = MaterialTheme.shapes.medium
     val blur by SettingsStore.blurEpisodeImages.collectAsState()
-    val panel = if (colors.background == Color.Black) Color.Black else colors.surface
+    val panel = colors.surface
+    val progress by animateFloatAsState(
+        targetValue = (seconds.toFloat() / NEXT_EPISODE_COUNTDOWN_SECONDS).coerceIn(0f, 1f),
+        animationSpec = tween(durationMillis = 900, easing = LinearEasing), label = "Afterglow countdown",
+    )
     Column(
-        Modifier.widthIn(max = 264.dp).clip(shape)
-            .background(panel.copy(alpha = if (panel == Color.Black) 1f else .96f))
-            .border(.5.dp, colors.onSurface.copy(alpha = .20f), shape)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.widthIn(max = 228.dp).clip(shape)
+            .background(panel.copy(alpha = .88f))
+            .border(.75.dp, Brush.verticalGradient(listOf(colors.onSurface.copy(alpha = .28f), colors.onSurface.copy(alpha = .08f))), shape)
+            .padding(9.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             if (!artworkUrl.isNullOrBlank()) {
                 EpisodeArtwork(image = artworkUrl, blurred = blur, compact = true,
-                    modifier = Modifier.size(80.dp, 48.dp).clip(MaterialTheme.shapes.small))
+                    modifier = Modifier.size(60.dp, 40.dp).clip(MaterialTheme.shapes.small))
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text("Up next", style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
-                Text(label, style = MaterialTheme.typography.titleSmall, color = colors.onSurface,
-                    fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (seriesTitle.isNotBlank()) Text(seriesTitle, style = MaterialTheme.typography.labelSmall,
-                    color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(label, style = MaterialTheme.typography.labelLarge, color = colors.onSurface,
+                    fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = onPlay, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+            Button(onClick = onPlay, modifier = Modifier.weight(1f).heightIn(min = 44.dp),
                 shape = RoundedCornerShape(50), contentPadding = PaddingValues(horizontal = 4.dp)) {
-                Text(if (seconds > 0) "Play now · ${seconds}s" else "Play now", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                Text("Play now", style = MaterialTheme.typography.labelMedium, maxLines = 1)
             }
             OutlinedButton(onClick = onStay, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                 shape = RoundedCornerShape(50), contentPadding = PaddingValues(horizontal = 4.dp)) {
                 Text("Stay here", style = MaterialTheme.typography.labelMedium, maxLines = 1)
             }
         }
-        Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(50)).background(colors.onSurface.copy(alpha = .12f))) {
-            Box(Modifier.fillMaxWidth((seconds.toFloat() / NEXT_EPISODE_COUNTDOWN_SECONDS).coerceIn(0f, 1f))
+        Box(Modifier.fillMaxWidth().height(2.dp).clip(RoundedCornerShape(50)).background(colors.onSurface.copy(alpha = .12f))) {
+            Box(Modifier.fillMaxWidth(progress)
                 .height(3.dp).background(colors.primary))
         }
     }
