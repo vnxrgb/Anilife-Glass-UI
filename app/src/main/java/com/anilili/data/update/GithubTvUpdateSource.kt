@@ -30,7 +30,8 @@ internal object GithubTvUpdateSource {
                 val apk = assets.singleOrNull { it["name"]?.jsonPrimitive?.content == APK } ?: return@runCatching null
                 val meta = assets.singleOrNull { it["name"]?.jsonPrimitive?.content == META } ?: return@runCatching null
                 val metaUrl = meta.getValue("browser_download_url").jsonPrimitive.content
-                if (!validUrl(metaUrl, tag, META) ||
+                if (meta["state"]?.jsonPrimitive?.content?.let { it != "uploaded" } == true ||
+                    !validUrl(metaUrl, tag, META) ||
                     meta.getValue("size").jsonPrimitive.content.toLongOrNull()?.let { it in 1..8192L } != true) return@runCatching null
                 val payload = metadata(metaUrl)?.takeIf { it.length <= 8192 } ?: return@runCatching null
                 val details = json.parseToJsonElement(payload).jsonObject
