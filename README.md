@@ -14,6 +14,12 @@
   <a href="https://github.com/vnxrgb/Anilumos/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/vnxrgb/Anilumos?style=for-the-badge"></a>
 </p>
 
+<p align="center">
+  <a href="https://rookieenough.github.io/Orion-Data/app/?id=anilumos"><img src="https://raw.githubusercontent.com/RookieEnough/Orion-Store/refs/heads/main/assets/orion-badge.png" alt="Get it on Orion Store" height="60"></a>
+</p>
+
+<p align="center">Also available on Orion Store · <a href="https://anilumos.onrender.com">Official website</a></p>
+
 ## About AniLumos
 
 AniLumos builds on AniLife with its own visual identity, a redesigned interface and an emphasis on discovery, playback and everyday usability.
@@ -108,9 +114,7 @@ A look at AniLumos on Android, including the Anime Journal and its personalizati
 
 Grab the [latest stable APK](https://github.com/vnxrgb/Anilumos/releases/latest) from GitHub, or find the app on Orion Store.
 
-<p align="center">
-  <a href="https://rookieenough.github.io/Orion-Data/app/?id=anilumos"><img src="https://raw.githubusercontent.com/RookieEnough/Orion-Store/refs/heads/main/assets/orion-badge.png" alt="Get it on Orion Store" height="60"></a>
-</p>
+[**View AniLumos on Orion Store**](https://rookieenough.github.io/Orion-Data/app/?id=anilumos) for an alternative to the direct GitHub APK download.
 
 The stable app uses `com.anilumos.app`. Some signed preview builds use the same package and may replace an installed stable build; check the release notes before installing. AniLife keeps its own app data.
 
