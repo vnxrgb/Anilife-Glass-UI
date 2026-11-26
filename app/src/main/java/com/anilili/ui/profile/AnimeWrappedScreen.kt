@@ -248,19 +248,30 @@ internal fun AnimeWrappedScreen(days: Map<Long, Int>, history: List<HistoryEntry
                     Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(26.dp)).padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("Top anime this year", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            topTitles.take(3).forEachIndexed { index, title ->
-                                Column(Modifier.weight(1f).glassCard(RoundedCornerShape(18.dp)).padding(6.dp),
-                                    verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                    Box {
-                                        AsyncImage(model = title.artwork, contentDescription = title.title,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxWidth().aspectRatio(.70f).clip(RoundedCornerShape(14.dp)))
-                                        Text("#${index + 1}", color = Color.White, fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(4.dp).background(Color.Black.copy(alpha = .65f), RoundedCornerShape(10.dp)).padding(6.dp))
+                        BoxWithConstraints(Modifier.fillMaxWidth()) {
+                            // Actual card width, not device classification, controls this layout.
+                            val columns = if (maxWidth < 420.dp) 2 else 3
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                topTitles.take(3).chunked(columns).forEachIndexed { rowIndex, titles ->
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        titles.forEachIndexed { columnIndex, title ->
+                                            val index = rowIndex * columns + columnIndex
+                                            Column(Modifier.weight(1f).glassCard(RoundedCornerShape(18.dp)).padding(6.dp),
+                                                verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                                Box {
+                                                    AsyncImage(model = title.artwork, contentDescription = title.title,
+                                                        contentScale = ContentScale.Crop,
+                                                        modifier = Modifier.fillMaxWidth().aspectRatio(.70f).clip(RoundedCornerShape(14.dp)))
+                                                    Text("#${index + 1}", color = Color.White, fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(4.dp).background(Color.Black.copy(alpha = .65f), RoundedCornerShape(10.dp)).padding(6.dp))
+                                                }
+                                                Text(title.title, style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                                Text(title.time, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                        }
+                                        // Keep the last row's card width consistent with full rows.
+                                        repeat(columns - titles.size) { Spacer(Modifier.weight(1f)) }
                                     }
-                                    Text(title.title, style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                    Text(title.time, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
