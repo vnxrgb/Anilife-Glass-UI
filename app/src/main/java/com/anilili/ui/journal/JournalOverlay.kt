@@ -8,6 +8,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.material3.LocalContentColor
+import com.anilili.ui.components.opticalGlass
+import com.anilili.ui.theme.LocalThemeSpec
+import com.anilili.data.settings.ThemeBackground
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
@@ -30,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.anilili.data.journal.JournalEntry
 import com.anilili.data.journal.JournalStore
-import com.anilili.ui.components.glassCard
 import kotlin.math.roundToInt
 
 data class JournalContext(val animeId: Int? = null, val title: String = "", val episode: String = "", val fullscreen: Boolean = false)
@@ -39,6 +46,22 @@ val LocalJournalReport = compositionLocalOf<(JournalContext) -> Unit> { {} }
 @Composable
 fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: androidx.compose.ui.unit.Dp = 0.dp) {
     val context = LocalContext.current
+    val colors = MaterialTheme.colorScheme
+    val amoled = LocalThemeSpec.current.background == ThemeBackground.AMOLED
+    val light = colors.surface.luminance() > .5f
+    // The editor must be opaque behind long-form text even when placed over bright anime artwork.
+    // AMOLED uses the actual black canvas; raised controls use the app's near-black container roles.
+    val editorSurface = if (amoled) Color.Black else colors.surface
+    val fieldSurface = colors.surfaceContainerLow
+    val rim = colors.onSurface.copy(alpha = if (light) .17f else .20f)
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = colors.onSurface, unfocusedTextColor = colors.onSurface,
+        focusedContainerColor = fieldSurface, unfocusedContainerColor = fieldSurface,
+        focusedBorderColor = colors.primary, unfocusedBorderColor = rim,
+        focusedLabelColor = colors.primary, unfocusedLabelColor = colors.onSurfaceVariant,
+        cursorColor = colors.primary,
+    )
+    val fieldShape = RoundedCornerShape(18.dp)
     val entries by JournalStore.entries.collectAsState()
     val stored = remember { JournalStore.position() }
     var fx by remember { mutableStateOf(stored.first.coerceIn(0f, 1f)) }
@@ -80,6 +103,7 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
     BackHandler(visible && open) { close() }
     val expansion by animateFloatAsState(if (open && visible) 1f else 0f, spring(dampingRatio = .86f, stiffness = 370f), label = "journal expansion")
     if (!visible) return
+    CompositionLocalProvider(LocalContentColor provides colors.onSurface) {
     BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(bottom = bottomSpace).zIndex(20f)) {
         val density = LocalDensity.current
         val maxX = with(density) { (maxWidth - 58.dp).toPx().coerceAtLeast(1f) }
@@ -88,7 +112,8 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
         if (expansion < .98f) {
             Box(Modifier.offset { IntOffset(((if (dragging) fx else animatedX) * maxX).roundToInt(), (fy * maxY).roundToInt()) }
                 .size(54.dp).graphicsLayer { alpha = (1f - expansion).coerceIn(0f, 1f); scaleX = 1f - expansion * .2f; scaleY = scaleX }
-                .glassCard(CircleShape)
+                .opticalGlass(CircleShape, navigation = true)
+                .border(.5.dp, rim, CircleShape)
                 .pointerInput(maxX, maxY) {
                     detectDragGestures(onDragStart = { dragging = true }, onDragEnd = {
                         dragging = false; fx = if (fx < .5f) 0f else 1f; JournalStore.position(fx, fy)
@@ -101,17 +126,17 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
             }
         }
         if (expansion > .01f) {
-            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.scrim.copy(alpha = .42f * expansion.coerceIn(0f,1f)))
+            Box(Modifier.fillMaxSize().background(colors.scrim.copy(alpha = (if (light) .30f else .50f) * expansion.coerceIn(0f,1f)))
                 .clickable(enabled = open, onClickLabel = "Close journal") { close() })
             Column(Modifier.align(Alignment.Center).padding(12.dp).widthIn(max = 520.dp).fillMaxWidth().fillMaxHeight(.94f)
                 .graphicsLayer {
                     val t = expansion.coerceIn(0f,1f)
                     scaleX = .22f + .78f*t; scaleY = scaleX; alpha = t
                     translationX = (fx-.5f)*maxX*(1f-t); translationY = (fy-.5f)*maxY*(1f-t)
-                }.glassCard(RoundedCornerShape(28.dp)).clickable(enabled = open) {}.padding(16.dp),
+                }.clip(RoundedCornerShape(28.dp)).background(editorSurface).border(.75.dp, rim, RoundedCornerShape(28.dp)).clickable(enabled = open) {}.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Anime Journal", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    Text("Anime Journal", style = MaterialTheme.typography.titleLarge, color = colors.onSurface, modifier = Modifier.weight(1f))
                     TextButton(onClick = { close() }) { Text("Close") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -120,23 +145,23 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
                 }
                 Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).imePadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (library) {
-                        OutlinedTextField(query, { query = it }, label = { Text("Search journal") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(query, { query = it }, label = { Text("Search journal") }, modifier = Modifier.fillMaxWidth(), singleLine = true, colors = fieldColors, shape = fieldShape)
                         val filtered = entries.filter { it.asText().contains(query, ignoreCase = true) }
                         if (filtered.isEmpty()) Text("No entries yet. Start a new note.")
                         filtered.forEach { entry ->
-                            Column(Modifier.fillMaxWidth().glassCard().clickable { draft = entry; saved = true; library = false }.padding(12.dp)) {
+                            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(colors.surfaceContainerLow).border(.5.dp, rim, RoundedCornerShape(18.dp)).clickable { draft = entry; saved = true; library = false }.padding(12.dp)) {
                                 Text(entry.animeTitle.ifBlank { "Personal journal" }, style = MaterialTheme.typography.titleMedium)
                                 Text(entry.notes.ifBlank { entry.review.ifBlank { entry.favoriteMoment } }.take(100), style = MaterialTheme.typography.bodySmall)
                             }
                         }
                     } else {
-                        OutlinedTextField(draft.animeTitle, { edit(draft.copy(animeTitle=it.take(180))) }, label={ Text("Anime title") }, singleLine=true, modifier=Modifier.fillMaxWidth())
-                        OutlinedTextField(draft.episode, { edit(draft.copy(episode=it.take(40))) }, label={ Text("Episode (optional)") }, singleLine=true, modifier=Modifier.fillMaxWidth())
+                        OutlinedTextField(draft.animeTitle, { edit(draft.copy(animeTitle=it.take(180))) }, label={ Text("Anime title") }, singleLine=true, modifier=Modifier.fillMaxWidth(), colors = fieldColors, shape = fieldShape)
+                        OutlinedTextField(draft.episode, { edit(draft.copy(episode=it.take(40))) }, label={ Text("Episode (optional)") }, singleLine=true, modifier=Modifier.fillMaxWidth(), colors = fieldColors, shape = fieldShape)
                         Text("Personal rating: " + if(draft.rating==0) "Unrated" else "${draft.rating}/10")
-                        Slider(value=draft.rating.toFloat(), onValueChange={edit(draft.copy(rating=it.roundToInt()))}, valueRange=0f..10f, steps=9)
-                        OutlinedTextField(draft.notes, { edit(draft.copy(notes=it.take(8000))) }, label={ Text("Your thoughts") }, minLines=3, modifier=Modifier.fillMaxWidth())
-                        OutlinedTextField(draft.review, { edit(draft.copy(review=it.take(8000))) }, label={ Text("Private review") }, minLines=3, modifier=Modifier.fillMaxWidth())
-                        OutlinedTextField(draft.favoriteMoment, { edit(draft.copy(favoriteMoment=it.take(4000))) }, label={ Text("Favorite moments / timestamps") }, minLines=2, modifier=Modifier.fillMaxWidth())
+                        Slider(value=draft.rating.toFloat(), onValueChange={edit(draft.copy(rating=it.roundToInt()))}, valueRange=0f..10f, steps=9, colors = SliderDefaults.colors(thumbColor = colors.primary, activeTrackColor = colors.primary, inactiveTrackColor = colors.surfaceContainerHighest))
+                        OutlinedTextField(draft.notes, { edit(draft.copy(notes=it.take(8000))) }, label={ Text("Your thoughts") }, minLines=3, modifier=Modifier.fillMaxWidth(), colors = fieldColors, shape = fieldShape)
+                        OutlinedTextField(draft.review, { edit(draft.copy(review=it.take(8000))) }, label={ Text("Private review") }, minLines=3, modifier=Modifier.fillMaxWidth(), colors = fieldColors, shape = fieldShape)
+                        OutlinedTextField(draft.favoriteMoment, { edit(draft.copy(favoriteMoment=it.take(4000))) }, label={ Text("Favorite moments / timestamps") }, minLines=2, modifier=Modifier.fillMaxWidth(), colors = fieldColors, shape = fieldShape)
                     }
                 }
                 Text(if(saved) "Stored locally on this device" else "Could not save: storage limit or unreadable data", style=MaterialTheme.typography.labelSmall, color=if(saved) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
@@ -148,4 +173,5 @@ fun JournalOverlay(visible: Boolean, anime: JournalContext, bottomSpace: android
             }
         }
     }
+}
 }
