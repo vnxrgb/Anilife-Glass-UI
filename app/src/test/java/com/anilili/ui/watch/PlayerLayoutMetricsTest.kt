@@ -39,6 +39,21 @@ class PlayerLayoutMetricsTest {
     }
 
     @Test
+    fun wideButShortTabletPlayerUsesMediumTransportControls() {
+        val metrics = playerLayoutMetrics(1200, 240)
+        assertTrue(metrics.compactHeight)
+        assertFalse(metrics.showPillLabels)
+        assertEquals(54.dp, metrics.playButtonSize)
+        assertEquals(8.dp, metrics.barTopPadding)
+    }
+
+    @Test
+    fun tallTabletRestoresExpandedControlsAfterResize() {
+        assertEquals(64.dp, playerLayoutMetrics(1200, 400).playButtonSize)
+        assertEquals(54.dp, playerLayoutMetrics(1200, 299).playButtonSize)
+    }
+
+    @Test
     fun compactHeightBoundaryIsConsistent() {
         assertTrue(playerLayoutMetrics(650, 299).compactHeight)
         assertFalse(playerLayoutMetrics(650, 300).compactHeight)
