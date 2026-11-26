@@ -2168,6 +2168,18 @@ fun SettingsScreen(
             }
 
             settingsSection("player", openSectionId) {
+                item(key = "Audio Studio") {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        MidnightSectionLabel("Audio Studio")
+                        com.anilili.experience.AudioStudioControls()
+                    }
+                }
+                item(key = "Anime4K Upscaling") {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        MidnightSectionLabel("Video Enhancement · Anime4K")
+                        com.anilili.experience.AnimeUpscaleControls()
+                    }
+                }
                 item(key = "Play when an episode opens") {
                     MidnightSettingSwitchRow(
                         title = "Play when an episode opens",
