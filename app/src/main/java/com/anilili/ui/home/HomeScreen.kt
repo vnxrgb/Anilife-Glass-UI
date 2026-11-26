@@ -4,6 +4,7 @@ package com.anilili.ui.home
 
 
 
+import com.anilili.ui.easteregg.HiddenSparks
 import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassAtmosphere
 import com.anilili.ui.components.glassCard
@@ -271,7 +272,7 @@ fun HomeScreen(
             )
             is UiState.Success -> PullRefreshContainer(
                 isRefreshing = isRefreshing,
-                onRefresh = vm::refresh,
+                onRefresh = { if (!device.isTv) HiddenSparks.hit("refresh", 4, "Anime doesn't release that fast, unfortunately."); vm.refresh() },
                 modifier = modifier.fillMaxSize(),
                 // This box spans the window so rows pass under the bar, which puts its top edge
                 // *behind* the navigation. Left at zero the spinner is drawn up there, hidden, and
@@ -363,7 +364,7 @@ fun HomeScreen(
             // under the bars as they retreat instead of being shunted about by them.
             is UiState.Success -> PullRefreshContainer(
                 isRefreshing = isRefreshing,
-                onRefresh = vm::refresh,
+                onRefresh = { if (!device.isTv) HiddenSparks.hit("refresh", 4, "Anime doesn't release that fast, unfortunately."); vm.refresh() },
                 modifier = Modifier.fillMaxSize().then(if (homeBackdrop != null) Modifier.hazeSource(homeBackdrop) else Modifier),
                 // This box spans the window so rows scroll under the bars; without this the
                 // spinner would sit behind the header where nobody can see it.

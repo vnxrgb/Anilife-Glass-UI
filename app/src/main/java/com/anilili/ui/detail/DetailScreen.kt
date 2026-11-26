@@ -264,6 +264,7 @@ fun DetailScreen(
     /** The television's reload, raised by a hold on the lit tab in the navigation bar above. */
     tvRefreshRequest: TvRefreshRequest? = null,
     onHeroUnderBarsChanged: (Boolean) -> Unit = {},
+    openFranchiseInitially: Boolean = false,
     vm: DetailViewModel = viewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -283,6 +284,7 @@ fun DetailScreen(
             tvRefreshRequest = tvRefreshRequest,
             onHeroUnderBarsChanged = onHeroUnderBarsChanged,
             vm = vm,
+            openFranchiseInitially = openFranchiseInitially,
         )
     }
 }
@@ -300,6 +302,7 @@ private fun DetailScreenBody(
     tvRefreshRequest: TvRefreshRequest?,
     onHeroUnderBarsChanged: (Boolean) -> Unit,
     vm: DetailViewModel,
+    openFranchiseInitially: Boolean,
 ) {
     LaunchedEffect(animeId) { vm.load(animeId) }
     OnTvRefreshRequest(tvRefreshRequest) { vm.refresh(animeId) }
@@ -504,6 +507,7 @@ private fun DetailScreenBody(
                         onAnimeClick = onAnimeClick,
                         onStudioClick = onStudioClick,
                         onSeasonWatch = onSeasonWatch,
+                        openFranchiseInitially = openFranchiseInitially,
                         onSelectSeason = vm::selectSeason,
                         loadProviderCatalog = vm::providerCatalog,
                         backFocusRequester = backFocusRequester,
@@ -537,6 +541,7 @@ private fun DetailContent(
     onPrimaryFocusAcquired: () -> Unit,
     /** Hoisted so the scaffold's bar, which sits above this in the tree, can watch it. */
     detailListState: LazyListState,
+    openFranchiseInitially: Boolean = false,
     artworkUnderStatusBar: Boolean = false,
     contentPadding: PaddingValues = PaddingValues(),
 ) {
@@ -658,7 +663,20 @@ private fun DetailContent(
         franchiseRemote.filterValues { it == "COMPLETED" }.keys.forEach { ids.add(it) }
         ids.toSet()
     }
+    LaunchedEffect(franchiseEntries, completedFranchiseIds) {
+        if (!device.isTv && franchiseEntries.size > 1 && franchiseEntries.all { it.media.id in completedFranchiseIds }) {
+            val key = franchiseEntries.map { it.media.id }.minOrNull()
+            com.anilili.ui.easteregg.HiddenSparks.say("franchise:$key", "You didn't skip a single chapter of this universe.")
+        }
+    }
     var franchiseOpen by rememberSaveable(info.id) { mutableStateOf(false) }
+    var initialFranchiseHandled by rememberSaveable(info.id) { mutableStateOf(false) }
+    LaunchedEffect(openFranchiseInitially, franchiseEntries.size) {
+        if (openFranchiseInitially && !initialFranchiseHandled && franchiseEntries.size > 1) {
+            initialFranchiseHandled = true
+            franchiseOpen = true
+        }
+    }
     val demoCard = !device.isTv && info.id == WhatsNewTour.FRANCHISE_DEMO_ID && WhatsNewTour.franchiseCardDemo
     val demoGuide = !device.isTv && info.id == WhatsNewTour.FRANCHISE_DEMO_ID && WhatsNewTour.franchiseGuideDemo
     LaunchedEffect(demoCard, franchiseEntries.size, resume != null, selectedTab) {
@@ -2602,6 +2620,13 @@ private fun RelatedRow(media: Media, onOpen: () -> Unit, onWatch: () -> Unit) {
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 )
             }
+            Box(Modifier.align(Alignment.Center).size(40.dp).clip(RoundedCornerShape(50))
+                .background(Color.Black.copy(alpha = .58f))
+                .border(.75.dp, Color.White.copy(alpha = .65f), RoundedCornerShape(50))
+                .clickable(onClickLabel = "Watch ${media.title.preferred}", onClick = onWatch),
+                contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+            }
         }
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
             Text(media.title.preferred, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -2611,11 +2636,6 @@ private fun RelatedRow(media: Media, onOpen: () -> Unit, onWatch: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
-        }
-        val controlFocus17 = rememberFocusFill()
-        IconButton(
-            colors = controlFocus17.iconButtonColors(IconButtonDefaults.iconButtonColors()),onClick = onWatch, modifier = Modifier.focusFill(controlFocus17, RoundedCornerShape(20.dp))) {
-            Icon(Icons.Default.PlayArrow, contentDescription = "Watch ${media.title.preferred}")
         }
     }
 }

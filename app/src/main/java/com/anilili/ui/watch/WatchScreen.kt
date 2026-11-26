@@ -3,6 +3,7 @@ package com.anilili.ui.watch
 
 
 
+import com.anilili.ui.easteregg.HiddenSparks
 import com.anilili.data.model.hasUsableWindow
 import android.Manifest
 import android.app.Activity
@@ -251,6 +252,10 @@ fun WatchScreen(
     onOpenNextSeason: (NextSeasonRequest, Boolean) -> Unit = { _, _ -> },
     /** Where an `anilili://watch/…?t=` link asked to start [episode]; null plays from the saved position. */
     startAtMs: Long? = null,
+    onOpenRecommendation: (Int) -> Unit = {},
+    onPlayRecommendation: (Int) -> Unit = {},
+    onOpenFranchise: () -> Unit = onOpenAnime,
+    onAfterglowHome: () -> Unit = onBack,
     vm: WatchViewModel = viewModel(),
 ) {
     // An Episodes route is a browser, not a playback request. It opts in only after a row is
@@ -572,11 +577,18 @@ fun WatchScreen(
                     },
                     onBack = pauseAndBack,
                     onOpenAnime = onOpenAnime,
+                    onOpenRecommendation = onOpenRecommendation,
+                    onPlayRecommendation = onPlayRecommendation,
+                    onOpenFranchise = onOpenFranchise,
+                    onAfterglowHome = onAfterglowHome,
                     onPrev = vm::prev,
                     onNext = vm::next,
                     onAutoAdvance = vm::autoAdvance,
                     onSkipFiller = vm::skipFiller,
-                    onChangeSource = vm::changeSource,
+                    onChangeSource = { provider, category ->
+                        if (!device.isTv) HiddenSparks.hit("server", 5, "Searching for the promised server.", daily = true)
+                        vm.changeSource(provider, category)
+                    },
                     onChangeCategory = vm::changeCategory,
                     onRequestAllSources = vm::validateRemainingSources,
                     onRetryMiruroSources = vm::retryMiruroServers,
@@ -686,6 +698,10 @@ private fun WatchContent(
     onOpenAnime: () -> Unit,
     onPrev: () -> Unit,
     onNext: () -> Unit,
+    onOpenRecommendation: (Int) -> Unit,
+    onPlayRecommendation: (Int) -> Unit,
+    onOpenFranchise: () -> Unit,
+    onAfterglowHome: () -> Unit,
     /** The player continuing on its own after the credits, as opposed to [onNext]'s press. */
     onAutoAdvance: () -> Unit,
     /** The FILLER tag's press: on past this filler episode to the next one that is not. */
@@ -717,6 +733,16 @@ private fun WatchContent(
     val context = LocalContext.current
     val device = LocalAppDeviceProfile.current
     val isMovie = isMovieFormat(data.seriesFormat)
+    val afterglowEnabled by SettingsStore.afterglow.collectAsState()
+    val afterglowPip = LocalPlayerInPictureInPicture.current
+    var afterglowFinished by remember(data.anilistId, data.currentIndex, data.chosenStream?.url) { mutableStateOf(false) }
+    if (afterglowFinished && afterglowEnabled && !device.isTv && !afterglowPip && !data.canAdvance) {
+        AfterglowCompletionDialog(data = data, onDismiss = { afterglowFinished = false },
+            onOpenRecommendation = { afterglowFinished = false; onOpenRecommendation(it) },
+            onPlayRecommendation = { afterglowFinished = false; onPlayRecommendation(it) },
+            onFranchise = { afterglowFinished = false; onOpenFranchise() },
+            onHome = { afterglowFinished = false; onAfterglowHome() })
+    }
     // Keep ambient colours local to each episode and stream, never behind the entire page.
     var ambientPalette by remember(data.anilistId, data.currentIndex, data.chosenStream?.url) {
         mutableStateOf(VideoAmbientPalette.Empty)
@@ -1457,10 +1483,13 @@ private fun WatchContent(
                         episode = data.current.displayNumber,
                         autoAdvanced = data.autoAdvanced,
                         onEnded = {
-                            if (!SleepTimer.consumeEpisodeEnd() &&
-                                com.anilili.data.settings.SettingsStore.autoplay.value
-                            ) {
-                                onAutoAdvance()
+                            if (!device.isTv && !afterglowPip) HiddenSparks.episodeEnded(data.anilistId, data.current.displayNumber, afterglowSeriesComplete(data.declaredSeriesStatus, data.declaredEpisodeCount, data.current.number.toDouble(), isMovie), data.declaredEpisodeCount)
+                            if (!SleepTimer.consumeEpisodeEnd()) {
+                                if (data.canAdvance && SettingsStore.autoplay.value) onAutoAdvance()
+                                else if (!data.canAdvance && !device.isTv && afterglowEnabled && !afterglowPip &&
+                                    afterglowSeriesComplete(data.declaredSeriesStatus, data.declaredEpisodeCount, data.current.number.toDouble(), isMovie)) {
+                                    afterglowFinished = true
+                                }
                             }
                         },
                         onNextEpisode = onNext,

@@ -205,6 +205,15 @@ object Recommendations {
         return RecommendationRow(items, seedMedia).takeIf { it.items.isNotEmpty() }
     }
 
+    suspend fun afterglow(animeId: Int, limit: Int = 3): List<Media> {
+        val graph = safe<NeighbourGraph?>(null) { graph() }
+        val excluded = known() + animeId
+        val local = if (graph == null) emptyList() else withContext(Dispatchers.Default) {
+            TasteEngine.because(graph, animeId, excluded, hideAdult = SettingsStore.hideAdultContent.value, limit = limit * 2)
+        }
+        return hybrid(graph, local, listOf(TasteSignal(animeId, 1.0)), excluded, limit)
+    }
+
     suspend fun diceCandidates(count: Int = 12): List<Media> =
         forYou(limit = DICE_POOL)?.items.orEmpty().shuffled().take(count)
 

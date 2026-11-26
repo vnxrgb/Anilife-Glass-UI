@@ -29,11 +29,13 @@ object Routes {
      * the back stack reports a destination's route with its optional arguments stripped by
      * [tabRoute], so a pattern with a query in it would never match.
      */
-    const val DETAIL_DESTINATION = "$DETAIL?episode={episode}"
+    const val DETAIL_DESTINATION = "$DETAIL?episode={episode}&franchise={franchise}"
 
     fun detail(id: Int, episode: String? = null) =
         if (episode.isNullOrBlank()) "detail/$id"
         else "detail/$id?episode=${Uri.encode(episode)}"
+
+    fun franchise(id: Int) = "detail/$id?franchise=true"
 
     fun studioSearch(studioId: Int, studioName: String) =
         "$SEARCH?studioId=$studioId&studioName=${Uri.encode(studioName)}"

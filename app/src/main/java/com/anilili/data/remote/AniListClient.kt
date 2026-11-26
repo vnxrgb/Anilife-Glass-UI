@@ -612,6 +612,21 @@ class AniListClient(
         }
     }
 
+    /** Full metadata for a known frontier of franchise members, not lightweight poster cards. */
+    suspend fun fullMediaByIds(ids: List<Int>): List<Media> = withContext(Dispatchers.IO) {
+        val gql = """
+            query (${'$'}ids: [Int]) {
+              Page(page: 1, perPage: 10) {
+                media(type: ANIME, id_in: ${'$'}ids) { $mediaFullFields }
+              }
+            }
+        """.trimIndent()
+        ids.filter { it > 0 }.distinct().chunked(10).flatMap { chunk ->
+            val vars = buildJsonObject { put("ids", kotlinx.serialization.json.JsonArray(chunk.map { kotlinx.serialization.json.JsonPrimitive(it) })) }
+            json.decodeFromString(GqlPageResponse.serializer(), post(gql, vars)).data?.page?.media.orEmpty()
+        }
+    }
+
     /**
      * AniList's community recommendations for one title ("users who liked this also liked"),
      * best-rated first.

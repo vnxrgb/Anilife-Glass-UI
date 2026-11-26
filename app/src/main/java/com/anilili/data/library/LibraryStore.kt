@@ -363,7 +363,11 @@ object LibraryStore {
     fun isInWatchlist(anilistId: Int): Boolean = _watchlist.value.any { it.anilistId == anilistId }
 
     fun toggleWatchlist(entry: WatchlistEntry) {
-        val updated = if (isInWatchlist(entry.anilistId)) {
+        val adding = !isInWatchlist(entry.anilistId)
+        if (adding) scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {
+            com.anilili.ui.easteregg.HiddenSparks.hit("watchlist", 10, "Your future self would like a word.")
+        }
+        val updated = if (!adding) {
             _watchlist.value.filter { it.anilistId != entry.anilistId }
         } else {
             listOf(entry.copy(addedAt = System.currentTimeMillis())) + _watchlist.value

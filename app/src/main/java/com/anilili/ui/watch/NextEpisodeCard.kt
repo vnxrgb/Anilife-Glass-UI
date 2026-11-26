@@ -1,6 +1,10 @@
 package com.anilili.ui.watch
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -11,6 +15,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -18,6 +34,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.anilili.data.settings.SettingsStore
+import com.anilili.ui.components.EpisodeArtwork
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -153,6 +173,9 @@ internal fun NextEpisodeCard(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
     playNowFocusRequester: FocusRequester? = null,
+    afterglow: Boolean = false,
+    artworkUrl: String? = null,
+    seriesTitle: String = "",
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -160,6 +183,9 @@ internal fun NextEpisodeCard(
         exit = fadeOut() + slideOutVertically { it / 2 },
         modifier = modifier,
     ) {
+        if (afterglow) {
+            AfterglowUpNext(artworkUrl, seriesTitle, nextEpisodeLabel, secondsRemaining, onPlayNow, onCancel)
+        } else {
         Column(
             modifier = Modifier
                 .widthIn(max = 340.dp)
@@ -207,6 +233,8 @@ internal fun NextEpisodeCard(
                 )
                 NextEpisodeAction(text = "Stay", filled = false, onClick = onCancel)
             }
+
+        }
         }
     }
 }
@@ -246,4 +274,55 @@ private fun NextEpisodeAction(
             .padding(horizontal = 14.dp, vertical = 9.dp)
             .semantics { contentDescription = text },
     )
+}
+
+
+/** Compact mobile-only card. Use the resolved app surface rather than a hard-coded dark tint. */
+@Composable
+private fun AfterglowUpNext(
+    artworkUrl: String?, seriesTitle: String, label: String, seconds: Int,
+    onPlay: () -> Unit, onStay: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    val shape = MaterialTheme.shapes.medium
+    val blur by SettingsStore.blurEpisodeImages.collectAsState()
+    val panel = colors.surface
+    val progress by animateFloatAsState(
+        targetValue = (seconds.toFloat() / NEXT_EPISODE_COUNTDOWN_SECONDS).coerceIn(0f, 1f),
+        animationSpec = tween(durationMillis = 900, easing = LinearEasing), label = "Afterglow countdown",
+    )
+    Column(
+        Modifier.widthIn(max = 228.dp).clip(shape)
+            .background(panel.copy(alpha = .88f))
+            .border(.75.dp, Brush.verticalGradient(listOf(colors.onSurface.copy(alpha = .28f), colors.onSurface.copy(alpha = .08f))), shape)
+            .padding(9.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            if (!artworkUrl.isNullOrBlank()) {
+                EpisodeArtwork(image = artworkUrl, blurred = blur, compact = true,
+                    modifier = Modifier.size(60.dp, 40.dp).clip(MaterialTheme.shapes.small))
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Up next", style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                Text(label, style = MaterialTheme.typography.labelLarge, color = colors.onSurface,
+                    fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onPlay, modifier = Modifier.weight(1f).heightIn(min = 44.dp),
+                shape = RoundedCornerShape(50), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                Text("Play now", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+            }
+            OutlinedButton(onClick = onStay, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                shape = RoundedCornerShape(50), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                Text("Stay here", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+            }
+        }
+        Box(Modifier.fillMaxWidth().height(2.dp).clip(RoundedCornerShape(50)).background(colors.onSurface.copy(alpha = .12f))) {
+            Box(Modifier.fillMaxWidth(progress)
+                .height(3.dp).background(colors.primary))
+        }
+    }
 }

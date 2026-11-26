@@ -444,6 +444,9 @@ fun PlayerSurface(
     val currentOnFinalProgress by rememberUpdatedState(onFinalProgress)
     val perStream = remember(stream.url) { PlayerStreamState(stream, startPositionMs) }
     var activeStream by perStream.activeStream
+    // Shared by the media listener and the Up Next controls, across compiled sections.
+    val latestEnded by rememberUpdatedState(onEnded)
+    var suppressEndAdvance by remember(animeId, episode, activeStream.url) { mutableStateOf(false) }
     var nextStartPositionMs by perStream.nextStartPositionMs
     var playbackIsPlaying by perSurface.playbackIsPlaying
     val perController = remember(controller) { PlayerControllerState() }
@@ -591,7 +594,7 @@ fun PlayerSurface(
                         PlaybackService.finishUncachedPlaybackRecovery()
                         tracksRevision++
                     }
-                    if (state == Player.STATE_ENDED) onEnded()
+                    if (state == Player.STATE_ENDED && !suppressEndAdvance) latestEnded()
                 }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -1579,6 +1582,7 @@ fun PlayerSurface(
     val autoSkipIntroOutro by SettingsStore.autoSkipIntroOutro.collectAsState()
     val autoSkipFiller by SettingsStore.autoSkipFiller.collectAsState()
     val autoplay by SettingsStore.autoplay.collectAsState()
+    val afterglowEnabled by SettingsStore.afterglow.collectAsState()
     val sleepTimer by SleepTimer.state.collectAsState()
     val pauseDetailsOverlay by SettingsStore.pauseDetailsOverlay.collectAsState()
     val playerClock by SettingsStore.playerClock.collectAsState()
@@ -1759,13 +1763,14 @@ fun PlayerSurface(
     // Derived, so the clock's twice-a-second tick only recomposes this screen when the answer
     // changes — which is twice an episode. Read straight off the position, it made every tick
     // recompose the whole player, controls hidden or not.
-    val nextEpisodeTrigger by remember(outroStartMs, outroEndMs) {
+    val nextEpisodeTrigger by remember(outroStartMs, outroEndMs, afterglowEnabled, device.isTv, isFullscreen) {
         derivedStateOf {
             nextEpisodeTrigger(
                 positionMs = positionMs,
                 durationMs = durationMs,
                 outroStartMs = outroStartMs,
                 outroEndMs = outroEndMs,
+                tailWindowMs = if (afterglowEnabled && !device.isTv && isFullscreen) 8_000L else NEXT_EPISODE_TAIL_WINDOW_MS,
             )
         }
     }
@@ -1834,6 +1839,7 @@ fun PlayerSurface(
             if (playbackIsPlaying) nextEpisodeSecondsLeft -= 1
         }
         nextEpisodeHandled = true
+        suppressEndAdvance = true
         onAutoAdvance()
     }
     }
@@ -2230,6 +2236,7 @@ fun PlayerSurface(
                     if (zone == PlayerDoubleTapZone.PlayPause) {
                         val active = controller ?: return@PlayerGestureControls
                         playbackGestureIsPlaying = togglePlayerPlayback(active)
+                        if (!device.isTv) com.anilili.ui.easteregg.HiddenSparks.hit("pause", 5, "Even filler episodes have better pacing.", daily = true)
                     } else {
                         phoneControlsInteraction++
                     }
@@ -2273,6 +2280,7 @@ fun PlayerSurface(
                     phoneControlsInteraction++
                 },
                 onPlayPause = {
+                    if (controller != null && !device.isTv) com.anilili.ui.easteregg.HiddenSparks.hit("pause", 5, "Even filler episodes have better pacing.", daily = true)
                     controller?.let(::togglePlayerPlayback)
                     phoneControlsInteraction++
                 },
@@ -2951,15 +2959,20 @@ fun PlayerSurface(
             } ?: nextSeasonLabel?.let { "$it · Episode 1" } ?: "Next episode",
             onPlayNow = {
                 nextEpisodeHandled = true
+                suppressEndAdvance = true
                 onNextEpisode()
             },
             onCancel = {
                 // Suppressed for the rest of this episode rather than re-armed a second later,
                 // which is the whole point of being able to say no to it.
                 nextEpisodeHandled = true
+                suppressEndAdvance = true
                 DiagnosticsLog.event("PlayerSurface next-episode card dismissed")
             },
             playNowFocusRequester = nextEpisodePlayNowFocus.takeIf { device.isTv },
+            afterglow = !device.isTv && afterglowEnabled && isFullscreen,
+            artworkUrl = nextEpisodeItem?.image ?: artworkUrl.takeIf { nextSeasonLabel == null },
+            seriesTitle = seriesTitle,
             modifier = Modifier
                 .onFocusChanged { nextEpisodeCardFocused = it.hasFocus }
                 .align(Alignment.BottomEnd)
@@ -3026,7 +3039,10 @@ fun PlayerSurface(
             // See TIMED_SKIP_POPUP_MS.
             introEndMs != null && (controlsVisible || introPopup.showing) &&
                 skipWindows.intro ->
-                "Skip Intro" to { requestSkipSeek(introEndMs, "manual-intro") }
+                "Skip Intro" to {
+                    if (!device.isTv) com.anilili.ui.easteregg.HiddenSparks.hit("intro", 5, "The opening theme will remember this.", daily = true)
+                    requestSkipSeek(introEndMs, "manual-intro")
+                }
             nextEpisodeCardVisible -> null
             // Only an outro that reaches the end of this file: a window from the first half of it is
             // not the credits. See outroWindowIsCredits. This was "Next Episode", which threw away

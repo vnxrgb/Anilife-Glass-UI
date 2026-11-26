@@ -1,5 +1,6 @@
 package com.anilili.ui.search
 
+import com.anilili.ui.easteregg.HiddenSparks
 import com.anilili.ui.theme.canvasColor
 import com.anilili.ui.components.glassAtmosphere
 import com.anilili.ui.components.glassCard
@@ -192,6 +193,17 @@ fun SearchScreen(
     val correction by vm.correction.collectAsState()
     val device = LocalAppDeviceProfile.current
     val gridState = rememberLazyGridState()
+    if (!device.isTv) {
+        LaunchedEffect(vm.query) {
+            kotlinx.coroutines.delay(900)
+            HiddenSparks.search(vm.query)
+        }
+        LaunchedEffect(gridState) {
+            androidx.compose.runtime.snapshotFlow { gridState.firstVisibleItemIndex }.collect { index ->
+                if (index >= 100) HiddenSparks.say("browse100", "Browsing is your favorite anime at this point.")
+            }
+        }
+    }
     var showFilters by remember { mutableStateOf(false) }
     var tvHeaderExpanded by remember { mutableStateOf(true) }
     var restoreTvHeaderFocus by remember { mutableStateOf(false) }

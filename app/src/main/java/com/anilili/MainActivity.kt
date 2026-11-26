@@ -1,5 +1,6 @@
 package com.anilili
 
+import com.anilili.ui.easteregg.HiddenSparks
 import com.anilili.ui.theme.appCanvas
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -282,6 +283,22 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    @Suppress("DEPRECATION")
+    private fun applyTransparentSystemBars() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.navigationBarDividerColor = Color.TRANSPARENT
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Android may otherwise insert an opaque/translucent contrast scrim, particularly
+            // on older tablets. The themed canvas and icon appearance are owned by Compose.
+            window.isStatusBarContrastEnforced = false
+            window.isNavigationBarContrastEnforced = false
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val launchStartedAt = SystemClock.elapsedRealtime()
         DiagnosticsLog.event("MainActivity.onCreate start savedState=${savedInstanceState != null}")
@@ -292,6 +309,7 @@ class MainActivity : FragmentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+        applyTransparentSystemBars()
         // Before the activity starts, so a result for a recreated activity is still delivered.
         com.anilili.playback.ExternalPlaybackReturns.register(this)
         DiagnosticsJankMonitor.install(this)
@@ -354,6 +372,7 @@ class MainActivity : FragmentActivity() {
                         DiagnosticsLog.event("Browsing status bar darkIcons=$nextBrowsingPolicy")
                     }
                     window.decorView.setBackgroundColor(canvas)
+                    applyTransparentSystemBars()
                     WindowCompat.getInsetsController(window, window.decorView).apply {
                         isAppearanceLightStatusBars = darkStatusIcons
                         isAppearanceLightNavigationBars = lightCanvas
@@ -949,6 +968,16 @@ private fun MiruroRoot(
     }
 
     val context = LocalContext.current
+    LaunchedEffect(deviceProfile.isTv) { if (!deviceProfile.isTv) HiddenSparks.start(context) }
+    LaunchedEffect(backStack?.id) {
+        if (!deviceProfile.isTv) {
+            when (currentRoute) {
+                Routes.SEARCH -> HiddenSparks.hit("discover", 5, "Another side quest?")
+                Routes.SETTINGS -> HiddenSparks.hit("settings", 5, "Still looking for the secret ending?")
+                Routes.DETAIL -> backStack?.arguments?.getInt(Routes.Arg.ID)?.let { HiddenSparks.hit("detail:$it", 4, "Just watch it already.") }
+            }
+        }
+    }
     val pipeResolverRequired by PipeBridge.resolverRequired.collectAsState()
     val pipeHumanCheck by PipeBridge.humanCheck.collectAsState()
     val flixcloudResolverRequired by FlixcloudBridge.resolverRequired.collectAsState()
@@ -1043,6 +1072,8 @@ private fun MiruroRoot(
         LocalAppChromeReveal provides revealChrome,
         LocalAppChromeBottomInset provides if (hasPhoneBottomBarForChrome) {
             PhoneNavigationBarHeight + navBarInsetForChrome
+        } else if (!deviceProfile.isTv && deviceProfile.useNavigationRail && showPhoneNavigation) {
+            navBarInsetForChrome
         } else {
             0.dp
         },
@@ -1109,7 +1140,7 @@ private fun MiruroRoot(
                         Modifier
                             .fillMaxSize()
                             .padding(
-                                bottom = if (hasPhoneBottomBar) 0.dp else innerPadding.calculateBottomPadding(),
+                                bottom = if (hasPhoneBottomBar || (!deviceProfile.isTv && deviceProfile.useNavigationRail && showPhoneNavigation)) 0.dp else innerPadding.calculateBottomPadding(),
                             ),
                     ) {
                         if (!chromeTakeover.active && showPhoneNavigation &&
@@ -1139,7 +1170,7 @@ private fun MiruroRoot(
                             tvHomeRefresh = tvHomeRefresh,
                             tvDetailRefresh = tvDetailRefresh,
                             tabSwipe = tabSwipe,
-                            onMoodDiscovery = { randomVm.ensurePick(); showRandomPick = true },
+                            onMoodDiscovery = { HiddenSparks.hit("random", 5, "You don't trust destiny, do you?"); randomVm.ensurePick(); showRandomPick = true },
                             onArtworkUnderBarsChanged = { entryId, overArtwork ->
                                 artworkBarReport = entryId to overArtwork
                             },
@@ -1222,6 +1253,9 @@ private fun MiruroRoot(
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
+            if (!deviceProfile.isTv) {
+                com.anilili.ui.easteregg.HiddenSparkText(Modifier.align(Alignment.BottomCenter).padding(bottom = navBarInsetForChrome + (if (showPhoneCapsule) PhoneNavigationBarHeight + 12.dp else 20.dp)), enabled = !inPictureInPicture && !Routes.hostsPlayer(currentRoute) && !showRandomPick && !chromeTakeover.active)
+            }
             com.anilili.ui.journal.JournalOverlay(
                 visible = !deviceProfile.isTv && !inPictureInPicture && currentRoute != null &&
                     currentRoute != Routes.SETTINGS && currentRoute != Routes.DOWNLOAD &&
@@ -1235,13 +1269,16 @@ private fun MiruroRoot(
                 val randomState by randomVm.state.collectAsState()
                 RandomAnimeDialog(
                     state = randomState,
-                    onSkip = { randomVm.skipped() },
+                    onSkip = { if (!deviceProfile.isTv) HiddenSparks.hit("random", 5, "You don't trust destiny, do you?"); randomVm.skipped() },
                     onOpen = { id ->
                         showRandomPick = false
                         nav.navigate(Routes.detail(id)) { launchSingleTop = true }
                         randomVm.opened()
                     },
-                    onSource = randomVm::selectSource,
+                    onSource = { key ->
+                        if (!deviceProfile.isTv && key.startsWith("mood:") && key != randomState.source.key) HiddenSparks.hit("mood", 5, "Character development in progress.")
+                        randomVm.selectSource(key)
+                    },
                     onDismiss = { showRandomPick = false },
                 )
             }
@@ -2184,6 +2221,7 @@ private fun AppNavHost(
                         nullable = true
                         defaultValue = null
                     },
+                    navArgument("franchise") { type = NavType.BoolType; defaultValue = false },
                 ),
             ) { entry ->
                 val id = entry.arguments?.getInt(Routes.Arg.ID) ?: return@composable
@@ -2194,6 +2232,7 @@ private fun AppNavHost(
                 DetailScreen(
                     animeId = id,
                     focusEpisode = returnEpisode,
+                    openFranchiseInitially = entry.arguments?.getBoolean("franchise") == true,
                     onHeroUnderBarsChanged = { overArtwork ->
                         if (nav.currentBackStackEntry?.id == entry.id) onArtworkUnderBarsChanged(entry.id, overArtwork)
                     },
@@ -2295,6 +2334,14 @@ private fun AppNavHost(
                         }
                     },
                     onOpenAnime = { nav.navigate(Routes.detail(watchId)) },
+                    onOpenRecommendation = { id -> nav.navigate(Routes.detail(id)) { popUpTo(Routes.WATCH) { inclusive = true } } },
+                    onPlayRecommendation = { id ->
+                        val saved = LibraryStore.historyFor(id)
+                        val route = resumeRoute(context, id, saved?.provider ?: "auto", saved?.category ?: if (SettingsStore.preferDub.value) "dub" else "sub", saved?.episodeLabel ?: "1")
+                        nav.navigate(route) { popUpTo(Routes.WATCH) { inclusive = true } }
+                    },
+                    onOpenFranchise = { nav.navigate(Routes.franchise(watchId)) { popUpTo(Routes.WATCH) { inclusive = true } } },
+                    onAfterglowHome = { nav.popBackStack(Routes.HOME, false); nav.navigateTab(Routes.HOME) },
                     autoAdvanced = args.getBoolean(Routes.Arg.AUTO_ADVANCED),
                     startFullscreen = args.getBoolean(Routes.Arg.FULLSCREEN),
                     startAtMs = args.getLong(Routes.Arg.START_MS).takeIf { it > 0 },
