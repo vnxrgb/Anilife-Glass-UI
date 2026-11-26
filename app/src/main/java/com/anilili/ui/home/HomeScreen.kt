@@ -200,7 +200,6 @@ fun HomeScreen(
     onGenreClick: (String?) -> Unit,
     onNotificationsClick: () -> Unit,
     onMoodDiscovery: () -> Unit = {},
-    onReadClick: () -> Unit = {},
     onHeroUnderBarsChanged: (Boolean) -> Unit = {},
     tvPrimaryFocusTarget: TvFocusTarget? = null,
     /** Raised by a hold on the television's Home tab; a phone refreshes by pulling instead. */
@@ -336,7 +335,6 @@ fun HomeScreen(
                     onGenreClick = onGenreClick,
                     backdrop = homeBackdrop,
                     onMoodDiscovery = onMoodDiscovery,
-                    onReadClick = onReadClick,
                 )
             }
         },
@@ -430,7 +428,6 @@ private fun HomeTopChrome(
     onGenreClick: (String?) -> Unit,
     backdrop: HazeState? = null,
     onMoodDiscovery: () -> Unit,
-    onReadClick: () -> Unit,
 ) {
     val device = LocalAppDeviceProfile.current
     val foreground = if (overHero) Color.White else MaterialTheme.colorScheme.onSurface
@@ -443,7 +440,6 @@ private fun HomeTopChrome(
             },
             actions = {
                 if (!device.isTv) {
-                    androidx.compose.material3.TextButton(onClick = onReadClick) { Text("Read", color = foreground) }
                     IconButton(onClick = onMoodDiscovery, modifier = Modifier.tourTarget(TourTarget.DICE)) {
                         Icon(Icons.Default.Casino, contentDescription = "Mood discovery", tint = if (overHero) foreground else MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                     }
@@ -485,6 +481,7 @@ private fun HomeTopChrome(
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = foreground, actionIconContentColor = foreground),
         )
+        if (!device.isTv) com.anilili.manga.ContentModeSwitcher()
         if (showGenres) GenrePillRow(
             onGenreClick = onGenreClick,
             backdrop = backdrop,
