@@ -252,4 +252,16 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
       - name: Compile mobile UI and test local reader
-        run: ./gradlew :app:compileMobileDebugKotlin :app:testMobileDebugUnitTest --tests 'com.anilili.manga.*' --max-workers=2 --no-configuration-cache --console=plain --stacktrace
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            log="$RUNNER_TEMP/manga-ui-build-$attempt.log"
+            set +e
+            ./gradlew :app:compileMobileDebugKotlin :app:testMobileDebugUnitTest --tests 'com.anilili.manga.*' --max-workers=2 --no-configuration-cache --console=plain --stacktrace 2>&1 | tee "$log"
+            result=${PIPESTATUS[0]}
+            set -e
+            if [ "$result" -eq 0 ]; then exit 0; fi
+            if [ "$attempt" -eq 3 ] || ! grep -Eq 'Received status code (429|502|503|504)|Read timed out|Connection timed out|Connection reset' "$log" || ! grep -Eq 'Could not (GET|resolve|get resource|download)|Could not resolve all files' "$log"; then exit "$result"; fi
+            sleep $((attempt * 60))
+          done
