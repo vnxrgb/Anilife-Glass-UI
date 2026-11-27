@@ -49,9 +49,9 @@ The AniLumos-specific GithubUpdateSource points at this repository's releases AP
 
 See [update source tests](../app/src/test/java/com/anilili/data/update/GithubUpdateSourceTest.kt), [update manager tests](../app/src/test/java/com/anilili/data/update/UpdateManagerTest.kt), [release runbook](release/runbook.md) and [configuration](CONFIGURATION.md). Signing secrets belong in protected release configuration, never documentation.
 
-## Website and distribution
+## Distribution references
 
-The public site is maintained on the [website branch](https://github.com/vnxrgb/Anilumos/tree/website), with a [static HTML/CSS/JavaScript landing page](https://github.com/vnxrgb/Anilumos/blob/website/website/index.html), responsive layout, sticky navigation, screenshots, feature sections and reduced-motion treatment. The site's deployment and content are distinct from the Android binary. The README documents the official Render URL, GitHub release links and Orion Store listing. Review the website branch separately before asserting that a site change is deployed.
+The main README identifies the official website, GitHub release links and Orion Store listing. This guide does not audit website implementation or deployment outside the main source baseline.
 
 ## Build and validation
 
@@ -63,4 +63,4 @@ For the main mobile baseline, use JDK 17, Android SDK 36 and the repository's Gr
 
 For signed releases follow the runbook and protected CI configuration. Unit tests and lint validate code behavior and static constraints, not runtime provider availability or physical device performance. Validate changed features on both phone and tablet. Document test results with the exact revision.
 
-This documentation does not merge experimental features into main, publish APKs or certify external service availability.
+Source inspection and CI do not certify external service availability.

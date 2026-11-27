@@ -23,14 +23,11 @@ A feature may contain an original UI, original integration glue, inherited appli
 | Metadata diagnostics and caching | Diagnostic integrations and improvements | Existing repository/cache and metadata services |
 | Guided tour and tablet polish | New walkthrough steps and layout refinements | Inherited tour, Compose and adaptive layout foundations |
 | In-app updates | AniLumos release-channel selection and integration | Existing update/install verification infrastructure |
-| Website | Independently authored landing-page contributions | Third-party artwork, assets and service references |
 | Branding | Independently owned name/logo/artwork where applicable | Original asset provenance; trademark rights not granted by software MIT license |
 
 The above describes implementation boundaries from the inspected source and project documentation. It does not claim all code in linked files was authored by vnxrgb. For exact attribution, inspect file history, original headers and upstream diffs; obtain permission where required. The MIT license covers only the eligible original software and documentation contributions owned by vnxrgb. Standalone branding and artwork are excluded unless separately designated. Existing AniLife terms and applicable redistribution permissions remain necessary. Morphe-derived code retains GPLv3 and required notices; the MIT grant does not resolve licensing compatibility of the combined app.
 
-## Experimental work
 
-The manga reader backup preserves UI and reader work, not a stable provider implementation. Other development branches may contain unmerged code; do not attribute them to the stable release or assume their separate third-party license terms have been resolved. Document provenance when integrating them.
 
 ## For future additions
 

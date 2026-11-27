@@ -122,7 +122,7 @@ Stable releases are intended for Android phones and tablets. Android TV builds a
 
 ## Technical documentation
 
-For developers and contributors, the [technical guide](docs/TECHNICAL_GUIDE.md) explains the architecture, original feature implementations, UI and playback, data integrations, releases and [contribution/license boundaries](docs/CONTRIBUTION_MAP.md). Each guide links to the relevant source code and documents limitations and validation. Experimental work is kept separate from stable functionality.
+For developers and contributors, the [technical guide](docs/TECHNICAL_GUIDE.md) explains the architecture, original feature implementations, UI and playback, data integrations, releases and [contribution/license boundaries](docs/CONTRIBUTION_MAP.md). Each guide links to the relevant source code and documents limitations and validation. The guide covers only source present on main.
 
 ## Building it yourself
 

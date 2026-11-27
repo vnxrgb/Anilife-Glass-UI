@@ -36,8 +36,8 @@ The diagram is a conceptual dependency map, not a complete runtime call graph. E
 - [Release runbook](release/runbook.md), [security incident response](security/incident-response.md).
 - [Morphe ambient port](MORPHE_AMBIENT_PORT.md), [asset provenance](ASSET-LICENCES.md), [ownership](OWNERSHIP.md), [copyright and license scope](../COPYRIGHT.md).
 
-## Branch boundaries
+## Documentation scope
 
-Do not read experimental features as stable capabilities. The manga UI and reader are preserved on [backup/manga-ui-reader](https://github.com/vnxrgb/Anilumos/tree/backup/manga-ui-reader); a replacement manga provider engine is not part of this baseline. Android TV previews and other unmerged mobile or provider experiments are separate. The [website branch](https://github.com/vnxrgb/Anilumos/tree/website) contains the public site.
+This guide covers only code and documentation present on the inspected main revision. It does not describe unmerged features or development branches.
 
 When changing a feature, update its guide, identify the source files and licenses, and record relevant tests and known limitations. Avoid describing planned features as implemented.
