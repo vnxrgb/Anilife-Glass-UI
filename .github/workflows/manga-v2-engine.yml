@@ -76,12 +76,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          sdk_tools="$ANDROID_HOME/cmdline-tools/latest/bin"
+          if [ ! -x "$sdk_tools/sdkmanager" ]; then
+            sdkmanager_path="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -print -quit)"
+            test -n "$sdkmanager_path"
+            sdk_tools="$(dirname "$sdkmanager_path")"
+          fi
+          test -x "$sdk_tools/sdkmanager"
+          test -x "$sdk_tools/avdmanager"
+          export PATH="$sdk_tools:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
+          echo "$sdk_tools" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/emulator" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
           sudo chmod a+rw /dev/kvm
-          sdkmanager 'emulator' 'platform-tools' 'system-images;android-30;default;x86_64'
+          "$sdk_tools/sdkmanager" --sdk_root="$ANDROID_HOME" 'emulator' 'platform-tools' 'system-images;android-30;default;x86_64'
           test -x "$ANDROID_HOME/emulator/emulator"
           "$ANDROID_HOME/emulator/emulator" -version
           "$ANDROID_HOME/emulator/emulator" -accel-check
-          echo no | avdmanager create avd --force --name manga-ci --package 'system-images;android-30;default;x86_64'
+          echo no | "$sdk_tools/avdmanager" create avd --force --name manga-ci --package 'system-images;android-30;default;x86_64'
           "$ANDROID_HOME/emulator/emulator" -list-avds
       - name: Run isolated Android instrumentation tests
         shell: bash
