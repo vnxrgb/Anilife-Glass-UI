@@ -164,7 +164,7 @@ private class KotatsuNativeSource(
             authors = details.authors.filter { it.isNotBlank() }, alternativeTitles = details.altTitles.filter { it.isNotBlank() },
             genres = details.tags.map { it.title }.ifEmpty { title.genres },
             status = details.state?.name?.lowercase(Locale.ROOT) ?: title.status,
-            unrated = details.contentRating == null && title.unrated)
+            unrated = details.contentRating == null && allowsUnratedPublisherTitles(descriptor.name, parser.domain))
     }
     override suspend fun pages(chapterId: String): List<MangaPage> = withContext(Dispatchers.IO) {
         val chapter = chapterCache[chapterId] ?: error("Open chapter list again to reload this chapter")
