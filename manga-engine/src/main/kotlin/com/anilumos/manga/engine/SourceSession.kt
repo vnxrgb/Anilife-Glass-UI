@@ -44,7 +44,7 @@ internal class SourceSession(scope: SourceScope, cacheDirectory: File? = null) :
             if (result.code == 401 || result.code == 403 || result.code == 429 || result.code == 451) {
                 val code = result.code
                 result.close()
-                throw IOException("Provider access or rate limit: HTTP $code")
+                throw ProviderAccessException(code)
             }
             result
         }.build()

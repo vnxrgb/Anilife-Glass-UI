@@ -23,3 +23,7 @@ Kuroha at 394d2b5719f94a5db3a663fee4702241ea3f82bb declares parser revision 3432
 5. Evaluate separately signed parser bundles: own publisher keys, contract/version matching, validation, rollback, trusted update endpoint and device tests. No remote executable loading at this checkpoint.
 
 Do not report provider count as working count. No signed beta until actual reader validation and licensing gates are satisfied.
+
+## Provider health checkpoint
+
+An explicit reviewed-scope probe checks browse, search, details, chapters and first page bytes. Results expire after 15 minutes; unchecked and failed sources are hidden by the visibility predicate. No UI integration, automatic bulk probes, live provider certification or device image decoding yet. Restricted responses remain blocked. Synthetic tests cover state isolation and expiry.
