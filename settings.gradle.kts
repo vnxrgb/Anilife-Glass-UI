@@ -16,9 +16,11 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven {
-            url = uri("https://jitpack.io")
-            content { includeGroup("com.github.Kotatsu-Redo") }
+        exclusiveContent {
+            forRepository {
+                maven { url = uri("https://jitpack.io") }
+            }
+            filter { includeModule("com.github.Kotatsu-Redo", "kotatsu-parsers-redo") }
         }
         maven {
             url = uri("https://maven.mozilla.org/maven2")

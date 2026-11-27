@@ -6,15 +6,19 @@ on:
       - 'manga-engine/**'
       - 'settings.gradle.kts'
       - 'build.gradle.kts'
+      - 'gradle/libs.versions.toml'
       - '.github/workflows/manga-v2-engine.yml'
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: manga-v2-engine-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   engine:
     if: github.ref == 'refs/heads/feature/manga-v2'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -26,9 +30,28 @@ jobs:
       - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
         with:
-          cache-read-only: true
+          cache-read-only: false
       - name: Compile and test isolated engine (no live provider requests)
-        run: ./gradlew :manga-engine:testDebugUnitTest :manga-engine:assembleDebug --max-workers=2 --no-configuration-cache --console=plain --stacktrace
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            log="$RUNNER_TEMP/manga-engine-attempt-$attempt.log"
+            set +e
+            ./gradlew :manga-engine:testDebugUnitTest :manga-engine:assembleDebug --max-workers=2 --no-configuration-cache --console=plain --stacktrace 2>&1 | tee "$log"
+            result=${PIPESTATUS[0]}
+            set -e
+            if [ "$result" -eq 0 ]; then
+              exit 0
+            fi
+            # Only transient repository transport errors are retried. Never hide compiler or test failures.
+            if [ "$attempt" -eq 3 ] || ! grep -Eq 'Received status code (429|502|503|504)|Read timed out|Connection timed out|Connection reset' "$log" || ! grep -Eq 'Could not (GET|resolve|get resource)|Could not resolve all files' "$log"; then
+              exit "$result"
+            fi
+            delay=$((attempt * 60))
+            echo "::warning::Transient dependency download failure; retrying after ${delay}s"
+            sleep "$delay"
+          done
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
