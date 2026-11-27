@@ -2,6 +2,8 @@ package com.anilili.manga
 
 import com.anilumos.manga.engine.ApprovedReader
 import java.io.Closeable
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 internal fun reviewedReaderSupported(): Boolean = true
 internal suspend fun openReviewedReader(): MangaSource = EngineSampleSource(ApprovedReader.openReviewedSample())
@@ -11,9 +13,16 @@ private class EngineSampleSource(private val reader: ApprovedReader) : MangaSour
     override val displayName = "Atsu"
     override val languageTag = "en"
     override val sampleOnly = true
-    override suspend fun artwork(mangaId: String): Any? {
+    private val coverLock = Mutex()
+    private var artworkLoaded = false
+    private var coverBitmap: android.graphics.Bitmap? = null
+    override suspend fun artwork(mangaId: String): Any? = coverLock.withLock {
         require(mangaId == title.id)
-        return reader.cover()
+        if (!artworkLoaded) {
+            coverBitmap = reader.cover()
+            artworkLoaded = true
+        }
+        coverBitmap
     }
     override val chapterLanguages = listOf("und")
     private val title = reader.title.let {
