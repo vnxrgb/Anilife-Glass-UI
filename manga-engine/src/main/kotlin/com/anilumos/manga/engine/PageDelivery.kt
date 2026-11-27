@@ -39,7 +39,9 @@ internal class PageDelivery(private val scope: SourceScope, private val session:
             if (!response.isSuccessful) throw IOException("Image HTTP ${response.code}")
             val body = response.body
             val type = body.contentType()
-            if (type?.type != "image" || type.subtype !in setOf("jpeg", "png", "webp", "gif", "avif"))
+            val format = type?.takeIf { it.type == "image" }?.subtype
+            val genericBinary = type == null || (type.type == "application" && type.subtype == "octet-stream")
+            if (!genericBinary && format !in setOf("jpeg", "png", "webp", "gif", "avif"))
                 throw IOException("Unsupported image content")
             if (body.contentLength() > MAX_BYTES) throw IOException("Image exceeds size limit")
             val input = body.source()
@@ -47,7 +49,9 @@ internal class PageDelivery(private val scope: SourceScope, private val session:
             if (input.buffer.size > MAX_BYTES) throw IOException("Image exceeds size limit")
             val bytes = input.readByteArray()
             if (bytes.isEmpty()) throw IOException("Empty image")
-            if (!matchesImageHeader(bytes, type.subtype)) throw IOException("Image signature mismatch")
+            if (genericBinary) {
+                if (listOf("jpeg", "png", "webp", "gif", "avif").none { matchesImageHeader(bytes, it) }) throw IOException("Image signature mismatch")
+            } else if (!matchesImageHeader(bytes, requireNotNull(format))) throw IOException("Image signature mismatch")
             return bytes
         }
         // Header validation is not a substitute for full Android image decoding.
@@ -60,7 +64,14 @@ internal class PageDelivery(private val scope: SourceScope, private val session:
                 "jpeg" -> at(0, 255, 216, 255)
                 "gif" -> ascii(0, "GIF87a") || ascii(0, "GIF89a")
                 "webp" -> ascii(0, "RIFF") && ascii(8, "WEBP")
-                "avif" -> ascii(4, "ftyp") && (ascii(8, "avif") || ascii(8, "avis"))
+                "avif" -> {
+                    // ISO BMFF may declare AVIF as a compatible rather than major brand.
+                    if (!ascii(4, "ftyp") || bytes.size < 12) false else if (ascii(8, "avif") || ascii(8, "avis")) true else {
+                        val size = (0..3).fold(0L) { acc, i -> (acc shl 8) or (bytes[i].toLong() and 255) }
+                        if (size < 16 || size > bytes.size || size > 4096) false
+                        else (16 until size.toInt() - 3 step 4).any { ascii(it, "avif") || ascii(it, "avis") }
+                    }
+                }
                 else -> false
             }
         }

@@ -98,7 +98,15 @@ private class EngineCatalogSource(
         val active = catalog ?: return@withLock null
         if (!covers.containsKey(mangaId)) {
             if (covers.size >= 3) covers.remove(covers.keys.first())
-            covers[mangaId] = active.cover(mangaId)
+            val image = try { active.cover(mangaId) }
+            catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                val classified = classifyProviderFailure("PAGE_DOWNLOAD", e)
+                withContext(Dispatchers.Main.immediate) { if (!closed) onHealth(health?.read(id, revision)?.reason ?: "CATALOGUE", providerDiagnostic(classified)) }
+                null
+            }
+            // Do not permanently remember a failed cover request as a successful cache entry.
+            if (image != null) covers[mangaId] = image
         }
         covers[mangaId]
     }
@@ -120,6 +128,6 @@ private class EngineCatalogSource(
             val image = checked("IMAGE_DECODE") { session().decode(chapterId, index, w, h) }
             if (health?.read(id, revision)?.reason != "READY") success(true)
             image
-        }) }
+        }, sourceId = id) }
     override fun close() { closed = true; catalog?.close(); catalog = null }
 }

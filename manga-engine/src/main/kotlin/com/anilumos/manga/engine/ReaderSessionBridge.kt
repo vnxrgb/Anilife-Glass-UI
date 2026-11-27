@@ -101,7 +101,9 @@ internal class ReaderSessionBridge private constructor(
     /** Caller owns the bounded decoded bitmap; the Compose reader must recycle it on disposal. */
     suspend fun decode(page: Page, width: Int = 2048, height: Int = 4096, onBytesReady: () -> Unit = {}): Bitmap = lock.withLock {
         owned(page.owner)
-        val bytes = encodedPages[page.raw] ?: repository.loadImage(page.raw).also { fresh ->
+        val bytes = encodedPages[page.raw] ?: (try { repository.loadImage(page.raw) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { throw compatibilityFailure(ProbeStage.PAGE_DOWNLOAD, e) }).also { fresh ->
             if (!closed && fresh.size <= 12 * 1024 * 1024) {
                 while (encodedPages.isNotEmpty() && (encodedPages.size >= 3 || encodedBytes + fresh.size > 12 * 1024 * 1024)) {
                     val key = encodedPages.keys.first()
@@ -119,11 +121,9 @@ internal class ReaderSessionBridge private constructor(
     suspend fun cover(title: Title): Bitmap? = lock.withLock {
         owned(title.owner)
         if (!covers.containsKey(title.id)) {
-            val bytes = try { repository.coverBytes(title.raw)?.takeIf { it.size <= 4 * 1024 * 1024 } }
-                catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                catch (e: Exception) { null }
+            val bytes = repository.coverBytes(title.raw)?.takeIf { it.size <= 4 * 1024 * 1024 }
             if (covers.size >= 3) covers.remove(covers.keys.first())
-            covers[title.id] = bytes
+            if (bytes != null) covers[title.id] = bytes
         }
         val bytes = covers[title.id] ?: return@withLock null
         val bitmap = PageDecoder.decode(bytes, 768, 1152)

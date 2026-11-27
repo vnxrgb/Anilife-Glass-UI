@@ -1081,6 +1081,8 @@ private fun EnginePageBitmap(page: MangaPage, modifier: Modifier, scale: Content
     var bitmap by remember(page, width, height, retry) { mutableStateOf<android.graphics.Bitmap?>(null) }
     var failed by remember(page, width, height, retry) { mutableStateOf(false) }
     val callback by rememberUpdatedState(onLoaded)
+    val providerState = LocalMangaProviderState.current
+    val reportContext = LocalContext.current
     LaunchedEffect(page, width, height, retry) {
         var decoded: android.graphics.Bitmap? = null
         var published = false
@@ -1103,7 +1105,20 @@ private fun EnginePageBitmap(page: MangaPage, modifier: Modifier, scale: Content
     val value = bitmap
     when {
         value != null -> Image(value.asImageBitmap(), "Page ${page.index + 1}", modifier = modifier, contentScale = scale)
-        failed -> Box(modifier.heightIn(min = 100.dp), contentAlignment = Alignment.Center) { TextButton(onClick = { retry++ }) { Text("Retry page") } }
+        failed -> Box(modifier.heightIn(min = 100.dp), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                TextButton(onClick = { retry++ }) { Text("Retry page") }
+                val id = page.sourceId
+                val diagnostic = id?.let { providerState.diagnostics[it] }
+                if (id != null && diagnostic != null) {
+                    Text(diagnostic.reason.replace('_', ' '), style = MaterialTheme.typography.labelSmall)
+                    TextButton(onClick = {
+                        val clipboard = reportContext.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Manga provider diagnostics", providerCompatibilityReport(mapOf(id to diagnostic))))
+                    }) { Text("Copy error report") }
+                }
+            }
+        }
         else -> Box(modifier.heightIn(min = 100.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
     }
 }
