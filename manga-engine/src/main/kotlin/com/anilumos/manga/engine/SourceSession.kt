@@ -7,6 +7,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.Cache
 import okhttp3.Cookie
 import okhttp3.CookieJar
+import okhttp3.Dns
+import java.net.UnknownHostException
+import java.net.InetAddress
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import java.io.Closeable
@@ -40,6 +43,11 @@ internal class SourceSession(scope: SourceScope, cacheDirectory: File? = null, p
     val cookies = ScopedCookies(scope)
     val client = OkHttpClient.Builder()
         .cookieJar(cookies)
+        .dns(Dns { hostname ->
+            val addresses = Dns.SYSTEM.lookup(hostname)
+            if (addresses.isEmpty() || addresses.any { !publicProviderAddress(it) }) throw UnknownHostException("Provider resolved to a non-public address")
+            addresses
+        })
         .followRedirects(false)
         .followSslRedirects(false)
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -92,4 +100,19 @@ internal object SessionDisposal {
             cleanup()
         }
     }
+}
+
+internal fun publicProviderAddress(address: InetAddress): Boolean {
+    if (address.isAnyLocalAddress || address.isLoopbackAddress || address.isLinkLocalAddress ||
+        address.isSiteLocalAddress || address.isMulticastAddress) return false
+    val b = address.address.map { it.toInt() and 255 }
+    if (b.size == 4) {
+        return !(b[0] == 0 || b[0] == 10 || b[0] == 127 || b[0] >= 224 ||
+            (b[0] == 100 && b[1] in 64..127) || (b[0] == 169 && b[1] == 254) ||
+            (b[0] == 172 && b[1] in 16..31) || (b[0] == 192 && b[1] == 168) ||
+            (b[0] == 192 && b[1] == 0) || (b[0] == 198 && b[1] in 18..19) ||
+            (b[0] == 198 && b[1] == 51 && b[2] == 100) || (b[0] == 203 && b[1] == 0 && b[2] == 113))
+    }
+    return b.size == 16 && b[0] in 0x20..0x3f &&
+        !(b[0] == 0x20 && b[1] == 0x01 && b[2] == 0x0d && b[3] == 0xb8)
 }

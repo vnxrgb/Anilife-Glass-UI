@@ -123,8 +123,8 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     val healthContext = LocalContext.current
     val localSource = remember(healthContext) { LocalMangaSource(healthContext) }
     val providerState = LocalMangaProviderState.current
-    val readers = providerState.sources.values.toList()
-    val reviewedBusy = providerState.checking.values.any { it }
+    val readers = providerState.sources.values.sortedWith(compareBy<MangaSource> { if (it.id == REVIEWED_SOURCE_ID) 0 else 1 }.thenBy { it.displayName }.thenBy { it.languageTag })
+    val reviewedBusy = providerState.discovering || providerState.checking.values.any { it } || providerState.checkedCount < providerState.candidateCount
     val reviewedError = providerState.unavailable.values.any { it }
     val registry = LocalMangaRegistry.current
     val provider = registry.byId(providerState.selectedId) ?: registry.byId(MangaDiscoverySource.ID) ?: localSource
@@ -137,6 +137,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         }
     }
     var providerMenu by remember { mutableStateOf(false) }
+    var providerQuery by remember { mutableStateOf("") }
     var query by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf(MangaKind.ALL) }
     var order by rememberSaveable { mutableStateOf(MangaOrder.POPULAR) }
@@ -253,22 +254,36 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         title = { Text("Providers") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Discovery", style = MaterialTheme.typography.labelMedium)
-                FilterChip(selected = provider.metadataOnly, onClick = {
-                    providerState.selectedId = MangaDiscoverySource.ID; kind = MangaKind.ALL; genre = null; providerMenu = false
-                }, label = { Text("AniList catalogue") })
-                Text("Available readers", style = MaterialTheme.typography.labelMedium)
-                readers.forEach { source ->
-                    FilterChip(selected = provider.id == source.id, onClick = {
-                        providerState.selectedId = source.id; kind = MangaKind.ALL; genre = null; providerMenu = false
-                    }, label = { Text(source.displayName + if (source.sampleOnly) " · reviewed" else "") })
+                OutlinedTextField(providerQuery, { providerQuery = it.take(80) },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Find provider") })
+                if (reviewedBusy) {
+                    val total = providerState.candidateCount
+                    if (total > 0) {
+                        LinearProgressIndicator(progress = { (providerState.checkedCount.toFloat() / total).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+                        Text("${readers.size} available · ${providerState.checkedCount} of $total checked", style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                        Text("Discovering bundled providers…", style = MaterialTheme.typography.bodySmall)
+                    }
+                } else Text("${readers.size} available readers", style = MaterialTheme.typography.bodySmall)
+                LazyColumn(modifier = Modifier.heightIn(max = 320.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if ("AniList catalogue".contains(providerQuery, true)) item("catalogue") {
+                        FilterChip(selected = provider.metadataOnly, onClick = {
+                            providerState.selectedId = MangaDiscoverySource.ID; kind = MangaKind.ALL; genre = null; providerMenu = false
+                        }, label = { Text("AniList catalogue · discovery only") })
+                    }
+                    if ("Local library".contains(providerQuery, true)) item("local") {
+                        FilterChip(selected = provider.id == LocalMangaSource.ID, onClick = {
+                            providerState.selectedId = LocalMangaSource.ID; kind = MangaKind.ALL; genre = null; providerMenu = false
+                        }, label = { Text("Local library") })
+                    }
+                    items(readers.filter { it.displayName.contains(providerQuery, true) || it.languageLabel().contains(providerQuery, true) }, key = { it.id }) { source ->
+                        FilterChip(selected = provider.id == source.id, onClick = {
+                            providerState.selectedId = source.id; kind = MangaKind.ALL; genre = null; providerMenu = false
+                        }, label = { Text(source.displayName + " · " + source.languageLabel(), maxLines = 2) })
+                    }
                 }
-                if (reviewedBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if (reviewedBusy) Text("Checking reading sources…", style = MaterialTheme.typography.bodySmall)
-                else if (reviewedError && readers.isEmpty()) Text("No verified online readers currently available.", style = MaterialTheme.typography.bodySmall)
-                FilterChip(selected = provider.id == LocalMangaSource.ID, onClick = {
-                    providerState.selectedId = LocalMangaSource.ID; kind = MangaKind.ALL; genre = null; providerMenu = false
-                }, label = { Text("Local library") })
+                if (!reviewedBusy && readers.isEmpty()) Text("No verified online readers currently available.", style = MaterialTheme.typography.bodySmall)
             }
         },
         confirmButton = { TextButton(onClick = { providerMenu = false }) { Text("Close") } },

@@ -16,24 +16,56 @@ internal data class ReviewedTitleGrant(val name: String, val chapters: Set<Float
 internal fun permittedChapters(grant: ReviewedTitleGrant, chapterNumbers: List<Float>): Set<Float> =
     chapterNumbers.filter { it in grant.chapters }.toSet()
 
-internal data class LiveProviderProfile(val scope: SourceScope, val label: String, val probeTitle: String? = null, val probeChapter: Float? = null)
+internal data class LiveProviderProfile(val scope: SourceScope, val label: String, val locale: String = "", val category: String = "MANGA", val probeTitle: String? = null, val probeChapter: Float? = null)
 
 /** Owner confirmed provider-wide content permission on 2026-11-27.
- * Registration here describes technical host compatibility, not chapter restrictions. */
+ * Discover technical candidates from the pinned parser bundle without network I/O.
+ * Known multi-host providers retain narrowly scoped CDN overrides. */
 internal object LiveProviderProfiles {
-    val all = listOf(
-        LiveProviderProfile(SourceScope("ATSUMOE", setOf("atsu.moe", "cdn.atsu.moe")), "Atsu", "Chico", 3f),
+    private val known = listOf(
+        LiveProviderProfile(SourceScope("ATSUMOE", setOf("atsu.moe", "cdn.atsu.moe")), "Atsu", "en", probeTitle = "Chico", probeChapter = 3f),
         LiveProviderProfile(SourceScope("MANGADEX", setOf("mangadex.org", "api.mangadex.org", "uploads.mangadex.org", "mangadex.network"), setOf("mangadex.network")), "MangaDex"),
         LiveProviderProfile(SourceScope("COMICK_FUN", setOf("comick.live", "comick.art")), "ComicK")
-    )
+    ).associateBy { it.scope.sourceName }
+    private val discovered by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { discover(ParserRegistry()) }
+    val all: List<LiveProviderProfile> get() = discovered
+    internal fun domain(value: String): String? {
+        val normalized = value.trim().lowercase(java.util.Locale.ROOT)
+        if (normalized.length !in 4..253 || !normalized.contains('.') ||
+            normalized.endsWith(".local") || normalized.endsWith(".localhost") ||
+            normalized.endsWith(".invalid") || normalized.endsWith(".test") ||
+            normalized.endsWith(".internal") || normalized.split('.').last().all { it.isDigit() }) return null
+        if (!normalized.split('.').all { label -> label.length in 1..63 &&
+                label.matches(Regex("[a-z0-9](?:[a-z0-9-]*[a-z0-9])?")) }) return null
+        return normalized
+    }
+    internal fun discover(registry: ParserRegistry): List<LiveProviderProfile> =
+        registry.descriptors().asSequence()
+            .filter { !it.markedBroken && it.category in ParserRegistry.supportedCategories }
+            .mapNotNull { descriptor ->
+                val override = known[descriptor.id]
+                if (override != null) return@mapNotNull override.copy(locale = descriptor.locale, category = descriptor.category)
+                try {
+                    val offline = SourceScope(descriptor.id, setOf("offline.invalid"))
+                    SourceSession(offline, offline = true).use { session ->
+                        val parser = registry.bundle.newParser(registry.requireSource(offline), AndroidParserContext(registry.bundle, session))
+                        val primary = domain(parser.domain) ?: return@use null
+                        val hosts = (parser.configKeyDomain.presetValues.mapNotNull(::domain) + primary).toSet()
+                        LiveProviderProfile(SourceScope(descriptor.id, hosts), descriptor.title, descriptor.locale, descriptor.category)
+                    }
+                } catch (e: LinkageError) { null }
+                catch (e: Exception) { null }
+            }.sortedWith(compareBy<LiveProviderProfile> {
+                when (it.scope.sourceName) { "ATSUMOE" -> 0; "MANGADEX" -> 1; "COMICK_FUN" -> 2; else -> if (it.locale.substringBefore('-').substringBefore('_') == "en") 3 else 4 }
+            }.thenBy { it.label }.thenBy { it.scope.sourceName }).toList()
 }
 
 /** Generic provider session. Public metadata stays separate from raw URLs and credentials. */
 public class ReviewedCatalog private constructor(
     private val bridge: ReaderSessionBridge,
-    initial: ReaderSessionBridge.Details,
+    initial: ReaderSessionBridge.Details? = null,
 ) : Closeable {
-    public data class Provider(val id: String, val label: String)
+    public data class Provider(val id: String, val label: String, val locale: String, val category: String)
     public data class Title(val id: String, val name: String, val description: String, val genres: List<String>,
         val authors: List<String>, val status: String, val alternatives: List<String>, val hasReadingGrant: Boolean)
     public data class Chapter(val id: String, val titleId: String, val label: String, val number: String?, val scanlator: String?)
@@ -44,7 +76,7 @@ public class ReviewedCatalog private constructor(
     private val chapterHandles = LinkedHashMap<String, ReaderSessionBridge.Chapter>()
     private val pageHandles = LinkedHashMap<String, List<ReaderSessionBridge.Page>>(4, .75f, true)
     @Volatile private var closed = false
-    init { remember(initial) }
+    init { initial?.let(::remember) }
     private fun active() { check(!closed) { "Catalogue closed" } }
     private fun rememberTitle(title: ReaderSessionBridge.Title) {
         titles[title.id] = title
@@ -114,14 +146,22 @@ public class ReviewedCatalog private constructor(
     }
     override fun close() { closed = true; bridge.close() }
     public companion object {
-        public fun providers(): List<Provider> {
-            val descriptors = ParserRegistry().descriptors().associateBy { it.id }
-            return LiveProviderProfiles.all.filter { profile ->
-                val d = descriptors[profile.scope.sourceName]
-                d != null && !d.markedBroken && d.category in ParserRegistry.supportedCategories
-            }.map { Provider(it.scope.sourceName, it.label) }
+        public suspend fun providers(): List<Provider> = withContext(Dispatchers.IO) {
+            LiveProviderProfiles.all.map { Provider(it.scope.sourceName, it.label, it.locale, it.category) }
         }
-        public suspend fun open(providerId: String): ReviewedCatalog = withContext(Dispatchers.IO) {
+        public suspend fun connect(providerId: String): ReviewedCatalog {
+            var opened: ReviewedCatalog? = null
+            try {
+                return withContext(Dispatchers.IO) {
+                    val profile = LiveProviderProfiles.all.singleOrNull { it.scope.sourceName == providerId }
+                        ?: error("Provider is not configured")
+                    ReviewedCatalog(ReaderSessionBridge.open(ParserRegistry(), profile.scope)).also { opened = it }
+                }
+            } catch (e: Throwable) { opened?.close(); throw e }
+        }
+        public suspend fun open(providerId: String): ReviewedCatalog {
+            var opened: ReviewedCatalog? = null
+            try { return withContext(Dispatchers.IO) {
             val profile = LiveProviderProfiles.all.singleOrNull { it.scope.sourceName == providerId }
                 ?: error("Provider has not been configured")
             val bridge = ReaderSessionBridge.open(ParserRegistry(), profile.scope)
@@ -140,13 +180,14 @@ public class ReviewedCatalog private constructor(
                         val pages = bridge.pages(chapter)
                         if (pages.isEmpty() || pages.size > 2000) continue
                         bridge.decode(pages.first(), 320, 480).recycle()
-                        return@withContext ReviewedCatalog(bridge, detail)
+                        return@withContext ReviewedCatalog(bridge, detail).also { opened = it }
                     } catch (e: CancellationException) { throw e }
                     catch (e: ProviderAccessException) { throw e }
                     catch (e: Exception) { continue }
                 }
                 throw IOException("Provider did not pass catalogue/chapter/image verification")
             } catch (e: Throwable) { bridge.close(); throw e }
+            } } catch (e: Throwable) { opened?.close(); throw e }
         }
     }
 }
