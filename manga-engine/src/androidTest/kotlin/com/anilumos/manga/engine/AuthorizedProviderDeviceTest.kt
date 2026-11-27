@@ -54,7 +54,9 @@ class AuthorizedProviderDeviceTest {
         assumeTrue("No reviewed live source selected", source.isNotBlank())
         val title = args.getString("liveTitle").orEmpty()
         val hosts = args.getString("liveHosts").orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-        require(title.isNotBlank() && hosts.isNotEmpty())
+        val chapterNumber = args.getString("liveChapter")?.toFloatOrNull()
+            ?: error("Exact authorized chapter number required")
+        require(title.isNotBlank() && hosts.isNotEmpty() && chapterNumber.isFinite() && chapterNumber >= 0f)
         val registry = ParserRegistry()
         val scope = SourceScope(source, hosts)
         SourceSession(scope).use { session ->
@@ -62,10 +64,10 @@ class AuthorizedProviderDeviceTest {
             val catalog = repository.browse("", 0, SortOrder.POPULARITY)
             assertTrue("Catalog returned no entries", catalog.consumed > 0)
             val search = repository.browse(title, 0, SortOrder.RELEVANCE)
-            val match = search.titles.firstOrNull { it.title.equals(title, ignoreCase = true) }
-                ?: error("Exact approved safe title absent from first search page")
+            val match = search.titles.filter { it.title.equals(title, ignoreCase = true) }.distinctBy { it.id }.singleOrNull()
+                ?: error("Exact approved safe title absent or ambiguous")
             val details = repository.details(match)
-            val chapter = details.chapters.orEmpty().firstOrNull() ?: error("No chapter for approved title")
+            val chapter = details.chapters.orEmpty().firstOrNull { it.number == chapterNumber } ?: error("Exact approved chapter not found")
             val page = repository.pages(details, chapter).firstOrNull() ?: error("No page for approved chapter")
             val bitmap = repository.decodePage(page)
             try {

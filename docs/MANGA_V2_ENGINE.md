@@ -67,3 +67,7 @@ Run 45973630287 verified the authorized Chico chapter 3 first page on Android 14
 ## AVIF dependency transport
 
 Run 45974418150 stopped at dependency resolution after three HTTP 429 responses from repo.maven.apache.org. The exact pinned release exists on Maven Central. Route only the libavif module through upstream's documented official repo1.maven.org endpoint. Do not change artifact version or general repository routing. Synthetic 16x16 blue fixture was independently decoded locally (RGB 0,0,253). Retry the API 30 one-shot test; native ABI and runtime behavior still require CI verification.
+
+## Bundle-wide offline compatibility inventory
+
+Run 45975226273 passed live Chico chapter 3 first-page decode and local AVIF fixtures on API 30. The new offline audit enumerates the entire pinned bundle, classifies upstream broken and unsupported categories, and attempts parser initialization and declared search/sort capability inspection using a session that rejects every network request. CI uploads inventory.tsv and summary.txt with the engine test report. No claim of live availability, rights, or support for every architecture is implied. Visibility requires an initialized parser, explicit reviewed ID and fresh READY health. Reviewed profiles and manual live instrumentation now require an exact title and chapter number, and fail on ambiguous titles. No new live provider is enabled by this change; authorized representative sources and fixtures for distinct architectures remain necessary. No automatic bulk probing.

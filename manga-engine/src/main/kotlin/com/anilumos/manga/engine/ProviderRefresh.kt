@@ -5,8 +5,8 @@ import kotlinx.coroutines.sync.withLock
 
 /** Foreground-only, serialized checks for explicitly supplied reviewed profiles.
  * No default provider list, background worker or unbounded retry loop. */
-internal data class ReviewedProfile(val scope: SourceScope, val query: String, val headers: SourceHeaders = SourceHeaders(scope)) {
-    init { require(query.isNotBlank()) }
+internal data class ReviewedProfile(val scope: SourceScope, val query: String, val chapterNumber: Float, val headers: SourceHeaders = SourceHeaders(scope)) {
+    init { require(query.isNotBlank() && chapterNumber.isFinite() && chapterNumber >= 0f) }
 }
 internal class ProviderRefresh(
     private val health: ProviderHealth,
@@ -30,5 +30,5 @@ internal class ProviderRefresh(
         }
 
     suspend fun refresh(registry: ParserRegistry, profiles: List<ReviewedProfile>): Map<String, ProviderCheck> =
-        refresh(profiles) { health.probe(registry, it.scope, it.query, it.headers) }
+        refresh(profiles) { health.probe(registry, it.scope, it.query, it.chapterNumber, it.headers) }
 }

@@ -10,7 +10,7 @@ class ProviderRefreshTest {
         var calls = 0
         val health = ProviderHealth { clock }
         val refresh = ProviderRefresh(health, { clock }, 100L)
-        val profile = ReviewedProfile(SourceScope("FIXTURE", setOf("example.org")), "fixture")
+        val profile = ReviewedProfile(SourceScope("FIXTURE", setOf("example.org")), "fixture", 1f)
         suspend fun probe(p: ReviewedProfile): ProviderCheck {
             calls++
             return health.record(p.scope.sourceName, if (calls == 1) ProviderState.NETWORK_ERROR else ProviderState.READY)

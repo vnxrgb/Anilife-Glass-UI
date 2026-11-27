@@ -28,7 +28,7 @@ internal class ProviderHealth(private val now: () -> Long = System::currentTimeM
         return record(source, state)
     }
 
-    suspend fun probe(registry: ParserRegistry, scope: SourceScope, query: String, headers: SourceHeaders = SourceHeaders(scope)): ProviderCheck =
+    suspend fun probe(registry: ParserRegistry, scope: SourceScope, query: String, chapterNumber: Float, headers: SourceHeaders = SourceHeaders(scope)): ProviderCheck =
         check(scope.sourceName) {
             SourceSession(scope, headers = headers).use { session ->
                 val repository = ParserRepository(registry, scope, session)
@@ -37,9 +37,10 @@ internal class ProviderHealth(private val now: () -> Long = System::currentTimeM
                 if (catalog.titles.isEmpty()) return@check ProviderState.FILTERED
                 val search = repository.browse(query, 0, SortOrder.RELEVANCE)
                 if (search.consumed == 0) return@check ProviderState.EMPTY
-                val title = search.titles.firstOrNull() ?: return@check ProviderState.FILTERED
+                val matches = search.titles.filter { it.title.equals(query, ignoreCase = true) }.distinctBy { it.id }
+                val title = matches.singleOrNull() ?: return@check ProviderState.FILTERED
                 val details = repository.details(title)
-                val chapter = details.chapters.orEmpty().firstOrNull() ?: return@check ProviderState.NO_CHAPTERS
+                val chapter = details.chapters.orEmpty().firstOrNull { it.number == chapterNumber } ?: return@check ProviderState.NO_CHAPTERS
                 val page = repository.pages(details, chapter).firstOrNull() ?: return@check ProviderState.NO_PAGES
                 val bitmap = repository.decodePage(page)
                 bitmap.recycle()

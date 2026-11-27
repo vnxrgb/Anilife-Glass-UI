@@ -16,6 +16,9 @@ internal data class SourceDescriptor(
  * This registry has no executable-download mechanism. One compiled bundle for this phase. */
 @OptIn(DirectParsersAccess::class)
 internal class ParserRegistry(val bundle: ParsersBundle = ParsersBundleImpl) {
+    companion object {
+        val supportedCategories = setOf(ContentType.MANGA, ContentType.MANHWA, ContentType.MANHUA, ContentType.COMICS, ContentType.ONE_SHOT).map { it.name }.toSet()
+    }
     init { require(bundle.apiVersion == ParsersApi.VERSION) }
     val revision: String get() = bundle.revision
     fun descriptors(): List<SourceDescriptor> = bundle.sources.distinctBy { it.name }.map {
@@ -24,7 +27,7 @@ internal class ParserRegistry(val bundle: ParsersBundle = ParsersBundleImpl) {
     fun requireSource(scope: SourceScope): ParserMangaSource {
         val source = bundle.findSource(scope.sourceName) ?: error("Unknown parser source")
         check(!source.isBroken) { "Source marked broken by its parser bundle" }
-        check(source.contentType in setOf(ContentType.MANGA, ContentType.MANHWA, ContentType.MANHUA, ContentType.COMICS, ContentType.ONE_SHOT)) { "Source category not supported" }
+        check(source.contentType.name in supportedCategories) { "Source category not supported" }
         return source
     }
 }

@@ -28,7 +28,7 @@ internal class ScopedCookies(private val scope: SourceScope) : CookieJar {
     @Synchronized fun clear() = values.clear()
 }
 
-internal class SourceSession(scope: SourceScope, cacheDirectory: File? = null, private val headers: SourceHeaders = SourceHeaders(scope)) : Closeable {
+internal class SourceSession(scope: SourceScope, cacheDirectory: File? = null, private val headers: SourceHeaders = SourceHeaders(scope), offline: Boolean = false) : Closeable {
     val cookies = ScopedCookies(scope)
     val client = OkHttpClient.Builder()
         .cookieJar(cookies)
@@ -39,6 +39,7 @@ internal class SourceSession(scope: SourceScope, cacheDirectory: File? = null, p
         .callTimeout(45, TimeUnit.SECONDS)
         .apply { if (cacheDirectory != null) cache(Cache(cacheDirectory, 16L * 1024 * 1024)) }
         .addInterceptor { chain ->
+            if (offline) throw IOException("Network disabled during offline audit")
             if (!scope.permits(chain.request().url)) throw IOException("Request outside reviewed source scope")
             val result = chain.proceed(headers.apply(chain.request()))
             if (result.code == 401 || result.code == 403 || result.code == 429 || result.code == 451) {

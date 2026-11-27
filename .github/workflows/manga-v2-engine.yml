@@ -22,6 +22,10 @@ on:
         description: 'Exact title of an authorized test manga'
         type: string
         required: false
+      live_chapter:
+        description: 'Exact authorized chapter number'
+        type: string
+        required: false
       live_authorized:
         description: 'I have permission for automated access to this source and title'
         type: boolean
@@ -73,7 +77,9 @@ jobs:
         if: always()
         with:
           name: manga-engine-test-report
-          path: manga-engine/build/reports/tests/
+          path: |
+            manga-engine/build/reports/tests/
+            manga-engine/build/reports/provider-compatibility/
           if-no-files-found: ignore
   android-device:
     if: github.ref == 'refs/heads/feature/manga-v2'
@@ -160,6 +166,7 @@ jobs:
           LIVE_SOURCE: ${{ inputs.live_source }}
           LIVE_HOSTS: ${{ inputs.live_hosts }}
           LIVE_TITLE: ${{ inputs.live_title }}
+          LIVE_CHAPTER: ${{ inputs.live_chapter }}
           LIVE_AUTHORIZED: ${{ inputs.live_authorized }}
           ATSU_METADATA: ${{ github.event_name == 'push' && github.event.head_commit.message == 'Run one-shot Atsu metadata validation' }}
           ATSU_CHICO: ${{ github.event_name == 'push' && (github.event.head_commit.message == 'Run one-shot Atsu Chico chapter 3 validation' || github.event.head_commit.message == 'Retest Atsu Chico with Android image format compatibility' || github.event.head_commit.message == 'Validate bounded legacy Android AVIF decoding' || github.event.head_commit.message == 'Resolve AVIF via upstream documented Maven repository') }}
@@ -205,14 +212,15 @@ jobs:
           if [ "$ATSU_CHICO" = true ]; then
             args+=("-Pandroid.testInstrumentationRunnerArguments.atsuChico=true")
           fi
-          if [ -n "$LIVE_SOURCE$LIVE_HOSTS$LIVE_TITLE" ] || [ "$LIVE_AUTHORIZED" = true ]; then
-            if [ "$LIVE_AUTHORIZED" != true ] || [ -z "$LIVE_SOURCE" ] || [ -z "$LIVE_HOSTS" ] || [ -z "$LIVE_TITLE" ]; then
-              echo "::error::Live checks require source, hosts, exact authorized title and permission confirmation"
+          if [ -n "$LIVE_SOURCE$LIVE_HOSTS$LIVE_TITLE$LIVE_CHAPTER" ] || [ "$LIVE_AUTHORIZED" = true ]; then
+            if [ "$LIVE_AUTHORIZED" != true ] || [ -z "$LIVE_SOURCE" ] || [ -z "$LIVE_HOSTS" ] || [ -z "$LIVE_TITLE" ] || [ -z "$LIVE_CHAPTER" ]; then
+              echo "::error::Live checks require source, hosts, exact authorized title, chapter and permission confirmation"
               exit 1
             fi
             args+=("-Pandroid.testInstrumentationRunnerArguments.liveSource=$LIVE_SOURCE")
             args+=("-Pandroid.testInstrumentationRunnerArguments.liveHosts=$LIVE_HOSTS")
             args+=("-Pandroid.testInstrumentationRunnerArguments.liveTitle=$LIVE_TITLE")
+            args+=("-Pandroid.testInstrumentationRunnerArguments.liveChapter=$LIVE_CHAPTER")
           fi
           ./gradlew :manga-engine:connectedDebugAndroidTest --max-workers=2 --no-configuration-cache --console=plain --stacktrace "${args[@]}"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
