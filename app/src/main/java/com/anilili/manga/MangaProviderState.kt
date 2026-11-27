@@ -10,6 +10,7 @@ import java.io.Closeable
 internal class MangaProviderState {
     val sources = mutableStateMapOf<String, MangaSource>()
     val status = mutableStateMapOf<String, String>()
+    val revisions = mutableStateMapOf<String, String>()
     val diagnostics = mutableStateMapOf<String, ProviderDiagnostic>()
     var selectedId by mutableStateOf(MangaDiscoverySource.ID)
     var pinned by mutableStateOf<Set<String>>(emptySet())
@@ -47,13 +48,14 @@ internal fun rememberMangaProviderState(enabled: Boolean): MangaProviderState {
     val health = remember(context) { MangaProviderHealthCache(context.getSharedPreferences("manga_provider_health_v2", android.content.Context.MODE_PRIVATE)) }
     LaunchedEffect(state, enabled) {
         val generation = ++state.generation
-        state.sources.clear(); state.status.clear(); state.diagnostics.clear()
+        state.sources.clear(); state.status.clear(); state.diagnostics.clear(); state.revisions.clear()
         state.discovering = enabled
         if (!enabled) return@LaunchedEffect
         val opened = mutableListOf<MangaSource>()
         try {
             val descriptors = reviewedReaderProviders(context).distinctBy { it.id }
             for (descriptor in descriptors) {
+                state.revisions[descriptor.id] = descriptor.revision
                 health.read(descriptor.id, descriptor.revision)?.let { state.status[descriptor.id] = it.reason }
                 val source = descriptor.create { status, diagnostic ->
                     if (state.generation == generation) {

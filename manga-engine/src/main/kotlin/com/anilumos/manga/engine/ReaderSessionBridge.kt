@@ -68,7 +68,7 @@ internal class ReaderSessionBridge private constructor(
     }
     suspend fun restoreTitle(id: String, name: String): Title? = lock.withLock {
         active()
-        val result = repository.browse(name, 0, SortOrder.POPULARITY)
+        val result = repository.browse(name, 0, SortOrder.RELEVANCE)
         result.titles.firstOrNull { it.id.toString() == id }?.let { Title(owner, it) }
     }
     suspend fun approvedDetails(query: String, chapterNumber: Float): Details = lock.withLock {

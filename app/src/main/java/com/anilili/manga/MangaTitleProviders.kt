@@ -13,6 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import com.anilili.data.profiles.Profiles
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -46,7 +48,7 @@ internal suspend fun matchProviderTitle(source: MangaSource, reference: MangaTit
     return if (chapters.isEmpty()) null else MangaTitleMatch(prepared, chapters.size)
 }
 
-private data class TitleProviderMatch(val source: MangaSource, val title: MangaTitle, val count: Int)
+private data class TitleProviderMatch(val source: MangaSource, val title: MangaTitle, val count: Int, val cached: Boolean = false)
 
 internal const val TITLE_PROVIDER_BATCH = 100
 internal const val TITLE_PROVIDER_CONCURRENCY = 4
@@ -54,24 +56,40 @@ internal const val TITLE_PROVIDER_CONCURRENCY = 4
 @Composable
 internal fun MangaTitleProviders(title: MangaTitle, onChoose: (MangaTitle) -> Unit) {
     val state = LocalMangaProviderState.current
+    val context = LocalContext.current
+    val profile by Profiles.activeId.collectAsState()
+    val cache = remember(context, profile) { MangaTitleMatchCache(context.getSharedPreferences("manga_title_matches_" + (profile ?: "default"), android.content.Context.MODE_PRIVATE)) }
     var filter by remember(title.id) { mutableStateOf("preferred") }
-    var pages by remember(title.id, filter, state.languages) { mutableIntStateOf(1) }
+    var batch by remember(title.id, filter, state.languages) { mutableIntStateOf(0) }
+    var refresh by remember(title.id, filter, state.languages) { mutableIntStateOf(0) }
     var matches by remember(title.id, filter, state.languages) { mutableStateOf<List<TitleProviderMatch>>(emptyList()) }
     var checked by remember(title.id, filter, state.languages) { mutableStateOf<Set<String>>(emptySet()) }
     var busy by remember(title.id, filter, state.languages) { mutableStateOf(false) }
     val all = state.sources.values.toList()
     val locales = all.map { it.languageKey() }.filter { it.isNotBlank() }.distinct().sortedBy(::languageName)
-    val eligible = all.filter { source ->
-        val key = source.languageKey()
-        providerLanguageMatches(key, filter, state.languages)
-    }.sortedWith(compareBy<MangaSource> { it.id !in state.pinned }.thenBy { providerRank(state.status[it.id]) }.thenBy { it.displayName })
-    // Up to 100 selected-language candidates per user-requested batch, not 100 concurrent requests.
-    // The current search is cancelled when the title, language filter or screen changes.
-    LaunchedEffect(title.sourceId, title.id, filter, pages, state.discovering, all.size, state.languages) {
+    val eligible = MangaProviderPolicy.order(all.filter { providerLanguageMatches(it.languageKey(), filter, state.languages) },
+        state.pinned, state.status.toMap(), cache.last(title))
+    // Only a curated/pinned/previously-read shortlist is searched automatically.
+    // Larger lookups are explicit and keep the previous 100-provider batch cap.
+    LaunchedEffect(title.sourceId, title.id, filter, batch, refresh, state.discovering, all.size, state.languages) {
         if (state.discovering) return@LaunchedEffect
         busy = true
         try {
-            val remaining = eligible.filter { it.id !in checked }.take(TITLE_PROVIDER_BATCH)
+            if (batch == 0) {
+                checked = emptySet()
+                matches = emptyList()
+                if (refresh == 0) {
+                    for (source in eligible) {
+                        val revision = state.revisions[source.id] ?: continue
+                        val saved = cache.get(title, source, revision) ?: continue
+                        checked = checked + source.id
+                        matches = matches + TitleProviderMatch(source, saved.title, saved.count, cached = true)
+                    }
+                }
+            }
+            val remaining = if (batch == 0) MangaProviderPolicy.primary(eligible, state.pinned, state.status.toMap(), cache.last(title))
+                .filter { it.id !in checked }
+                else eligible.filter { it.id !in checked }.take(TITLE_PROVIDER_BATCH)
             for (group in remaining.chunked(TITLE_PROVIDER_CONCURRENCY)) {
                 coroutineScope {
                     group.mapIndexed { index, source ->
@@ -83,7 +101,11 @@ internal fun MangaTitleProviders(title: MangaTitle, onChoose: (MangaTitle) -> Un
                             catch (_: Exception) { null }
                             catch (_: LinkageError) { null }
                             checked = checked + source.id
-                            if (match != null) matches = matches + TitleProviderMatch(source, match.title, match.count)
+                            if (match != null) {
+                                val revision = state.revisions[source.id]
+                                if (revision != null) cache.put(title, source, revision, match)
+                                matches = matches.filterNot { it.source.id == source.id } + TitleProviderMatch(source, match.title, match.count)
+                            } else if (refresh > 0) cache.forget(title, source)
                         }
                     }.awaitAll()
                 }
@@ -99,21 +121,22 @@ internal fun MangaTitleProviders(title: MangaTitle, onChoose: (MangaTitle) -> Un
             }
         }
         if (busy || state.discovering) LinearProgressIndicator(Modifier.fillMaxWidth())
-        Text("Matches with available chapter lists · selected provider language", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        matches.sortedWith(compareBy<TitleProviderMatch> { it.source.languageLabel() }.thenBy { it.source.id !in state.pinned }.thenBy { it.source.displayName }).forEach { match ->
+        Text("Preferred sources first · search other sources only when needed", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        matches.sortedWith(compareBy<TitleProviderMatch> { it.source.id != cache.last(title) }.thenBy { it.source.id !in state.pinned }.thenBy { !MangaProviderPolicy.isCurated(it.source.id) }.thenBy { it.source.languageLabel() }.thenBy { it.source.displayName }).forEach { match ->
             Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f)) {
-                Row(Modifier.fillMaxWidth().clickable { onChoose(match.title) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth().clickable { cache.choose(title, match.source); onChoose(match.title) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(Icons.Default.Book, null, tint = MaterialTheme.colorScheme.primary)
                     Column(Modifier.weight(1f)) {
                         Text(match.source.displayName, style = MaterialTheme.typography.titleSmall)
-                        Text("${match.source.languageLabel()} · ${match.count} chapter entries", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("${match.source.languageLabel()} · ${match.count} chapter entries" + if (match.cached) " · Previously found" else "", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Icon(Icons.Default.ChevronRight, "View chapters")
                 }
             }
         }
-        if (!busy && !state.discovering && matches.isEmpty()) Text("No matching chapter lists found in the sources checked.", style = MaterialTheme.typography.bodySmall)
+        if (!busy && !state.discovering && matches.isEmpty()) Text(if (checked.isEmpty()) "No preferred sources for this language. Search other providers below." else "No matching chapter lists found in the sources checked.", style = MaterialTheme.typography.bodySmall)
         if (!busy && checked.size < eligible.size) OutlinedButton(onClick = { pages++ }, modifier = Modifier.fillMaxWidth()) { Text("Search next ${minOf(TITLE_PROVIDER_BATCH, eligible.size - checked.size)} providers") }
-        Text("${checked.size} of ${eligible.size} matching-language providers checked", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (!busy && matches.any { it.cached }) TextButton(onClick = { batch = 0; refresh++ }) { Text("Refresh preferred matches") }
+        Text("${checked.size} of ${eligible.size} matching-language providers checked or remembered", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

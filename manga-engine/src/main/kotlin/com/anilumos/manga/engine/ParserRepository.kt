@@ -45,7 +45,7 @@ internal class ParserRepository(
     suspend fun catalogueOptions(): org.koitharu.kotatsu.parsers.model.MangaListFilterOptions =
         cachedOptions ?: filterOptions().also { cachedOptions = it }
     suspend fun catalogueBrowse(query: String, offset: Int, recent: Boolean, genre: String?, kind: String?): CatalogPage {
-        val requested = if (recent) SortOrder.UPDATED else SortOrder.POPULARITY
+        val requested = if (query.isNotBlank() && SortOrder.RELEVANCE in parser.availableSortOrders) SortOrder.RELEVANCE else if (recent) SortOrder.UPDATED else SortOrder.POPULARITY
         if (genre == null && kind == null) return browse(query, offset, requested)
         val options = catalogueOptions()
         val tags = if (genre == null) emptySet() else setOf(options.availableTags.firstOrNull { it.title.equals(genre, true) }

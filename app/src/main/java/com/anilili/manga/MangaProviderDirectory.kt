@@ -43,7 +43,8 @@ internal fun MangaProviderDirectory(state: MangaProviderState, current: String, 
         matchesLanguage && (source.displayName.contains(query, true) || source.languageLabel().contains(query, true))
     }.sortedWith(compareBy<MangaSource> { it.id !in state.pinned }.thenBy { providerRank(state.status[it.id]) }.thenBy { it.displayName.lowercase(Locale.ROOT) })
     val pinned = visible.filter { it.id in state.pinned }
-    val groups = visible.filter { it.id !in state.pinned }.groupBy { it.languageKey() }.entries.sortedBy { languageName(it.key) }
+    val recommended = visible.filter { it.id !in state.pinned && MangaProviderPolicy.isCurated(it.id) }
+    val groups = visible.filter { it.id !in state.pinned && !MangaProviderPolicy.isCurated(it.id) }.groupBy { it.languageKey() }.entries.sortedBy { languageName(it.key) }
     if (editLanguages) AlertDialog(
         onDismissRequest = { editLanguages = false },
         title = { Text("Preferred reading languages") },
@@ -80,6 +81,10 @@ internal fun MangaProviderDirectory(state: MangaProviderState, current: String, 
                 if (pinned.isNotEmpty()) {
                     item("pinned-heading") { DirectoryHeading("Pinned", pinned.size) }
                     items(pinned, key = { it.id }) { source -> ProviderDirectoryRow(source, state, current, onSelect) }
+                }
+                if (recommended.isNotEmpty()) {
+                    item("recommended-heading") { DirectoryHeading("Recommended", recommended.size) }
+                    items(recommended, key = { it.id }) { source -> ProviderDirectoryRow(source, state, current, onSelect) }
                 }
                 groups.forEach { (language, entries) ->
                     item("language:" + language) { DirectoryHeading(languageName(language), entries.size) }
