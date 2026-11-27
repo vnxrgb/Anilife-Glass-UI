@@ -123,8 +123,8 @@ internal fun MangaProviderHub(
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text("${filtered.size} shown", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
                         if (manage) {
-                            TextButton(onClick = { bulk = true }, enabled = matching.isNotEmpty()) { Text("Enable shown") }
-                            TextButton(onClick = { bulk = false }, enabled = matching.isNotEmpty()) { Text("Disable shown") }
+                            TextButton(onClick = { bulk = true }, enabled = filtered.isNotEmpty()) { Text("Enable shown") }
+                            TextButton(onClick = { bulk = false }, enabled = filtered.isNotEmpty()) { Text("Disable shown") }
                         } else TextButton(onClick = { manage = true }) { Text("Manage") }
                     }
                     if (filtered.isEmpty()) {
@@ -161,8 +161,8 @@ internal fun MangaProviderHub(
         }
         bulk?.let { value ->
             AlertDialog(onDismissRequest = { bulk = null }, title = { Text(if (value) "Enable providers?" else "Disable providers?") },
-                text = { Text("Apply to ${matching.size} providers matching the current search, language and category. Your reading history is kept.") },
-                confirmButton = { TextButton(onClick = { prefs.setEnabled(matching, value); bulk = null }) { Text("Apply") } },
+                text = { Text("Apply to ${filtered.size} providers currently shown. Your reading history is kept.") },
+                confirmButton = { TextButton(onClick = { prefs.setEnabled(filtered, value); bulk = null }) { Text("Apply") } },
                 dismissButton = { TextButton(onClick = { bulk = null }) { Text("Cancel") } })
         }
     }
