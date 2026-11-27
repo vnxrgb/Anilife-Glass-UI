@@ -16,7 +16,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.magnifier
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.geometry.Offset
 import android.os.Build
 import android.view.WindowManager
@@ -659,7 +659,7 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
             }
             var lensCenter by remember { mutableStateOf(Offset.Unspecified) }
             val lensModifier = if (magnify && Build.VERSION.SDK_INT >= 28) Modifier.magnifier(sourceCenter = { lensCenter }, zoom = if (Build.VERSION.SDK_INT >= 29) 2f else Float.NaN).pointerInput(magnify) {
-                detectDragGestures(onDragStart = { lensCenter = it }, onDragEnd = { lensCenter = Offset.Unspecified }, onDragCancel = { lensCenter = Offset.Unspecified }) { change, _ -> lensCenter = change.position; change.consume() }
+                detectDragGesturesAfterLongPress(onDragStart = { lensCenter = it }, onDragEnd = { lensCenter = Offset.Unspecified }, onDragCancel = { lensCenter = Offset.Unspecified }) { change, _ -> lensCenter = change.position; change.consume() }
             } else Modifier
             Box(Modifier.weight(1f).fillMaxWidth().then(lensModifier), contentAlignment = Alignment.Center) {
                 if (ambient && Build.VERSION.SDK_INT >= 31) {
@@ -669,10 +669,10 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
                         AsyncImage(ambientRequest, null, imageLoader = MangaNetwork.imageLoader(context), modifier = Modifier.fillMaxSize().blur(42.dp), contentScale = ContentScale.Crop, alpha = ambientStrength)
                     }
                 }
-                if (mode == ReadingMode.WEBTOON) LazyColumn(Modifier.fillMaxHeight().widthIn(max = 760.dp).fillMaxWidth().then(if (ambient) Modifier.padding(horizontal = 12.dp) else Modifier), state = list, userScrollEnabled = !magnify) {
-                    items(pages, key = { it.index }) { page -> ReaderImage(page, Modifier.fillMaxWidth(), fit = false, onTap = { if (!magnify) controls = !controls }, magnifierActive = magnify, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) }) }
-                } else HorizontalPager(state = pager, reverseLayout = mode == ReadingMode.RTL, userScrollEnabled = !magnify, modifier = Modifier.fillMaxSize()) { index ->
-                    ReaderImage(pages[index], Modifier.fillMaxSize(), fit = true, onTap = { if (!magnify) controls = !controls }, magnifierActive = magnify, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) })
+                if (mode == ReadingMode.WEBTOON) LazyColumn(Modifier.fillMaxHeight().widthIn(max = 760.dp).fillMaxWidth().then(if (ambient) Modifier.padding(horizontal = 12.dp) else Modifier), state = list, userScrollEnabled = true) {
+                    items(pages, key = { it.index }) { page -> ReaderImage(page, Modifier.fillMaxWidth(), fit = false, onTap = { controls = !controls }, magnifierActive = magnify, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) }) }
+                } else HorizontalPager(state = pager, reverseLayout = mode == ReadingMode.RTL, userScrollEnabled = true, modifier = Modifier.fillMaxSize()) { index ->
+                    ReaderImage(pages[index], Modifier.fillMaxSize(), fit = true, onTap = { controls = !controls }, magnifierActive = magnify, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) })
                 }
             }
             AnimatedVisibility(visible = controls) {
@@ -700,7 +700,7 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
                             IconButton(onClick = { magnify = false; controls = false }) { Icon(Icons.Default.VisibilityOff, "Hide controls") }
                             IconButton(enabled = nextChapter != null, onClick = { nextChapter?.invoke() }) { Icon(Icons.Default.SkipNext, "Next chapter") }
                         }
-                        if (magnify) Text("Drag to magnify · tap the magnifier again to resume scrolling", color = ink.copy(alpha = .8f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(6.dp))
+                        if (magnify) Text("Touch and hold, then drag to magnify · swipe normally to read", color = ink.copy(alpha = .8f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(6.dp))
                     }
                 }
             }
@@ -810,7 +810,7 @@ private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap
                 imageLoader = MangaNetwork.imageLoader(context),
                 onSuccess = { loaded() },
                 contentDescription = "Page ${page.index + 1}",
-                modifier = modifier.then(if (magnifierActive) Modifier else Modifier.pointerInput(Unit) { detectTapGestures(onTap = { tap() }) }),
+                modifier = modifier.then(Modifier.pointerInput(Unit) { detectTapGestures(onTap = { tap() }) }),
                 contentScale = if (fit) ContentScale.Fit else ContentScale.FillWidth,
                 loading = { Box(Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
                 error = { Box(Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) { Button(onClick = { retry++ }) { Text("Retry page") } } },
