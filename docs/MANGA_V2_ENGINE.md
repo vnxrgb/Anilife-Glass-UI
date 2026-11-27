@@ -107,3 +107,7 @@ The mobile-only adapter now connects the restored Compose reader to a public nar
 ## Mode switch correction
 
 Owner confirmed the final UX is tapping the AniLumos wordmark to choose Anime or Manga in the preserved glass dropdown. Remove the earlier edge hold-and-swipe recognizer entirely; keep the ordinary tab swipe unchanged. Restore shared ContentModeWordmark on anime and manga home, with selected checkmark and haptic selection, and disable mode switching on TV/PiP. No separate mode buttons. The earlier gesture description is superseded. CI and physical-device dropdown appearance still require validation.
+
+## Signed preview regression fix
+
+Preview run 45981370584 failed in the full mobile unit-test suite with widespread NoClassDefFoundError during network test setup. Earlier manga-specific CI passed. Align the mobile OkHttp family to the parser engine's 5.1.0 version and substitute okhttp-jvm in mobile host unit-test configurations, following the already tested isolated engine setup. TV remains on its original dependency versions. Enable full test exception traces and archive the full mobile regression report; remove the manga-only test filter from feature CI. No skipped tests and no signature or lint gates removed. Exact missing class was not printed in the earlier truncated Gradle report; the diagnosis is based on shared failure pattern and dependency graph, and must be validated by a fresh full run.

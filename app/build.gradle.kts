@@ -273,6 +273,34 @@ val syncParityCorpus = tasks.register<Sync>("syncParityCorpus") {
 // processing, the lint models) runs after it, so Gradle never sees a reader racing the write.
 tasks.named("preBuild") { dependsOn(syncParityCorpus) }
 
+/** The mobile parser bundle requires OkHttp 5. Keep the mobile network family aligned
+ * and use the JVM artifact in host-side tests, as in :manga-engine. TV retains 4.12. */
+configurations.configureEach {
+    if (name.contains("mobile", ignoreCase = true)) {
+        resolutionStrategy.force(
+            "com.squareup.okhttp3:okhttp:5.1.0",
+            "com.squareup.okhttp3:logging-interceptor:5.1.0",
+            "com.squareup.okhttp3:okhttp-dnsoverhttps:5.1.0",
+            "com.squareup.okhttp3:mockwebserver:5.1.0",
+        )
+        if (name.contains("UnitTest", ignoreCase = true)) {
+            resolutionStrategy.dependencySubstitution {
+                substitute(module("com.squareup.okhttp3:okhttp"))
+                    .using(module("com.squareup.okhttp3:okhttp-jvm:5.1.0"))
+                substitute(module("com.squareup.okhttp3:okhttp-android"))
+                    .using(module("com.squareup.okhttp3:okhttp-jvm:5.1.0"))
+            }
+        }
+    }
+}
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    testLogging {
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showCauses = true
+        showStackTraces = true
+    }
+}
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
 
