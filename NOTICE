@@ -14,6 +14,11 @@ the extent owned by their respective contributors. This notice does not
 claim ownership of upstream code, adapted third-party code, artwork or
 other third-party materials, and does not alter their licensing terms.
 
+Original software and associated documentation contributions owned by vnxrgb
+are additionally offered under the MIT License in LICENSE-ANILUMOS. See
+COPYRIGHT.md for the scope. This does not relicense the combined application
+or any third-party material and grants no trademark rights.
+
 This app uses code from Morphe. To learn more, visit https://morphe.software
 
 Morphe-derived code remains subject to its applicable GPLv3 terms.

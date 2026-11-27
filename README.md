@@ -153,7 +153,9 @@ Anilumos isn't affiliated with or endorsed by AniLife or Morphe. It doesn't host
 
 Copyright © 2026 [vnxrgb](https://github.com/vnxrgb).
 
-This notice applies only to original contributions owned by the AniLumos maintainer, such as independently created branding, visual assets, UI work, and code changes. It does not claim ownership of underlying AniLife code, Morphe-derived work, or third-party materials. Their existing licenses, attribution requirements, and permissions remain in effect.
+Original software and associated documentation contributions owned by vnxrgb are offered under the [MIT License](LICENSE-ANILUMOS). This includes the independently authored portions of AniLumos-specific UI, features and website code. The grant applies only to copyright interests held by vnxrgb; it does not relicense inherited AniLife code, Morphe-derived code owned by others, third-party assets or other contributors' work. No trademark rights in the AniLumos name or logo are granted. See [copyright and license scope](COPYRIGHT.md) for details.
+
+The repository and distributed application are not licensed as a whole under MIT. All applicable upstream licenses, permissions, attribution and GPLv3 obligations for covered combined works remain in effect.
 
 ### Community playback metadata
 
