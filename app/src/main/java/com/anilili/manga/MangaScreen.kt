@@ -126,10 +126,9 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         }
     }
     val catalogSources = remember(registry, verifiedIds) { registry.all().filter { it.available && it.id != LocalMangaSource.ID && it.id in verifiedIds } }
-    val providerPrefs = remember(healthContext) { MangaProviderPreferences(healthContext) }
-    val enabledSources = remember(catalogSources, providerPrefs.disabled, providerPrefs.enabled) { catalogSources.filter { providerPrefs.isEnabled(it) } }
-    val selectableSources = remember(enabledSources, healthStates, providerPrefs.pinned) {
-        enabledSources.sortedWith(compareBy<MangaSource> { sourceHealthRank(healthStates[it.id] ?: SourceHealth.UNTESTED) }.thenBy { it.id !in providerPrefs.pinned }
+    val enabledSources = catalogSources
+    val selectableSources = remember(enabledSources, healthStates) {
+        enabledSources.sortedWith(compareBy<MangaSource> { sourceHealthRank(healthStates[it.id] ?: SourceHealth.UNTESTED) }
             .thenBy { !preferredMangaLanguage(it.languageTag) }.thenBy { it.id != "mangadex" }.thenBy { it.displayName.lowercase() })
     }
     var sourceId by remember { mutableStateOf(sourcePrefs.getString("provider", "").orEmpty()) }
@@ -223,7 +222,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         if (provider == null) error = if (catalogSources.isEmpty()) "No recently verified providers. Check your connection or try again later." else "Choose a provider to browse manga."
         else if (!sourceCanBrowse(healthStates[provider.id] ?: SourceHealth.UNTESTED)) error = "This provider has an active access, certificate or rate-limit restriction. Try again after its cooldown."
         else resultOf { provider.catalog(if (browse) query.trim() else "", kind, order, limit = 24) }
-            .onSuccess { results = it; offset = (provider as? NativeConfigurableProvider)?.rawCatalogCount() ?: it.size; hasMore = offset > 0; if (it.isNotEmpty()) health.record(provider.id, SourceHealth.CATALOG) else if (offset > 0) { health.record(provider.id, SourceHealth.CATALOG); error = "Provider responded, but no titles met the content-rating filter." } }
+            .onSuccess { results = it; offset = (provider as? NativeCatalogProvider)?.rawCatalogCount() ?: it.size; hasMore = offset > 0; if (it.isNotEmpty()) health.record(provider.id, SourceHealth.CATALOG) else if (offset > 0) { health.record(provider.id, SourceHealth.CATALOG); error = "Provider responded, but no titles met the content-rating filter." } }
             .onFailure { health.record(provider.id, classifySourceFailure(it)); error = healthError(it) }
         loading = false
         if (home && provider != null && error == null && results.isNotEmpty()) {
@@ -231,10 +230,10 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
             resultOf { provider.catalog("", kind, MangaOrder.RECENT, limit = 12) }.onSuccess { recent = it }
         }
     }
-    if (sourceMenu) MangaProviderHub(catalogSources, providerPrefs, health, healthStates, provider?.id, onDismiss = { sourceMenu = false }, onSelect = { source ->
+    if (sourceMenu) MangaProviderPicker(catalogSources, healthStates, provider?.id, onDismiss = { sourceMenu = false }, onSelect = { source ->
         sourceId = source.id; kind = MangaKind.ALL; genre = null; sourceMenu = false; retry++
     }, onInfo = { sourceMenu = false; attribution = true })
-    unavailableTitle?.let { unavailable -> AlertDialog(onDismissRequest = { unavailableTitle = null }, title = { Text("Provider unavailable") }, text = { Text("${unavailable.title} remains in your reading list. Enable its provider in Manage providers if it is still available.") }, confirmButton = { TextButton(onClick = { unavailableTitle = null }) { Text("OK") } }) }
+    unavailableTitle?.let { unavailable -> AlertDialog(onDismissRequest = { unavailableTitle = null }, title = { Text("Provider unavailable") }, text = { Text("${unavailable.title} remains in your reading list. Its provider is not currently verified. Your saved progress is preserved.") }, confirmButton = { TextButton(onClick = { unavailableTitle = null }) { Text("OK") } }) }
     if (attribution) AlertDialog(onDismissRequest = { attribution = false }, title = { Text("Built-in sources") },
         text = { Text("Providers are shown only after a recent catalog, chapter, page and image sample passes verification. The verified list refreshes automatically and can add or remove built-in sources without an APK update. Temporary device-specific failures remain possible. Availability and access rights vary by provider. No external extensions are installed.") },
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
@@ -358,7 +357,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                                     val generation = catalogGeneration
                                     moreLoading = true
                                     resultOf { provider.catalog(query.trim(), kind, order, offset, 24) }.onSuccess { batch ->
-                                        if (generation == catalogGeneration) { results = (results + batch).distinctBy { it.identity() }; val consumed = (provider as? NativeConfigurableProvider)?.rawCatalogCount() ?: batch.size; offset += consumed; hasMore = consumed > 0 && batch.isNotEmpty() }
+                                        if (generation == catalogGeneration) { results = (results + batch).distinctBy { it.identity() }; val consumed = (provider as? NativeCatalogProvider)?.rawCatalogCount() ?: batch.size; offset += consumed; hasMore = consumed > 0 && batch.isNotEmpty() }
                                     }.onFailure { if (generation == catalogGeneration) error = healthError(it) }
                                     if (generation == catalogGeneration) moreLoading = false
                                 }

@@ -15,7 +15,7 @@ internal suspend fun probeMangaSource(source: MangaSource): SourceProbeResult {
     return withTimeoutOrNull(90_000L) {
         try {
             val titles = source.catalog("", MangaKind.ALL, MangaOrder.POPULAR, limit = 5)
-            if (titles.isEmpty()) return@withTimeoutOrNull SourceProbeResult(if ((source as? NativeConfigurableProvider)?.rawCatalogCount()?.let { it > 0 } == true) SourceHealth.CATALOG else SourceHealth.FAILED, "no-safe-catalog")
+            if (titles.isEmpty()) return@withTimeoutOrNull SourceProbeResult(if ((source as? NativeCatalogProvider)?.rawCatalogCount()?.let { it > 0 } == true) SourceHealth.CATALOG else SourceHealth.FAILED, "no-safe-catalog")
             stage = "search"
             val safeSamples = titles.filterNot { it.unrated }
             if (safeSamples.isEmpty()) return@withTimeoutOrNull SourceProbeResult(SourceHealth.CATALOG, "publisher-catalog-unrated")
