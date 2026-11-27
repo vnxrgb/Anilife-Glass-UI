@@ -123,15 +123,13 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     val healthContext = LocalContext.current
     val localSource = remember(healthContext) { LocalMangaSource(healthContext) }
     val providerState = LocalMangaProviderState.current
-    val readers = providerState.sources.values.sortedWith(compareBy<MangaSource> { if (it.id == REVIEWED_SOURCE_ID) 0 else 1 }.thenBy { it.displayName }.thenBy { it.languageTag })
-    val reviewedBusy = providerState.discovering || providerState.checking.values.any { it } || providerState.checkedCount < providerState.candidateCount
-    val reviewedError = providerState.unavailable.values.any { it }
+    val readers = providerState.sources.values.sortedWith(compareBy<MangaSource> { providerRank(providerState.status[it.id]) }.thenBy { if (it.id == providerState.selectedId) 0 else 1 }.thenBy { it.displayName }.thenBy { it.languageTag })
     val registry = LocalMangaRegistry.current
     val provider = registry.byId(providerState.selectedId) ?: registry.byId(MangaDiscoverySource.ID) ?: localSource
     var nativeGenres by remember(provider.id) { mutableStateOf<List<String>>(emptyList()) }
     var nativeKinds by remember(provider.id) { mutableStateOf<List<MangaKind>>(emptyList()) }
-    LaunchedEffect(provider.id) {
-        if (provider.hasNativeCatalogue) {
+    LaunchedEffect(provider.id, section) {
+        if (provider.hasNativeCatalogue && section != MangaSection.LIBRARY) {
             resultOf { provider.genreOptions() }.onSuccess { nativeGenres = it }
             resultOf { provider.kindOptions() }.onSuccess { nativeKinds = it }
         }
@@ -210,7 +208,8 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     }
     BackHandler(selected != null || chapter != null) { back() }
     LaunchedEffect(Unit) { saved = store.all() }
-    LaunchedEffect(provider.id, query, kind, genre, order, retry, section) {
+    LaunchedEffect(provider.id, providerState.discovering, query, kind, genre, order, retry, section) {
+        if (providerState.discovering && providerState.selectedId.startsWith("engine:") && provider.id != providerState.selectedId) { loading = true; return@LaunchedEffect }
         if (!home && !browse) { loading = false; return@LaunchedEffect }
         if (browse && query.isNotBlank()) delay(350)
         listState.scrollToItem(0)
@@ -225,9 +224,9 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
             resultOf { provider.catalogPage("", kind, MangaOrder.RECENT, genre, 0, 12) }.onSuccess { recent = it.items }
         }
     }
-    unavailableTitle?.let { unavailable -> AlertDialog(onDismissRequest = { unavailableTitle = null }, title = { Text("Provider unavailable") }, text = { Text("${unavailable.title} remains in your reading list. Its provider is not currently verified. Your saved progress is preserved.") }, confirmButton = { TextButton(onClick = { unavailableTitle = null }) { Text("OK") } }) }
+    unavailableTitle?.let { unavailable -> AlertDialog(onDismissRequest = { unavailableTitle = null }, title = { Text("Provider unavailable") }, text = { Text("${unavailable.title} remains in your reading list. Its provider is no longer in the bundled catalogue. Your saved progress is preserved.") }, confirmButton = { TextButton(onClick = { unavailableTitle = null }) { Text("OK") } }) }
     if (attribution) AlertDialog(onDismissRequest = { attribution = false }, title = { Text("Built-in sources") },
-        text = { Text("AniList provides discovery metadata and official publisher links. In-app reading uses available built-in provider catalogues and local archives. Only sources that pass catalogue, chapter and page checks appear. AniList is discovery metadata, not a reading source. Credits: AniLife and Kotatsu-Redo.") },
+        text = { Text("AniList provides discovery metadata and official publisher links. In-app reading uses available built-in provider catalogues and local archives. Eligible bundled sources appear immediately. Only the provider you use is contacted; catalogue and reading successes are remembered. AniList is discovery metadata, not a reading source. Credits: AniLife and Kotatsu-Redo.") },
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
     val title = selected
     val activeChapter = chapter
@@ -257,16 +256,8 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(providerQuery, { providerQuery = it.take(80) },
                     modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Find provider") })
-                if (reviewedBusy) {
-                    val total = providerState.candidateCount
-                    if (total > 0) {
-                        LinearProgressIndicator(progress = { (providerState.checkedCount.toFloat() / total).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
-                        Text("${readers.size} available · ${providerState.checkedCount} of $total checked", style = MaterialTheme.typography.bodySmall)
-                    } else {
-                        LinearProgressIndicator(Modifier.fillMaxWidth())
-                        Text("Discovering bundled providers…", style = MaterialTheme.typography.bodySmall)
-                    }
-                } else Text("${readers.size} available readers", style = MaterialTheme.typography.bodySmall)
+                if (providerState.discovering) Text("Loading provider list…", style = MaterialTheme.typography.bodySmall)
+                else Text("${readers.size} bundled providers · checked when used", style = MaterialTheme.typography.bodySmall)
                 LazyColumn(modifier = Modifier.heightIn(max = 320.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     if ("AniList catalogue".contains(providerQuery, true)) item("catalogue") {
                         FilterChip(selected = provider.metadataOnly, onClick = {
@@ -281,20 +272,15 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                     items(readers.filter { it.displayName.contains(providerQuery, true) || it.languageLabel().contains(providerQuery, true) }, key = { it.id }) { source ->
                         FilterChip(selected = provider.id == source.id, onClick = {
                             providerState.selectedId = source.id; kind = MangaKind.ALL; genre = null; providerMenu = false
-                        }, label = { Text(source.displayName + " · " + source.languageLabel(), maxLines = 2) })
+                        }, label = { Text(source.displayName + " · " + source.languageLabel() + when (providerState.status[source.id]) {
+                            "READY" -> " · Previously read"
+                            "CATALOGUE" -> " · Previously used"
+                            null -> ""
+                            else -> " · Retry"
+                        }, maxLines = 2) })
                     }
                 }
-                if (!reviewedBusy && readers.isEmpty()) Text("No verified online readers currently available.", style = MaterialTheme.typography.bodySmall)
-                if (providerState.diagnostics.isNotEmpty()) {
-                    TextButton(onClick = {
-                        val clipboard = reportContext.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Manga provider diagnostics", providerCompatibilityReport(providerState.diagnostics.toMap())))
-                    }) { Text("Copy compatibility report") }
-                }
-                if (providerState.failureReasons.isNotEmpty()) {
-                    val counts = providerState.failureReasons.values.groupingBy { it.substringBefore('/') }.eachCount()
-                    Text(counts.entries.sortedByDescending { it.value }.take(4).joinToString(" · ") { (reason, count) -> reason.lowercase().replace('_', ' ') + ": " + count }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                if (!providerState.discovering && readers.isEmpty()) Text("No compatible bundled providers found.", style = MaterialTheme.typography.bodySmall)
             }
         },
         confirmButton = { TextButton(onClick = { providerMenu = false }) { Text("Close") } },
@@ -348,12 +334,6 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                 if (browse || library) item("search") {
                     PageSearchField(query, { query = it }, if (browse) "Search manga, manhwa, manhua" else "Search reading list", "Clear search")
                 }
-                if ((home || browse) && reviewedBusy && !provider.metadataOnly && readers.isEmpty()) item("provider-loading") {
-                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        LinearProgressIndicator(Modifier.fillMaxWidth())
-                        Text("Checking provider availability…", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
                 if ((home || browse) && (provider.metadataOnly || provider.hasNativeCatalogue)) item("filters") {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -383,7 +363,15 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                 }
                 if (home || browse) {
                     if (loading) item { Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
-                    error?.let { message -> item { MangaError(message) { retry++ } } }
+                    error?.let { message -> item {
+                        MangaError(message) { retry++ }
+                        providerState.diagnostics[provider.id]?.let { diagnostic ->
+                            TextButton(onClick = {
+                                val clipboard = reportContext.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Manga provider diagnostics", providerCompatibilityReport(mapOf(provider.id to diagnostic))))
+                            }) { Text("Copy error report") }
+                        }
+                    } }
                     if (!loading && error == null && filtered.isEmpty()) item { MangaEmpty("No titles found", if (provider.id == LocalMangaSource.ID) "Import a comic archive from My List." else "Try another search or genre.") }
                     if (home && provider.metadataOnly) item("catalog-notice") { Text("Discovery metadata from AniList · reading availability varies by title", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     if (home && filtered.isNotEmpty() && !provider.sampleOnly) item("popular") { MangaRail(if (provider.id == LocalMangaSource.ID) "Your comics" else "Popular Now", filtered.take(15), onClick = { selected = it }) }
@@ -1214,4 +1202,4 @@ private fun MangaChapterPicker(chapters: List<MangaChapter>, current: MangaChapt
     }
 }
 
-private fun healthError(error: Throwable): String = "Could not open the local archive. Check that it contains supported images and retry."
+private fun healthError(error: Throwable): String = "Could not load this source. Check your connection, retry, or select a different provider."

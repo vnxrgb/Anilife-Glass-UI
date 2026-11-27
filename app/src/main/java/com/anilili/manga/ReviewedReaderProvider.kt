@@ -1,8 +1,9 @@
 package com.anilili.manga
-/** Lightweight source descriptor. Cached factories only restore previously verified health. */
+
+/** A lightweight, offline-discovered descriptor. Factory creation performs no provider I/O. */
 internal data class ReviewedReaderProvider(
-    val id: String, val label: String,
+    val id: String,
+    val label: String,
     val revision: String,
-    val cached: () -> MangaSource,
-    val open: suspend () -> MangaSource,
+    val create: ((String, ProviderDiagnostic?) -> Unit) -> MangaSource,
 )
