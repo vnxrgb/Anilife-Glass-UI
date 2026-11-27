@@ -6,6 +6,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 internal fun reviewedReaderSupported(): Boolean = true
+internal fun reviewedReaderProviders(): List<ReviewedReaderProvider> = listOf(ReviewedReaderProvider(REVIEWED_SOURCE_ID, "Atsu", ::openReviewedReader))
 internal suspend fun openReviewedReader(): MangaSource = EngineSampleSource(ApprovedReader.openReviewedSample())
 
 private class EngineSampleSource(private val reader: ApprovedReader) : MangaSource, Closeable {
@@ -27,7 +28,7 @@ private class EngineSampleSource(private val reader: ApprovedReader) : MangaSour
     override val chapterLanguages = listOf("und")
     private val title = reader.title.let {
         MangaTitle(id, it.id, it.name, androidx.core.text.HtmlCompat.fromHtml(it.description,
-            androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString().trim(), null,
+            androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString().let(::cleanMangaDescription), null,
             genres = it.genres, authors = it.authors, status = it.status, alternativeTitles = it.alternatives)
     }
     private val chapter = reader.chapter.let {

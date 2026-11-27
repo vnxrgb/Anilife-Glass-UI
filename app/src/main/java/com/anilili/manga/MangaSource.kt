@@ -12,6 +12,11 @@ interface MangaSource {
     suspend fun search(query: String, limit: Int = 20): List<MangaTitle>
     suspend fun catalog(query: String, kind: MangaKind = MangaKind.ALL, order: MangaOrder = MangaOrder.POPULAR, offset: Int = 0, limit: Int = 24): List<MangaTitle> =
         if (offset == 0) search(query, limit).filter { kind == MangaKind.ALL || it.kind == kind } else emptyList()
+    suspend fun catalogPage(query: String, kind: MangaKind, order: MangaOrder, genre: String?, offset: Int, limit: Int): MangaCatalogPage {
+        val batch = catalog(query, kind, order, offset, limit)
+        return MangaCatalogPage(batch.filter { genre == null || genre in it.genres }, if (batch.size == limit) offset + batch.size else null)
+    }
+    val metadataOnly: Boolean get() = false
     suspend fun chapters(mangaId: String, language: String = "en"): List<MangaChapter>
     suspend fun pages(chapterId: String): List<MangaPage>
     fun enrichedTitle(title: MangaTitle): MangaTitle = title
@@ -48,7 +53,12 @@ data class MangaTitle(
     val alternativeTitles: List<String> = emptyList(),
     val largeCoverUrl: String? = null,
     val unrated: Boolean = false,
+    val officialLinks: List<MangaOfficialLink> = emptyList(),
+    val knownChapterCount: Int? = null,
 )
+
+data class MangaOfficialLink(val label: String, val url: String)
+data class MangaCatalogPage(val items: List<MangaTitle>, val nextOffset: Int?)
 
 data class MangaChapter(
     val sourceId: String,

@@ -251,6 +251,37 @@ class AniListClient(
         )
     }
 
+    /** Complementary manga discovery metadata; no chapter scraping, bulk mirror or offline catalogue. */
+    suspend fun mangaDiscovery(
+        search: String, country: String?, genre: String?, recent: Boolean, page: Int, perPage: Int = 24,
+    ): JsonObject {
+        require(page in 1..500 && perPage in 1..30 && search.length <= 200)
+        require(country == null || country in setOf("JP", "KR", "CN"))
+        val query = """
+            query ($page: Int, $size: Int, $search: String, $country: CountryCode, $genre: String, $sort: [MediaSort]) {
+              Page(page: $page, perPage: $size) {
+                pageInfo { hasNextPage currentPage }
+                media(type: MANGA, format: MANGA, isAdult: false, search: $search, countryOfOrigin: $country, genre: $genre, sort: $sort) {
+                  id title { userPreferred romaji english native } isAdult countryOfOrigin
+                  coverImage { large extraLarge } bannerImage description(asHtml: false)
+                  genres status chapters startDate { year } siteUrl
+                  externalLinks { site url type }
+                }
+              }
+            }
+        """.trimIndent()
+        val vars = buildJsonObject {
+            put("page", page); put("size", perPage)
+            search.trim().takeIf { it.isNotEmpty() }?.let { put("search", it) }
+            country?.let { put("country", it) }; genre?.let { put("genre", it) }
+            put("sort", buildJsonArray {
+                add(if (search.isNotBlank()) "SEARCH_MATCH" else if (recent) "UPDATED_AT_DESC" else "POPULARITY_DESC")
+                add("ID")
+            })
+        }
+        return parseMangaDiscovery(post(query, vars))
+    }
+
     suspend fun search(query: String, page: Int = 1, perPage: Int = 20, hideAdult: Boolean = false): MediaPage {
         val gql = """
             query (${'$'}search: String, ${'$'}page: Int, ${'$'}perPage: Int, ${'$'}isAdult: Boolean) {
@@ -1834,4 +1865,11 @@ private suspend fun Call.awaitResponse(): Response = suspendCancellableCoroutine
             }
         }
     })
+}
+
+internal fun parseMangaDiscovery(body: String): JsonObject {
+    val root = Json.parseToJsonElement(body).jsonObject
+    if ((root["errors"] as? JsonArray)?.isNotEmpty() == true) throw IOException("Manga catalogue request failed")
+    return (root["data"] as? JsonObject)?.get("Page") as? JsonObject
+        ?: throw IOException("Manga catalogue response missing")
 }

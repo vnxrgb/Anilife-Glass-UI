@@ -110,8 +110,9 @@ fun MangaScreen(onBack: () -> Unit, section: MangaSection = MangaSection.HOME, o
     val profile by Profiles.activeId.collectAsState()
     val store = remember(context, profile) { MangaReadingStore(context, profile) }
     val localSource = remember(context) { LocalMangaSource(context) }
-    val online = LocalMangaProviderState.current.source
-    val registry = remember(localSource, online) { MangaSources(listOfNotNull(localSource, online)) }
+    val online = LocalMangaProviderState.current.sources.values.toList()
+    val discovery = remember { MangaDiscoverySource() }
+    val registry = remember(localSource, discovery, online) { MangaSources(listOf(localSource, discovery) + online) }
     CompositionLocalProvider(LocalMangaRegistry provides registry) {
         key(profile, section) { MangaDestination(store, section, onBack, onHeroUnderBarsChanged) }
     }
@@ -122,12 +123,11 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     val healthContext = LocalContext.current
     val localSource = remember(healthContext) { LocalMangaSource(healthContext) }
     val providerState = LocalMangaProviderState.current
-    val reviewedSource = providerState.source
-    val reviewedBusy = providerState.checking
-    val reviewedError = providerState.unavailable
-    val remoteSelected = providerState.remoteSelected
+    val readers = providerState.sources.values.toList()
+    val reviewedBusy = providerState.checking.values.any { it }
+    val reviewedError = providerState.unavailable.values.any { it }
     val registry = LocalMangaRegistry.current
-    val provider = if (remoteSelected) reviewedSource ?: localSource else localSource
+    val provider = registry.byId(providerState.selectedId) ?: registry.byId(MangaDiscoverySource.ID) ?: localSource
     var providerMenu by remember { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf(MangaKind.ALL) }
@@ -201,24 +201,24 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     }
     BackHandler(selected != null || chapter != null) { back() }
     LaunchedEffect(Unit) { saved = store.all() }
-    LaunchedEffect(provider?.id, query, kind, order, retry, section) {
+    LaunchedEffect(provider.id, query, kind, genre, order, retry, section) {
         if (!home && !browse) { loading = false; return@LaunchedEffect }
         if (browse && query.isNotBlank()) delay(350)
         listState.scrollToItem(0)
         catalogGeneration++; moreLoading = false
         loading = true; error = null; results = emptyList(); recent = emptyList(); offset = 0; hasMore = false
-        resultOf { provider.catalog(if (browse) query.trim() else "", kind, order, limit = 24) }
-            .onSuccess { results = it; offset = it.size; hasMore = it.size == 24 }
+        resultOf { provider.catalogPage(if (browse) query.trim() else "", kind, order, genre, 0, 24) }
+            .onSuccess { results = it.items; offset = it.nextOffset ?: 0; hasMore = it.nextOffset != null }
             .onFailure { error = healthError(it) }
         loading = false
         if (home && error == null && results.isNotEmpty() && !provider.sampleOnly) {
             delay(350)
-            resultOf { provider.catalog("", kind, MangaOrder.RECENT, limit = 12) }.onSuccess { recent = it }
+            resultOf { provider.catalogPage("", kind, MangaOrder.RECENT, genre, 0, 12) }.onSuccess { recent = it.items }
         }
     }
     unavailableTitle?.let { unavailable -> AlertDialog(onDismissRequest = { unavailableTitle = null }, title = { Text("Provider unavailable") }, text = { Text("${unavailable.title} remains in your reading list. Its provider is not currently verified. Your saved progress is preserved.") }, confirmButton = { TextButton(onClick = { unavailableTitle = null }) { Text("OK") } }) }
     if (attribution) AlertDialog(onDismissRequest = { attribution = false }, title = { Text("Built-in sources") },
-        text = { Text("Local archives and the explicitly reviewed Atsu sample (Chico chapter 3) are supported in this experimental checkpoint. Other providers and chapters are not enabled. Credits: AniLife and Kotatsu-Redo.") },
+        text = { Text("AniList provides discovery metadata and official publisher links. In-app reading supports local archives and the reviewed Atsu sample (Chico chapter 3). Other reader sources require review. Credits: AniLife and Kotatsu-Redo.") },
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
     val title = selected
     val activeChapter = chapter
@@ -245,16 +245,22 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         title = { Text("Providers") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (reviewedSource != null) FilterChip(selected = remoteSelected, onClick = {
-                    providerState.remoteSelected = true; kind = MangaKind.ALL; genre = null; providerMenu = false
-                }, label = { Text(reviewedSource.displayName) })
+                Text("Discovery", style = MaterialTheme.typography.labelMedium)
+                FilterChip(selected = provider.metadataOnly, onClick = {
+                    providerState.selectedId = MangaDiscoverySource.ID; kind = MangaKind.ALL; genre = null; providerMenu = false
+                }, label = { Text("AniList catalogue") })
+                Text("Available readers", style = MaterialTheme.typography.labelMedium)
+                readers.forEach { source ->
+                    FilterChip(selected = provider.id == source.id, onClick = {
+                        providerState.selectedId = source.id; kind = MangaKind.ALL; genre = null; providerMenu = false
+                    }, label = { Text(source.displayName + if (source.sampleOnly) " · sample" else "") })
+                }
                 if (reviewedBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if (reviewedBusy) Text("Checking availability…", style = MaterialTheme.typography.bodySmall)
-                else if (reviewedError) Text("No online providers currently available.", style = MaterialTheme.typography.bodySmall)
-                FilterChip(selected = !remoteSelected || reviewedSource == null, onClick = {
-                    providerState.remoteSelected = false; kind = MangaKind.ALL; genre = null; providerMenu = false
+                if (reviewedBusy) Text("Checking reading sources…", style = MaterialTheme.typography.bodySmall)
+                else if (reviewedError && readers.isEmpty()) Text("No verified online readers currently available.", style = MaterialTheme.typography.bodySmall)
+                FilterChip(selected = provider.id == LocalMangaSource.ID, onClick = {
+                    providerState.selectedId = LocalMangaSource.ID; kind = MangaKind.ALL; genre = null; providerMenu = false
                 }, label = { Text("Local library") })
-                if (reviewedSource != null) Text("Atsu currently supports the reviewed title and chapter only.", style = MaterialTheme.typography.labelSmall)
             }
         },
         confirmButton = { TextButton(onClick = { providerMenu = false }) { Text("Close") } },
@@ -308,23 +314,23 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                 if (browse || library) item("search") {
                     PageSearchField(query, { query = it }, if (browse) "Search manga, manhwa, manhua" else "Search reading list", "Clear search")
                 }
-                if ((home || browse) && reviewedBusy && remoteSelected && reviewedSource == null) item("provider-loading") {
+                if ((home || browse) && reviewedBusy && !provider.metadataOnly && readers.isEmpty()) item("provider-loading") {
                     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         LinearProgressIndicator(Modifier.fillMaxWidth())
                         Text("Checking provider availability…", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                if ((home || browse) && results.isNotEmpty() && !provider.sampleOnly && provider.id != LocalMangaSource.ID) item("filters") {
+                if ((home || browse) && provider.metadataOnly) item("filters") {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(listOf(MangaKind.ALL, MangaKind.MANGA, MangaKind.MANHWA, MangaKind.MANHUA)) { option ->
                                 GenrePill(option.label, kind == option, { kind = option; genre = null })
                             }
                         }
-                        val genres = results.flatMap { it.genres }.distinct().sorted()
+                        val genres = MangaDiscoverySource.GENRES
                         if (browse) PageFilterRow {
                             PageFilterPill(genre ?: "Genres", listOf(PageFilterOption(null, "All genres")) + genres.map { PageFilterOption(it, it) }, { genre = it }, Modifier.weight(1f))
-                            PageFilterPill(if (order == MangaOrder.POPULAR) "Popular" else "Recent", listOf(PageFilterOption("popular", "Popular"), PageFilterOption("recent", "Recently updated")), { value -> order = if (value == "recent") MangaOrder.RECENT else MangaOrder.POPULAR; genre = null }, Modifier.weight(1f))
+                            PageFilterPill(if (order == MangaOrder.POPULAR) "Popular" else "Recent", listOf(PageFilterOption("popular", "Popular"), PageFilterOption("recent", "Updated listings")), { value -> order = if (value == "recent") MangaOrder.RECENT else MangaOrder.POPULAR; genre = null }, Modifier.weight(1f))
                         } else if (genres.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             item { GenrePill("All genres", genre == null, { genre = null }) }
                             items(genres) { option -> GenrePill(option, genre == option, { genre = if (genre == option) null else option }) }
@@ -344,14 +350,15 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                 if (home || browse) {
                     if (loading) item { Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
                     error?.let { message -> item { MangaError(message) { retry++ } } }
-                    if (!loading && error == null && filtered.isEmpty() && !reviewedBusy) item { MangaEmpty(if (reviewedError && remoteSelected) "No providers available" else "No titles found", if (provider.id == LocalMangaSource.ID) "Import a comic archive from My List." else "Try another search.") }
+                    if (!loading && error == null && filtered.isEmpty()) item { MangaEmpty("No titles found", if (provider.id == LocalMangaSource.ID) "Import a comic archive from My List." else "Try another search or genre.") }
+                    if (home && provider.metadataOnly) item("catalog-notice") { Text("Discovery metadata from AniList · reading availability varies by title", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     if (home && filtered.isNotEmpty() && !provider.sampleOnly) item("popular") { MangaRail(if (provider.id == LocalMangaSource.ID) "Your comics" else "Popular Now", filtered.take(15), onClick = { selected = it }) }
-                    if (home && recent.any { entry -> filtered.none { it.identity() == entry.identity() } && (genre == null || genre in entry.genres) }) item("recent") { MangaRail(if (provider.id == LocalMangaSource.ID) "Recently Imported" else "Recently Updated", recent.filter { entry -> filtered.none { it.identity() == entry.identity() } && (genre == null || genre in entry.genres) }, onClick = { selected = it }) }
+                    if (home && recent.any { entry -> filtered.none { it.identity() == entry.identity() } && (genre == null || genre in entry.genres) }) item("recent") { MangaRail(if (provider.id == LocalMangaSource.ID) "Recently Imported" else "Recently Updated Listings", recent.filter { entry -> filtered.none { it.identity() == entry.identity() } && (genre == null || genre in entry.genres) }, onClick = { selected = it }) }
                     if (home && genre == null && !provider.sampleOnly) filtered.flatMap { it.genres }.distinct().take(6).forEach { category ->
                         val shelf = filtered.filter { category in it.genres }
                         if (shelf.size >= 2) item("genre-$category") { MangaRail(category, shelf, onClick = { selected = it }) }
                     }
-                    if (browse && filtered.isNotEmpty()) {
+                    if (browse && (filtered.isNotEmpty() || hasMore)) {
                         item { MangaHeading(if (query.isBlank()) "Discover" else "Search results") }
                         items(filtered.chunked(columns)) { row ->
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -359,13 +366,13 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                                 repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                             }
                         }
-                        if (hasMore && genre == null) item("more") {
+                        if (hasMore) item("more") {
                             OutlinedButton(onClick = {
                                 if (!moreLoading) scope.launch {
                                     val generation = catalogGeneration
                                     moreLoading = true
-                                    resultOf { provider.catalog(query.trim(), kind, order, offset, 24) }.onSuccess { batch ->
-                                        if (generation == catalogGeneration) { results = (results + batch).distinctBy { it.identity() }; val consumed = batch.size; offset += consumed; hasMore = consumed == 24 }
+                                    resultOf { provider.catalogPage(query.trim(), kind, order, genre, offset, 24) }.onSuccess { batch ->
+                                        if (generation == catalogGeneration) { results = (results + batch.items).distinctBy { it.identity() }; offset = batch.nextOffset ?: offset; hasMore = batch.nextOffset != null }
                                     }.onFailure { if (generation == catalogGeneration) error = healthError(it) }
                                     if (generation == catalogGeneration) moreLoading = false
                                 }
@@ -420,7 +427,16 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
 }
 
 @Composable
-private fun MangaArtwork(title: MangaTitle, modifier: Modifier, contentScale: ContentScale = ContentScale.Crop) {
+private fun MangaArtwork(title: MangaTitle, modifier: Modifier, contentScale: ContentScale = ContentScale.Crop, large: Boolean = false) {
+    if (title.sourceId == MangaDiscoverySource.ID) {
+        val context = LocalContext.current
+        val url = catalogueImage(if (large) title.largeCoverUrl ?: title.coverUrl else title.coverUrl ?: title.largeCoverUrl)
+        if (url != null) {
+            val request = remember(url, context) { ImageRequest.Builder(context).data(url).diskCachePolicy(coil.request.CachePolicy.DISABLED).build() }
+            AsyncImage(model = request, contentDescription = title.title, modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainer), contentScale = contentScale, imageLoader = MangaNetwork.catalogueImageLoader(context))
+            return
+        }
+    }
     val source = LocalMangaRegistry.current.byId(title.sourceId)
     val model by produceState<Any?>(null, source, title.id) {
         value = null
@@ -472,7 +488,7 @@ private fun MangaHomeCarousel(titles: List<MangaTitle>, modifier: Modifier, topI
                     drawContent()
                     drawRect(Brush.verticalGradient(0f to Color.Black, .70f to Color.Black, .82f to Color.Black.copy(alpha = .82f), .93f to Color.Black.copy(alpha = .30f), 1f to Color.Transparent), blendMode = BlendMode.DstIn)
                 }.hazeSource(art)) {
-                    MangaArtwork(title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    MangaArtwork(title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop, large = true)
                     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = .26f), .30f to Color.Black.copy(alpha = .06f), .50f to Color.Black.copy(alpha = .20f), .68f to Color.Black.copy(alpha = .54f), .84f to Color.Black.copy(alpha = .68f), 1f to Color.Black.copy(alpha = .35f))))
                 }
                 Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth(if (device.isExpanded) .8f else 1f).padding(horizontal = device.pagePadding).padding(top = 8.dp, bottom = if (titles.size > 1) 64.dp else 40.dp)) {
@@ -480,11 +496,13 @@ private fun MangaHomeCarousel(titles: List<MangaTitle>, modifier: Modifier, topI
                         ShrinkingTitle(text = title.title, style = (if (device.isExpanded) MaterialTheme.typography.displaySmall else MaterialTheme.typography.titleLarge).copy(fontWeight = FontWeight.Black, lineHeight = if (device.isExpanded) 42.sp else 28.sp), color = Color.White, maxLines = 2, minFontSize = 17.sp)
                     }
                     Text(listOf(title.metadata(), title.genres.take(3).joinToString(" · ")).filter { it.isNotBlank() }.joinToString(" · "), color = Color.White.copy(alpha = .9f), style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    val summary = remember(title.description) { androidx.core.text.HtmlCompat.fromHtml(title.description, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString().trim() }
+                    val summary = remember(title.description) { cleanMangaDescription(androidx.core.text.HtmlCompat.fromHtml(title.description, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString()) }
                     if (summary.isNotBlank()) Text(summary, color = Color.White.copy(alpha = .9f), style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp).fillMaxWidth(.86f))
                     Row(Modifier.padding(top = 12.dp, bottom = 2.dp).widthIn(max = 286.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        HomeHeroAction("Read Now", Icons.Default.Book, true, art, { onRead(title) }, Modifier.weight(1f))
-                        HomeHeroAction("Details", Icons.Default.Info, false, art, { onDetails(title) }, Modifier.weight(1f))
+                        if (title.sourceId == MangaDiscoverySource.ID) HomeHeroAction("View title", Icons.Default.Info, true, art, { onDetails(title) }, Modifier.weight(1f)) else {
+                            HomeHeroAction("Read Now", Icons.Default.Book, true, art, { onRead(title) }, Modifier.weight(1f))
+                            HomeHeroAction("Details", Icons.Default.Info, false, art, { onDetails(title) }, Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -505,7 +523,7 @@ private fun MangaDetailHero(title: MangaTitle, source: MangaSource) {
         MangaArtwork(title, modifier = Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }.drawWithContent {
             drawContent()
             drawRect(Brush.verticalGradient(0f to Color.White, .54f to Color.White, .75f to Color.White.copy(alpha = .78f), .92f to Color.White.copy(alpha = .22f), 1f to Color.Transparent), blendMode = BlendMode.DstIn)
-        }, contentScale = ContentScale.Crop)
+        }, contentScale = ContentScale.Crop, large = true)
         Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal = device.pagePadding, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
             MangaArtwork(title, modifier = Modifier.width(if (device.isTablet) 90.dp else 78.dp).aspectRatio(2f/3f).clip(RoundedCornerShape(18.dp)), contentScale = ContentScale.Crop)
             Column(Modifier.weight(1f).padding(bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -557,6 +575,9 @@ private fun MangaContinueCard(entry: MangaSaved, modifier: Modifier, onClick: ()
 
 @Composable
 private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaReadingStore, saved: MangaSaved?, readImmediately: Boolean, onBack: () -> Unit, onBookmark: (Boolean) -> Unit, onChapter: (MangaChapter, List<MangaChapter>) -> Unit) {
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+    var linkError by remember { mutableStateOf(false) }
+    if (linkError) AlertDialog(onDismissRequest = { linkError = false }, title = { Text("Couldn't open link") }, confirmButton = { TextButton(onClick = { linkError = false }) { Text("OK") } })
     var chapters by remember(title) { mutableStateOf<List<MangaChapter>>(emptyList()) }
     var loading by remember(title) { mutableStateOf(true) }
     var error by remember(title) { mutableStateOf<String?>(null) }
@@ -569,6 +590,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
     var chapterQuery by rememberSaveable(title.id) { mutableStateOf("") }
     LaunchedEffect(title.id, language, retry) {
         chapters = emptyList(); loading = true; error = null
+        if (source.metadataOnly) { loading = false; return@LaunchedEffect }
         resultOf { source.chapters(title.id, language) }.onSuccess { chapters = it; details = source.enrichedTitle(title); Unit }.onFailure { error = healthError(it) }
         loading = false
     }
@@ -583,26 +605,29 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
             val hero: @Composable () -> Unit = {
                 MangaDetailHero(details, source)
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = { first?.let { onChapter(it, chapters) } }, enabled = first != null, modifier = Modifier.weight(1f).heightIn(min = 48.dp), shape = CircleShape, colors = cinematicPrimaryButtonColors()) {
-                        Icon(Icons.Default.Book, null, Modifier.size(18.dp)); Spacer(Modifier.width(5.dp)); Text(if (resume != null) "Continue" else "Read Now", maxLines = 1)
+                    Button(onClick = { if (source.metadataOnly) { details.officialLinks.firstOrNull()?.let { link -> runCatching { uriHandler.openUri(link.url) }.onFailure { linkError = true } } } else first?.let { onChapter(it, chapters) } }, enabled = if (source.metadataOnly) details.officialLinks.isNotEmpty() else first != null, modifier = Modifier.weight(1f).heightIn(min = 48.dp), shape = CircleShape, colors = cinematicPrimaryButtonColors()) {
+                        Icon(Icons.Default.Book, null, Modifier.size(18.dp)); Spacer(Modifier.width(5.dp)); Text(if (source.metadataOnly) "Open official link" else if (resume != null) "Continue" else "Read Now", maxLines = 1)
                     }
-                    OutlinedButton(onClick = { onBookmark(saved?.bookmarked != true) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp), colors = cinematicSecondaryButtonColors(), border = cinematicSecondaryButtonBorder(), shape = CircleShape) {
+                    if (!source.metadataOnly) OutlinedButton(onClick = { onBookmark(saved?.bookmarked != true) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp), colors = cinematicSecondaryButtonColors(), border = cinematicSecondaryButtonBorder(), shape = CircleShape) {
                         Icon(if (saved?.bookmarked == true) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, null, Modifier.size(18.dp)); Spacer(Modifier.width(5.dp)); Text(if (saved?.bookmarked == true) "Saved" else "My List", maxLines = 1)
                     }
                 }
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) { MangaDetailTab.entries.forEach { entry -> FilterChip(selected = tab == entry, onClick = { tab = entry }, label = { Text(entry.label) }) } }
+                if (!source.metadataOnly) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) { MangaDetailTab.entries.forEach { entry -> FilterChip(selected = tab == entry, onClick = { tab = entry }, label = { Text(entry.label) }) } }
             }
             val overview: @Composable () -> Unit = {
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (details.genres.isNotEmpty()) GenreRow(details.genres.distinct())
                     if (details.unrated) Text("Publisher has not supplied an age rating for this title.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Description(details.description)
+                    Description(cleanMangaDescription(details.description))
                     Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(18.dp)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        listOf("Provider" to source.displayName, "Status" to details.status, "Authors" to details.authors.joinToString(", "), "Alternative titles" to details.alternativeTitles.joinToString(" · "), "Chapters" to chapters.size.takeIf { it > 0 }?.toString().orEmpty()).filter { it.second.isNotBlank() }.forEach { (name, value) ->
+                        listOf("Provider" to source.displayName, "Status" to details.status.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }, "Authors" to details.authors.joinToString(", "), "Alternative titles" to details.alternativeTitles.joinToString(" · "), (if (source.sampleOnly) "Reviewed chapters" else "Chapters") to (details.knownChapterCount ?: chapters.size.takeIf { it > 0 })?.toString().orEmpty()).filter { it.second.isNotBlank() }.forEach { (name, value) ->
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text(name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(.4f)); Text(value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(.6f)) }
                         }
                     }
-                    TextButton(onClick = { tab = MangaDetailTab.CHAPTERS }) { Text("View chapters"); Icon(Icons.Default.ChevronRight, null) }
+                    if (source.metadataOnly) {
+                        Text("Catalogue information only. In-app chapters are not verified for this title.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        details.officialLinks.forEach { link -> TextButton(onClick = { runCatching { uriHandler.openUri(link.url) }.onFailure { linkError = true } }) { Text(link.label); Icon(Icons.Default.OpenInNew, null) } }
+                    } else TextButton(onClick = { tab = MangaDetailTab.CHAPTERS }) { Text("View chapters"); Icon(Icons.Default.ChevronRight, null) }
                 }
             }
             val chapterHeader: @Composable () -> Unit = {
