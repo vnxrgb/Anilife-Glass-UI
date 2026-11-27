@@ -39,6 +39,23 @@ class AniListClientTest {
     }
 
     @Test
+    fun `manga discovery preserves GraphQL variable references and applies filters`() = runBlocking {
+        server.enqueue(graphQlBody("""{"data":{"Page":{"pageInfo":{"hasNextPage":false},"media":[]}}}"""))
+        client.mangaDiscovery("Example", "KR", "Fantasy", false, 2, 24)
+        val request = Json.parseToJsonElement(server.takeRequest().body.readUtf8()) as kotlinx.serialization.json.JsonObject
+        val query = (request["query"] as kotlinx.serialization.json.JsonPrimitive).content
+        val variables = request["variables"] as kotlinx.serialization.json.JsonObject
+        assertTrue(query.contains("perPage: ${'$'}size"))
+        assertTrue(query.contains("search: ${'$'}search"))
+        assertTrue(query.contains("sort: ${'$'}sort"))
+        assertTrue(query.contains("type: MANGA"))
+        assertEquals("2", variables["page"].toString())
+        assertEquals("24", variables["size"].toString())
+        assertEquals("\"KR\"", variables["country"].toString())
+        assertEquals("\"Fantasy\"", variables["genre"].toString())
+    }
+
+    @Test
     fun `MAL ids are matched in bounded 50 item requests`() = runBlocking {
         server.enqueue(graphQlMedia(id = 101, malId = 1))
         server.enqueue(graphQlMedia(id = 151, malId = 51))

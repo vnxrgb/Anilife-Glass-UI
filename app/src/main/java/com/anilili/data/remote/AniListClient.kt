@@ -258,10 +258,10 @@ class AniListClient(
         require(page in 1..500 && perPage in 1..30 && search.length <= 200)
         require(country == null || country in setOf("JP", "KR", "CN"))
         val query = """
-            query ($page: Int, $size: Int, $search: String, $country: CountryCode, $genre: String, $sort: [MediaSort]) {
-              Page(page: $page, perPage: $size) {
+            query (${'$'}page: Int, ${'$'}size: Int, ${'$'}search: String, ${'$'}country: CountryCode, ${'$'}genre: String, ${'$'}sort: [MediaSort]) {
+              Page(page: ${'$'}page, perPage: ${'$'}size) {
                 pageInfo { hasNextPage currentPage }
-                media(type: MANGA, format: MANGA, isAdult: false, search: $search, countryOfOrigin: $country, genre: $genre, sort: $sort) {
+                media(type: MANGA, format: MANGA, isAdult: false, search: ${'$'}search, countryOfOrigin: ${'$'}country, genre: ${'$'}genre, sort: ${'$'}sort) {
                   id title { userPreferred romaji english native } isAdult countryOfOrigin
                   coverImage { large extraLarge } bannerImage description(asHtml: false)
                   genres status chapters startDate { year } siteUrl
