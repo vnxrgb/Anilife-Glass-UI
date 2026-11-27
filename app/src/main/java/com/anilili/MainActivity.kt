@@ -1,5 +1,7 @@
 package com.anilili
 
+import com.anilili.manga.swipeHoldContentMode
+
 import com.anilili.ui.easteregg.HiddenSparks
 import com.anilili.ui.theme.appCanvas
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -1102,6 +1104,7 @@ private fun MiruroRoot(
         NotificationPermissionEffect()
         UpdatePromptHost()
         Box(Modifier.fillMaxSize().nestedScroll(chromeScrollConnection)
+            .swipeHoldContentMode(!deviceProfile.isTv && !inPictureInPicture && showBottomBar && !chromeTakeover.active && !showRandomPick)
             .pointerInput(deviceProfile.isTv, chromeHideThresholdPx) {
                 if (deviceProfile.isTv) return@pointerInput
                 awaitEachGesture {
