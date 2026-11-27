@@ -831,7 +831,7 @@ private fun GenrePillRow(
  * is the one thing in the row that is not translucent.
  */
 @Composable
-private fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, backdrop: HazeState? = null) {
+internal fun GenrePill(label: String, highlighted: Boolean, onClick: () -> Unit, backdrop: HazeState? = null) {
     val shape = RoundedCornerShape(50)
     val scheme = MaterialTheme.colorScheme
     val fillFocus1 = rememberFocusFill()
@@ -1246,7 +1246,7 @@ private fun HeroCard(
  * Blur is inside the same painted pill, rather than decorating Material's larger touch bounds.
  */
 @Composable
-private fun HomeHeroAction(
+internal fun HomeHeroAction(
     label: String,
     icon: ImageVector,
     primary: Boolean,
@@ -1540,7 +1540,7 @@ internal fun slideHeroPage(currentPage: Int, pageCount: Int, step: Int): Int =
  * icon is what says it can be done.
  */
 @Composable
-private fun RailTitle(title: String, dragHandle: Modifier?, modifier: Modifier = Modifier) {
+internal fun RailTitle(title: String, dragHandle: Modifier?, modifier: Modifier = Modifier) {
     Row(
         // A finger-sized target when it can be held; otherwise exactly the title, as before.
         modifier = modifier.then(if (dragHandle != null) Modifier.heightIn(min = 40.dp).then(dragHandle) else Modifier),

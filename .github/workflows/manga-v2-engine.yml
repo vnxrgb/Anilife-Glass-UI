@@ -4,6 +4,7 @@ on:
     branches: [feature/manga-v2]
     paths:
       - 'manga-engine/**'
+      - 'app/src/**'
       - 'settings.gradle.kts'
       - 'build.gradle.kts'
       - 'gradle/libs.versions.toml'
@@ -235,3 +236,19 @@ jobs:
             ${{ runner.temp }}/manga-avds.log
             ${{ runner.temp }}/manga-device-build-attempt-*.log
           if-no-files-found: ignore
+
+  mobile-ui-compile:
+    if: github.ref == 'refs/heads/feature/manga-v2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - name: Compile mobile UI and test local reader
+        run: ./gradlew :app:compileMobileDebugKotlin :app:testMobileDebugUnitTest --tests 'com.anilili.manga.*' --max-workers=2 --no-configuration-cache --console=plain --stacktrace

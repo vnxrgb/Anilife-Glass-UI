@@ -406,7 +406,7 @@ internal fun PlayerOptionsSheet(
 /** The phone-in-portrait presentation: the standard Midnight bottom sheet. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PlayerModalSheet(
+internal fun PlayerModalSheet(
     title: String,
     closeDescription: String,
     onDismiss: () -> Unit,

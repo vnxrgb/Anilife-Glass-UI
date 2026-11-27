@@ -1589,7 +1589,7 @@ private fun NextAiringCard(airingAt: Long, episode: Int?) {
 }
 
 @Composable
-private fun GenreRow(genres: List<String>) {
+internal fun GenreRow(genres: List<String>) {
     // Centred while the chips fit, scrolling once they do not — the same rule as the tabs.
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Row(
@@ -1614,7 +1614,7 @@ private fun GenreRow(genres: List<String>) {
 }
 
 @Composable
-private fun Description(description: String?) {
+internal fun Description(description: String?) {
     if (description.isNullOrBlank()) return
     var expanded by remember { mutableStateOf(false) }
     val clean = remember(description) { androidx.core.text.HtmlCompat.fromHtml(description, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString().trim() }
