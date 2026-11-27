@@ -593,7 +593,7 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
     var ambientStrength by rememberSaveable { mutableFloatStateOf(prefs.getFloat("ambient_strength", .55f).coerceIn(.15f, .85f)) }
     var pageMenu by remember { mutableStateOf(false) }
     val options = remember(prefs) { ReaderPreferences(prefs) }
-    LaunchedEffect(options) { snapshotFlow { options.save() }.collect {} }
+    LaunchedEffect(options) { snapshotFlow { options.snapshot() }.collect { options.save() } }
     var bookmarked by remember(title.id, chapter.id) { mutableStateOf(store.isChapterBookmarked(title, chapter.id)) }
     val toggleBookmark = { bookmarked = !bookmarked; store.bookmarkChapter(title, chapter.id, bookmarked) }
     val activity = context.findActivity()
@@ -731,11 +731,11 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
                     var scrub by remember { mutableStateOf<Long?>(null) }
                     CompositionLocalProvider(LocalContentColor provides ink) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { turn(-1) }, enabled = position > 0) { Icon(Icons.Default.ChevronLeft, "Previous page") }
+                            IconButton(onClick = { turn(-1) }, enabled = if (mode == ReadingMode.WEBTOON) position > 0 else pager.currentPage > 0) { Icon(Icons.Default.ChevronLeft, "Previous page") }
                             PlayerSeekBar(positionMs = position * 1000L, durationMs = pages.lastIndex * 1000L,
                                 bufferedPositionMs = position * 1000L, onSeek = { jump((it / 1000f).roundToInt()) },
                                 onScrubChange = { scrub = it }, modifier = Modifier.weight(1f), touchHeight = 28.dp)
-                            IconButton(onClick = { turn(1) }, enabled = position < pages.lastIndex) { Icon(Icons.Default.ChevronRight, "Next page") }
+                            IconButton(onClick = { turn(1) }, enabled = if (mode == ReadingMode.WEBTOON) position < pages.lastIndex else pager.currentPage < groups.lastIndex) { Icon(Icons.Default.ChevronRight, "Next page") }
                             TextButton(onClick = { pageMenu = true }) { Text("${(scrub?.let { (it / 1000f).roundToInt() } ?: position) + 1}/${pages.size}", color = ink) }
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -960,6 +960,10 @@ private fun MangaChapterPicker(chapters: List<MangaChapter>, current: MangaChapt
                                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Icon(if (active) Icons.Default.CheckCircle else if (releases.size > 1) Icons.Default.ExpandMore else Icons.Default.ChevronRight, null)
+                        if (releases.size == 1) {
+                            var saved by remember(first.id) { mutableStateOf(store.isChapterBookmarked(title, first.id)) }
+                            IconButton(onClick = { saved = !saved; store.bookmarkChapter(title, first.id, saved) }) { Icon(if (saved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, "Bookmark chapter") }
+                        }
                     }
                     if (expanded && releases.size > 1) releases.forEach { release ->
                         Row(Modifier.fillMaxWidth().padding(start = 16.dp).clip(RoundedCornerShape(10.dp)).clickable { onSelect(release) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {

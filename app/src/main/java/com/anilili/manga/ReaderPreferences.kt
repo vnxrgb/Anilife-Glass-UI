@@ -63,6 +63,7 @@ internal class ReaderPreferences(private val prefs: SharedPreferences) {
     var ambientShortcut by mutableStateOf(prefs.getBoolean("shortcut_ambient", true))
     var magnifierShortcut by mutableStateOf(prefs.getBoolean("shortcut_magnifier", true))
     var bookmarkShortcut by mutableStateOf(prefs.getBoolean("shortcut_bookmark", false))
+    fun snapshot(): List<Any> = listOf(scale, rotation, layout, zones, invertZones, animate, pageNumber, volume, shift, reverseSpread, grayscale, invert, warm, padding, gap, autoHide, chapterShortcut, ambientShortcut, magnifierShortcut, bookmarkShortcut)
     fun save() {
         prefs.edit().putString("scale", scale.name).putString("rotation", rotation.name)
             .putString("layout", layout.name).putString("tap_zones", zones.name)
