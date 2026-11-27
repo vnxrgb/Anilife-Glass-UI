@@ -1,0 +1,6 @@
+Experimental standalone module; not linked into the AniLumos app.
+Kotatsu-Redo parser dependency: https://github.com/Kotatsu-Redo/kotatsu-parsers-redo/tree/3432a85ac02ce99824cf841aca40bfd3af78ed3f
+GPLv3 upstream license reproduced in LICENSE.
+Architecture studied: https://github.com/xrnix/Kuroha/tree/394d2b5719f94a5db3a663fee4702241ea3f82bb
+New module code is independently written. No Kuroha application code copied.
+No claim of distribution permission for the combined application; resolve upstream licensing before integration.

@@ -17,6 +17,10 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven {
+            url = uri("https://jitpack.io")
+            content { includeGroup("com.github.Kotatsu-Redo") }
+        }
+        maven {
             url = uri("https://maven.mozilla.org/maven2")
             content { includeGroupByRegex("org\\.mozilla.*") }
         }
@@ -26,3 +30,6 @@ dependencyResolutionManagement {
 rootProject.name = "Anilife"
 include(":app")
 include(":benchmark")
+
+// Research module only; deliberately not a dependency of :app.
+include(":manga-engine")

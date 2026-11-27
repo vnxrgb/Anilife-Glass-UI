@@ -1,0 +1,25 @@
+# Manga v2 — isolated engine research
+
+Base: stable main 4455209715c1442416d612461e0eebea9ec15052. No app dependency, no new app permission, no APK publication. UI and reader remain on backup/manga-ui-reader.
+
+## Reference architecture
+
+Kuroha at 394d2b5719f94a5db3a663fee4702241ea3f82bb declares parser revision 3432a85ac0. The original fork endpoint redirects; canonical Kotatsu-Redo contains exact commit 3432a85ac02ce99824cf841aca40bfd3af78ed3f. JitPack resolution still needs CI validation. Its contract is ParsersApi.VERSION 1, Kotlin 2.2.10, OkHttp 5.1.0, Okio 3.16.0. The standalone module uses API 26 without raising the app minimum or altering anime networking.
+
+## First checkpoint
+
+- Built-in descriptor registry, stable source names, separate broken flag (not live health).
+- Source-scoped HTTPS-only session, no automatic redirects or shared credentials; bounded optional HTTP cache and in-memory cookies.
+- Android parser host with explicit unsupported-operation failures rather than silent null results; default configuration.
+- Provider-native browse/search, catalog raw-offset accounting, details and chapter/page references for reviewed sources. Explicit SAFE rating only; unrated is not verified safe. No bulk live tests.
+- Unit tests for compiled contract, source scope, session isolation and empty-page accounting. Dedicated CI compiles this module only.
+
+## Remaining gates
+
+1. Resolve pinned dependency and pass CI. Add fixture-based tests of catalogs, nonempty pagination, chapter and image pipeline; obtain permission for representative sources and test on Android. Differentiate empty/filtered catalogs, network failure, unsupported operation, access restrictions and rating metadata.
+2. Implement authorized page delivery, source-aware headers, cache, permitted redirects and normal image handling for approved sources. Assess legitimate browser interaction and persisted per-source settings. Access-control bypass is not part of this project checkpoint.
+3. Determine upstream GPLv3 and AniLife distribution compatibility before linking module to app. This module is not yet packaged with AniLumos. Keep notices; Kuroha's own permission does not replace underlying rights.
+4. Only then integrate backed-up UI and reader via neutral models. Downloads for permitted content after reader tests.
+5. Evaluate separately signed parser bundles: own publisher keys, contract/version matching, validation, rollback, trusted update endpoint and device tests. No remote executable loading at this checkpoint.
+
+Do not report provider count as working count. No signed beta until actual reader validation and licensing gates are satisfied.
