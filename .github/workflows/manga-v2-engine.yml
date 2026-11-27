@@ -72,19 +72,48 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - name: Prepare Android emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo chmod a+rw /dev/kvm
+          "$ANDROID_HOME/emulator/emulator" -accel-check
+          sdkmanager 'platform-tools' 'system-images;android-30;default;x86_64'
+          echo no | avdmanager create avd --force --name manga-ci --package 'system-images;android-30;default;x86_64'
+          "$ANDROID_HOME/emulator/emulator" -list-avds
       - name: Run isolated Android instrumentation tests
         shell: bash
         run: |
           set -euo pipefail
-          export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
-          sudo chmod a+rw /dev/kvm
-          sdkmanager 'emulator' 'platform-tools' 'system-images;android-30;google_apis;x86_64'
-          echo no | avdmanager create avd --force --name manga-ci --package 'system-images;android-30;google_apis;x86_64'
-          emulator -avd manga-ci -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot > "$RUNNER_TEMP/manga-emulator.log" 2>&1 &
+          export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
+          log="$RUNNER_TEMP/manga-emulator.log"
+          adb start-server
+          emulator -avd manga-ci -port 5554 -no-window -no-audio -no-boot-anim -gpu swiftshader -no-snapshot -no-metrics -memory 2048 -cores 2 > "$log" 2>&1 &
           emulator_pid=$!
-          trap 'kill "$emulator_pid" 2>/dev/null || true' EXIT
-          timeout 300 adb wait-for-device
-          timeout 300 bash -c 'until [ "$(adb shell getprop sys.boot_completed | tr -d "\r")" = 1 ]; do sleep 5; done'
+          cleanup() {
+            result=$?
+            trap - EXIT
+            if [ "$result" -ne 0 ]; then
+              adb devices -l || true
+              tail -200 "$log" || true
+            fi
+            kill "$emulator_pid" 2>/dev/null || true
+            exit "$result"
+          }
+          trap cleanup EXIT
+          export ANDROID_SERIAL=emulator-5554
+          deadline=$((SECONDS + 600))
+          until [ "$(timeout 5 adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)" = 1 ]; do
+            if ! kill -0 "$emulator_pid" 2>/dev/null; then
+              echo "::error::Emulator process exited before boot"
+              exit 1
+            fi
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::Emulator boot timed out"
+              exit 124
+            fi
+            sleep 5
+          done
           adb shell input keyevent 82
           ./gradlew :manga-engine:connectedDebugAndroidTest --max-workers=2 --no-configuration-cache --console=plain --stacktrace
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
