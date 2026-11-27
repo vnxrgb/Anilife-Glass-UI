@@ -39,3 +39,7 @@ Optional per-host Accept and Accept-Language defaults preserve parser-supplied h
 ## Android decoding and foreground refresh
 
 Bitmap decoding uses a sampled raster budget of four million pixels and caller-owned bitmaps. Health readiness now requires Android decoding, not only valid headers. Reviewed profiles can be refreshed serially on demand with a 15-minute minimum interval, including failures. No background scheduling or real profiles are enabled. The local Android instrumentation fixture requires an emulator/device and :manga-engine:connectedDebugAndroidTest. JVM sampling and refresh tests run in existing CI. No app integration or licensing clearance is claimed.
+
+## Device CI gate
+
+The branch-only workflow now includes a separate Android API 30 emulator job after the JVM engine job, running connectedDebugAndroidTest and retaining reports. Local synthetic fixtures only; no live provider access or app packaging. A successful emulator job is required before claiming device decoding validation.

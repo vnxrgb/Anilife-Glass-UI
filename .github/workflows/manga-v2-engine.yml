@@ -58,3 +58,41 @@ jobs:
           name: manga-engine-test-report
           path: manga-engine/build/reports/tests/
           if-no-files-found: ignore
+  android-device:
+    if: github.ref == 'refs/heads/feature/manga-v2'
+    needs: engine
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+      - name: Run isolated Android instrumentation tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          sudo chmod a+rw /dev/kvm
+          sdkmanager 'emulator' 'platform-tools' 'system-images;android-30;google_apis;x86_64'
+          echo no | avdmanager create avd --force --name manga-ci --package 'system-images;android-30;google_apis;x86_64'
+          emulator -avd manga-ci -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot > "$RUNNER_TEMP/manga-emulator.log" 2>&1 &
+          emulator_pid=$!
+          trap 'kill "$emulator_pid" 2>/dev/null || true' EXIT
+          timeout 300 adb wait-for-device
+          timeout 300 bash -c 'until [ "$(adb shell getprop sys.boot_completed | tr -d "\r")" = 1 ]; do sleep 5; done'
+          adb shell input keyevent 82
+          ./gradlew :manga-engine:connectedDebugAndroidTest --max-workers=2 --no-configuration-cache --console=plain --stacktrace
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: manga-engine-device-report
+          path: |
+            manga-engine/build/reports/androidTests/
+            manga-engine/build/outputs/androidTest-results/
+            ${{ runner.temp }}/manga-emulator.log
+          if-no-files-found: ignore
