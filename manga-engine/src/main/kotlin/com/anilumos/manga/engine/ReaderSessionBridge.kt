@@ -126,7 +126,7 @@ internal class ReaderSessionBridge private constructor(
             if (bytes != null) covers[title.id] = bytes
         }
         val bytes = covers[title.id] ?: return@withLock null
-        val bitmap = PageDecoder.decode(bytes, 768, 1152)
+        val bitmap = PageDecoder.decode(bytes, 1024, 1536)
         if (closed) { bitmap.recycle(); error("Reader session closed") }
         bitmap
     }

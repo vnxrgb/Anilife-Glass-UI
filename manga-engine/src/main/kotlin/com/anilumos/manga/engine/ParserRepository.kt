@@ -89,13 +89,13 @@ internal class ParserRepository(
     suspend fun coverBytes(title: Manga): ByteArray? {
         require(title.source.name == scope.sourceName && PrimaryProviderProfiles.permitsRating(title.contentRating))
         val url = title.largeCoverUrl ?: title.coverUrl ?: return null
-        return PageDelivery(scope, session).load(scope.requireUrl(url, "https://" + parser.domain + "/").toString())
+        return PageDelivery(scope, session).load(scope.requireImageUrl(url, "https://" + parser.domain + "/").toString())
     }
     suspend fun decodePage(page: MangaPage, width: Int = 2048, height: Int = 4096) =
         PageDecoder.decode(loadImage(page), width, height)
     suspend fun loadImage(page: MangaPage): ByteArray = PageDelivery(scope, session).load(imageUrl(page))
     suspend fun imageUrl(page: MangaPage): String = withContext(Dispatchers.IO) {
         require(page.source.name == scope.sourceName)
-        scope.requireUrl(parser.getPageUrl(page), "https://" + parser.domain + "/").toString()
+        scope.requireImageUrl(parser.getPageUrl(page), "https://" + parser.domain + "/").toString()
     }
 }

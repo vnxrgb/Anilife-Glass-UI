@@ -996,6 +996,8 @@ private fun <T> ReaderChoices(label: String, choices: List<T>, selected: T, name
 @Composable
 private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap: (Float, Float) -> Unit, magnifierActive: Boolean, options: ReaderPreferences, onLoaded: () -> Unit) {
     if (page.decode != null) {
+        val context = LocalContext.current
+        val lowMemory = remember(context) { (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as? android.app.ActivityManager)?.let { it.isLowRamDevice || it.memoryClass < 192 } ?: true }
         var zoom by remember(page) { mutableFloatStateOf(1f) }
         var pan by remember(page) { mutableStateOf(Offset.Zero) }
         var measured by remember(page) { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
@@ -1019,7 +1021,7 @@ private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap
         Box(transformed.clip(RoundedCornerShape(0.dp)), contentAlignment = Alignment.Center) {
             EnginePageBitmap(page, (if (fit) Modifier.fillMaxSize() else Modifier.fillMaxWidth())
                 .graphicsLayer { scaleX = zoom; scaleY = zoom; translationX = pan.x; translationY = pan.y },
-                if (fit) options.scale.scale else ContentScale.FillWidth, 2048, 4096, onLoaded)
+                if (fit) options.scale.scale else ContentScale.FillWidth, if (lowMemory) 2048 else 3072, if (lowMemory) 4096 else 8192, onLoaded)
         }
         return
     }

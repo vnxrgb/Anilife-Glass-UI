@@ -14,6 +14,9 @@ import java.io.IOException
 /** Decode a bounded preview/page; the caller owns and must release the returned bitmap. */
 internal object PageDecoder {
     private const val MAX_PIXELS = 4_000_000L
+    private const val HIGH_QUALITY_PIXELS = 8_000_000L
+    internal fun pixelBudget(targetWidth: Int, targetHeight: Int): Long =
+        if (targetWidth >= 3072 && targetHeight >= 8192) HIGH_QUALITY_PIXELS else MAX_PIXELS
     // Native AVIF decoding may allocate full-size intermediate planes before scaling.
     private const val MAX_AVIF_SOURCE_PIXELS = 16_000_000L
     private val avifMutex = Mutex()
@@ -50,7 +53,7 @@ internal object PageDecoder {
         require(width > 0 && height > 0 && targetWidth > 0 && targetHeight > 0)
         var sample = 1
         fun scaled(value: Int): Long = (value.toLong() + sample - 1) / sample
-        while (scaled(width) * scaled(height) > MAX_PIXELS ||
+        while (scaled(width) * scaled(height) > pixelBudget(targetWidth, targetHeight) ||
             scaled(width) > targetWidth || scaled(height) > targetHeight) {
             sample *= 2
         }
@@ -79,7 +82,7 @@ internal object PageDecoder {
             val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
                 ?: if (isAvif) return@withContext decodeAvif(bytes, targetWidth, targetHeight)
                 else throw IOException("Image decode failed")
-            if (bitmap.width.toLong() * bitmap.height > MAX_PIXELS || bitmap.width > targetWidth || bitmap.height > targetHeight) {
+            if (bitmap.width.toLong() * bitmap.height > pixelBudget(targetWidth, targetHeight) || bitmap.width > targetWidth || bitmap.height > targetHeight) {
                 bitmap.recycle()
                 throw IOException("Decoded bitmap exceeds budget")
             }

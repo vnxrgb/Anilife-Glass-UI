@@ -9,11 +9,11 @@ import org.koitharu.kotatsu.parsers.model.MangaListFilter
 internal object PrimaryProviderProfiles {
     val ids = listOf("ATSUMOE", "WEEBCENTRAL", "MANGADEX", "MANGAPILL", "MANGAKATANA")
     val profiles = listOf(
-        LiveProviderProfile(SourceScope("ATSUMOE", setOf("atsu.moe", "cdn.atsu.moe"), imageRedirectHosts = setOf("cdn.atsu.moe")), "Atsu", "en", probeTitle = "Chico", probeChapter = 3f),
-        LiveProviderProfile(SourceScope("WEEBCENTRAL", setOf("weebcentral.com")), "Weeb Central", "en"),
-        LiveProviderProfile(SourceScope("MANGADEX", setOf("mangadex.org", "api.mangadex.org", "uploads.mangadex.org", "mangadex.network"), setOf("mangadex.network"), imageRedirectHosts = setOf("uploads.mangadex.org")), "MangaDex"),
-        LiveProviderProfile(SourceScope("MANGAPILL", setOf("mangapill.com")), "MangaPill", "en"),
-        LiveProviderProfile(SourceScope("MANGAKATANA", setOf("mangakatana.com")), "MangaKatana", "en")
+        LiveProviderProfile(SourceScope("ATSUMOE", setOf("atsu.moe", "cdn.atsu.moe"), imageRedirectHosts = setOf("cdn.atsu.moe"), imageDomainHosts = setOf("atsu.moe")), "Atsu", "en", probeTitle = "Chico", probeChapter = 3f),
+        LiveProviderProfile(SourceScope("WEEBCENTRAL", setOf("weebcentral.com"), imageDomainHosts = setOf("weebcentral.com")), "Weeb Central", "en"),
+        LiveProviderProfile(SourceScope("MANGADEX", setOf("mangadex.org", "api.mangadex.org", "uploads.mangadex.org", "mangadex.network"), setOf("mangadex.network"), imageRedirectHosts = setOf("uploads.mangadex.org"), imageDomainHosts = setOf("mangadex.org")), "MangaDex"),
+        LiveProviderProfile(SourceScope("MANGAPILL", setOf("mangapill.com"), imageDomainHosts = setOf("mangapill.com")), "MangaPill", "en"),
+        LiveProviderProfile(SourceScope("MANGAKATANA", setOf("mangakatana.com"), imageDomainHosts = setOf("mangakatana.com")), "MangaKatana", "en")
     )
     fun restrictFilter(id: String, filter: MangaListFilter): MangaListFilter = when (id) {
         "MANGADEX", "WEEBCENTRAL" -> filter.copy(contentRating = setOf(ContentRating.SAFE))

@@ -12,12 +12,12 @@ import java.io.IOException
  * Only bounded same-origin or explicitly configured CDN HTTPS redirects are accepted; access denials are not retried. */
 internal class PageDelivery(private val scope: SourceScope, private val session: SourceSession) {
     suspend fun load(url: String): ByteArray = withContext(Dispatchers.IO) {
-        var current = scope.requireUrl(url)
+        var current = scope.requireImageUrl(url)
         val visited = mutableSetOf<HttpUrl>()
         repeat(4) { hop ->
             if (!visited.add(current)) throw IOException("Image redirect loop")
             val request = Request.Builder().url(current).header("Accept", imageAccept(Build.VERSION.SDK_INT)).build()
-            session.client.newCall(request).execute().use { response ->
+            session.imageCall(request).execute().use { response ->
                 if (response.code !in setOf(301, 302, 303, 307, 308)) return@withContext readImage(response)
                 if (hop == 3) throw IOException("Image redirect limit")
                 current = redirectTarget(scope, current, response.header("Location"))
@@ -31,7 +31,7 @@ internal class PageDelivery(private val scope: SourceScope, private val session:
             else "image/webp,image/png,image/jpeg,image/gif"
         private const val MAX_BYTES = 16 * 1024 * 1024
         internal fun redirectTarget(scope: SourceScope, from: HttpUrl, location: String?): HttpUrl {
-            val next = scope.requireUrl(location ?: throw IOException("Missing redirect location"), from.toString())
+            val next = scope.requireImageUrl(location ?: throw IOException("Missing redirect location"), from.toString())
             if (!scope.permitsImageRedirect(from, next)) throw scope.denied(next)
             return next
         }

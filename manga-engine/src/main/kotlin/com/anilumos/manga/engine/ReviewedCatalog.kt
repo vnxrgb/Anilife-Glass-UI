@@ -23,7 +23,7 @@ internal data class LiveProviderProfile(val scope: SourceScope, val label: Strin
  * Known multi-host providers retain narrowly scoped CDN overrides. */
 internal object LiveProviderProfiles {
     private val known = (PrimaryProviderProfiles.profiles + LiveProviderProfile(
-        SourceScope("COMICK_FUN", setOf("comick.live", "comick.art")), "ComicK"
+        SourceScope("COMICK_FUN", setOf("comick.live", "comick.art"), imageDomainHosts = setOf("comick.live", "comick.art")), "ComicK"
     )).associateBy { it.scope.sourceName }
     private val discovered by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { discover(ParserRegistry()) }
     val all: List<LiveProviderProfile> get() = discovered
@@ -145,7 +145,7 @@ public class ReviewedCatalog private constructor(
     }
     override fun close() { closed = true; bridge.close() }
     public companion object {
-        public fun compatibilityRevision(): String = ParserRegistry().revision + ":compat-6"
+        public fun compatibilityRevision(): String = ParserRegistry().revision + ":compat-7"
         public suspend fun providers(): List<Provider> = withContext(Dispatchers.IO) {
             LiveProviderProfiles.all.map { Provider(it.scope.sourceName, it.label, it.locale, it.category) }
         }

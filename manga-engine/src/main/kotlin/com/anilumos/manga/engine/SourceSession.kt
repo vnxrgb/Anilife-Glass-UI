@@ -67,6 +67,27 @@ internal class SourceSession(private val scope: SourceScope, cacheDirectory: Fil
             }
             result
         }.build()
+    // Extended image-only subdomains receive no parser cookies, authorization or custom headers.
+    private val imageOnlyClient by lazy {
+        client.newBuilder().cookieJar(CookieJar.NO_COOKIES).cache(null)
+            .apply { interceptors().clear(); networkInterceptors().clear() }
+            .addInterceptor { chain ->
+                if (closed.get() || offline) throw IOException("Reader session unavailable")
+                val request = chain.request()
+                if (!scope.permitsImage(request.url) || request.method != "GET") throw scope.denied(request.url)
+                val clean = request.newBuilder().removeHeader("Cookie").removeHeader("Authorization")
+                    .removeHeader("Proxy-Authorization").removeHeader("Referer").build()
+                val result = chain.proceed(clean)
+                if (result.code in setOf(401, 403, 429, 451)) {
+                    val code = result.code
+                    result.close()
+                    throw ProviderAccessException(code)
+                }
+                result
+            }.build()
+    }
+    fun imageCall(request: okhttp3.Request): okhttp3.Call =
+        if (scope.permits(request.url)) client.newCall(request) else imageOnlyClient.newCall(request)
     fun requireBrowserOrigin(baseUrl: String) { scope.requireUrl(baseUrl) }
     suspend fun evaluateRemoteDocument(baseUrl: String, script: String, timeout: Long): String? {
         if (offline || closed.get()) throw ProviderFeatureException(UnsupportedFeature.BROWSER_EXECUTION)
