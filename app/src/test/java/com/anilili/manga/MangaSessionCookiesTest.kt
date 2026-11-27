@@ -15,4 +15,14 @@ class MangaSessionCookiesTest {
         assertTrue(jar.loadForRequest("https://other.example/chapter".toHttpUrl()).isEmpty())
         assertTrue(jar.loadForRequest("http://example.com/chapter".toHttpUrl()).isEmpty())
     }
+    @Test fun clearingProviderCookiesDoesNotClearOtherDomains() {
+        val jar = MangaSessionCookies()
+        val a = okhttp3.HttpUrl.Builder().scheme("https").host("example.org").build()
+        val b = okhttp3.HttpUrl.Builder().scheme("https").host("example.net").build()
+        jar.saveFromResponse(a, listOf(requireNotNull(okhttp3.Cookie.parse(a, "session=one; Secure; Path=/"))))
+        jar.saveFromResponse(b, listOf(requireNotNull(okhttp3.Cookie.parse(b, "session=two; Secure; Path=/"))))
+        jar.clearDomain(a.host)
+        org.junit.Assert.assertTrue(jar.loadForRequest(a).isEmpty())
+        org.junit.Assert.assertEquals("two", jar.loadForRequest(b).single().value)
+    }
 }

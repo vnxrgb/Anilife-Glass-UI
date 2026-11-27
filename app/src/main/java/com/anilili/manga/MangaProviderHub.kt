@@ -238,7 +238,7 @@ private fun ProviderSettings(source: MangaSource, prefs: MangaProviderPreference
             }
         }
         item {
-            Text("Connection", style = MaterialTheme.typography.titleMedium)
+            Text("Provider status", style = MaterialTheme.typography.titleMedium)
             Text(health.label, color = MaterialTheme.colorScheme.onSurfaceVariant)
             website?.let { Text("Domain: " + (it.toHttpUrlOrNull()?.host ?: it), style = MaterialTheme.typography.bodyMedium) }
         }
@@ -264,11 +264,12 @@ private fun ProviderSettings(source: MangaSource, prefs: MangaProviderPreference
             }
         }
         website?.let { url ->
+            item { Text("Network", style = MaterialTheme.typography.titleMedium) }
             item {
                 Row(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(18.dp)).clickable {
                     runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }.onFailure { message = "No browser available." }
                 }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Open provider website", modifier = Modifier.weight(1f))
+                    Column(Modifier.weight(1f)) { Text("Open in web browser"); Text(url, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     Icon(Icons.Default.OpenInNew, null)
                 }
             }
@@ -276,8 +277,31 @@ private fun ProviderSettings(source: MangaSource, prefs: MangaProviderPreference
                 Row(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(18.dp)).clickable {
                     url.toHttpUrlOrNull()?.host?.let { MangaNetwork.clearDomain(it) }; message = "Provider session cookies cleared."
                 }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) { Text("Clear session cookies"); Text("May sign you out of this provider.", style = MaterialTheme.typography.labelSmall) }
+                    Column(Modifier.weight(1f)) { Text("Clear session cookies"); Text("Clears cookies for this provider domain only. May sign you out.", style = MaterialTheme.typography.labelSmall) }
                     Icon(Icons.Default.DeleteOutline, null)
+                }
+            }
+        }
+        if (source is NativeConfigurableProvider) {
+            item { Text("Advanced", style = MaterialTheme.typography.titleMedium) }
+            item {
+                var slow by remember(source.id, revision) { mutableStateOf(source.sourceConfig().slowRequests()) }
+                Row(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(18.dp)).padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(Icons.Default.Timer, null)
+                    Column(Modifier.weight(1f)) {
+                        Text("Request slowdown")
+                        Text("Space out catalog, chapter and page-resolution requests to reduce server load.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = slow, onCheckedChange = { slow = it; source.sourceConfig().setSlowRequests(it) })
+                }
+            }
+            item {
+                Row(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(18.dp)).padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(Icons.Default.Info, null)
+                    Column {
+                        Text("Manual verification")
+                        Text("If a provider requests verification, open its website and follow its instructions. Browser sessions are separate from AniLumos. Automatic challenge solving is not supported.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }

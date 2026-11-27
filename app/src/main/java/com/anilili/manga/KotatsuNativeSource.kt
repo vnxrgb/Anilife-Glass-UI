@@ -45,6 +45,7 @@ private class NativeParserContext(private val androidContext: android.content.Co
 
 /** Expose every compiled descriptor, including upstream-broken entries as unavailable. */
 internal fun builtInKotatsuSources(androidContext: android.content.Context? = null): List<MangaSource> {
+    androidContext?.let { MangaNetwork.initialize(it.applicationContext) }
     val context = NativeParserContext(androidContext?.applicationContext)
     return context.parsers.sources.filter { source -> sourceAllowed(source.contentType, source.name, source.title, source.isBroken) }
         .distinctBy { it.name }.map { KotatsuNativeSource(context, it) }
@@ -78,6 +79,20 @@ private class KotatsuNativeSource(
     override fun sourceConfig(): NativeSourceConfig = parser.config as NativeSourceConfig
     override fun supportedSorts(): List<SortOrder> = parser.availableSortOrders.toList()
     override fun currentDomain(): String = parser.domain
+    private val requestGate = kotlinx.coroutines.sync.Mutex()
+    private var lastRequestAt = 0L
+    private suspend fun <T> paced(block: suspend () -> T): T {
+        if (!sourceConfig().slowRequests()) return block()
+        requestGate.lock()
+        try {
+            val elapsed = (System.nanoTime() / 1_000_000L) - lastRequestAt
+            if (elapsed < 1500L) kotlinx.coroutines.delay(1500L - elapsed)
+            return block()
+        } finally {
+            lastRequestAt = System.nanoTime() / 1_000_000L
+            requestGate.unlock()
+        }
+    }
     @Volatile private var rawCount = 0
     override fun rawCatalogCount(): Int = rawCount
     override fun websiteUrl(): String? = runCatching { "https://${parser.domain}/".toHttpUrlOrNull()?.toString() }.getOrNull()
@@ -104,7 +119,7 @@ private class KotatsuNativeSource(
         rawCount = 0
         if (!isMangaDex && kind != MangaKind.ALL && kind != sourceKind) return@withContext emptyList()
         val filter = MangaListFilter(query = query.trim().takeIf { it.isNotEmpty() }, originalLocale = originalLocale, contentRating = if (query.isBlank() || parser.filterCapabilities.isSearchWithFiltersSupported) setOf(ContentRating.SAFE) else emptySet())
-        val raw = parser.getList(offset, sort, filter)
+        val raw = paced { parser.getList(offset, sort, filter) }
         rawCount = raw.size
         raw.filter { it.contentRating == ContentRating.SAFE }.map { manga ->
             val mangaId = key(manga)
@@ -125,7 +140,7 @@ private class KotatsuNativeSource(
                 contentRating = null, coverUrl = null, tags = emptySet(), state = null,
                 authors = emptySet(), source = descriptor)
         }
-        val details = parser.getDetails(manga)
+        val details = paced { parser.getDetails(manga) }
         require(details.contentRating == ContentRating.SAFE || (details.contentRating == null && manga.contentRating == ContentRating.SAFE)) { "Title is not confirmed safe" }
         catalog[mangaId] = details
         details.chapters.orEmpty().filter { chapter ->
@@ -153,8 +168,8 @@ private class KotatsuNativeSource(
         val chapter = chapterCache[chapterId] ?: error("Open chapter list again to reload this chapter")
         val headers = parser.getRequestHeaders().toMultimap().mapValues { it.value.joinToString(", ") }
         val base = chapterBases[chapterId] ?: "https://${parser.domain}/"
-        parser.getPages(chapter).mapIndexed { index, page ->
-            val url = normalizePageUrl(parser.getPageUrl(page), base)
+        paced { parser.getPages(chapter) }.mapIndexed { index, page ->
+            val url = normalizePageUrl(paced { parser.getPageUrl(page) }, base)
                 ?: error("Provider returned an unsupported image URL")
             MangaPage(index, url, headers)
         }

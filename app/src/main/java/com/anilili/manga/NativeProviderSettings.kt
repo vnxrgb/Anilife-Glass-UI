@@ -49,6 +49,8 @@ internal class NativeSourceConfig(context: Context?, source: String) : MangaSour
     }
     fun defaultSort(): SortOrder? = prefs?.getString("sort_order", null)?.let { value -> SortOrder.entries.firstOrNull { it.name == value } }
     fun sort(value: SortOrder?) { prefs?.edit()?.putString("sort_order", value?.name)?.apply() }
+    fun slowRequests(): Boolean = prefs?.getBoolean("slow_requests", false) ?: false
+    fun setSlowRequests(value: Boolean) { prefs?.edit()?.putBoolean("slow_requests", value)?.apply() }
     fun reset() { prefs?.edit()?.clear()?.apply() }
 }
 
@@ -61,10 +63,10 @@ internal fun NativeProviderSettings(source: NativeConfigurableProvider, onChange
     val change = { revision++; onChange() }
     key(revision) {
         Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(18.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Parser configuration", style = MaterialTheme.typography.titleMedium)
+            Text("Connection", style = MaterialTheme.typography.titleMedium)
             keys.forEach { key ->
                 when (key) {
-                    is ConfigKey.Domain -> if (key.presetValues.size > 1) ProviderChoice("Provider domain", config[key], key.presetValues.toList().map { it to it }) { config.selectDomain(key, it); change() }
+                    is ConfigKey.Domain -> ProviderChoice("Provider domain", config[key], key.presetValues.toList().map { it to it }) { config.selectDomain(key, it); change() }
                     is ConfigKey.SplitByTranslations -> Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Split by translations", Modifier.weight(1f)); Switch(checked = config[key], onCheckedChange = { config.split(key, it); change() })
                     }
