@@ -162,7 +162,7 @@ jobs:
           LIVE_TITLE: ${{ inputs.live_title }}
           LIVE_AUTHORIZED: ${{ inputs.live_authorized }}
           ATSU_METADATA: ${{ github.event_name == 'push' && github.event.head_commit.message == 'Run one-shot Atsu metadata validation' }}
-          ATSU_CHICO: ${{ github.event_name == 'push' && (github.event.head_commit.message == 'Run one-shot Atsu Chico chapter 3 validation' || github.event.head_commit.message == 'Retest Atsu Chico with Android image format compatibility') }}
+          ATSU_CHICO: ${{ github.event_name == 'push' && (github.event.head_commit.message == 'Run one-shot Atsu Chico chapter 3 validation' || github.event.head_commit.message == 'Retest Atsu Chico with Android image format compatibility' || github.event.head_commit.message == 'Validate bounded legacy Android AVIF decoding') }}
         run: |
           set -euo pipefail
           export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"

@@ -31,6 +31,8 @@ dependencies {
     implementation("com.github.Kotatsu-Redo:kotatsu-parsers-redo:3432a85ac02ce99824cf841aca40bfd3af78ed3f") {
         exclude(group = "org.json", module = "json")
     }
+    // BSD-2-Clause libavif JNI; fallback for platform decoders without AVIF support.
+    implementation("org.aomedia.avif.android:avif:1.3.0.841110fd")
     implementation("com.squareup.okhttp3:okhttp:5.1.0")
     implementation("com.squareup.okio:okio:3.16.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
