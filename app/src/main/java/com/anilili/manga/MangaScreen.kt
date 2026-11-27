@@ -431,7 +431,7 @@ private fun MangaArtwork(title: MangaTitle, modifier: Modifier, contentScale: Co
     Box(modifier.background(MaterialTheme.colorScheme.surfaceContainer), contentAlignment = Alignment.Center) {
         when (val art = model) {
             is android.graphics.Bitmap -> Image(art.asImageBitmap(), title.title, Modifier.fillMaxSize(), contentScale = contentScale)
-            is android.net.Uri -> AsyncImage(art, title.title, Modifier.fillMaxSize(), contentScale = contentScale, imageLoader = MangaNetwork.imageLoader(LocalContext.current))
+            is android.net.Uri -> AsyncImage(model = art, contentDescription = title.title, modifier = Modifier.fillMaxSize(), contentScale = contentScale, imageLoader = MangaNetwork.imageLoader(LocalContext.current))
             else -> Icon(Icons.Default.Book, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .55f), modifier = Modifier.size(32.dp))
         }
     }
