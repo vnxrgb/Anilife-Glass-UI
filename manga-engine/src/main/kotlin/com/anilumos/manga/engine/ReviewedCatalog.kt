@@ -133,7 +133,7 @@ public class ReviewedCatalog private constructor(
     public suspend fun pageCount(chapterId: String): Int = gate.withLock { active(); pagesLocked(chapterId).size }
     public suspend fun decode(chapterId: String, index: Int, width: Int, height: Int): Bitmap = gate.withLock {
         active()
-        require(width in 1..2048 && height in 1..4096)
+        require(width in 1..3072 && height in 1..8192)
         val pages = pagesLocked(chapterId)
         require(index in pages.indices)
         bridge.decode(pages[index], width, height)
