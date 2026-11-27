@@ -23,6 +23,9 @@ import android.view.WindowManager
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.anilili.ui.watch.findActivity
+import com.anilili.ui.watch.PlayerSeekBar
+import com.anilili.ui.dialogs.popupGlass
+import com.anilili.ui.dialogs.rememberPopupBackdrop
 import com.anilili.ui.home.HomeHeroAction
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
@@ -80,7 +83,7 @@ private suspend fun <T> resultOf(block: suspend () -> T): Result<T> =
     try { Result.success(block()) } catch (e: CancellationException) { throw e } catch (e: Exception) { Result.failure(e) }
 
 private fun MangaTitle.identity() = "$sourceId:$id"
-private fun MangaChapter.label() = chapterNumber?.let { "Chapter $it" } ?: "Chapter"
+private fun MangaChapter.label() = chapterNumber?.let { "Chapter $it" } ?: title.takeIf { it.isNotBlank() } ?: "Special chapter"
 private fun MangaTitle.metadata() = listOfNotNull(kind.label.takeUnless { kind == MangaKind.OTHER }, year?.toString(), status.takeIf { it.isNotBlank() }?.replaceFirstChar { it.uppercase() }).joinToString(" · ")
 private fun MangaSaved.readLabel() = listOfNotNull(chapterNumber?.let { "Chapter $it" }, if (chapterId != null) "Page ${page + 1}" else "Bookmarked").joinToString(" · ")
 
@@ -414,7 +417,7 @@ private fun MangaDetailHero(title: MangaTitle, source: MangaSource) {
         }, imageLoader = MangaNetwork.imageLoader(LocalContext.current), contentScale = ContentScale.Crop)
         Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal = device.pagePadding, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
             AsyncImage(title.coverUrl, title.title, modifier = Modifier.width(if (device.isTablet) 90.dp else 78.dp).aspectRatio(2f/3f).clip(RoundedCornerShape(18.dp)), imageLoader = MangaNetwork.imageLoader(LocalContext.current), contentScale = ContentScale.Crop)
-            Column(Modifier.weight(1f).glassCard(RoundedCornerShape(18.dp)).padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.weight(1f).padding(bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(title.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 Text(listOf(title.metadata(), source.displayName).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -483,7 +486,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
     val first = resume ?: chapters.lastOrNull()
     LaunchedEffect(readImmediately, first?.id) { if (readImmediately && first != null) onChapter(first, chapters) }
     Scaffold(modifier = Modifier.fillMaxSize().glassAtmosphere(), containerColor = Color.Transparent,
-        topBar = { PageTitleBar("Details", leading = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") } }) }) { padding ->
+        topBar = { PageTitleBar("", leading = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") } }) }) { padding ->
         BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
             val tablet = maxWidth >= 720.dp
             val hero: @Composable () -> Unit = {
@@ -586,6 +589,12 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
     var fullscreen by rememberSaveable { mutableStateOf(prefs.getBoolean("fullscreen", false)) }
     var awake by rememberSaveable { mutableStateOf(prefs.getBoolean("awake", true)) }
     var magnify by remember { mutableStateOf(false) }
+    var brightness by rememberSaveable { mutableFloatStateOf(prefs.getFloat("brightness", -1f)) }
+    var ambientStrength by rememberSaveable { mutableFloatStateOf(prefs.getFloat("ambient_strength", .55f).coerceIn(.15f, .85f)) }
+    var pageMenu by remember { mutableStateOf(false) }
+    LaunchedEffect(brightness, ambientStrength) {
+        prefs.edit().putFloat("brightness", brightness).putFloat("ambient_strength", ambientStrength).apply()
+    }
     val haptic = LocalHapticFeedback.current
     val pageBackground = when (background) { ReaderBackground.THEME -> MaterialTheme.colorScheme.background; ReaderBackground.LIGHT -> Color.White; ReaderBackground.DARK -> Color(0xFF17171C); ReaderBackground.BLACK -> Color.Black }
     val chromeInk = when (background) { ReaderBackground.LIGHT -> Color(0xFF20212A); ReaderBackground.DARK, ReaderBackground.BLACK -> Color.White; else -> MaterialTheme.colorScheme.onSurface }
@@ -593,19 +602,20 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
     LaunchedEffect(background, ambient, fullscreen, awake) {
         prefs.edit().putString("background", background.name).putBoolean("ambient", ambient).putBoolean("fullscreen", fullscreen).putBoolean("awake", awake).apply()
     }
-    MangaReaderWindow(fullscreen, awake, background == ReaderBackground.LIGHT || (background == ReaderBackground.THEME && MaterialTheme.colorScheme.background.luminance() > .5f))
-    BackHandler(fullscreen && !controls) { controls = true }
+    MangaReaderWindow(fullscreen, awake, brightness, background == ReaderBackground.LIGHT || (background == ReaderBackground.THEME && MaterialTheme.colorScheme.background.luminance() > .5f))
+    BackHandler(!controls || magnify) { magnify = false; controls = true }
     var position by remember(chapter.id) { mutableIntStateOf(store.saved(title)?.takeIf { chapter.matchesSaved(it.chapterId) }?.page ?: 0) }
     LaunchedEffect(chapter.id, retry) {
         loading = true; error = null
         resultOf { source.pages(chapter.id) }.onSuccess { pages = it; if (it.isNotEmpty()) position = position.coerceIn(0, it.lastIndex) }.onFailure { error = healthError(it) }
         loading = false
     }
-    if (chapterMenu) AlertDialog(onDismissRequest = { chapterMenu = false }, title = { Text("Chapters") },
-        text = { LazyColumn(Modifier.heightIn(max = 400.dp)) { items(chapters, key = { it.id }) { entry ->
-            TextButton(onClick = { chapterMenu = false; onChapter(entry) }, modifier = Modifier.fillMaxWidth()) { Text(entry.label() + if (entry.id == chapter.id) " · Reading" else "") }
-        } } }, confirmButton = { TextButton(onClick = { chapterMenu = false }) { Text("Close") } })
-    if (modeMenu) MangaReaderSettings(mode, background, ambient, fullscreen, magnify, awake, onMode = { mode = it }, onBackground = { background = it }, onAmbient = { ambient = it }, onFullscreen = { fullscreen = it }, onMagnify = { magnify = it }, onAwake = { awake = it }, onDismiss = { modeMenu = false })
+    if (chapterMenu) MangaChapterPicker(chapters, chapter, onDismiss = { chapterMenu = false }, onSelect = { chapterMenu = false; onChapter(it) })
+    if (modeMenu) MangaReaderSettings(mode, background, ambient, fullscreen, magnify, awake, brightness, ambientStrength,
+        onMode = { mode = it; magnify = false }, onBackground = { background = it }, onAmbient = { ambient = it },
+        onFullscreen = { fullscreen = it; if (it) controls = false }, onMagnify = { magnify = it; controls = true },
+        onAwake = { awake = it }, onBrightness = { brightness = it }, onAmbientStrength = { ambientStrength = it },
+        onDismiss = { modeMenu = false })
     val barsPadding = if (fullscreen && !controls) Modifier else Modifier.statusBarsPadding().navigationBarsPadding()
     CompositionLocalProvider(LocalContentColor provides chromeInk) {
     Column(Modifier.fillMaxSize().background(pageBackground).then(barsPadding)) {
@@ -617,7 +627,7 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
                     Text(chapter.label(), style = MaterialTheme.typography.labelMedium, color = chromeInk.copy(alpha = .75f))
                 }
                 IconButton(onClick = { chapterMenu = true }) { Icon(Icons.Default.List, "Select chapter", tint = chromeInk) }
-                IconButton(onClick = { fullscreen = !fullscreen; haptic.performHapticFeedback(HapticFeedbackType.LongPress); if (fullscreen) controls = false }) { Icon(if (fullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, "Fullscreen", tint = chromeInk) }
+                IconButton(onClick = { fullscreen = !fullscreen; haptic.performHapticFeedback(HapticFeedbackType.LongPress); controls = !fullscreen; magnify = false }) { Icon(if (fullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, "Fullscreen", tint = chromeInk) }
                 IconButton(onClick = { modeMenu = true }) { Icon(Icons.Default.Settings, "Reader settings", tint = chromeInk) }
 
             }
@@ -629,7 +639,19 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
             val scope = rememberCoroutineScope()
             val list = rememberLazyListState(initialFirstVisibleItemIndex = position.coerceIn(0, pages.lastIndex))
             val pager = rememberPagerState(initialPage = position.coerceIn(0, pages.lastIndex), pageCount = { pages.size })
-            val jump: (Int) -> Unit = { target -> scope.launch { if (mode == ReadingMode.WEBTOON) list.scrollToItem(target) else pager.scrollToPage(target) } }
+            val jump: (Int) -> Unit = { target -> scope.launch {
+                val index = target.coerceIn(0, pages.lastIndex)
+                if (mode == ReadingMode.WEBTOON) list.scrollToItem(index) else pager.scrollToPage(index)
+                position = index
+            } }
+            if (pageMenu) {
+                var pageInput by remember { mutableStateOf((position + 1).toString()) }
+                AlertDialog(onDismissRequest = { pageMenu = false }, title = { Text("Go to page") },
+                    text = { OutlinedTextField(pageInput, { pageInput = it.filter(Char::isDigit).take(6) }, singleLine = true,
+                        label = { Text("Page 1–" + pages.size) }, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)) },
+                    confirmButton = { TextButton(enabled = (pageInput.toIntOrNull() ?: 0) in 1..pages.size, onClick = { jump((pageInput.toIntOrNull() ?: 1) - 1); pageMenu = false }) { Text("Go") } },
+                    dismissButton = { TextButton(onClick = { pageMenu = false }) { Text("Cancel") } })
+            }
             LaunchedEffect(list, pager, mode) {
                 snapshotFlow { if (mode == ReadingMode.WEBTOON) list.firstVisibleItemIndex else pager.settledPage }.distinctUntilChanged().collect { index ->
                     position = index; store.progress(title, chapter.id, index, chapter.chapterNumber, pages.size)
@@ -644,38 +666,41 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
                     val current = pages.getOrNull(position)
                     if (current != null) {
                         val ambientRequest = remember(context, current) { ImageRequest.Builder(context).data(current.imageUrl).headers(current.headers.toHeaders()).size(160, 240).build() }
-                        AsyncImage(ambientRequest, null, imageLoader = MangaNetwork.imageLoader(context), modifier = Modifier.fillMaxSize().blur(42.dp), contentScale = ContentScale.Crop, alpha = .36f)
+                        AsyncImage(ambientRequest, null, imageLoader = MangaNetwork.imageLoader(context), modifier = Modifier.fillMaxSize().blur(42.dp), contentScale = ContentScale.Crop, alpha = ambientStrength)
                     }
                 }
-                if (mode == ReadingMode.WEBTOON) LazyColumn(Modifier.fillMaxHeight().widthIn(max = 760.dp).fillMaxWidth().then(if (ambient) Modifier.padding(horizontal = 8.dp) else Modifier), state = list, userScrollEnabled = !magnify) {
+                if (mode == ReadingMode.WEBTOON) LazyColumn(Modifier.fillMaxHeight().widthIn(max = 760.dp).fillMaxWidth().then(if (ambient) Modifier.padding(horizontal = 12.dp) else Modifier), state = list, userScrollEnabled = !magnify) {
                     items(pages, key = { it.index }) { page -> ReaderImage(page, Modifier.fillMaxWidth(), fit = false, onTap = { if (!magnify) controls = !controls }, magnifierActive = magnify, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) }) }
                 } else HorizontalPager(state = pager, reverseLayout = mode == ReadingMode.RTL, userScrollEnabled = !magnify, modifier = Modifier.fillMaxSize()) { index ->
                     ReaderImage(pages[index], Modifier.fillMaxSize(), fit = true, onTap = { if (!magnify) controls = !controls }, magnifierActive = magnify, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) })
                 }
             }
             AnimatedVisibility(visible = controls) {
-                Column(Modifier.fillMaxWidth().background(chromeSurface).padding(horizontal = 10.dp, vertical = 6.dp)) {
-                    Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(24.dp)).padding(horizontal = 12.dp, vertical = 4.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { modeMenu = true }) { Icon(Icons.Default.MenuBook, "Reading mode", tint = chromeInk) }
-                            IconButton(onClick = { background = ReaderBackground.entries[(background.ordinal + 1) % ReaderBackground.entries.size] }) { Icon(Icons.Default.DarkMode, "Change reader background", tint = chromeInk) }
-                            if (Build.VERSION.SDK_INT >= 31) IconButton(onClick = { ambient = !ambient }) { Icon(Icons.Default.Lightbulb, "Ambient light", tint = if (ambient) MaterialTheme.colorScheme.primary else chromeInk) }
-                            if (Build.VERSION.SDK_INT >= 28) IconButton(onClick = { magnify = !magnify; if (magnify) controls = true }) { Icon(Icons.Default.ZoomIn, "Magnifier", tint = if (magnify) MaterialTheme.colorScheme.primary else chromeInk) }
-                        }
-                        if (magnify) Text("Drag over the page to magnify. Turn off to scroll.", style = MaterialTheme.typography.labelSmall, color = chromeInk, modifier = Modifier.padding(horizontal = 8.dp))
-                        var drag by remember { mutableStateOf<Float?>(null) }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { jump((position - 1).coerceAtLeast(0)) }, enabled = position > 0) { Icon(Icons.Default.ChevronLeft, "Previous page") }
-                            Slider(value = drag ?: position.toFloat(), onValueChange = { drag = it }, onValueChangeFinished = { drag?.let { jump(it.roundToInt().coerceIn(0, pages.lastIndex)) }; drag = null },
-                                enabled = pages.size > 1, valueRange = 0f..pages.lastIndex.coerceAtLeast(1).toFloat(), modifier = Modifier.weight(1f))
-                            IconButton(onClick = { jump((position + 1).coerceAtMost(pages.lastIndex)) }, enabled = position < pages.lastIndex) { Icon(Icons.Default.ChevronRight, "Next page") }
+                val panel = Color(0xFF16171C)
+                val ink = Color.White
+                Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp)
+                    .clip(RoundedCornerShape(22.dp)).background(panel)
+                    .border(.5.dp, ink.copy(alpha = .18f), RoundedCornerShape(22.dp))
+                    .padding(horizontal = 10.dp, vertical = 2.dp)) {
+                    var scrub by remember { mutableStateOf<Long?>(null) }
+                    CompositionLocalProvider(LocalContentColor provides ink) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { jump(position - 1) }, enabled = position > 0) { Icon(Icons.Default.ChevronLeft, "Previous page") }
+                            PlayerSeekBar(positionMs = position * 1000L, durationMs = pages.lastIndex * 1000L,
+                                bufferedPositionMs = position * 1000L, onSeek = { jump((it / 1000f).roundToInt()) },
+                                onScrubChange = { scrub = it }, modifier = Modifier.weight(1f), touchHeight = 28.dp)
+                            IconButton(onClick = { jump(position + 1) }, enabled = position < pages.lastIndex) { Icon(Icons.Default.ChevronRight, "Next page") }
+                            TextButton(onClick = { pageMenu = true }) { Text("${(scrub?.let { (it / 1000f).roundToInt() } ?: position) + 1}/${pages.size}", color = ink) }
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(enabled = previousChapter != null, onClick = { previousChapter?.invoke() }) { Text("Prev chapter") }
-                            Text("${(drag?.roundToInt() ?: position) + 1} / ${pages.size}", style = MaterialTheme.typography.labelMedium)
-                            TextButton(enabled = nextChapter != null, onClick = { nextChapter?.invoke() }) { Text("Next chapter") }
+                            IconButton(enabled = previousChapter != null, onClick = { previousChapter?.invoke() }) { Icon(Icons.Default.SkipPrevious, "Previous chapter") }
+                            IconButton(onClick = { modeMenu = true }) { Icon(Icons.Default.MenuBook, "Reading mode") }
+                            if (Build.VERSION.SDK_INT >= 31) IconButton(onClick = { ambient = !ambient }) { Icon(Icons.Default.Lightbulb, "Ambient light", tint = if (ambient) MaterialTheme.colorScheme.primaryContainer else ink) }
+                            if (Build.VERSION.SDK_INT >= 28) IconButton(onClick = { magnify = !magnify }) { Icon(Icons.Default.ZoomIn, "Magnifier", tint = if (magnify) MaterialTheme.colorScheme.primaryContainer else ink) }
+                            IconButton(onClick = { magnify = false; controls = false }) { Icon(Icons.Default.VisibilityOff, "Hide controls") }
+                            IconButton(enabled = nextChapter != null, onClick = { nextChapter?.invoke() }) { Icon(Icons.Default.SkipNext, "Next chapter") }
                         }
-                        Text(chapter.scanlationGroups.joinToString(", ").ifBlank { source.displayName }, modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 4.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (magnify) Text("Drag to magnify · tap the magnifier again to resume scrolling", color = ink.copy(alpha = .8f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(6.dp))
                     }
                 }
             }
@@ -685,23 +710,26 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
 }
 
 @Composable
-private fun MangaReaderWindow(fullscreen: Boolean, awake: Boolean, light: Boolean) {
+private fun MangaReaderWindow(fullscreen: Boolean, awake: Boolean, brightness: Float, light: Boolean) {
     val activity = LocalContext.current.findActivity()
     DisposableEffect(activity) {
         val window = activity?.window
         val controller = window?.let { WindowInsetsControllerCompat(it, it.decorView) }
         val oldLight = controller?.isAppearanceLightStatusBars
         val oldNavLight = controller?.isAppearanceLightNavigationBars
+        val oldBrightness = window?.attributes?.screenBrightness
         val wasAwake = (window?.attributes?.flags?.and(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) ?: 0) != 0
         onDispose {
             controller?.show(WindowInsetsCompat.Type.systemBars())
+            if (window != null && oldBrightness != null) window.attributes = window.attributes.apply { screenBrightness = oldBrightness }
             if (oldLight != null) controller?.isAppearanceLightStatusBars = oldLight
             if (oldNavLight != null) controller?.isAppearanceLightNavigationBars = oldNavLight
             if (wasAwake) window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
-    LaunchedEffect(activity, fullscreen, awake, light) {
+    LaunchedEffect(activity, fullscreen, awake, brightness, light) {
         val window = activity?.window ?: return@LaunchedEffect
+        window.attributes = window.attributes.apply { screenBrightness = brightness }
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         controller.isAppearanceLightStatusBars = light
         controller.isAppearanceLightNavigationBars = light
@@ -713,7 +741,7 @@ private fun MangaReaderWindow(fullscreen: Boolean, awake: Boolean, light: Boolea
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MangaReaderSettings(mode: ReadingMode, background: ReaderBackground, ambient: Boolean, fullscreen: Boolean, magnify: Boolean, awake: Boolean, onMode: (ReadingMode) -> Unit, onBackground: (ReaderBackground) -> Unit, onAmbient: (Boolean) -> Unit, onFullscreen: (Boolean) -> Unit, onMagnify: (Boolean) -> Unit, onAwake: (Boolean) -> Unit, onDismiss: () -> Unit) {
+private fun MangaReaderSettings(mode: ReadingMode, background: ReaderBackground, ambient: Boolean, fullscreen: Boolean, magnify: Boolean, awake: Boolean, brightness: Float, ambientStrength: Float, onMode: (ReadingMode) -> Unit, onBackground: (ReaderBackground) -> Unit, onAmbient: (Boolean) -> Unit, onFullscreen: (Boolean) -> Unit, onMagnify: (Boolean) -> Unit, onAwake: (Boolean) -> Unit, onBrightness: (Float) -> Unit, onAmbientStrength: (Float) -> Unit, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Reader settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -725,6 +753,16 @@ private fun MangaReaderSettings(mode: ReadingMode, background: ReaderBackground,
             }
             Text("Appearance", style = MaterialTheme.typography.titleSmall)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { ReaderBackground.entries.forEach { option -> FilterChip(selected = background == option, onClick = { onBackground(option) }, label = { Text(option.label) }, shape = CircleShape, colors = cinematicFilterChipColors()) } }
+            Text("Brightness", style = MaterialTheme.typography.titleSmall)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.BrightnessLow, null)
+                Slider(value = if (brightness < 0f) .5f else brightness, onValueChange = onBrightness, valueRange = .05f..1f, modifier = Modifier.weight(1f))
+                TextButton(onClick = { onBrightness(-1f) }) { Text("System") }
+            }
+            if (ambient && Build.VERSION.SDK_INT >= 31) {
+                Text("Ambient intensity", style = MaterialTheme.typography.titleSmall)
+                Slider(value = ambientStrength, onValueChange = onAmbientStrength, valueRange = .15f..0.85f)
+            }
             val toggles = buildList {
                 add(Triple("Fullscreen", fullscreen, onFullscreen))
                 add(Triple("Keep screen awake", awake, onAwake))
@@ -789,7 +827,57 @@ private fun MangaError(message: String, retry: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MangaChapterPicker(chapters: List<MangaChapter>, current: MangaChapter, onDismiss: () -> Unit, onSelect: (MangaChapter) -> Unit) {
+    var query by rememberSaveable { mutableStateOf("") }
+    var newest by rememberSaveable { mutableStateOf(true) }
+    val groups = remember(chapters, query, newest) {
+        val entries = if (newest) chapters else chapters.reversed()
+        entries.filter { it.label().contains(query, true) || it.title.contains(query, true) }
+            .groupBy { it.chapterNumber ?: "special:" + it.title.ifBlank { it.id } }.values.toList()
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss, shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp).padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Chapters", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                TextButton(onClick = { newest = !newest }) { Text(if (newest) "Newest" else "Oldest") }
+            }
+            PageSearchField(query, { query = it }, "Find chapter", "Clear search")
+            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 440.dp)) {
+                items(groups) { releases ->
+                    val first = releases.first()
+                    var expanded by remember(first.id) { mutableStateOf(releases.any { it.id == current.id }) }
+                    val active = releases.any { it.id == current.id }
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                        .background(if (active) glassSelectionColor() else Color.Transparent)
+                        .clickable { if (releases.size == 1) onSelect(first) else expanded = !expanded }.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(first.label(), style = MaterialTheme.typography.titleSmall)
+                            Text(if (releases.size > 1) "${releases.size} releases" else first.scanlationGroups.joinToString(", ").ifBlank { first.language },
+                                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(if (active) Icons.Default.CheckCircle else if (releases.size > 1) Icons.Default.ExpandMore else Icons.Default.ChevronRight, null)
+                    }
+                    if (expanded && releases.size > 1) releases.forEach { release ->
+                        Row(Modifier.fillMaxWidth().padding(start = 16.dp).clip(RoundedCornerShape(10.dp)).clickable { onSelect(release) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(release.scanlationGroups.joinToString(", ").ifBlank { "Release " + (releases.indexOf(release) + 1) }, style = MaterialTheme.typography.bodyMedium)
+                                Text(java.util.Locale.forLanguageTag(release.language).getDisplayLanguage().ifBlank { release.language }, style = MaterialTheme.typography.labelSmall)
+                            }
+                            if (release.id == current.id) Icon(Icons.Default.Check, "Current release", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .45f))
+                }
+            }
+        }
+    }
+}
+
 /** Virtualized source catalog: only the chosen parser is asked for content. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MangaSourcePicker(sources: List<MangaSource>, selected: String?, onDismiss: () -> Unit, onSelect: (MangaSource) -> Unit, onInfo: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -800,8 +888,13 @@ private fun MangaSourcePicker(sources: List<MangaSource>, selected: String?, onD
             (language == "All" || tag.isBlank() || tag == language) && (query.isBlank() || source.displayName.contains(query.trim(), true) || source.languageLabel().contains(query.trim(), true))
         }.sortedWith(compareBy<MangaSource> { it.id != selected }.thenBy { !it.languageTag.startsWith("en") }.thenBy { it.displayName.lowercase() })
     }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Providers") }, text = {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    ModalBottomSheet(onDismissRequest = onDismiss, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Providers", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                TextButton(onClick = onInfo) { Text("Credits") }
+                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close") }
+            }
             PageSearchField(query, { query = it }, "Search providers", "Clear search")
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(listOf("All" to "All", "en" to "EN", "ja" to "JP", "zh" to "ZH", "ko" to "KO")) { (code, label) ->
@@ -811,8 +904,8 @@ private fun MangaSourcePicker(sources: List<MangaSource>, selected: String?, onD
             Text("${filtered.size} available providers", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 items(filtered, key = { it.id }) { source ->
-                    Row(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).clickable { onSelect(source) }.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(Modifier.size(40.dp).glassCard(RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) { Text(source.displayName.take(1).uppercase(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(if (source.id == selected) glassSelectionColor() else Color.Transparent).clickable { onSelect(source) }.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(Modifier.size(38.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) { Icon(Icons.Default.AutoStories, null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(19.dp)) }
                         Column(Modifier.weight(1f)) { Text(source.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(source.languageLabel(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         if (source.id == selected) Icon(Icons.Default.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary)
                         else Icon(Icons.Default.ChevronRight, "Select provider", tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -822,7 +915,7 @@ private fun MangaSourcePicker(sources: List<MangaSource>, selected: String?, onD
             }
             Text("Providers are automatically checked and updated.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-    }, confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }, dismissButton = { TextButton(onClick = onInfo) { Text("Credits") } })
+    }
 }
 
 private fun healthError(error: Throwable): String = when (classifySourceFailure(error)) {
