@@ -29,7 +29,11 @@ internal class NativeSourceConfig(context: Context?, source: String) : MangaSour
         is ConfigKey.Domain -> prefs?.getString(key.key, null)?.takeIf { it in key.presetValues } ?: key.defaultValue
         is ConfigKey.UserAgent -> key.defaultValue
         is ConfigKey.SplitByTranslations -> prefs?.getBoolean(key.key, key.defaultValue) ?: key.defaultValue
-        is ConfigKey.PreferredImageServer -> prefs?.getString(key.key, null)?.let { value -> key.presetValues.keys.firstOrNull { it.orEmpty() == value } } ?: key.defaultValue
+        is ConfigKey.PreferredImageServer -> {
+            val saved = prefs?.getString(key.key, null)
+            if (saved == null || key.presetValues.keys.none { it.orEmpty() == saved }) key.defaultValue
+            else key.presetValues.keys.first { it.orEmpty() == saved }
+        }
         is ConfigKey.ShowSuspiciousContent -> false
         is ConfigKey.InterceptCloudflare -> false
         is ConfigKey.DisableUpdateChecking -> key.defaultValue

@@ -14,7 +14,9 @@ class MangaProviderVerificationTest {
         val shard = System.getenv("MANGA_HEALTH_SHARD")?.toIntOrNull() ?: 0
         val shards = System.getenv("MANGA_HEALTH_SHARDS")?.toIntOrNull() ?: 1
         require(shards in 1..32 && shard in 0 until shards)
-        val sources = builtInKotatsuSources().filter { preferredMangaLanguage(it.languageTag) }.sortedBy { it.id }.filterIndexed { index, _ -> index % shards == shard }
+        val selected = System.getenv("MANGA_HEALTH_IDS")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet().orEmpty()
+        val sources = builtInKotatsuSources().filter { if (selected.isEmpty()) preferredMangaLanguage(it.languageTag) else it.id in selected }.sortedBy { it.id }.filterIndexed { index, _ -> index % shards == shard }
+        require(sources.isNotEmpty()) { "No selected parsers" }
         val file = File(requireNotNull(output))
         file.parentFile?.mkdirs()
         file.writeText("id\tstatus\tstage\n")

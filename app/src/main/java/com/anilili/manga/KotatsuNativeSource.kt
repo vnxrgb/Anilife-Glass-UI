@@ -85,7 +85,7 @@ private class KotatsuNativeSource(
     private val chapterCache = ConcurrentHashMap<String, ParserChapter>()
     private val chapterBases = ConcurrentHashMap<String, String>()
     private fun key(manga: Manga) = if (isMangaDex) manga.url.removePrefix("/") else "${manga.id}|${manga.url}"
-    override suspend fun search(query: String, limit: Int) = catalog(query, MangaKind.ALL, MangaOrder.POPULAR, 0, limit)
+    override suspend fun search(query: String, limit: Int) = catalog(query, MangaKind.ALL, MangaOrder.POPULAR, 0, limit).take(limit)
     override suspend fun catalog(query: String, kind: MangaKind, order: MangaOrder, offset: Int, limit: Int): List<MangaTitle> = withContext(Dispatchers.IO) {
         check(available) { "This source is marked unavailable upstream" }
         val requested = when {
