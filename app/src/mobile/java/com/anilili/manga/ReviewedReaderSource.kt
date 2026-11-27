@@ -91,13 +91,14 @@ private class EngineCatalogSource(
         return session().detail(title.id)?.let(::convert) ?: title
     }
     override val chapterLanguages = listOf("und")
-    private val covers = LinkedHashMap<String, android.graphics.Bitmap?>(4, .75f, true)
+    private val covers = object : android.util.LruCache<String, android.graphics.Bitmap>(24 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: android.graphics.Bitmap): Int = value.allocationByteCount
+    }
     private val lock = Mutex()
     override suspend fun artwork(mangaId: String): Any? = lock.withLock {
         // Saved-list thumbnails must not open a new provider session in the background.
         val active = catalog ?: return@withLock null
-        if (!covers.containsKey(mangaId)) {
-            if (covers.size >= 3) covers.remove(covers.keys.first())
+        if (covers.get(mangaId) == null) {
             val image = try { active.cover(mangaId) }
             catch (e: CancellationException) { throw e }
             catch (e: Exception) {
@@ -106,9 +107,9 @@ private class EngineCatalogSource(
                 null
             }
             // Do not permanently remember a failed cover request as a successful cache entry.
-            if (image != null) covers[mangaId] = image
+            if (image != null && !closed) covers.put(mangaId, image)
         }
-        covers[mangaId]
+        covers.get(mangaId)
     }
     private fun convert(title: ReviewedCatalog.Title) = MangaTitle(id, title.id, title.name,
         cleanMangaDescription(androidx.core.text.HtmlCompat.fromHtml(title.description, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString()), null,
@@ -129,5 +130,5 @@ private class EngineCatalogSource(
             if (health?.read(id, revision)?.reason != "READY") success(true)
             image
         }, sourceId = id) }
-    override fun close() { closed = true; catalog?.close(); catalog = null }
+    override fun close() { closed = true; covers.evictAll(); catalog?.close(); catalog = null }
 }
