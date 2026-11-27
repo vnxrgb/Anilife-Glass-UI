@@ -17,7 +17,9 @@ class MangaReadingStore(context: Context, profileId: String?) {
             MangaSaved(
                 MangaTitle(if (j.getString("source") == "kotatsu:mangadex") "mangadex" else j.getString("source"), if (j.getString("source") == "kotatsu:mangadex") j.getString("id").substringAfter('|') else j.getString("id"), j.getString("title"), j.optString("description"), j.optString("cover").takeIf { it.isNotBlank() },
                     runCatching { MangaKind.valueOf(j.optString("kind")) }.getOrDefault(MangaKind.OTHER),
-                    j.optJSONArray("genres")?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty(), j.optString("status"), j.optInt("year").takeIf { it > 0 }),
+                    j.optJSONArray("genres")?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty(), j.optString("status"), j.optInt("year").takeIf { it > 0 },
+                    j.optJSONArray("authors")?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty(),
+                    j.optJSONArray("alternativeTitles")?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty(), j.optString("largeCover").takeIf { it.isNotBlank() }),
                 j.optBoolean("bookmarked"), j.optString("chapter").takeIf { it.isNotBlank() },
                 j.optInt("page").coerceAtLeast(0), j.optLong("updated"), j.optString("chapterNumber").takeIf { it.isNotBlank() }, j.optInt("pageCount")
             )
@@ -41,6 +43,7 @@ class MangaReadingStore(context: Context, profileId: String?) {
             .put("bookmarked", bookmarked).put("chapter", chapterId.orEmpty()).put("page", page)
             .put("updated", System.currentTimeMillis()).put("chapterNumber", chapterNumber.orEmpty()).put("pageCount", pageCount)
             .put("kind", title.kind.name).put("genres", JSONArray(title.genres)).put("status", title.status).put("year", title.year ?: 0)
+            .put("authors", JSONArray(title.authors)).put("alternativeTitles", JSONArray(title.alternativeTitles)).put("largeCover", title.largeCoverUrl.orEmpty())
         prefs.edit().putString(key(title), j.toString()).apply()
     }
 }

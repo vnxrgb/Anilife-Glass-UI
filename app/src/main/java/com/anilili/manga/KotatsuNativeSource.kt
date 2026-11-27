@@ -69,7 +69,7 @@ private class KotatsuNativeSource(
         else -> listOf(languageTag.replace('_', '-'))
     }
     private val sourceKind = when {
-        descriptor.name.startsWith("WEBTOONS_") || descriptor.name.startsWith("LINEWEBTOONS_") -> MangaKind.MANHWA
+        descriptor.name == "STONESCAPE" || descriptor.name.startsWith("WEBTOONS_") || descriptor.name.startsWith("LINEWEBTOONS_") -> MangaKind.MANHWA
         descriptor.contentType == ContentType.MANHWA -> MangaKind.MANHWA
         descriptor.contentType == ContentType.MANHUA -> MangaKind.MANHUA
         descriptor.contentType == ContentType.MANGA -> MangaKind.MANGA
