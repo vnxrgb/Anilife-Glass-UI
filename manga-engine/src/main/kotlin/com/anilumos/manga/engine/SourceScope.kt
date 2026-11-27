@@ -22,11 +22,16 @@ internal class SourceScope(val sourceName: String, hosts: Set<String>, delegated
     fun permitsImageRedirect(from: HttpUrl, to: HttpUrl): Boolean = permits(from) && permits(to) &&
         (from.host == to.host || to.host in redirectHosts)
 
+    fun denied(url: HttpUrl?): SourceScopeException {
+        val host = url?.host?.takeIf { url.isHttps && url.port == 443 && url.username.isEmpty() && url.password.isEmpty() }
+            ?.let(LiveProviderProfiles::domain)
+        return SourceScopeException(host)
+    }
     fun requireUrl(value: String, base: String? = null): HttpUrl {
         val url = value.toHttpUrlOrNull() ?: base?.toHttpUrlOrNull()?.resolve(value)
-        if (url == null || !permits(url)) throw SourceScopeException()
+        if (url == null || !permits(url)) throw denied(url)
         return url
     }
 }
 
-internal class SourceScopeException : IOException("URL outside reviewed source scope")
+internal class SourceScopeException(val candidateHost: String? = null) : IOException("URL outside reviewed source scope")

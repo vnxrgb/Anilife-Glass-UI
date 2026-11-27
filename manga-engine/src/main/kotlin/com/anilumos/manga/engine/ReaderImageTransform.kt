@@ -9,6 +9,11 @@ import kotlinx.coroutines.withContext
  * Not used to reconstruct protected or scrambled provider images. Caller owns the input
  * and any distinct returned bitmap. */
 internal object ReaderImageTransform {
+    suspend fun resize(input: Bitmap, width: Int, height: Int): Bitmap = withContext(Dispatchers.Default) {
+        require(!input.isRecycled && input.width.toLong() * input.height <= 4_000_000L)
+        require(width in 1..4096 && height in 1..4096 && width.toLong() * height <= 4_000_000L)
+        Bitmap.createScaledBitmap(input, width, height, true)
+    }
     suspend fun rotateQuarterTurns(input: Bitmap, turns: Int): Bitmap = withContext(Dispatchers.Default) {
         require(!input.isRecycled && input.width.toLong() * input.height <= 4_000_000L)
         val normalized = Math.floorMod(turns, 4)

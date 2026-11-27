@@ -11,5 +11,7 @@ class LocalScriptDeviceTest {
         LocalScriptRuntime.initialize(InstrumentationRegistry.getInstrumentation().targetContext)
         assertEquals("42", LocalScriptRuntime.evaluate("String(6 * 7)", 8000))
         assertEquals("fixture", LocalScriptRuntime.evaluate("document.body.textContent='fixture'; document.body.textContent", 8000))
+        val snapshot = RemoteDocumentRuntime.sanitize("<h1 id='title'>Rendered</h1><script>document.body.textContent='unsafe'</script>")
+        assertEquals("Rendered", LocalScriptRuntime.evaluate("document.getElementById('title').textContent", 8000, snapshot))
     }
 }

@@ -26,8 +26,8 @@ public object LocalScriptRuntime {
     public fun initialize(context: Context) { application = context.applicationContext }
 
     @SuppressLint("SetJavaScriptEnabled")
-    internal suspend fun evaluate(script: String, timeoutMs: Long): String? {
-        require(script.length <= 512 * 1024)
+    internal suspend fun evaluate(script: String, timeoutMs: Long, bodyHtml: String = ""): String? {
+        require(script.length <= 512 * 1024 && bodyHtml.length <= 512 * 1024)
         val context = application ?: throw ProviderFeatureException(UnsupportedFeature.BROWSER_EXECUTION)
         return gate.withLock {
             withContext(Dispatchers.Main.immediate) {
@@ -60,7 +60,7 @@ public object LocalScriptRuntime {
                                     }
                                 }
                             }
-                            view.loadDataWithBaseURL(null, "<!doctype html><meta charset=utf-8><meta http-equiv=Content-Security-Policy content=\"default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; connect-src 'none'; form-action 'none'\"><body></body>", "text/html", "UTF-8", null)
+                            view.loadDataWithBaseURL(null, "<!doctype html><meta charset=utf-8><meta http-equiv=Content-Security-Policy content=\"default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; connect-src 'none'; form-action 'none'\"><body>$bodyHtml</body>", "text/html", "UTF-8", null)
                         }
                     }
                 } finally {

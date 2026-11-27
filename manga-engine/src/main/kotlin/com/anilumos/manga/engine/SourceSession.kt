@@ -58,7 +58,7 @@ internal class SourceSession(private val scope: SourceScope, cacheDirectory: Fil
         .addInterceptor { chain ->
             if (closed.get()) throw IOException("Reader session closed")
             if (offline) throw IOException("Network disabled during offline audit")
-            if (!scope.permits(chain.request().url)) throw SourceScopeException()
+            if (!scope.permits(chain.request().url)) throw scope.denied(chain.request().url)
             val result = chain.proceed(headers.apply(chain.request()))
             if (result.code == 401 || result.code == 403 || result.code == 429 || result.code == 451) {
                 val code = result.code
@@ -68,6 +68,11 @@ internal class SourceSession(private val scope: SourceScope, cacheDirectory: Fil
             result
         }.build()
     fun requireBrowserOrigin(baseUrl: String) { scope.requireUrl(baseUrl) }
+    suspend fun evaluateRemoteDocument(baseUrl: String, script: String, timeout: Long): String? {
+        if (offline || closed.get()) throw ProviderFeatureException(UnsupportedFeature.BROWSER_EXECUTION)
+        val url = scope.requireUrl(baseUrl)
+        return RemoteDocumentRuntime.evaluate(this, url.toString(), script, timeout)
+    }
     suspend fun evaluateLocalScript(script: String, timeout: Long): String? {
         if (offline || closed.get()) throw ProviderFeatureException(UnsupportedFeature.BROWSER_EXECUTION)
         return try { LocalScriptRuntime.evaluate(script, timeout) }

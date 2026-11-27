@@ -32,7 +32,7 @@ internal class PageDelivery(private val scope: SourceScope, private val session:
         private const val MAX_BYTES = 16 * 1024 * 1024
         internal fun redirectTarget(scope: SourceScope, from: HttpUrl, location: String?): HttpUrl {
             val next = scope.requireUrl(location ?: throw IOException("Missing redirect location"), from.toString())
-            if (!scope.permitsImageRedirect(from, next)) throw SourceScopeException()
+            if (!scope.permitsImageRedirect(from, next)) throw scope.denied(next)
             return next
         }
         internal fun readImage(response: Response): ByteArray {

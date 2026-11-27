@@ -27,8 +27,7 @@ internal class AndroidParserContext(
     override suspend fun evaluateJs(script: String): String? =
         session.evaluateLocalScript(script, 5_000L)
     override suspend fun evaluateJs(baseUrl: String, script: String, timeout: Long): String? {
-        session.requireBrowserOrigin(baseUrl)
-        return session.evaluateLocalScript(script, timeout)
+        return session.evaluateRemoteDocument(baseUrl, script, timeout)
     }
     override fun redrawImageResponse(response: Response, redraw: (Bitmap) -> Bitmap): Response =
         throw ProviderFeatureException(UnsupportedFeature.PARSER_IMAGE_TRANSFORM)

@@ -36,6 +36,8 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:5.1.0")
     implementation("com.squareup.okio:okio:3.16.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("org.jsoup:jsoup:1.21.2")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     testImplementation(libs.junit)

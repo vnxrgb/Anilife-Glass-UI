@@ -28,6 +28,7 @@ internal class MangaProviderState {
     var selectedId by mutableStateOf(REVIEWED_SOURCE_ID)
     val failures = mutableMapOf<String, Long>()
     val failureReasons = mutableStateMapOf<String, String>()
+    val diagnostics = mutableStateMapOf<String, ProviderDiagnostic>()
     var generation = 0L
     var discovering by mutableStateOf(false)
     var candidateCount by mutableIntStateOf(0)
@@ -73,10 +74,11 @@ internal fun rememberMangaProviderState(enabled: Boolean): MangaProviderState {
                                 val verified = descriptor.cached()
                                 opened = verified
                                 state.sources[descriptor.id] = verified
-                                state.unavailable.remove(descriptor.id); state.failureReasons.remove(descriptor.id); state.failures.remove(descriptor.id)
+                                state.unavailable.remove(descriptor.id); state.failureReasons.remove(descriptor.id); state.diagnostics.remove(descriptor.id); state.failures.remove(descriptor.id)
                                 awaitCancellation()
                             } else {
                                 state.unavailable[descriptor.id] = true; state.failureReasons[descriptor.id] = cached.reason
+                                state.diagnostics[descriptor.id] = ProviderDiagnostic(cached.reason.substringBefore('/'), cached.reason.substringAfter('/', "UNKNOWN"))
                                 delay(cached.remainingMs)
                                 state.failures.remove(descriptor.id)
                             }
@@ -115,6 +117,7 @@ internal fun rememberMangaProviderState(enabled: Boolean): MangaProviderState {
                                 state.sources[descriptor.id] = verified
                                 state.unavailable.remove(descriptor.id)
                                 state.failureReasons.remove(descriptor.id)
+                                state.diagnostics.remove(descriptor.id)
                                 state.failures.remove(descriptor.id)
                                 health.record(descriptor.id, descriptor.revision, true, "READY")
                                 if (first) { state.checkedCount++; first = false }
@@ -126,6 +129,7 @@ internal fun rememberMangaProviderState(enabled: Boolean): MangaProviderState {
                                     state.unavailable[descriptor.id] = true
                                     val reason = providerFailureReason(e)
                                     state.failureReasons[descriptor.id] = reason
+                                    state.diagnostics[descriptor.id] = providerDiagnostic(e)
                                     health.record(descriptor.id, descriptor.revision, false, reason)
                                     if (first) { state.checkedCount++; first = false }
                                 }

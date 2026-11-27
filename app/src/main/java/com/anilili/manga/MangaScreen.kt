@@ -249,6 +249,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         }
         return
     }
+    val reportContext = LocalContext.current
     if (providerMenu) AlertDialog(
         onDismissRequest = { providerMenu = false },
         title = { Text("Providers") },
@@ -284,6 +285,12 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                     }
                 }
                 if (!reviewedBusy && readers.isEmpty()) Text("No verified online readers currently available.", style = MaterialTheme.typography.bodySmall)
+                if (providerState.diagnostics.isNotEmpty()) {
+                    TextButton(onClick = {
+                        val clipboard = reportContext.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Manga provider diagnostics", providerCompatibilityReport(providerState.diagnostics.toMap())))
+                    }) { Text("Copy compatibility report") }
+                }
                 if (providerState.failureReasons.isNotEmpty()) {
                     val counts = providerState.failureReasons.values.groupingBy { it.substringBefore('/') }.eachCount()
                     Text(counts.entries.sortedByDescending { it.value }.take(4).joinToString(" · ") { (reason, count) -> reason.lowercase().replace('_', ' ') + ": " + count }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
