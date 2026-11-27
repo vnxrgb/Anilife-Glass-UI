@@ -74,7 +74,12 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     val healthContext = LocalContext.current
     val health = remember(healthContext) { MangaSourceHealthStore(healthContext) }
     val healthStates by health.states.collectAsState()
-    var sourceId by rememberSaveable { mutableStateOf("mangadex") }
+    var verifiedIds by remember(healthContext) { mutableStateOf(MangaVerifiedSources.cached(healthContext)) }
+    var sourceId by rememberSaveable { mutableStateOf(verifiedIds.firstOrNull { it == "mangadex" } ?: verifiedIds.firstOrNull().orEmpty()) }
+    LaunchedEffect(healthContext) {
+        verifiedIds = MangaVerifiedSources.refresh(healthContext)
+        if (sourceId.isEmpty()) sourceId = registry.all().firstOrNull { it.id in verifiedIds }?.id.orEmpty()
+    }
     var query by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf(MangaKind.ALL) }
     var order by rememberSaveable { mutableStateOf(MangaOrder.POPULAR) }
@@ -117,7 +122,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         listState.scrollToItem(0)
         catalogGeneration++; moreLoading = false
         loading = true; error = null; results = emptyList(); recent = emptyList(); offset = 0; hasMore = false
-        if (provider == null) error = "Source unavailable"
+        if (provider == null) error = "No verified source selected. Open the source picker to check an additional source."
         else resultOf { provider.catalog(if (browse) query.trim() else "", kind, order, limit = 24) }
             .onSuccess { results = it; offset = it.size; hasMore = it.size == 24; if (it.isNotEmpty()) health.record(provider.id, SourceHealth.CATALOG) }
             .onFailure { health.record(provider.id, classifySourceFailure(it)); error = healthError(it) }
@@ -127,11 +132,13 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
             resultOf { provider.catalog("", kind, MangaOrder.RECENT, limit = 12) }.onSuccess { recent = it }
         }
     }
-    if (sourceMenu) MangaSourcePicker(registry.all(), healthStates, provider?.id, onDismiss = { sourceMenu = false }, onSelect = { source ->
+    if (sourceMenu) MangaSourcePicker(registry.all(), healthStates, verifiedIds, provider?.id, onCheck = { source ->
+        val result = probeMangaSource(source); health.record(source.id, result.health)
+    }, onDismiss = { sourceMenu = false }, onSelect = { source ->
         sourceId = source.id; kind = MangaKind.ALL; genre = null; sourceMenu = false; retry++
     }, onInfo = { sourceMenu = false; attribution = true })
     if (attribution) AlertDialog(onDismissRequest = { attribution = false }, title = { Text("Built-in sources") },
-        text = { Text("Catalog and chapters come from the built-in Kotatsu-Redo parser library. Adult categories and unconfirmed content ratings are excluded. Known broken sources are omitted. Health is observed locally; catalog success is not proof every chapter works. Availability and access rights vary by provider; no external extensions are installed. Chapter credits are shown when provided.") },
+        text = { Text("Catalog and chapters come from the built-in Kotatsu-Redo parser library. Adult categories and unconfirmed content ratings are excluded. Known broken sources are omitted. Automated verification checks one safe sample on the CI network; local checks may differ. Catalog success is not proof every chapter works. Availability and access rights vary by provider; no external extensions are installed. Chapter credits are shown when provided.") },
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
     val title = selected
     val activeChapter = chapter
@@ -233,11 +240,11 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                         }
                     }
                 }
-                if (home && saved.any { it.chapterId != null }) item("continue") {
+                if (home && saved.any { it.chapterId != null && registry.byId(it.title.sourceId) != null }) item("continue") {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         MangaHeading("Continue Reading")
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(saved.filter { it.chapterId != null }, key = { it.title.identity() }) { entry ->
+                            items(saved.filter { it.chapterId != null && registry.byId(it.title.sourceId) != null }, key = { it.title.identity() }) { entry ->
                                 MangaContinueCard(entry, Modifier.width(170.dp)) { selected = results.firstOrNull { it.identity() == entry.title.identity() } ?: entry.title }
                             }
                         }
@@ -572,17 +579,19 @@ private fun MangaError(message: String, retry: () -> Unit) {
 
 /** Virtualized source catalog: only the chosen parser is asked for content. */
 @Composable
-private fun MangaSourcePicker(sources: List<MangaSource>, health: Map<String, SourceHealth>, selected: String?, onDismiss: () -> Unit, onSelect: (MangaSource) -> Unit, onInfo: () -> Unit) {
+private fun MangaSourcePicker(sources: List<MangaSource>, health: Map<String, SourceHealth>, verifiedIds: Set<String>, selected: String?, onCheck: suspend (MangaSource) -> Unit, onDismiss: () -> Unit, onSelect: (MangaSource) -> Unit, onInfo: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     var language by rememberSaveable { mutableStateOf<String?>(null) }
     var filter by rememberSaveable { mutableStateOf("Working") }
+    val checkScope = rememberCoroutineScope()
+    var checking by remember { mutableStateOf<String?>(null) }
     val languages = remember(sources) { sources.map { it.languageLabel() }.distinct().sorted() }
-    val filtered = remember(sources, query, language, filter, health) {
+    val filtered = remember(sources, query, language, filter, health, verifiedIds) {
         val q = query.trim()
         sources.filter { source -> val status = health[source.id] ?: SourceHealth.UNTESTED
             val matchesHealth = when (filter) {
-                "Working" -> status == SourceHealth.CATALOG || status == SourceHealth.VERIFIED
-                "Untested" -> status == SourceHealth.UNTESTED
+                "Working" -> status == SourceHealth.VERIFIED || (source.id in verifiedIds && status in setOf(SourceHealth.UNTESTED, SourceHealth.CATALOG))
+                "Additional" -> status == SourceHealth.CATALOG || (source.id !in verifiedIds && status == SourceHealth.UNTESTED)
                 else -> status in setOf(SourceHealth.RESTRICTED, SourceHealth.SERVER_TLS, SourceHealth.FAILED)
             }
             matchesHealth && (language == null || source.languageLabel() == language) &&
@@ -594,9 +603,9 @@ private fun MangaSourcePicker(sources: List<MangaSource>, health: Map<String, So
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PageSearchField(query, { query = it }, "Search sources or languages", "Clear search")
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                listOf("Working", "Untested", "Failed").forEach { label -> FilterChip(selected = filter == label, onClick = { filter = label }, label = { Text(label) }, shape = CircleShape, colors = cinematicFilterChipColors()) }
+                listOf("Working", "Additional", "Failed").forEach { label -> FilterChip(selected = filter == label, onClick = { filter = label }, label = { Text(label) }, shape = CircleShape, colors = cinematicFilterChipColors()) }
             }
-            if (filter == "Untested") Text("Choose a source to check its catalog on your network.", style = MaterialTheme.typography.labelSmall)
+            if (filter == "Additional") Text("Check a source on your current network before selecting it.", style = MaterialTheme.typography.labelSmall)
             if (filter == "Failed") Text("Choose a source only to retry it. Access restrictions and server TLS errors are not bypassed.", style = MaterialTheme.typography.labelSmall)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 FilterChip(selected = language == null, onClick = { language = null }, label = { Text("All") }, shape = CircleShape, colors = cinematicFilterChipColors())
@@ -608,12 +617,13 @@ private fun MangaSourcePicker(sources: List<MangaSource>, health: Map<String, So
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(enabled = source.available) { onSelect(source) }.padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(source.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(listOf(source.languageLabel(), source.sourceCategory, (health[source.id] ?: SourceHealth.UNTESTED).label).filterNotNull().joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(listOf(source.languageLabel(), source.sourceCategory, (health[source.id]?.label ?: if (source.id in verifiedIds) "CI verified" else "Untested")).filterNotNull().joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         if (source.id == selected) Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                        TextButton(enabled = checking == null, onClick = { checking = source.id; checkScope.launch { try { onCheck(source) } finally { checking = null } } }) { Text(if (checking == source.id) "Checking…" else "Check") }
                     }
                 }
-                if (filtered.isEmpty()) item { Text(if (filter == "Working") "No working sources observed yet. Check a source under Untested." else "No matching sources", Modifier.padding(12.dp)) }
+                if (filtered.isEmpty()) item { Text(if (filter == "Working") "No verified sources yet. Check a source under Additional." else "No matching sources", Modifier.padding(12.dp)) }
             }
         }
     }, confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }, dismissButton = { TextButton(onClick = onInfo) { Text("Credits") } })
