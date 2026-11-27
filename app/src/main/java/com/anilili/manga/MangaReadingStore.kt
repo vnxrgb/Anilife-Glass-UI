@@ -15,14 +15,14 @@ class MangaReadingStore(context: Context, profileId: String?) {
         runCatching {
             val j = JSONObject(value as String)
             MangaSaved(
-                MangaTitle(j.getString("source"), j.getString("id"), j.getString("title"), j.optString("description"), j.optString("cover").takeIf { it.isNotBlank() },
+                MangaTitle(if (j.getString("source") == "kotatsu:mangadex") "mangadex" else j.getString("source"), if (j.getString("source") == "kotatsu:mangadex") j.getString("id").substringAfter('|') else j.getString("id"), j.getString("title"), j.optString("description"), j.optString("cover").takeIf { it.isNotBlank() },
                     runCatching { MangaKind.valueOf(j.optString("kind")) }.getOrDefault(MangaKind.OTHER),
                     j.optJSONArray("genres")?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty(), j.optString("status"), j.optInt("year").takeIf { it > 0 }),
                 j.optBoolean("bookmarked"), j.optString("chapter").takeIf { it.isNotBlank() },
                 j.optInt("page").coerceAtLeast(0), j.optLong("updated"), j.optString("chapterNumber").takeIf { it.isNotBlank() }, j.optInt("pageCount")
             )
         }.getOrNull()
-    }.sortedByDescending { it.updated }
+    }.sortedByDescending { it.updated }.distinctBy { key(it.title) }
 
     fun saved(title: MangaTitle): MangaSaved? = all().firstOrNull { it.title.sourceId == title.sourceId && it.title.id == title.id }
 

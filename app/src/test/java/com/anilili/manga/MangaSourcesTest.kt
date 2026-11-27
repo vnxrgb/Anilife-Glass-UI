@@ -11,6 +11,22 @@ class MangaSourcesTest {
         override suspend fun pages(chapterId: String) = emptyList<MangaPage>()
     }
 
+    @Test fun kotatsuCatalogExposesAllDescriptorsAndSingleMangaDex() {
+        val sources = builtInKotatsuSources()
+        assertTrue(sources.size >= 1000)
+        assertEquals(sources.size, sources.map { it.id }.distinct().size)
+        assertEquals(1, sources.count { it.id == "mangadex" })
+        assertTrue(sources.any { it.languageTag == "en" })
+        assertSame(MangaSources(sources).byId("mangadex"), MangaSources(sources).byId("kotatsu:mangadex"))
+    }
+
+    @Test fun canonicalChapterMatchesPriorKotatsuIdentity() {
+        val chapter = MangaChapter("mangadex", "uuid", "title", "", "1", "en", previousParserId = "42")
+        assertTrue(chapter.matchesSaved("uuid"))
+        assertTrue(chapter.matchesSaved("42"))
+        assertFalse(chapter.matchesSaved(null))
+    }
+
     @Test fun builtInProvidersResolveByStableId() {
         val first = Fake("first")
         val second = Fake("second")

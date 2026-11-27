@@ -70,7 +70,7 @@ fun MangaScreen(onBack: () -> Unit, section: MangaSection = MangaSection.HOME) {
 
 @Composable
 private fun MangaDestination(store: MangaReadingStore, section: MangaSection, onBack: () -> Unit) {
-    val registry = remember { MangaSources(listOf(MangaDexSource()) + builtInKotatsuSources()) }
+    val registry = remember { MangaSources(builtInKotatsuSources()) }
     var sourceId by rememberSaveable { mutableStateOf("mangadex") }
     var query by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf(MangaKind.ALL) }
@@ -124,8 +124,11 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
             resultOf { provider.catalog("", kind, MangaOrder.RECENT, limit = 12) }.onSuccess { recent = it }
         }
     }
+    if (sourceMenu) MangaSourcePicker(registry.all(), provider?.id, onDismiss = { sourceMenu = false }, onSelect = { source ->
+        sourceId = source.id; kind = MangaKind.ALL; genre = null; sourceMenu = false
+    }, onInfo = { sourceMenu = false; attribution = true })
     if (attribution) AlertDialog(onDismissRequest = { attribution = false }, title = { Text("Built-in sources") },
-        text = { Text("Catalog and chapters come from the selected built-in provider, including MangaDex and Kotatsu-Redo adapters. Availability varies by title. Chapter credits are shown when provided.") },
+        text = { Text("Catalog and chapters come from the built-in Kotatsu-Redo parser library. Upstream-broken entries are listed but disabled. Availability and access rights vary by provider; no external extensions are installed. Chapter credits are shown when provided.") },
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
     val title = selected
     val activeChapter = chapter
@@ -165,11 +168,9 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                         else -> "Downloads"
                     }, trailing = { if (browse) IconButton(onClick = { sourceMenu = true }) { Icon(Icons.Default.Storage, "Built-in sources") } })
                     ContentModeSwitcher()
-                    Box {
-                        DropdownMenu(expanded = sourceMenu, onDismissRequest = { sourceMenu = false }) {
-                            registry.all().forEach { source -> DropdownMenuItem(text = { Text(source.displayName) }, onClick = { sourceId = source.id; sourceMenu = false }) }
-                            DropdownMenuItem(text = { Text("Source information") }, onClick = { sourceMenu = false; attribution = true })
-                        }
+                    if (home || browse) TextButton(onClick = { sourceMenu = true }, modifier = Modifier.padding(horizontal = device.pagePadding)) {
+                        Text(provider?.displayName ?: "Select source", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Icon(Icons.Default.ArrowDropDown, "Change source")
                     }
                 }
             }
@@ -360,7 +361,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
     var loading by remember(title) { mutableStateOf(true) }
     var error by remember(title) { mutableStateOf<String?>(null) }
     var retry by remember { mutableIntStateOf(0) }
-    var language by rememberSaveable(title.id) { mutableStateOf("en") }
+    var language by rememberSaveable(title.sourceId, title.id) { mutableStateOf(source.chapterLanguages.firstOrNull() ?: "und") }
     var ascending by rememberSaveable(title.id) { mutableStateOf(true) }
     var expanded by rememberSaveable(title.id) { mutableStateOf(false) }
     LaunchedEffect(title.id, language, retry) {
@@ -369,7 +370,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
         loading = false
     }
     val sorted = if (ascending) chapters.reversed() else chapters
-    val resume = chapters.firstOrNull { it.id == saved?.chapterId }
+    val resume = chapters.firstOrNull { it.matchesSaved(saved?.chapterId) }
     val first = resume ?: chapters.lastOrNull()
     Scaffold(modifier = Modifier.fillMaxSize().glassAtmosphere(), containerColor = Color.Transparent,
         topBar = { PageTitleBar("Details", leading = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") } }) }) { padding ->
@@ -396,7 +397,8 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
                         TextButton(onClick = { ascending = !ascending }) { Icon(Icons.Default.Sort, null); Text(if (ascending) "Oldest" else "Newest") }
                     }
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("en" to "English", "es" to "Spanish", "fr" to "French").forEach { (code, label) ->
+                        source.chapterLanguages.forEach { code ->
+                            val label = if (code == "und") "All languages" else java.util.Locale.forLanguageTag(code).getDisplayLanguage(java.util.Locale.ENGLISH).ifBlank { code }
                             FilterChip(selected = language == code, onClick = { language = code }, label = { Text(label) }, colors = cinematicFilterChipColors(), shape = CircleShape)
                         }
                     }
@@ -411,9 +413,9 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(listOf(entry.label(), entry.title).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text(entry.scanlationGroups.joinToString(", ").ifBlank { source.displayName }, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        if (saved?.chapterId == entry.id) Text("Resume · Page ${saved.page + 1}", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
+                        if (entry.matchesSaved(saved?.chapterId)) Text("Resume · Page ${(saved?.page ?: 0) + 1}", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
                     }
-                    Icon(if (saved?.chapterId == entry.id) Icons.Default.PlayArrow else Icons.Default.ChevronRight, "Open chapter", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(if (entry.matchesSaved(saved?.chapterId)) Icons.Default.PlayArrow else Icons.Default.ChevronRight, "Open chapter", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f))
             }
@@ -441,7 +443,7 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
     var controls by rememberSaveable { mutableStateOf(true) }
     var background by rememberSaveable { mutableStateOf(ReaderBackground.THEME) }
     val pageBackground = when (background) { ReaderBackground.THEME -> MaterialTheme.colorScheme.background; ReaderBackground.LIGHT -> Color.White; ReaderBackground.BLACK -> Color.Black }
-    var position by remember(chapter.id) { mutableIntStateOf(store.saved(title)?.takeIf { it.chapterId == chapter.id }?.page ?: 0) }
+    var position by remember(chapter.id) { mutableIntStateOf(store.saved(title)?.takeIf { chapter.matchesSaved(it.chapterId) }?.page ?: 0) }
     LaunchedEffect(chapter.id, retry) {
         loading = true; error = null
         resultOf { source.pages(chapter.id) }.onSuccess { pages = it; if (it.isNotEmpty()) position = position.coerceIn(0, it.lastIndex) }.onFailure { error = it.message ?: "Unable to load pages" }
@@ -558,4 +560,41 @@ private fun MangaError(message: String, retry: () -> Unit) {
         Text(message, color = MaterialTheme.colorScheme.error)
         OutlinedButton(onClick = retry) { Text("Try again") }
     }
+}
+
+/** Virtualized source catalog: only the chosen parser is asked for content. */
+@Composable
+private fun MangaSourcePicker(sources: List<MangaSource>, selected: String?, onDismiss: () -> Unit, onSelect: (MangaSource) -> Unit, onInfo: () -> Unit) {
+    var query by rememberSaveable { mutableStateOf("") }
+    var language by rememberSaveable { mutableStateOf<String?>(null) }
+    val languages = remember(sources) { sources.map { it.languageLabel() }.distinct().sorted() }
+    val filtered = remember(sources, query, language) {
+        val q = query.trim()
+        sources.filter { source -> (language == null || source.languageLabel() == language) &&
+            (q.isEmpty() || listOf(source.displayName, source.languageTag, source.languageLabel(), source.sourceCategory).any { it.contains(q, true) }) }
+    }
+    val state = rememberLazyListState()
+    LaunchedEffect(query, language) { state.scrollToItem(0) }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Manga sources") }, text = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            PageSearchField(query, { query = it }, "Search sources or languages", "Clear search")
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FilterChip(selected = language == null, onClick = { language = null }, label = { Text("All") }, shape = CircleShape, colors = cinematicFilterChipColors())
+                languages.forEach { label -> FilterChip(selected = language == label, onClick = { language = label }, label = { Text(label) }, shape = CircleShape, colors = cinematicFilterChipColors()) }
+            }
+            Text("${filtered.size} of ${sources.size} built-in sources", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LazyColumn(state = state, modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+                items(filtered, key = { it.id }) { source ->
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(enabled = source.available) { onSelect(source) }.padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(source.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(listOf(source.languageLabel(), source.sourceCategory, if (source.available) null else "Unavailable upstream").filterNotNull().joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (source.id == selected) Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                if (filtered.isEmpty()) item { Text("No matching sources", Modifier.padding(12.dp)) }
+            }
+        }
+    }, confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }, dismissButton = { TextButton(onClick = onInfo) { Text("Credits") } })
 }

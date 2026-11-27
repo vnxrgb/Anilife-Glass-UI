@@ -17,6 +17,7 @@ import org.koitharu.kotatsu.parsers.model.MangaChapter as ParserChapter
 import org.koitharu.kotatsu.parsers.model.MangaSource as ParserSource
 import org.koitharu.kotatsu.parsers.model.ParserMangaSource
 import org.koitharu.kotatsu.parsers.model.MangaListFilter
+import org.koitharu.kotatsu.parsers.model.ContentType
 import org.koitharu.kotatsu.parsers.model.ContentRating
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import java.util.concurrent.ConcurrentHashMap
@@ -44,63 +45,86 @@ private class NativeParserContext : MangaLoaderContext() {
         throw UnsupportedOperationException("Image transformations are not supported by this preview")
 }
 
-/**
- * The compiled library is pinned. Expose a deliberately small initial catalog, not every
- * parser indiscriminately. Sources requiring authentication, protected content, browser
- * challenges or image transformations are not enabled in this preview.
- */
+/** Expose every compiled descriptor, including upstream-broken entries as unavailable. */
 internal fun builtInKotatsuSources(): List<MangaSource> {
     val context = NativeParserContext()
-    return listOf("MANGADEX", "WEBTOONS_EN").mapNotNull { name ->
-        context.parsers.findSource(name)?.takeUnless { it.isBroken }?.let { KotatsuNativeSource(context, it) }
-    }
+    return context.parsers.sources.distinctBy { it.name }.map { KotatsuNativeSource(context, it) }
+        .sortedWith(compareBy<MangaSource> { it.id != "mangadex" }.thenBy { !it.available }.thenBy { it.displayName.lowercase(Locale.ROOT) })
 }
 
 private class KotatsuNativeSource(
     context: NativeParserContext,
     private val descriptor: ParserMangaSource,
 ) : MangaSource {
-    override val id = "kotatsu:" + descriptor.name.lowercase(Locale.ROOT)
-    override val displayName = descriptor.title + " · Kotatsu"
+    private val isMangaDex = descriptor.name == "MANGADEX"
+    override val id = if (isMangaDex) "mangadex" else "kotatsu:" + descriptor.name.lowercase(Locale.ROOT)
+    override val displayName = descriptor.title
+    override val languageTag = descriptor.locale
+    override val sourceCategory = descriptor.contentType.name.lowercase(Locale.ROOT).replace('_', ' ').replaceFirstChar { it.uppercase() }
+    override val available = !descriptor.isBroken
+    override val chapterLanguages = when {
+        isMangaDex -> listOf("en", "es", "fr", "ja", "ko", "zh", "pt", "de", "it", "id", "ru", "ar", "th", "vi", "tr", "und")
+        languageTag.isBlank() -> listOf("und")
+        else -> listOf(languageTag.replace('_', '-'))
+    }
+    private val sourceKind = when {
+        descriptor.name.startsWith("WEBTOONS_") || descriptor.name.startsWith("LINEWEBTOONS_") -> MangaKind.MANHWA
+        descriptor.contentType == ContentType.MANHWA -> MangaKind.MANHWA
+        descriptor.contentType == ContentType.MANHUA -> MangaKind.MANHUA
+        descriptor.contentType == ContentType.MANGA -> MangaKind.MANGA
+        else -> MangaKind.OTHER
+    }
     private val parser by lazy { context.newParserInstance(descriptor) }
     private val catalog = ConcurrentHashMap<String, Manga>()
     private val chapterCache = ConcurrentHashMap<String, ParserChapter>()
-    private fun key(manga: Manga) = "${manga.id}|${manga.url}"
+    private fun key(manga: Manga) = if (isMangaDex) manga.url.removePrefix("/") else "${manga.id}|${manga.url}"
     override suspend fun search(query: String, limit: Int) = catalog(query, MangaKind.ALL, MangaOrder.POPULAR, 0, limit)
     override suspend fun catalog(query: String, kind: MangaKind, order: MangaOrder, offset: Int, limit: Int): List<MangaTitle> = withContext(Dispatchers.IO) {
+        check(available) { "This source is marked unavailable upstream" }
         val requested = when {
             query.isNotBlank() -> SortOrder.RELEVANCE
             order == MangaOrder.RECENT -> SortOrder.UPDATED
             else -> SortOrder.POPULARITY
         }
         val sort = requested.takeIf { it in parser.availableSortOrders } ?: parser.availableSortOrders.first()
-        val filter = MangaListFilter(query = query.trim().takeIf { it.isNotEmpty() }, contentRating = setOf(ContentRating.SAFE))
+        val originalLocale = if (isMangaDex) when (kind) {
+            MangaKind.MANGA -> Locale.JAPANESE
+            MangaKind.MANHWA -> Locale.KOREAN
+            MangaKind.MANHUA -> Locale.CHINESE
+            else -> null
+        } else null
+        if (!isMangaDex && kind != MangaKind.ALL && kind != sourceKind) return@withContext emptyList()
+        val filter = MangaListFilter(query = query.trim().takeIf { it.isNotEmpty() }, originalLocale = originalLocale, contentRating = setOf(ContentRating.SAFE))
         parser.getList(offset, sort, filter).filter { it.contentRating != ContentRating.ADULT && it.contentRating != ContentRating.SUGGESTIVE }.map { manga ->
             val mangaId = key(manga)
             catalog[mangaId] = manga
             MangaTitle(id, mangaId, manga.title, manga.description.orEmpty(), manga.coverUrl,
-                kind = if (descriptor.name == "WEBTOONS_EN") MangaKind.MANHWA else MangaKind.OTHER,
+                kind = if (isMangaDex) kind.takeUnless { it == MangaKind.ALL } ?: MangaKind.OTHER else sourceKind,
                 genres = manga.tags.map { it.title }, status = manga.state?.name?.lowercase(Locale.ROOT).orEmpty())
         }.filter { kind == MangaKind.ALL || it.kind == kind }.take(limit)
     }
     override suspend fun chapters(mangaId: String, language: String): List<MangaChapter> = withContext(Dispatchers.IO) {
-        if (language != "en") return@withContext emptyList()
+        check(available) { "This source is marked unavailable upstream" }
         val manga = catalog[mangaId] ?: run {
             val separator = mangaId.indexOf('|')
-            require(separator > 0) { "Invalid saved manga identity" }
-            Manga(id = mangaId.substring(0, separator).toLong(), title = "", altTitles = emptySet(),
-                url = mangaId.substring(separator + 1), publicUrl = "", rating = 0f,
+            require(isMangaDex || separator > 0) { "Invalid saved manga identity" }
+            Manga(id = if (separator > 0) mangaId.substring(0, separator).toLong() else 0L, title = "", altTitles = emptySet(),
+                url = if (separator > 0) mangaId.substring(separator + 1) else mangaId, publicUrl = "", rating = 0f,
                 contentRating = null, coverUrl = null, tags = emptySet(), state = null,
                 authors = emptySet(), source = descriptor)
         }
         val details = parser.getDetails(manga)
         catalog[mangaId] = details
         details.chapters.orEmpty().filter { chapter ->
-            descriptor.name != "MANGADEX" || chapter.branch.isNullOrBlank() || chapter.branch.equals("English", true) || chapter.branch.equals("en", true)
+            if (!isMangaDex || language == "und") true else {
+                val locale = Locale.forLanguageTag(language)
+                val branch = chapter.branch?.substringBefore(" (").orEmpty()
+                branch.equals(locale.getDisplayName(locale), true) || branch.equals(language, true)
+            }
         }.sortedByDescending { it.number }.map { chapter ->
-            val chapterId = chapter.id.toString()
+            val chapterId = if (isMangaDex) chapter.url.removePrefix("/") else chapter.id.toString()
             chapterCache[chapterId] = chapter
-            MangaChapter(id, chapterId, mangaId, chapter.title.orEmpty(), chapter.numberString(), language, listOfNotNull(chapter.scanlator))
+            MangaChapter(id, chapterId, mangaId, chapter.title.orEmpty(), chapter.numberString(), language, listOfNotNull(chapter.scanlator), previousParserId = if (isMangaDex) chapter.id.toString() else null)
         }
     }
     override suspend fun pages(chapterId: String): List<MangaPage> = withContext(Dispatchers.IO) {
