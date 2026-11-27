@@ -50,6 +50,23 @@ class RepositoryFixtureTest {
             override suspend fun resolveLink(context: MangaLoaderContext, link: HttpUrl): Manga? = null
         }
     }
+    @Test fun advertisedGenreAndCategoryFiltersAreValidated() {
+        val tag = MangaTag("action", "Action", source)
+        val second = MangaTag("comedy", "Comedy", source)
+        val options = MangaListFilterOptions(availableTags = setOf(tag, second),
+            availableContentTypes = setOf(ContentType.MANGA))
+        val caps = MangaListFilterCapabilities(isSearchSupported = true, isSearchWithFiltersSupported = true)
+        val filter = reviewedFilter(source.name, " test ", setOf(tag), emptySet(), setOf(ContentType.MANGA),
+            emptySet(), caps, options)
+        assertEquals("test", filter.query)
+        assertEquals(setOf(tag), filter.tags)
+        assertThrows(UnsupportedOperationException::class.java) {
+            reviewedFilter(source.name, "", setOf(tag, second), emptySet(), emptySet(), emptySet(), caps, options)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            reviewedFilter(source.name, "", setOf(tag), setOf(tag), emptySet(), emptySet(), caps, options)
+        }
+    }
     @Test fun browseOnlyParserCanSelectExactApprovedTitle() = runBlocking {
         val scope = SourceScope(source.name, setOf("example.org"))
         SourceSession(scope, offline = true).use { session ->

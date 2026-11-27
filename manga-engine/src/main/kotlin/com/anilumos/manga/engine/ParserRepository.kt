@@ -22,8 +22,9 @@ internal class ParserRepository(
     registry: ParserRegistry,
     private val scope: SourceScope,
     private val session: SourceSession,
+    config: ReviewedSourceConfig = ReviewedSourceConfig(),
 ) {
-    private val parser = registry.bundle.newParser(registry.requireSource(scope), AndroidParserContext(registry.bundle, session))
+    private val parser = registry.bundle.newParser(registry.requireSource(scope), AndroidParserContext(registry.bundle, session, config))
     init { scope.requireUrl("https://" + parser.domain + "/") }
     val supportsSearch: Boolean get() = parser.filterCapabilities.isSearchSupported
     suspend fun approvedTitle(query: String): ApprovedTitleResult {
@@ -38,6 +39,26 @@ internal class ParserRepository(
         val order = requested.takeIf { it in parser.availableSortOrders } ?: parser.availableSortOrders.first()
         val raw = parser.getList(offset, order, filter)
         check(raw.all { it.source.name == scope.sourceName }) { "Unexpected catalog source" }
+        catalogPage(raw, offset)
+    }
+    suspend fun filterOptions(): org.koitharu.kotatsu.parsers.model.MangaListFilterOptions = withContext(Dispatchers.IO) {
+        parser.getFilterOptions().also { options ->
+            check(options.availableTags.all { it.source.name == scope.sourceName }) { "Unexpected genre source" }
+        }
+    }
+    suspend fun browseFiltered(
+        query: String, offset: Int, requested: SortOrder,
+        tags: Set<org.koitharu.kotatsu.parsers.model.MangaTag> = emptySet(),
+        excluded: Set<org.koitharu.kotatsu.parsers.model.MangaTag> = emptySet(),
+        types: Set<org.koitharu.kotatsu.parsers.model.ContentType> = emptySet(),
+        states: Set<org.koitharu.kotatsu.parsers.model.MangaState> = emptySet(),
+    ): CatalogPage = withContext(Dispatchers.IO) {
+        require(offset >= 0)
+        val filter = reviewedFilter(scope.sourceName, query, tags, excluded, types, states,
+            parser.filterCapabilities, filterOptions())
+        if (requested !in parser.availableSortOrders) throw UnsupportedOperationException("Sort unsupported")
+        val raw = parser.getList(offset, requested, filter)
+        check(raw.all { it.source.name == scope.sourceName })
         catalogPage(raw, offset)
     }
     suspend fun details(title: Manga): Manga = withContext(Dispatchers.IO) {

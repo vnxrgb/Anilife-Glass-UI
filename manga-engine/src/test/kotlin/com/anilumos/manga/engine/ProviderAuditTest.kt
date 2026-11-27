@@ -18,11 +18,12 @@ class ProviderAuditTest {
         val report = File("build/reports/provider-compatibility/inventory.tsv")
         report.parentFile.mkdirs()
         fun clean(value: String) = value.replace(Regex("[\\t\\r\\n]"), " ")
-        report.writeText("id\ttitle\tlocale\tcategory\toffline_state\tsearch\tsorts\treason\tlive_status\n" +
+        report.writeText("id\ttitle\tlocale\tcategory\toffline_state\tsearch\tsorts\treason\tcombined_search\tmultiple_genres\texclude_genres\tlive_status\n" +
             rows.joinToString("\n") { row ->
                 listOf(row.descriptor.id, row.descriptor.title, row.descriptor.locale, row.descriptor.category,
                     row.state.name, row.search?.toString().orEmpty(), row.sortOrders.joinToString(","), row.reason,
-                    "NOT_TESTED_BY_AUDIT").joinToString("\t", transform = ::clean)
+                    row.combinedSearch?.toString().orEmpty(), row.multipleGenres?.toString().orEmpty(),
+                    row.excludeGenres?.toString().orEmpty(), "NOT_TESTED_BY_AUDIT").joinToString("\t", transform = ::clean)
             } + "\n")
         File(report.parentFile, "summary.txt").writeText(
             "Parser revision: ${registry.revision}\nTotal descriptors: ${rows.size}\n" +

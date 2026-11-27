@@ -5,7 +5,6 @@ import okhttp3.Response
 import org.koitharu.kotatsu.parsers.MangaLoaderContext
 import org.koitharu.kotatsu.parsers.ParsersBundle
 import org.koitharu.kotatsu.parsers.bitmap.Bitmap
-import org.koitharu.kotatsu.parsers.config.ConfigKey
 import org.koitharu.kotatsu.parsers.config.MangaSourceConfig
 import org.koitharu.kotatsu.parsers.model.MangaSource
 import java.util.Locale
@@ -15,6 +14,7 @@ import java.util.Locale
 internal class AndroidParserContext(
     override val parsers: ParsersBundle,
     private val session: SourceSession,
+    private val sourceConfig: ReviewedSourceConfig = ReviewedSourceConfig(),
 ) : MangaLoaderContext() {
     override val cookieJar get() = session.cookies
     override val httpClient get() = session.client
@@ -22,7 +22,7 @@ internal class AndroidParserContext(
     override fun getPreferredLocales() = listOf(Locale.getDefault(), Locale.ENGLISH).distinct()
     override fun encodeBase64(data: ByteArray): String = Base64.encodeToString(data, Base64.NO_WRAP)
     override fun decodeBase64(data: String): ByteArray = Base64.decode(data, Base64.DEFAULT)
-    override fun getConfig(source: MangaSource): MangaSourceConfig = DefaultConfig
+    override fun getConfig(source: MangaSource): MangaSourceConfig = sourceConfig
     @Deprecated("Provide base URL")
     override suspend fun evaluateJs(script: String): String? =
         throw UnsupportedOperationException("Browser execution is not enabled in this phase")
@@ -32,12 +32,5 @@ internal class AndroidParserContext(
         throw UnsupportedOperationException("Parser image transformation is not enabled in this phase")
     override fun createBitmap(width: Int, height: Int): Bitmap =
         throw UnsupportedOperationException("Parser image transformation is not enabled in this phase")
-    private object DefaultConfig : MangaSourceConfig {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T> get(key: ConfigKey<T>): T = when (key) {
-            is ConfigKey.ShowSuspiciousContent -> false
-            is ConfigKey.InterceptCloudflare -> false
-            else -> key.defaultValue
-        } as T
-    }
+
 }

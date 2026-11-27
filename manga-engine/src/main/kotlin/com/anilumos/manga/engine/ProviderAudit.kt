@@ -10,6 +10,9 @@ internal data class CapabilityRow(
     val search: Boolean? = null,
     val sortOrders: List<String> = emptyList(),
     val reason: String = "",
+    val combinedSearch: Boolean? = null,
+    val multipleGenres: Boolean? = null,
+    val excludeGenres: Boolean? = null,
 )
 
 /** Static capability inventory. Initialization never grants network permission. */
@@ -29,7 +32,10 @@ internal class ProviderAudit(private val registry: ParserRegistry) {
             val parser = registry.bundle.newParser(registry.requireSource(scope), AndroidParserContext(registry.bundle, session))
             CapabilityRow(descriptor, AuditState.INITIALIZED,
                 parser.filterCapabilities.isSearchSupported,
-                parser.availableSortOrders.map { it.name }.sorted())
+                parser.availableSortOrders.map { it.name }.sorted(),
+                combinedSearch = parser.filterCapabilities.isSearchWithFiltersSupported,
+                multipleGenres = parser.filterCapabilities.isMultipleTagsSupported,
+                excludeGenres = parser.filterCapabilities.isTagsExclusionSupported)
         }
     } catch (e: CancellationException) {
         throw e
