@@ -67,6 +67,28 @@ class RepositoryFixtureTest {
             reviewedFilter(source.name, "", setOf(tag), setOf(tag), emptySet(), emptySet(), caps, options)
         }
     }
+    @Test fun readerBridgePreservesPaginationAndRejectsForeignHandles() = runBlocking {
+        val scope = SourceScope(source.name, setOf("example.org"))
+        val registry = ParserRegistry(bundle(listOf(title(1, ContentRating.SAFE))))
+        val a = SourceSession(scope, offline = true)
+        val b = SourceSession(scope, offline = true)
+        ReaderSessionBridge.fixture(ParserRepository(registry, scope, a), a).use { first ->
+            ReaderSessionBridge.fixture(ParserRepository(registry, scope, b), b).use { second ->
+                val list = first.browse("", 5, SortOrder.POPULARITY)
+                assertEquals(6, list.nextOffset)
+                assertEquals("1", list.titles.single().id)
+                val detail = first.details(list.titles.single())
+                assertEquals("10", detail.chapters.single().id)
+                val pages = first.pages(detail.chapters.single())
+                assertEquals(0, pages.single().index)
+                assertTrue(runCatching { second.details(list.titles.single()) }.exceptionOrNull() is IllegalArgumentException)
+                assertTrue(runCatching { second.pages(detail.chapters.single()) }.exceptionOrNull() is IllegalArgumentException)
+                assertTrue(runCatching { second.decode(pages.single()) }.exceptionOrNull() is IllegalArgumentException)
+            }
+            first.close()
+            assertTrue(runCatching { first.browse("", 0, SortOrder.POPULARITY) }.exceptionOrNull() is IllegalStateException)
+        }
+    }
     @Test fun browseOnlyParserCanSelectExactApprovedTitle() = runBlocking {
         val scope = SourceScope(source.name, setOf("example.org"))
         SourceSession(scope, offline = true).use { session ->
