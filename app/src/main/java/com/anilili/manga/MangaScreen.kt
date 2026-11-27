@@ -1,6 +1,8 @@
 package com.anilili.manga
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -109,13 +111,14 @@ fun MangaScreen(onBack: () -> Unit, section: MangaSection = MangaSection.HOME, o
 
 @Composable
 private fun MangaDestination(store: MangaReadingStore, section: MangaSection, onBack: () -> Unit, onHeroUnderBarsChanged: (Boolean) -> Unit) {
-    val registry = remember { MangaSources(builtInKotatsuSources()) }
     val healthContext = LocalContext.current
+    val localSource = remember(healthContext) { LocalMangaSource(healthContext) }
+    val registry = remember(localSource) { MangaSources(builtInKotatsuSources() + localSource) }
     val health = remember(healthContext) { MangaSourceHealthStore(healthContext) }
     val healthStates by health.states.collectAsState()
     LaunchedEffect(health) { while (true) { health.refresh(); delay(30_000L) } }
     val sourcePrefs = remember(healthContext) { healthContext.getSharedPreferences("manga_source_selection", android.content.Context.MODE_PRIVATE) }
-    val catalogSources = remember(registry) { registry.all().filter { it.available } }
+    val catalogSources = remember(registry) { registry.all().filter { it.available && it.id != LocalMangaSource.ID } }
     val providerPrefs = remember(healthContext) { MangaProviderPreferences(healthContext) }
     val enabledSources = remember(catalogSources, providerPrefs.disabled, providerPrefs.enabled) { catalogSources.filter { providerPrefs.isEnabled(it) } }
     val selectableSources = remember(enabledSources, healthStates, providerPrefs.pinned) {
@@ -159,7 +162,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     var sourceMenu by remember { mutableStateOf(false) }
     var attribution by remember { mutableStateOf(false) }
     val openSaved: (MangaSaved, Boolean) -> Unit = { entry, resume ->
-        if (enabledSources.any { it.id == entry.title.sourceId }) { readImmediately = resume; selected = entry.title }
+        if (entry.title.sourceId == LocalMangaSource.ID || enabledSources.any { it.id == entry.title.sourceId }) { readImmediately = resume; selected = entry.title }
         else unavailableTitle = entry.title
     }
     collectionEdit?.let { entry ->
@@ -176,6 +179,19 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
             dismissButton = { TextButton(onClick = { store.setCategory(entry, null); collectionGeneration++; collectionEdit = null }) { Text("Remove") } })
     }
     val scope = rememberCoroutineScope()
+    var importBusy by remember { mutableStateOf(false) }
+    var importError by remember { mutableStateOf<String?>(null) }
+    val importArchive = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null && !importBusy) scope.launch {
+            importBusy = true
+            resultOf { localSource.importArchive(uri) }.onSuccess { title ->
+                store.bookmark(title, true); saved = store.all(); readImmediately = true; selected = title
+            }.onFailure { importError = it.message ?: "Could not import archive." }
+            importBusy = false
+        }
+    }
+    importError?.let { message -> AlertDialog(onDismissRequest = { importError = null }, title = { Text("Import failed") },
+        text = { Text(message) }, confirmButton = { TextButton(onClick = { importError = null }) { Text("Close") } }) }
     val provider = enabledSources.firstOrNull { it.id == sourceId }
     val home = section == MangaSection.HOME
     val browse = section == MangaSection.BROWSE
@@ -217,7 +233,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
     val title = selected
     val activeChapter = chapter
-    val titleSource = title?.let { entry -> catalogSources.firstOrNull { it.id == entry.sourceId } }
+    val titleSource = title?.let { entry -> registry.byId(entry.sourceId) }
     if (title != null && titleSource != null) {
         SideEffect { onHeroUnderBarsChanged(false) }
         AppChromeTakeoverEffect()
@@ -255,7 +271,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                         MangaSection.BROWSE -> "Browse"
                         MangaSection.LIBRARY -> "My List"
                         else -> "Downloads"
-                    }, trailing = { if (browse) TextButton(onClick = { sourceMenu = true }) { Icon(Icons.Default.Storage, null); Spacer(Modifier.width(4.dp)); Text("Providers") } })
+                    }, trailing = { if (browse) TextButton(onClick = { sourceMenu = true }) { Icon(Icons.Default.Storage, null); Spacer(Modifier.width(4.dp)); Text("Providers") } else if (library) TextButton(onClick = { importArchive.launch(arrayOf("application/zip", "application/vnd.comicbook+zip", "application/octet-stream")) }, enabled = !importBusy) { Icon(Icons.Default.FolderOpen, null); Spacer(Modifier.width(4.dp)); Text(if (importBusy) "Importing…" else "Import") } })
 
                 }
             }
@@ -373,7 +389,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                                 Text(entry.title.title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 Text(entry.readLabel(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 if (entry.pageCount > 0) LinearProgressIndicator(progress = { ((entry.page + 1f) / entry.pageCount).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
-                                if (catalogSources.none { it.id == entry.title.sourceId }) Text("Provider unavailable", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (registry.byId(entry.title.sourceId) == null) Text("Provider unavailable", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             IconButton(onClick = { collectionEdit = entry.title }) { Icon(Icons.Default.FolderOpen, "Reading collection") }
                         }
