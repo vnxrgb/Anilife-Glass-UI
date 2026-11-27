@@ -129,7 +129,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     LaunchedEffect(enabledSources) {
         if (enabledSources.none { it.id == sourceId }) {
             sourceId = selectableSources.firstOrNull { sourceReady(healthStates[it.id] ?: SourceHealth.UNTESTED) && it.languageTag.startsWith("en") }?.id
-                ?: selectableSources.firstOrNull { sourceReady(healthStates[it.id] ?: SourceHealth.UNTESTED) }?.id.orEmpty()
+                ?: selectableSources.firstOrNull { sourceCanBrowse(healthStates[it.id] ?: SourceHealth.UNTESTED) }?.id.orEmpty()
         }
     }
     LaunchedEffect(sourceId) { if (sourceId.isNotEmpty()) sourcePrefs.edit().putString("provider", sourceId).apply() }
@@ -214,7 +214,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         catalogGeneration++; moreLoading = false
         loading = true; error = null; results = emptyList(); recent = emptyList(); offset = 0; hasMore = false
         if (provider == null) error = "Choose a provider to browse manga."
-        else if (!sourceReady(healthStates[provider.id] ?: SourceHealth.UNTESTED)) error = "This provider is temporarily unavailable. Choose another provider or try again after its cooldown."
+        else if (!sourceCanBrowse(healthStates[provider.id] ?: SourceHealth.UNTESTED)) error = "This provider has an active access, certificate or rate-limit restriction. Try again after its cooldown."
         else resultOf { provider.catalog(if (browse) query.trim() else "", kind, order, limit = 24) }
             .onSuccess { results = it; offset = (provider as? NativeConfigurableProvider)?.rawCatalogCount() ?: it.size; hasMore = offset > 0; if (it.isNotEmpty()) health.record(provider.id, SourceHealth.CATALOG) else if (offset > 0) { health.record(provider.id, SourceHealth.CATALOG); error = "Provider responded, but no titles met the content-rating filter." } }
             .onFailure { health.record(provider.id, classifySourceFailure(it)); error = healthError(it) }
@@ -537,7 +537,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
     var chapterQuery by rememberSaveable(title.id) { mutableStateOf("") }
     LaunchedEffect(title.id, language, retry) {
         chapters = emptyList(); loading = true; error = null
-        resultOf { source.chapters(title.id, language) }.onSuccess { chapters = it; details = source.enrichedTitle(title); if (it.isNotEmpty()) health.record(source.id, SourceHealth.CATALOG) }.onFailure { health.record(source.id, classifySourceFailure(it)); error = healthError(it) }
+        resultOf { source.chapters(title.id, language) }.onSuccess { chapters = it; details = source.enrichedTitle(title); if (it.isNotEmpty()) health.record(source.id, SourceHealth.CATALOG) }.onFailure { health.recordReaderFailure(source.id, classifySourceFailure(it)); error = healthError(it) }
         loading = false
     }
     val sorted = (if (ascending) chapters.reversed() else chapters).filter { chapterQuery.isBlank() || it.label().contains(chapterQuery, true) || it.title.contains(chapterQuery, true) }
@@ -673,7 +673,7 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
     var position by remember(chapter.id) { mutableIntStateOf(store.saved(title)?.takeIf { chapter.matchesSaved(it.chapterId) }?.page ?: 0) }
     LaunchedEffect(chapter.id, retry) {
         loading = true; error = null
-        resultOf { source.pages(chapter.id) }.onSuccess { pages = it; if (it.isNotEmpty()) position = position.coerceIn(0, it.lastIndex) }.onFailure { health.record(source.id, classifySourceFailure(it)); error = healthError(it) }
+        resultOf { source.pages(chapter.id) }.onSuccess { pages = it; if (it.isNotEmpty()) position = position.coerceIn(0, it.lastIndex) }.onFailure { health.recordReaderFailure(source.id, classifySourceFailure(it)); error = healthError(it) }
         loading = false
     }
     if (chapterMenu) MangaChapterPicker(chapters, chapter, store, title, onDismiss = { chapterMenu = false }, onSelect = { chapterMenu = false; onChapter(it) })

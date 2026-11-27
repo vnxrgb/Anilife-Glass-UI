@@ -107,7 +107,7 @@ internal fun MangaProviderHub(
             (query.isBlank() || it.displayName.contains(query.trim(), true) || it.languageLabel().contains(query.trim(), true))
     }
     val filtered = matching.filter {
-        if (!manage) prefs.isEnabled(it) && sourceReady(health[it.id] ?: SourceHealth.UNTESTED)
+        if (!manage) prefs.isEnabled(it) && sourceCanBrowse(health[it.id] ?: SourceHealth.UNTESTED)
         else when (filter) { ProviderFilter.ALL -> true; ProviderFilter.ENABLED -> prefs.isEnabled(it); ProviderFilter.DISABLED -> !prefs.isEnabled(it) }
     }.sortedWith(compareBy<MangaSource> { it.id !in prefs.pinned }.thenBy { sourceHealthRank(health[it.id] ?: SourceHealth.UNTESTED) }.thenBy { it.displayName.lowercase(Locale.ROOT) })
     val back: () -> Unit = { if (settingsId != null) settingsId = null else if (manage) { manage = false; query = ""; category = "All"; language = "All" } else onDismiss() }
@@ -243,12 +243,12 @@ private fun ProviderSettings(source: MangaSource, prefs: MangaProviderPreference
             website?.let { Text("Domain: " + (it.toHttpUrlOrNull()?.host ?: it), style = MaterialTheme.typography.bodyMedium) }
         }
         item {
-            OutlinedButton(enabled = !testing && sourceReady(health), onClick = {
+            OutlinedButton(enabled = !testing && sourceCanBrowse(health), onClick = {
                 testing = true
                 scope.launch {
                     try {
                         val result = probeMangaSource(source)
-                        healthStore.record(source.id, result.health)
+                        if (result.stage in setOf("chapters", "pages", "image", "timeout-chapters", "timeout-pages", "timeout-image")) healthStore.recordReaderFailure(source.id, result.health) else healthStore.record(source.id, result.health)
                         message = result.health.label + " · " + result.stage
                     } finally { testing = false }
                 }

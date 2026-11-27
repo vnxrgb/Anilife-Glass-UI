@@ -19,6 +19,15 @@ class MangaSourceHealthTest {
         assertFalse(sourceReady(SourceHealth.SERVER_TLS))
         assertFalse(sourceReady(SourceHealth.RATE_LIMITED))
     }
+    @Test fun transientFailuresCanBeRetriedButRestrictionsRemainBlocked() {
+        assertTrue(sourceCanBrowse(SourceHealth.FAILED))
+        assertFalse(sourceCanBrowse(SourceHealth.RATE_LIMITED))
+        assertFalse(sourceCanBrowse(SourceHealth.SERVER_TLS))
+        assertFalse(sourceCanBrowse(SourceHealth.RESTRICTED))
+        assertEquals(SourceHealth.CATALOG, downstreamHealth(SourceHealth.VERIFIED, SourceHealth.FAILED))
+        assertEquals(SourceHealth.CATALOG, downstreamHealth(SourceHealth.CATALOG, SourceHealth.FAILED))
+        assertEquals(SourceHealth.RESTRICTED, downstreamHealth(SourceHealth.CATALOG, SourceHealth.RESTRICTED))
+    }
     @Test fun classifiesRateLimitSeparately() {
         assertEquals(SourceHealth.RATE_LIMITED, classifySourceFailure(java.io.IOException("HTTP 429")))
         assertEquals(SourceHealth.RESTRICTED, classifySourceFailure(java.io.IOException("HTTP 403")))

@@ -34,6 +34,9 @@ internal fun sourceHealthRank(status: SourceHealth): Int = when (status) {
     SourceHealth.RESTRICTED, SourceHealth.SERVER_TLS -> 4
 }
 internal fun sourceReady(status: SourceHealth): Boolean = sourceHealthRank(status) <= 2
+internal fun sourceCanBrowse(status: SourceHealth): Boolean = sourceReady(status) || status == SourceHealth.FAILED
+internal fun downstreamHealth(previous: SourceHealth, failure: SourceHealth): SourceHealth =
+    if (failure == SourceHealth.FAILED && previous in setOf(SourceHealth.CATALOG, SourceHealth.VERIFIED)) SourceHealth.CATALOG else failure
 internal fun classifySourceFailure(error: Throwable): SourceHealth {
     val messages = generateSequence(error) { it.cause?.takeUnless { cause -> cause === it } }
         .take(8).joinToString(" ") { it.message.orEmpty() + " " + it.javaClass.simpleName }
@@ -59,6 +62,16 @@ internal class MangaSourceHealthStore(context: Context) {
     private fun snapshot(): Map<String, SourceHealth> = observations.mapValues { it.value.current(System.currentTimeMillis()) }
     @Synchronized fun refresh() { mutable.value = snapshot() }
     @Synchronized fun reset(id: String) { observations.remove(id); prefs.edit().remove(id).apply(); mutable.value = snapshot() }
+    @Synchronized fun recordReaderFailure(id: String, failure: SourceHealth) {
+        val prior = observations[id]?.current(System.currentTimeMillis()) ?: SourceHealth.UNTESTED
+        val status = downstreamHealth(prior, failure)
+        if (status != failure) {
+            val next = SourceObservation(status, System.currentTimeMillis())
+            observations[id] = next
+            prefs.edit().putString(id, "${next.status.name}|${next.checkedAt}|${next.failures}").apply()
+            mutable.value = snapshot()
+        } else record(id, failure)
+    }
     @Synchronized fun record(id: String, status: SourceHealth) {
         val old = observations[id]
         if (status == SourceHealth.CATALOG && old?.current(System.currentTimeMillis()) == SourceHealth.VERIFIED) return
