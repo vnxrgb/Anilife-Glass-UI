@@ -12,11 +12,11 @@ Kuroha at 394d2b5719f94a5db3a663fee4702241ea3f82bb declares parser revision 3432
 - Source-scoped HTTPS-only session, no automatic redirects or shared credentials; bounded optional HTTP cache and in-memory cookies.
 - Android parser host with explicit unsupported-operation failures rather than silent null results; default configuration.
 - Provider-native browse/search, catalog raw-offset accounting, details and chapter/page references for reviewed sources. Explicit SAFE rating only; unrated is not verified safe. No bulk live tests.
-- Unit tests for compiled contract, source scope, session isolation and empty-page accounting. Dedicated CI compiles this module only.
+- Unit tests for compiled contract, source scope, session isolation, empty-page accounting, and synthetic catalog-to-page requests including filtered pagination and out-of-scope image rejection. Dedicated CI compiles this module only.
 
 ## Remaining gates
 
-1. Resolve pinned dependency and pass CI. Add fixture-based tests of catalogs, nonempty pagination, chapter and image pipeline; obtain permission for representative sources and test on Android. Differentiate empty/filtered catalogs, network failure, unsupported operation, access restrictions and rating metadata.
+1. Resolve pinned dependency and pass CI. Expand the synthetic fixture tests to actual image delivery; obtain permission for representative sources and test on Android. Differentiate empty/filtered catalogs, network failure, unsupported operation, access restrictions and rating metadata.
 2. Implement authorized page delivery, source-aware headers, cache, permitted redirects and normal image handling for approved sources. Assess legitimate browser interaction and persisted per-source settings. Access-control bypass is not part of this project checkpoint.
 3. Determine upstream GPLv3 and AniLife distribution compatibility before linking module to app. This module is not yet packaged with AniLumos. Keep notices; Kuroha's own permission does not replace underlying rights.
 4. Only then integrate backed-up UI and reader via neutral models. Downloads for permitted content after reader tests.

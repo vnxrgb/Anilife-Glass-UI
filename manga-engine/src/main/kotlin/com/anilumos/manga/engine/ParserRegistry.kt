@@ -5,6 +5,7 @@ import org.koitharu.kotatsu.parsers.ParsersApi
 import org.koitharu.kotatsu.parsers.ParsersBundle
 import org.koitharu.kotatsu.parsers.core.ParsersBundleImpl
 import org.koitharu.kotatsu.parsers.model.ParserMangaSource
+import org.koitharu.kotatsu.parsers.model.ContentType
 
 internal data class SourceDescriptor(
     val id: String, val title: String, val locale: String,
@@ -23,6 +24,7 @@ internal class ParserRegistry(val bundle: ParsersBundle = ParsersBundleImpl) {
     fun requireSource(scope: SourceScope): ParserMangaSource {
         val source = bundle.findSource(scope.sourceName) ?: error("Unknown parser source")
         check(!source.isBroken) { "Source marked broken by its parser bundle" }
+        check(source.contentType in setOf(ContentType.MANGA, ContentType.MANHWA, ContentType.MANHUA, ContentType.COMICS, ContentType.ONE_SHOT)) { "Source category not supported" }
         return source
     }
 }

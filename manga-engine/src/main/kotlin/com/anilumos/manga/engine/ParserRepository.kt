@@ -31,17 +31,20 @@ internal class ParserRepository(
         if (clean.isNotEmpty()) check(parser.filterCapabilities.isSearchSupported) { "Search unsupported" }
         val filter = MangaListFilter(query = clean.ifEmpty { null })
         val order = requested.takeIf { it in parser.availableSortOrders } ?: parser.availableSortOrders.first()
-        catalogPage(parser.getList(offset, order, filter), offset)
+        val raw = parser.getList(offset, order, filter)
+        check(raw.all { it.source.name == scope.sourceName }) { "Unexpected catalog source" }
+        catalogPage(raw, offset)
     }
     suspend fun details(title: Manga): Manga = withContext(Dispatchers.IO) {
         require(title.source.name == scope.sourceName && title.contentRating == ContentRating.SAFE)
         val result = parser.getDetails(title)
         check(result.source.name == scope.sourceName && result.id == title.id && result.url == title.url)
         check((result.contentRating ?: title.contentRating) == ContentRating.SAFE)
-        result
+        result.copy(contentRating = result.contentRating ?: title.contentRating)
     }
-    suspend fun pages(chapter: MangaChapter): List<MangaPage> = withContext(Dispatchers.IO) {
-        require(chapter.source.name == scope.sourceName)
+    suspend fun pages(title: Manga, chapter: MangaChapter): List<MangaPage> = withContext(Dispatchers.IO) {
+        require(title.source.name == scope.sourceName && title.contentRating == ContentRating.SAFE)
+        require(chapter.source.name == scope.sourceName && title.chapters.orEmpty().any { it == chapter })
         parser.getPages(chapter).also { pages -> check(pages.all { it.source.name == scope.sourceName }) }
     }
     suspend fun imageUrl(page: MangaPage): String = withContext(Dispatchers.IO) {
