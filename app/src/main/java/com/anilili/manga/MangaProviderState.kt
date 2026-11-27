@@ -27,6 +27,7 @@ internal class MangaProviderState {
     val unavailable = mutableStateMapOf<String, Boolean>()
     var selectedId by mutableStateOf(REVIEWED_SOURCE_ID)
     val failures = mutableMapOf<String, Long>()
+    val failureReasons = mutableStateMapOf<String, String>()
     var generation = 0L
     var discovering by mutableStateOf(false)
     var candidateCount by mutableIntStateOf(0)
@@ -46,13 +47,14 @@ internal fun rememberMangaProviderState(enabled: Boolean): MangaProviderState {
         selectedId = prefs.getString("selected", REVIEWED_SOURCE_ID) ?: REVIEWED_SOURCE_ID
     } }
     LaunchedEffect(state, state.selectedId) { prefs.edit().putString("selected", state.selectedId).apply() }
+    val health = remember(context) { MangaProviderHealthCache(context.getSharedPreferences("manga_provider_health_v2", android.content.Context.MODE_PRIVATE)) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(state, enabled, lifecycle) {
         val generation = ++state.generation
         if (!enabled) { state.sources.clear(); state.checking.clear(); state.discovering = false; return@LaunchedEffect }
         state.discovering = true
         state.checkedCount = 0
-        val descriptors = try { reviewedReaderProviders().distinctBy { it.id } }
+        val descriptors = try { reviewedReaderProviders(context).distinctBy { it.id } }
             finally { if (state.generation == generation) state.discovering = false }
         state.candidateCount = descriptors.size
         val permits = Semaphore(2)
@@ -64,10 +66,27 @@ internal fun rememberMangaProviderState(enabled: Boolean): MangaProviderState {
                     var first = true
                     var opened: MangaSource? = null
                     try {
+                        val cached = health.read(descriptor.id, descriptor.revision)
+                        if (cached != null) {
+                            state.checkedCount++; first = false
+                            if (cached.ready) {
+                                val verified = descriptor.cached()
+                                opened = verified
+                                state.sources[descriptor.id] = verified
+                                state.unavailable.remove(descriptor.id); state.failureReasons.remove(descriptor.id); state.failures.remove(descriptor.id)
+                                awaitCancellation()
+                            } else {
+                                state.unavailable[descriptor.id] = true; state.failureReasons[descriptor.id] = cached.reason
+                                delay(cached.remainingMs)
+                                state.failures.remove(descriptor.id)
+                            }
+                        }
                         while (true) {
                             val last = state.failures[descriptor.id]
                             val remaining = if (last == null) 0L else (900_000L - (SystemClock.elapsedRealtime() - last)).coerceAtLeast(0L)
-                            if (remaining > 0L) delay(remaining)
+                            val savedRemaining = health.read(descriptor.id, descriptor.revision)?.takeUnless { it.ready }?.remainingMs ?: 0L
+                            val waitMs = maxOf(remaining, savedRemaining)
+                            if (waitMs > 0L) delay(waitMs)
                             try {
                                 opened = permits.withPermit {
                                     lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.STARTED) }
@@ -95,7 +114,9 @@ internal fun rememberMangaProviderState(enabled: Boolean): MangaProviderState {
                                 require(verified.id == descriptor.id)
                                 state.sources[descriptor.id] = verified
                                 state.unavailable.remove(descriptor.id)
+                                state.failureReasons.remove(descriptor.id)
                                 state.failures.remove(descriptor.id)
+                                health.record(descriptor.id, descriptor.revision, true, "READY")
                                 if (first) { state.checkedCount++; first = false }
                                 awaitCancellation()
                             } catch (e: CancellationException) { throw e }
@@ -103,6 +124,9 @@ internal fun rememberMangaProviderState(enabled: Boolean): MangaProviderState {
                                 if (state.generation == generation) {
                                     state.failures[descriptor.id] = SystemClock.elapsedRealtime()
                                     state.unavailable[descriptor.id] = true
+                                    val reason = providerFailureReason(e)
+                                    state.failureReasons[descriptor.id] = reason
+                                    health.record(descriptor.id, descriptor.revision, false, reason)
                                     if (first) { state.checkedCount++; first = false }
                                 }
                             } catch (e: LinkageError) {
@@ -117,7 +141,10 @@ internal fun rememberMangaProviderState(enabled: Boolean): MangaProviderState {
                                 opened = null
                             }
                         }
-                    } finally { (opened as? Closeable)?.close() }
+                    } finally {
+                        if (state.generation == generation) { state.sources.remove(descriptor.id); state.checking.remove(descriptor.id) }
+                        (opened as? Closeable)?.close()
+                    }
                 }
             }
         }

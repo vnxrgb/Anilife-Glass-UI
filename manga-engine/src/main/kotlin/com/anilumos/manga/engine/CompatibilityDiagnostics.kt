@@ -1,0 +1,17 @@
+package com.anilumos.manga.engine
+
+import java.io.IOException
+
+/** Only stable categories; never expose raw parser exceptions, headers, cookies or URLs. */
+public class ProviderCompatibilityException(public val reason: String, public val stage: String, public val status: Int? = null) :
+    IOException("Provider compatibility: " + reason + " at " + stage)
+
+internal fun compatibilityFailure(stage: ProbeStage, error: Exception): ProviderCompatibilityException = when (error) {
+    is ProviderCompatibilityException -> error
+    is SourceScopeException -> ProviderCompatibilityException("HOST_SCOPE", stage.name)
+    is ProviderAccessException -> ProviderCompatibilityException(if (error.status == 429) "RATE_LIMIT" else "ACCESS_RESTRICTED", stage.name, error.status)
+    is ProviderFeatureException -> ProviderCompatibilityException(error.feature.name, stage.name)
+    is UnsupportedOperationException -> ProviderCompatibilityException("UNSUPPORTED_FEATURE", stage.name)
+    is IOException -> ProviderCompatibilityException(if (stage == ProbeStage.IMAGE_DECODE) "IMAGE_DECODE" else "NETWORK_OR_RESPONSE", stage.name)
+    else -> ProviderCompatibilityException("PARSER_FAILURE", stage.name)
+}

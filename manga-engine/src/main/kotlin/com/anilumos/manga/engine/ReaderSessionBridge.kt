@@ -99,7 +99,7 @@ internal class ReaderSessionBridge private constructor(
         repository.pages(chapter.title.raw, chapter.raw).mapIndexed { index, page -> Page(owner, page, index) }
     }
     /** Caller owns the bounded decoded bitmap; the Compose reader must recycle it on disposal. */
-    suspend fun decode(page: Page, width: Int = 2048, height: Int = 4096): Bitmap = lock.withLock {
+    suspend fun decode(page: Page, width: Int = 2048, height: Int = 4096, onBytesReady: () -> Unit = {}): Bitmap = lock.withLock {
         owned(page.owner)
         val bytes = encodedPages[page.raw] ?: repository.loadImage(page.raw).also { fresh ->
             if (!closed && fresh.size <= 12 * 1024 * 1024) {
@@ -111,6 +111,7 @@ internal class ReaderSessionBridge private constructor(
                 encodedBytes += fresh.size
             }
         }
+        onBytesReady()
         val bitmap = PageDecoder.decode(bytes, width, height)
         if (closed) { bitmap.recycle(); error("Reader session closed") }
         bitmap

@@ -284,6 +284,10 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                     }
                 }
                 if (!reviewedBusy && readers.isEmpty()) Text("No verified online readers currently available.", style = MaterialTheme.typography.bodySmall)
+                if (providerState.failureReasons.isNotEmpty()) {
+                    val counts = providerState.failureReasons.values.groupingBy { it.substringBefore('/') }.eachCount()
+                    Text(counts.entries.sortedByDescending { it.value }.take(4).joinToString(" · ") { (reason, count) -> reason.lowercase().replace('_', ' ') + ": " + count }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         },
         confirmButton = { TextButton(onClick = { providerMenu = false }) { Text("Close") } },

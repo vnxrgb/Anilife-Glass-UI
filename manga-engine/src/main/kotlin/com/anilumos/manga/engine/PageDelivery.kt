@@ -9,7 +9,7 @@ import okhttp3.Response
 import java.io.IOException
 
 /** Bounded delivery through the same reviewed, isolated session as the parser.
- * Only bounded same-origin HTTPS redirects are accepted; access denials are not retried. */
+ * Only bounded same-origin or explicitly configured CDN HTTPS redirects are accepted; access denials are not retried. */
 internal class PageDelivery(private val scope: SourceScope, private val session: SourceSession) {
     suspend fun load(url: String): ByteArray = withContext(Dispatchers.IO) {
         var current = scope.requireUrl(url)
@@ -32,8 +32,7 @@ internal class PageDelivery(private val scope: SourceScope, private val session:
         private const val MAX_BYTES = 16 * 1024 * 1024
         internal fun redirectTarget(scope: SourceScope, from: HttpUrl, location: String?): HttpUrl {
             val next = scope.requireUrl(location ?: throw IOException("Missing redirect location"), from.toString())
-            if (next.host != from.host || next.port != from.port || next.scheme != from.scheme)
-                throw IOException("Cross-origin image redirect")
+            if (!scope.permitsImageRedirect(from, next)) throw SourceScopeException()
             return next
         }
         internal fun readImage(response: Response): ByteArray {

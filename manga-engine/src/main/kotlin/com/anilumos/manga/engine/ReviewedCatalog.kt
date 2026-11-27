@@ -23,8 +23,8 @@ internal data class LiveProviderProfile(val scope: SourceScope, val label: Strin
  * Known multi-host providers retain narrowly scoped CDN overrides. */
 internal object LiveProviderProfiles {
     private val known = listOf(
-        LiveProviderProfile(SourceScope("ATSUMOE", setOf("atsu.moe", "cdn.atsu.moe")), "Atsu", "en", probeTitle = "Chico", probeChapter = 3f),
-        LiveProviderProfile(SourceScope("MANGADEX", setOf("mangadex.org", "api.mangadex.org", "uploads.mangadex.org", "mangadex.network"), setOf("mangadex.network")), "MangaDex"),
+        LiveProviderProfile(SourceScope("ATSUMOE", setOf("atsu.moe", "cdn.atsu.moe"), imageRedirectHosts = setOf("cdn.atsu.moe")), "Atsu", "en", probeTitle = "Chico", probeChapter = 3f),
+        LiveProviderProfile(SourceScope("MANGADEX", setOf("mangadex.org", "api.mangadex.org", "uploads.mangadex.org", "mangadex.network"), setOf("mangadex.network"), imageRedirectHosts = setOf("uploads.mangadex.org")), "MangaDex"),
         LiveProviderProfile(SourceScope("COMICK_FUN", setOf("comick.live", "comick.art")), "ComicK")
     ).associateBy { it.scope.sourceName }
     private val discovered by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { discover(ParserRegistry()) }
@@ -51,7 +51,8 @@ internal object LiveProviderProfiles {
                         val parser = registry.bundle.newParser(registry.requireSource(offline), AndroidParserContext(registry.bundle, session))
                         val primary = domain(parser.domain) ?: return@use null
                         val hosts = (parser.configKeyDomain.presetValues.mapNotNull(::domain) + primary).toSet()
-                        LiveProviderProfile(SourceScope(descriptor.id, hosts), descriptor.title, descriptor.locale, descriptor.category)
+                        val scope = ProviderCdnRegistry.scope(descriptor.id, hosts)
+                        LiveProviderProfile(scope, descriptor.title, descriptor.locale, descriptor.category)
                     }
                 } catch (e: LinkageError) { null }
                 catch (e: Exception) { null }
@@ -146,6 +147,7 @@ public class ReviewedCatalog private constructor(
     }
     override fun close() { closed = true; bridge.close() }
     public companion object {
+        public fun compatibilityRevision(): String = ParserRegistry().revision + ":compat-2"
         public suspend fun providers(): List<Provider> = withContext(Dispatchers.IO) {
             LiveProviderProfiles.all.map { Provider(it.scope.sourceName, it.label, it.locale, it.category) }
         }
@@ -161,33 +163,44 @@ public class ReviewedCatalog private constructor(
         }
         public suspend fun open(providerId: String): ReviewedCatalog {
             var opened: ReviewedCatalog? = null
-            try { return withContext(Dispatchers.IO) {
-            val profile = LiveProviderProfiles.all.singleOrNull { it.scope.sourceName == providerId }
-                ?: error("Provider has not been configured")
-            val bridge = ReaderSessionBridge.open(ParserRegistry(), profile.scope)
+            var stage = ProbeStage.INITIALIZE
             try {
-                // Known seed for Atsu, bounded catalogue/real page probe for other providers.
-                val candidates = if (profile.probeTitle != null) {
-                    bridge.catalogueBrowse(profile.probeTitle, 0, false, null, null).titles
-                        .filter { it.title.equals(profile.probeTitle, true) }.take(1)
-                } else bridge.catalogueBrowse("", 0, false, null, null).titles.take(3)
-                for (title in candidates) {
+                return withContext(Dispatchers.IO) {
+                    val profile = LiveProviderProfiles.all.singleOrNull { it.scope.sourceName == providerId }
+                        ?: error("Provider has not been configured")
+                    val bridge = ReaderSessionBridge.open(ParserRegistry(), profile.scope)
                     try {
-                        val detail = bridge.details(title)
-                        val chapter = if (profile.probeChapter != null) detail.chapters.firstOrNull { it.raw.number == profile.probeChapter }
-                            else detail.chapters.firstOrNull()
-                        if (chapter == null) continue
-                        val pages = bridge.pages(chapter)
-                        if (pages.isEmpty() || pages.size > 2000) continue
-                        bridge.decode(pages.first(), 320, 480).recycle()
-                        return@withContext ReviewedCatalog(bridge, detail).also { opened = it }
-                    } catch (e: CancellationException) { throw e }
-                    catch (e: ProviderAccessException) { throw e }
-                    catch (e: Exception) { continue }
+                        stage = ProbeStage.SELECT_TITLE
+                        val candidates = if (profile.probeTitle != null) {
+                            bridge.catalogueBrowse(profile.probeTitle, 0, false, null, null).titles
+                                .filter { it.title.equals(profile.probeTitle, true) }.take(1)
+                        } else bridge.catalogueBrowse("", 0, false, null, null).titles.take(3)
+                        if (candidates.isEmpty()) throw ProviderCompatibilityException("NO_TITLES", stage.name)
+                        var last: ProviderCompatibilityException? = null
+                        for (title in candidates) {
+                            try {
+                                stage = ProbeStage.DETAILS
+                                val detail = bridge.details(title)
+                                stage = ProbeStage.CHAPTER
+                                val chapter = if (profile.probeChapter != null) detail.chapters.firstOrNull { it.raw.number == profile.probeChapter }
+                                    else detail.chapters.firstOrNull()
+                                if (chapter == null) throw ProviderCompatibilityException("NO_CHAPTERS", stage.name)
+                                stage = ProbeStage.PAGE_LIST
+                                val pages = bridge.pages(chapter)
+                                if (pages.isEmpty() || pages.size > 2000) throw ProviderCompatibilityException("NO_PAGES", stage.name)
+                                stage = ProbeStage.PAGE_DOWNLOAD
+                                bridge.decode(pages.first(), 320, 480) { stage = ProbeStage.IMAGE_DECODE }.recycle()
+                                return@withContext ReviewedCatalog(bridge, detail).also { opened = it }
+                            } catch (e: CancellationException) { throw e }
+                            catch (e: ProviderAccessException) { throw e }
+                            catch (e: Exception) { last = compatibilityFailure(stage, e) }
+                        }
+                        throw last ?: ProviderCompatibilityException("NO_READABLE_PAGE", stage.name)
+                    } catch (e: Throwable) { bridge.close(); throw e }
                 }
-                throw IOException("Provider did not pass catalogue/chapter/image verification")
-            } catch (e: Throwable) { bridge.close(); throw e }
-            } } catch (e: Throwable) { opened?.close(); throw e }
+            } catch (e: CancellationException) { opened?.close(); throw e }
+            catch (e: Exception) { opened?.close(); throw compatibilityFailure(stage, e) }
+            catch (e: LinkageError) { opened?.close(); throw ProviderCompatibilityException("PARSER_INCOMPATIBLE", stage.name) }
         }
     }
 }

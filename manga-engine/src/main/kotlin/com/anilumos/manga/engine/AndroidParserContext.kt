@@ -25,9 +25,11 @@ internal class AndroidParserContext(
     override fun getConfig(source: MangaSource): MangaSourceConfig = sourceConfig
     @Deprecated("Provide base URL")
     override suspend fun evaluateJs(script: String): String? =
-        throw ProviderFeatureException(UnsupportedFeature.BROWSER_EXECUTION)
-    override suspend fun evaluateJs(baseUrl: String, script: String, timeout: Long): String? =
-        throw ProviderFeatureException(UnsupportedFeature.BROWSER_EXECUTION)
+        session.evaluateLocalScript(script, 5_000L)
+    override suspend fun evaluateJs(baseUrl: String, script: String, timeout: Long): String? {
+        session.requireBrowserOrigin(baseUrl)
+        return session.evaluateLocalScript(script, timeout)
+    }
     override fun redrawImageResponse(response: Response, redraw: (Bitmap) -> Bitmap): Response =
         throw ProviderFeatureException(UnsupportedFeature.PARSER_IMAGE_TRANSFORM)
     override fun createBitmap(width: Int, height: Int): Bitmap =

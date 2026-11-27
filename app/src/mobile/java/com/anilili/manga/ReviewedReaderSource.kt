@@ -1,19 +1,30 @@
 package com.anilili.manga
 
 import com.anilumos.manga.engine.ReviewedCatalog
+import com.anilumos.manga.engine.LocalScriptRuntime
+import android.content.Context
 import java.io.Closeable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 internal fun reviewedReaderSupported(): Boolean = true
-internal suspend fun reviewedReaderProviders(): List<ReviewedReaderProvider> = ReviewedCatalog.providers().map { provider ->
-    ReviewedReaderProvider(reviewedSourceId(provider.id), provider.label) {
-        ReviewedCatalog.open(provider.id).use { }
-        EngineCatalogSource(provider.id, provider.label, provider.locale, provider.category)
+internal suspend fun reviewedReaderProviders(context: Context): List<ReviewedReaderProvider> {
+    LocalScriptRuntime.initialize(context)
+    val revision = ReviewedCatalog.compatibilityRevision()
+    return ReviewedCatalog.providers().map { provider ->
+        val factory = { EngineCatalogSource(provider.id, provider.label, provider.locale, provider.category) }
+        ReviewedReaderProvider(reviewedSourceId(provider.id), provider.label, revision, factory) {
+            ReviewedCatalog.open(provider.id).use { }
+            factory()
+        }
     }
 }
 private fun reviewedSourceId(id: String) = if (id == "ATSUMOE") REVIEWED_SOURCE_ID else "engine:" + id
-internal suspend fun openReviewedReader(): MangaSource = reviewedReaderProviders().single { it.id == REVIEWED_SOURCE_ID }.open()
+internal suspend fun openReviewedReader(): MangaSource {
+    val provider = ReviewedCatalog.providers().single { it.id == "ATSUMOE" }
+    ReviewedCatalog.open(provider.id).use { }
+    return EngineCatalogSource(provider.id, provider.label, provider.locale, provider.category)
+}
 
 private class EngineCatalogSource(private val provider: String, override val displayName: String, override val languageTag: String, override val sourceCategory: String) : MangaSource, Closeable {
     override val id = reviewedSourceId(provider)

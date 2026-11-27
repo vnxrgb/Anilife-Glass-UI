@@ -1,6 +1,7 @@
 package com.anilumos.manga.engine
 
 import android.os.Looper
+import kotlinx.coroutines.ensureActive
 import android.util.Log
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -38,7 +39,7 @@ internal class ScopedCookies(private val scope: SourceScope) : CookieJar {
     @Synchronized fun seal() { sealed = true; values.clear() }
 }
 
-internal class SourceSession(scope: SourceScope, cacheDirectory: File? = null, private val headers: SourceHeaders = SourceHeaders(scope), offline: Boolean = false) : Closeable {
+internal class SourceSession(private val scope: SourceScope, cacheDirectory: File? = null, private val headers: SourceHeaders = SourceHeaders(scope), private val offline: Boolean = false) : Closeable {
     private val closed = AtomicBoolean(false)
     val cookies = ScopedCookies(scope)
     val client = OkHttpClient.Builder()
@@ -57,7 +58,7 @@ internal class SourceSession(scope: SourceScope, cacheDirectory: File? = null, p
         .addInterceptor { chain ->
             if (closed.get()) throw IOException("Reader session closed")
             if (offline) throw IOException("Network disabled during offline audit")
-            if (!scope.permits(chain.request().url)) throw IOException("Request outside reviewed source scope")
+            if (!scope.permits(chain.request().url)) throw SourceScopeException()
             val result = chain.proceed(headers.apply(chain.request()))
             if (result.code == 401 || result.code == 403 || result.code == 429 || result.code == 451) {
                 val code = result.code
@@ -66,6 +67,15 @@ internal class SourceSession(scope: SourceScope, cacheDirectory: File? = null, p
             }
             result
         }.build()
+    fun requireBrowserOrigin(baseUrl: String) { scope.requireUrl(baseUrl) }
+    suspend fun evaluateLocalScript(script: String, timeout: Long): String? {
+        if (offline || closed.get()) throw ProviderFeatureException(UnsupportedFeature.BROWSER_EXECUTION)
+        return try { LocalScriptRuntime.evaluate(script, timeout) }
+            catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                throw ProviderFeatureException(UnsupportedFeature.BROWSER_EXECUTION)
+            }
+    }
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
         // Reject new calls/cookies immediately. TLS socket close and disk cache close may
