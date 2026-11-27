@@ -29,13 +29,13 @@ fun ContentModeSwitcher(modifier: Modifier = Modifier) {
     val selected = LocalContentMode.current
     val select = LocalSelectContentMode.current
     Row(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp), horizontalArrangement = Arrangement.Center) {
-        Row(Modifier.width(192.dp).glassCard(CircleShape, tint = MaterialTheme.colorScheme.surfaceContainerHighest)
+        Row(Modifier.width(212.dp).glassCard(CircleShape, tint = MaterialTheme.colorScheme.surfaceContainerHighest)
             .padding(3.dp).selectableGroup(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
             ContentMode.entries.forEach { mode ->
                 val active = mode == selected
                 val fill by animateColorAsState(if (active) MaterialTheme.colorScheme.primary else Color.Transparent, label = "mode fill")
                 val ink by animateColorAsState(if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, label = "mode ink")
-                Box(Modifier.weight(1f).heightIn(min = 34.dp).clip(CircleShape).background(fill)
+                Box(Modifier.weight(1f).heightIn(min = 38.dp).clip(CircleShape).background(fill)
                     .selectable(selected = active, role = Role.Tab, onClick = { select(mode) }),
                     contentAlignment = Alignment.Center) {
                     Text(if (mode == ContentMode.ANIME) "Anime" else "Manga", color = ink,

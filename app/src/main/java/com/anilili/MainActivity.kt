@@ -846,7 +846,7 @@ private fun MiruroRoot(
     // A screen exiting through an animation must not override the screen coming in.
     var artworkBarReport by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     val browsingBars = !deviceProfile.isTv && !inPictureInPicture &&
-        ((currentRoute == Routes.HOME && contentMode == com.anilili.manga.ContentMode.ANIME) || currentRoute == Routes.DETAIL)
+        (currentRoute == Routes.HOME || currentRoute == Routes.DETAIL)
     SideEffect {
         // Default to white during the transition into an artwork route. The visible entry
         // then reports whether its artwork has actually scrolled clear.
@@ -862,7 +862,7 @@ private fun MiruroRoot(
     val appLayoutMode by SettingsStore.appLayoutMode.collectAsState()
     val cinema = appLayoutMode == AppLayoutMode.CINEMA
     val navigationTabs = (if (cinema) cinemaPhoneTabs else phoneTabs).filter { contentMode != com.anilili.manga.ContentMode.MANGA || it.route != Routes.DOWNLOADS }
-    val railTabs = if (cinema) cinemaTabs else Tab.entries
+    val railTabs = (if (cinema) cinemaTabs else Tab.entries).filter { contentMode != com.anilili.manga.ContentMode.MANGA || it.route != Routes.DOWNLOADS }
     var chromeVisible by remember { mutableStateOf(true) }
     var dockCollapsed by remember { mutableStateOf(false) }
     val tvSearchRailFocusRequester = remember { FocusRequester() }
@@ -2118,7 +2118,7 @@ private fun AppNavHost(
             composable(Routes.HOME) { entry ->
                 LaunchedEffect(Unit) { DiagnosticsLog.event("Route HOME content entered") }
                 if (com.anilili.manga.LocalContentMode.current == com.anilili.manga.ContentMode.MANGA) {
-                    com.anilili.manga.MangaScreen(onBack = { nav.popBackStack() }, section = com.anilili.manga.MangaSection.HOME)
+                    com.anilili.manga.MangaScreen(onBack = { nav.popBackStack() }, section = com.anilili.manga.MangaSection.HOME, onHeroUnderBarsChanged = { overArtwork -> if (nav.currentBackStackEntry?.id == entry.id) onArtworkUnderBarsChanged(entry.id, overArtwork) })
                 } else HomeScreen(
                     onAnimeClick = { id -> nav.navigate(Routes.detail(id)) },
                     onWatchNow = { id ->
