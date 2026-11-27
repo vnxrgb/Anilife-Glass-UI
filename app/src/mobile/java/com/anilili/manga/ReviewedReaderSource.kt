@@ -1,50 +1,43 @@
 package com.anilili.manga
 
-import com.anilumos.manga.engine.ApprovedReader
+import com.anilumos.manga.engine.ReviewedCatalog
 import java.io.Closeable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 internal fun reviewedReaderSupported(): Boolean = true
-internal fun reviewedReaderProviders(): List<ReviewedReaderProvider> = listOf(ReviewedReaderProvider(REVIEWED_SOURCE_ID, "Atsu", ::openReviewedReader), ReviewedReaderProvider(OPEN_COMIC_SOURCE_ID, "Pepper & Carrot", ::openOpenComicSource))
-internal suspend fun openReviewedReader(): MangaSource = EngineSampleSource(ApprovedReader.openReviewedSample())
+internal fun reviewedReaderProviders(): List<ReviewedReaderProvider> = ReviewedCatalog.providers().map { provider ->
+    ReviewedReaderProvider(reviewedSourceId(provider.id), provider.label) { EngineCatalogSource(provider.id, provider.label, ReviewedCatalog.open(provider.id)) }
+}
+private fun reviewedSourceId(id: String) = if (id == "ATSUMOE") REVIEWED_SOURCE_ID else "engine:" + id
+internal suspend fun openReviewedReader(): MangaSource = reviewedReaderProviders().single { it.id == REVIEWED_SOURCE_ID }.open()
 
-private class EngineSampleSource(private val reader: ApprovedReader) : MangaSource, Closeable {
-    override val id = REVIEWED_SOURCE_ID
-    override val displayName = "Atsu"
+private class EngineCatalogSource(provider: String, override val displayName: String, private val catalog: ReviewedCatalog) : MangaSource, Closeable {
+    override val id = reviewedSourceId(provider)
     override val languageTag = "en"
     override val sampleOnly = true
-    private val coverLock = Mutex()
-    private var artworkLoaded = false
-    private var coverBitmap: android.graphics.Bitmap? = null
-    override suspend fun artwork(mangaId: String): Any? = coverLock.withLock {
-        require(mangaId == title.id)
-        if (!artworkLoaded) {
-            coverBitmap = reader.cover()
-            artworkLoaded = true
-        }
-        coverBitmap
-    }
     override val chapterLanguages = listOf("und")
-    private val title = reader.title.let {
-        MangaTitle(id, it.id, it.name, androidx.core.text.HtmlCompat.fromHtml(it.description,
-            androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString().let(::cleanMangaDescription), null,
-            genres = it.genres, authors = it.authors, status = it.status, alternativeTitles = it.alternatives)
-    }
-    private val chapter = reader.chapter.let {
-        MangaChapter(id, it.id, title.id, it.label, it.number, "und", listOfNotNull(it.scanlator))
-    }
-    override suspend fun search(query: String, limit: Int): List<MangaTitle> =
-        listOf(title).filter { it.title.contains(query.trim(), ignoreCase = true) }.take(limit)
-    override suspend fun chapters(mangaId: String, language: String): List<MangaChapter> {
-        require(mangaId == title.id)
-        return listOf(chapter)
-    }
-    override suspend fun pages(chapterId: String): List<MangaPage> {
-        require(chapterId == chapter.id)
-        return List(reader.pageCount) { index ->
-            MangaPage(index, "", decode = { width, height -> reader.decode(index, width, height) })
+    private val covers = LinkedHashMap<String, android.graphics.Bitmap?>(4, .75f, true)
+    private val lock = Mutex()
+    override suspend fun artwork(mangaId: String): Any? = lock.withLock {
+        if (!covers.containsKey(mangaId)) {
+            if (covers.size >= 3) covers.remove(covers.keys.first())
+            covers[mangaId] = catalog.cover(mangaId)
         }
+        covers[mangaId]
     }
-    override fun close() = reader.close()
+    private fun convert(title: ReviewedCatalog.Title) = MangaTitle(id, title.id, title.name,
+        cleanMangaDescription(androidx.core.text.HtmlCompat.fromHtml(title.description, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString()), null,
+        genres = title.genres, authors = title.authors, status = title.status, alternativeTitles = title.alternatives)
+    override suspend fun search(query: String, limit: Int): List<MangaTitle> =
+        catalogPage(query, MangaKind.ALL, MangaOrder.POPULAR, null, 0, limit.coerceIn(1, 30)).items
+    override suspend fun catalogPage(query: String, kind: MangaKind, order: MangaOrder, genre: String?, offset: Int, limit: Int): MangaCatalogPage {
+        val result = catalog.list(query.take(200), offset, limit, genre)
+        return MangaCatalogPage(result.items.map(::convert), result.nextOffset)
+    }
+    override suspend fun chapters(mangaId: String, language: String): List<MangaChapter> =
+        catalog.chapters(mangaId).map { MangaChapter(id, it.id, it.titleId, it.label, it.number, "und", listOfNotNull(it.scanlator)) }
+    override suspend fun pages(chapterId: String): List<MangaPage> =
+        List(catalog.pageCount(chapterId)) { index -> MangaPage(index, "", decode = { w, h -> catalog.decode(chapterId, index, w, h) }) }
+    override fun close() = catalog.close()
 }

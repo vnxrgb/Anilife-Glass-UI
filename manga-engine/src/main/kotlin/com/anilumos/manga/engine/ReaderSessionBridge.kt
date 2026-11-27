@@ -21,8 +21,7 @@ internal class ReaderSessionBridge private constructor(
     @Volatile private var closed = false
     private val encodedPages = LinkedHashMap<MangaPage, ByteArray>(4, .75f, true)
     private var encodedBytes = 0
-    private var coverBytes: ByteArray? = null
-    private var coverAttempted = false
+    private val covers = LinkedHashMap<String, ByteArray?>(4, .75f, true)
 
     internal class Title internal constructor(internal val owner: Any, internal val raw: Manga) {
         val sourceId get() = raw.source.name
@@ -63,6 +62,15 @@ internal class ReaderSessionBridge private constructor(
             ?: error("Approved chapter missing or ambiguous")
         Details(detailed, listOf(Chapter(owner, detailed, chapter)), detailed.raw.description.orEmpty())
     }
+    suspend fun grantedDetails(grant: ReviewedTitleGrant): Details = lock.withLock {
+        active()
+        val selected = repository.approvedTitle(grant.name).title ?: error("Reviewed title unavailable")
+        val detailed = Title(owner, repository.details(selected))
+        val allowed = permittedChapters(grant, detailed.raw.chapters.orEmpty().map { it.number })
+        val chapters = detailed.raw.chapters.orEmpty().filter { it.number in allowed }
+            .groupBy { it.number }.values.mapNotNull { entries -> entries.distinctBy { it.id }.singleOrNull() }
+        Details(detailed, chapters.map { Chapter(owner, detailed, it) }, detailed.raw.description.orEmpty())
+    }
     suspend fun details(title: Title): Details = lock.withLock {
         owned(title.owner)
         val detailed = Title(owner, repository.details(title.raw))
@@ -91,14 +99,14 @@ internal class ReaderSessionBridge private constructor(
     }
     suspend fun cover(title: Title): Bitmap? = lock.withLock {
         owned(title.owner)
-        if (!coverAttempted) {
-            try {
-                coverBytes = repository.coverBytes(title.raw)?.takeIf { it.size <= 4 * 1024 * 1024 }
-                coverAttempted = true
-            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-            catch (e: Exception) { coverAttempted = true }
+        if (!covers.containsKey(title.id)) {
+            val bytes = try { repository.coverBytes(title.raw)?.takeIf { it.size <= 4 * 1024 * 1024 } }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (e: Exception) { null }
+            if (covers.size >= 3) covers.remove(covers.keys.first())
+            covers[title.id] = bytes
         }
-        val bytes = coverBytes ?: return@withLock null
+        val bytes = covers[title.id] ?: return@withLock null
         val bitmap = PageDecoder.decode(bytes, 768, 1152)
         if (closed) { bitmap.recycle(); error("Reader session closed") }
         bitmap

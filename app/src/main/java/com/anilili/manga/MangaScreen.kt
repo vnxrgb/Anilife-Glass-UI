@@ -218,7 +218,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     }
     unavailableTitle?.let { unavailable -> AlertDialog(onDismissRequest = { unavailableTitle = null }, title = { Text("Provider unavailable") }, text = { Text("${unavailable.title} remains in your reading list. Its provider is not currently verified. Your saved progress is preserved.") }, confirmButton = { TextButton(onClick = { unavailableTitle = null }) { Text("OK") } }) }
     if (attribution) AlertDialog(onDismissRequest = { attribution = false }, title = { Text("Built-in sources") },
-        text = { Text("AniList provides discovery metadata and official publisher links. In-app reading: local archives, the reviewed Atsu sample, and Pepper & Carrot by David Revoy and contributors (CC BY 4.0; official credits at peppercarrot.com). Other manga reader sources require review. Credits: AniLife and Kotatsu-Redo.") },
+        text = { Text("AniList provides discovery metadata and official publisher links. In-app reading: local archives and reviewed manga chapters. Metadata-only titles do not include readable chapters. Other manga reader sources require review. Credits: AniLife and Kotatsu-Redo.") },
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
     val title = selected
     val activeChapter = chapter
@@ -253,7 +253,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                 readers.forEach { source ->
                     FilterChip(selected = provider.id == source.id, onClick = {
                         providerState.selectedId = source.id; kind = MangaKind.ALL; genre = null; providerMenu = false
-                    }, label = { Text(source.displayName + if (source.sampleOnly) " · sample" else "") })
+                    }, label = { Text(source.displayName + if (source.sampleOnly) " · reviewed" else "") })
                 }
                 if (reviewedBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (reviewedBusy) Text("Checking reading sources…", style = MaterialTheme.typography.bodySmall)
@@ -649,7 +649,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
                     PageSearchField(chapterQuery, { chapterQuery = it }, "Search chapters", "Clear chapter search")
                     if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     error?.let { MangaError(it) { retry++ } }
-                    if (!loading && error == null && chapters.isEmpty()) Text("No readable chapters in this language.")
+                    if (!loading && error == null && chapters.isEmpty()) Text(if (source.sampleOnly) "No chapters authorized for in-app reading for this title." else "No readable chapters in this language.")
                 }
             }
             val chapterRow: @Composable (MangaChapter) -> Unit = { entry ->
