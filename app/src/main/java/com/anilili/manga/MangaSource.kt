@@ -72,6 +72,7 @@ data class MangaChapter(
 )
 
 internal const val REVIEWED_SOURCE_ID = "engine:ATSUMOE:chico3"
+internal const val OPEN_COMIC_SOURCE_ID = "official:pepper-carrot"
 
 data class MangaPage(val index: Int, val imageUrl: String, val headers: Map<String, String> = emptyMap(),
     val decode: (suspend (Int, Int) -> android.graphics.Bitmap)? = null)

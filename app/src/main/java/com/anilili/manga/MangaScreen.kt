@@ -218,7 +218,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     }
     unavailableTitle?.let { unavailable -> AlertDialog(onDismissRequest = { unavailableTitle = null }, title = { Text("Provider unavailable") }, text = { Text("${unavailable.title} remains in your reading list. Its provider is not currently verified. Your saved progress is preserved.") }, confirmButton = { TextButton(onClick = { unavailableTitle = null }) { Text("OK") } }) }
     if (attribution) AlertDialog(onDismissRequest = { attribution = false }, title = { Text("Built-in sources") },
-        text = { Text("AniList provides discovery metadata and official publisher links. In-app reading supports local archives and the reviewed Atsu sample (Chico chapter 3). Other reader sources require review. Credits: AniLife and Kotatsu-Redo.") },
+        text = { Text("AniList provides discovery metadata and official publisher links. In-app reading: local archives, the reviewed Atsu sample, and Pepper & Carrot by David Revoy and contributors (CC BY 4.0; official credits at peppercarrot.com). Other manga reader sources require review. Credits: AniLife and Kotatsu-Redo.") },
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
     val title = selected
     val activeChapter = chapter
@@ -627,7 +627,10 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
                     if (source.metadataOnly) {
                         Text("Catalogue information only. In-app chapters are not verified for this title.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         details.officialLinks.forEach { link -> TextButton(onClick = { runCatching { uriHandler.openUri(link.url) }.onFailure { linkError = true } }) { Text(link.label); Icon(Icons.Default.OpenInNew, null) } }
-                    } else TextButton(onClick = { tab = MangaDetailTab.CHAPTERS }) { Text("View chapters"); Icon(Icons.Default.ChevronRight, null) }
+                    } else {
+                        details.officialLinks.forEach { link -> TextButton(onClick = { runCatching { uriHandler.openUri(link.url) }.onFailure { linkError = true } }) { Text(link.label); Icon(Icons.Default.OpenInNew, null) } }
+                        TextButton(onClick = { tab = MangaDetailTab.CHAPTERS }) { Text("View chapters"); Icon(Icons.Default.ChevronRight, null) }
+                    }
                 }
             }
             val chapterHeader: @Composable () -> Unit = {

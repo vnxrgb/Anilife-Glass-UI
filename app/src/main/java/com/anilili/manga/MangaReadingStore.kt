@@ -24,7 +24,7 @@ class MangaReadingStore(context: Context, profileId: String?) {
                 j.optInt("page").coerceAtLeast(0), j.optLong("updated"), j.optString("chapterNumber").takeIf { it.isNotBlank() }, j.optInt("pageCount")
             )
         }.getOrNull()
-    }.filter { it.title.sourceId in setOf(LocalMangaSource.ID, REVIEWED_SOURCE_ID) }.map { it.copy(title = it.title.copy(coverUrl = null, largeCoverUrl = null)) }.sortedByDescending { it.updated }.distinctBy { key(it.title) }
+    }.filter { it.title.sourceId in setOf(LocalMangaSource.ID, REVIEWED_SOURCE_ID, OPEN_COMIC_SOURCE_ID) }.map { it.copy(title = it.title.copy(coverUrl = null, largeCoverUrl = null)) }.sortedByDescending { it.updated }.distinctBy { key(it.title) }
 
     fun saved(title: MangaTitle): MangaSaved? = all().firstOrNull { it.title.sourceId == title.sourceId && it.title.id == title.id }
 

@@ -6,7 +6,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 internal fun reviewedReaderSupported(): Boolean = true
-internal fun reviewedReaderProviders(): List<ReviewedReaderProvider> = listOf(ReviewedReaderProvider(REVIEWED_SOURCE_ID, "Atsu", ::openReviewedReader))
+internal fun reviewedReaderProviders(): List<ReviewedReaderProvider> = listOf(ReviewedReaderProvider(REVIEWED_SOURCE_ID, "Atsu", ::openReviewedReader), ReviewedReaderProvider(OPEN_COMIC_SOURCE_ID, "Pepper & Carrot", ::openOpenComicSource))
 internal suspend fun openReviewedReader(): MangaSource = EngineSampleSource(ApprovedReader.openReviewedSample())
 
 private class EngineSampleSource(private val reader: ApprovedReader) : MangaSource, Closeable {
