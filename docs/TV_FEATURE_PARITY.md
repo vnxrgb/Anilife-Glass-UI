@@ -1,9 +1,9 @@
-# Android TV parity tracker (source audit: 2026-11-25)
+# Android TV parity tracker (latest verified checkpoint: 2026-11-26)
 
 Reference mobile main: `ebe374eea7df5a77909f3a6b903753166f188c7e`
 TV branch before this tracker: `50930bec8e8e0f711efee8f5a905f2ff200b737a`
 
-**Do not treat a shared Kotlin source file as proof of TV usability.** TV is 223 commits behind main and 91 ahead. Review individual changes; no wholesale merge. Status legend: PRESENT = code exists, VALIDATE = remote/hardware behavior unverified, MISSING = no verified implementation.
+**Historical audit below is retained for provenance; its original MISSING labels and branch counts are superseded by the latest checkpoint.** Do not treat shared Kotlin code as proof of TV usability. Review individual changes; no wholesale merge. Status legend: PRESENT = code exists, VALIDATE = remote/hardware behavior unverified, MISSING = no verified implementation.
 
 | Area | TV status | Next verification |
 | --- | --- | --- |
@@ -84,3 +84,12 @@ TV update selection now requires both metadata and APK asset URLs to match the s
 - Signed TV preview: **PRESENT for older source / latest-head MISSING**. GitHub releases API lists `tv-alpha-signed-3c20de94c9d8-run17` with standalone `AniLumos-TV-ALPHA-signed.apk` and `TV-UPDATE.json`; latest source `0e2578e` has no verified published matching asset in this checkpoint. Do not claim latest-head APK ready.
 - Current mobile delta still requires review of recommendations, journal, metadata diagnostics, AniSkip/AniZip/Jikan, profile/settings, player, light/dark UI, integrations and attribution. Shared code does not prove 10-foot or D-pad usability. Maintain **VALIDATE** for real Android TV and Fire TV, QR pairing, intro/outro, downloads, ambient mode, accessibility, memory/performance and playback.
 - Release gate: before next publication check for active preview runs, use the dedicated preview workflow checking out `feature/tv-polish`, then verify unit tests, lint, release assembly, package/launcher, pinned signer, source SHA and published APK plus metadata. Never bypass verification or modify stable branches.
+
+## 2026-11-26 current signed-release and mobile delta checkpoint
+
+- Mobile `main`: `6165d5badc28007d65afe415b3dcf9454e660639`; TV `feature/tv-polish`: `3c3037475fb9992e3b3228d0ef41af6c5a47426f`. Comparing TV to main: TV is **121 commits ahead / 275 behind**; no merge was performed.
+- Signed TV preview **PRESENT for this exact TV source**: [`tv-alpha-signed-3c3037475fb9-run21`](https://github.com/vnxrgb/anilumos-preview/releases/tag/tv-alpha-signed-3c3037475fb9-run21), published by [successful workflow 45901369171](https://github.com/vnxrgb/anilumos-preview/actions/runs/45901369171). Release API confirms standalone `AniLumos-TV-ALPHA-signed.apk` (18,311,593 bytes) and `TV-UPDATE.json`. Do not confuse preview workflow's own main SHA with the checked-out application source SHA in release provenance.
+- TV GitHub direct update **PRESENT / hardware VALIDATE**; the previous introductory MISSING label is historical. Package/signer compatibility, checksum, version and trusted release-asset constraints remain mandatory. Real-device update installation has not been verified.
+- Current mobile delta review queue from actual compare: `JournalStore`, `HybridRanking`, metadata diagnostics, `AniSkipClient`, `AniZipClient`, `JikanClient`, profile/settings, light/dark theme and glass components, player controls/ambient wash, accessibility, attribution and UI screens. Compare behavior and dependencies individually; preserve TV D-pad, focus, keyboard, overscan and playback adaptations. These differences are not evidence that every mobile capability is missing.
+- Hardware verification remains **VALIDATE** for Android TV and Fire TV launch, D-pad focus/back, QR pairing, playback, subtitles, intro/outro, updates, performance, low-memory behavior and reduced motion. Code-level CI or a signed release cannot establish physical device compatibility.
+- Next meaningful implementation batch: select a bounded mobile behavior delta, inspect both implementations and dependencies, add TV-appropriate code and regression tests, then run TV unit tests and lint. Build/publish only after a cohesive validated milestone; never create duplicate preview releases for this source.
