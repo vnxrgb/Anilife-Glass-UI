@@ -422,7 +422,7 @@ private fun MangaHomeCarousel(titles: List<MangaTitle>, modifier: Modifier, topI
                         ShrinkingTitle(text = title.title, style = (if (device.isExpanded) MaterialTheme.typography.displaySmall else MaterialTheme.typography.titleLarge).copy(fontWeight = FontWeight.Black, lineHeight = if (device.isExpanded) 42.sp else 28.sp), color = Color.White, maxLines = 2, minFontSize = 17.sp)
                     }
                     Text(listOf(title.metadata(), title.genres.take(3).joinToString(" · ")).filter { it.isNotBlank() }.joinToString(" · "), color = Color.White.copy(alpha = .9f), style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    val summary = remember(title.description) { org.jsoup.Jsoup.parse(title.description).text() }
+                    val summary = remember(title.description) { androidx.core.text.HtmlCompat.fromHtml(title.description, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString().trim() }
                     if (summary.isNotBlank()) Text(summary, color = Color.White.copy(alpha = .9f), style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp).fillMaxWidth(.86f))
                     Row(Modifier.padding(top = 12.dp, bottom = 2.dp).widthIn(max = 286.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         HomeHeroAction("Read Now", Icons.Default.Book, true, art, { onRead(title) }, Modifier.weight(1f))

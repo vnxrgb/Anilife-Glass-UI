@@ -5,6 +5,7 @@ on:
     paths:
       - 'manga-engine/**'
       - 'app/src/**'
+      - 'app/build.gradle.kts'
       - 'settings.gradle.kts'
       - 'build.gradle.kts'
       - 'gradle/libs.versions.toml'

@@ -149,8 +149,8 @@ android {
     flavorDimensions += "form"
     productFlavors {
         create("mobile") {
-            // Optical renderer dependencies require API 23 or newer.
-            minSdk = 23
+            // Manga engine requires Android 8.0 or newer; TV retains its original minimum.
+            minSdk = 26
             dimension = "form"
             isDefault = true
         }
@@ -305,6 +305,9 @@ dependencies {
     // Cast is mobile-only. It also drags in play-services-cast-framework and mediarouter, so
     // scoping it here is what actually makes the TV build smaller, not just tidier.
     "mobileImplementation"(libs.androidx.media3.cast)
+    "mobileImplementation"(project(":manga-engine"))
+    // Shared reader composables compile for both form factors; TV never enters manga mode.
+    implementation("me.saket.telephoto:zoomable-image-coil:0.16.0")
     implementation(libs.androidx.media3.transformer)
     implementation(libs.play.services.cronet)
     implementation(libs.androidx.appcompat)
