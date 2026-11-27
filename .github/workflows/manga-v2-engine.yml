@@ -103,14 +103,29 @@ jobs:
           fi
           "$ANDROID_HOME/emulator/emulator" -version
           "$ANDROID_HOME/emulator/emulator" -accel-check
-          echo no | "$sdk_tools/avdmanager" create avd --force --name manga-ci --package 'system-images;android-30;default;x86_64'
-          "$ANDROID_HOME/emulator/emulator" -list-avds
+          export ANDROID_USER_HOME="$RUNNER_TEMP/manga-android-user"
+          export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo "ANDROID_USER_HOME=$ANDROID_USER_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
+          avd_dir="$ANDROID_AVD_HOME/manga-ci.avd"
+          printf 'no\n' | "$sdk_tools/avdmanager" create avd --force --name manga-ci --package 'system-images;android-30;default;x86_64' --path "$avd_dir"
+          test -s "$avd_dir/config.ini"
+          # Use an absolute AVD pointer, independent of SDK tool home-directory defaults.
+          printf 'avd.ini.encoding=UTF-8\npath=%s\ntarget=android-30\n' "$avd_dir" > "$ANDROID_AVD_HOME/manga-ci.ini"
+          "$ANDROID_HOME/emulator/emulator" -list-avds | tee "$RUNNER_TEMP/manga-avds.log"
+          grep -Fx manga-ci "$RUNNER_TEMP/manga-avds.log"
+      - name: Compile Android test APK before boot
+        run: ./gradlew :manga-engine:assembleDebugAndroidTest --max-workers=2 --no-configuration-cache --console=plain --stacktrace
       - name: Run isolated Android instrumentation tests
         shell: bash
         run: |
           set -euo pipefail
           export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
           log="$RUNNER_TEMP/manga-emulator.log"
+          test -s "$ANDROID_AVD_HOME/manga-ci.ini"
+          test -s "$ANDROID_AVD_HOME/manga-ci.avd/config.ini"
+          "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx manga-ci
           adb start-server
           "$ANDROID_HOME/emulator/emulator" -avd manga-ci -port 5554 -no-window -no-audio -no-boot-anim -gpu swiftshader -no-snapshot -no-metrics -memory 2048 -cores 2 > "$log" 2>&1 &
           emulator_pid=$!
@@ -149,4 +164,5 @@ jobs:
             manga-engine/build/outputs/androidTest-results/
             ${{ runner.temp }}/manga-emulator.log
             ${{ runner.temp }}/manga-emulator-libraries.log
+            ${{ runner.temp }}/manga-avds.log
           if-no-files-found: ignore
