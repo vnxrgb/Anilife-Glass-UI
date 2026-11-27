@@ -5,7 +5,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class TabletNarrowWindowColumnsTest {
-    private val tablet = AppDeviceProfile(AppFormFactor.TABLET, 900)
+    private val tablet = AppDeviceProfile(AppFormFactor.TABLET, 500)
+    private val expandedTablet = AppDeviceProfile(AppFormFactor.TABLET, 900)
 
     @Test fun splitScreenFitsOneReadablePoster() {
         assertEquals(1, tablet.homePosterColumns(180.dp, 12.dp))
@@ -18,6 +19,13 @@ class TabletNarrowWindowColumnsTest {
         assertEquals(2, tablet.homePosterColumns(419.dp, 12.dp))
         assertEquals(3, tablet.homePosterColumns(420.dp, 12.dp))
         assertEquals(6, tablet.homePosterColumns(1600.dp, 12.dp))
+    }
+
+    @Test fun expandedTabletUsesLargerPosterMinimum() {
+        assertEquals(1, expandedTablet.homePosterColumns(311.dp, 12.dp))
+        assertEquals(2, expandedTablet.homePosterColumns(312.dp, 12.dp))
+        assertEquals(2, expandedTablet.homePosterColumns(473.dp, 12.dp))
+        assertEquals(3, expandedTablet.homePosterColumns(474.dp, 12.dp))
     }
 
     @Test fun narrowTabletWindowKeepsTabletPolicy() {
