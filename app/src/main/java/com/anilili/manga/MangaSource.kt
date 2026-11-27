@@ -7,6 +7,7 @@ interface MangaSource {
     val languageTag: String get() = ""
     val sourceCategory: String get() = "Manga"
     val available: Boolean get() = true
+    fun websiteUrl(): String? = null
     val chapterLanguages: List<String> get() = listOf("en", "es", "fr")
     suspend fun search(query: String, limit: Int = 20): List<MangaTitle>
     suspend fun catalog(query: String, kind: MangaKind = MangaKind.ALL, order: MangaOrder = MangaOrder.POPULAR, offset: Int = 0, limit: Int = 24): List<MangaTitle> =

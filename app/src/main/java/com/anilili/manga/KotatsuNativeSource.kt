@@ -76,6 +76,7 @@ private class KotatsuNativeSource(
         else -> MangaKind.OTHER
     }
     private val parser by lazy { context.newParserInstance(descriptor) }
+    override fun websiteUrl(): String? = runCatching { "https://${parser.domain}/".toHttpUrlOrNull()?.toString() }.getOrNull()
     private val catalog = ConcurrentHashMap<String, Manga>()
     private val chapterCache = ConcurrentHashMap<String, ParserChapter>()
     private val chapterBases = ConcurrentHashMap<String, String>()

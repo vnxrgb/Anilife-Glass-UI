@@ -21,6 +21,9 @@ internal class MangaSessionCookies : CookieJar {
         }
         while (this.cookies.size > 512) this.cookies.remove(this.cookies.keys.first())
     }
+    @Synchronized fun clearDomain(host: String) {
+        cookies.entries.removeAll { (_, cookie) -> host == cookie.domain || host.endsWith("." + cookie.domain) }
+    }
     @Synchronized override fun loadForRequest(url: HttpUrl): List<Cookie> {
         val now = System.currentTimeMillis()
         cookies.entries.removeAll { it.value.expiresAt <= now }
@@ -29,7 +32,9 @@ internal class MangaSessionCookies : CookieJar {
 }
 
 internal object MangaNetwork {
-    val cookieJar: CookieJar = MangaSessionCookies()
+    private val session = MangaSessionCookies()
+    val cookieJar: CookieJar = session
+    fun clearDomain(host: String) { session.clearDomain(host) }
     val client: OkHttpClient by lazy {
         OkHttpClient.Builder().cookieJar(cookieJar)
             .addNetworkInterceptor { chain ->
