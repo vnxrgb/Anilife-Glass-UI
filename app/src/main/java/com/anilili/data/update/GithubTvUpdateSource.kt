@@ -29,6 +29,12 @@ internal object GithubTvUpdateSource {
                 if (assets.size > 100) return@runCatching null
                 val apk = assets.singleOrNull { it["name"]?.jsonPrimitive?.content == APK } ?: return@runCatching null
                 val meta = assets.singleOrNull { it["name"]?.jsonPrimitive?.content == META } ?: return@runCatching null
+                // Reject unusable APK assets before downloading any release metadata.
+                val url = apk.getValue("browser_download_url").jsonPrimitive.content
+                if (!validUrl(url, tag, APK) ||
+                    apk["state"]?.jsonPrimitive?.content?.let { it != "uploaded" } == true) return@runCatching null
+                val size = apk.getValue("size").jsonPrimitive.content.toLongOrNull()
+                    ?.takeIf { it in 1..536870912L } ?: return@runCatching null
                 val metaUrl = meta.getValue("browser_download_url").jsonPrimitive.content
                 if (meta["state"]?.jsonPrimitive?.content?.let { it != "uploaded" } == true ||
                     !validUrl(metaUrl, tag, META) ||
@@ -44,11 +50,6 @@ internal object GithubTvUpdateSource {
                     ?: return@runCatching null
                 val sha = details.getValue("sha256").jsonPrimitive.content
                 if (!sha.matches(Regex("[a-f0-9]{64}"))) return@runCatching null
-                val url = apk.getValue("browser_download_url").jsonPrimitive.content
-                if (!validUrl(url, tag, APK)) return@runCatching null
-                if (apk["state"]?.jsonPrimitive?.content?.let { it != "uploaded" } == true) return@runCatching null
-                val size = apk.getValue("size").jsonPrimitive.content.toLongOrNull()?.takeIf { it in 1..536870912L }
-                    ?: return@runCatching null
                 UpdateManager.UpdateInfo(version, "AniLumos TV preview", url, size,
                     build = build, sha256 = sha, formFactor = "tv")
             }.getOrNull()
