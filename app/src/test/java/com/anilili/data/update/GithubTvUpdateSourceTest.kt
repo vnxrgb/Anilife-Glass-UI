@@ -71,7 +71,7 @@ class GithubTvUpdateSourceTest {
             else payload
         }
         assertEquals(125, selected?.build)
-        assertTrue(selected?.url?.contains("run4") == true)
+        assertTrue(selected?.apkUrl?.contains("run4") == true)
     }
 
     @Test fun skipsInvalidReleaseWithoutDiscardingValidCandidates() {
@@ -80,6 +80,6 @@ class GithubTvUpdateSourceTest {
         val combined = malformed.dropLast(1) + "," + releases().drop(1)
         val selected = GithubTvUpdateSource.select(combined, json) { payload }
         assertEquals(124, selected?.build)
-        assertTrue(selected?.url?.contains("run2") == true)
+        assertTrue(selected?.apkUrl?.contains("run2") == true)
     }
 }
