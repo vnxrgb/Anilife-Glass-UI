@@ -21,8 +21,13 @@ internal suspend fun probeMangaSource(source: MangaSource): SourceProbeResult {
             val matches = source.search(title.title.take(120), limit = 5)
             if (matches.isEmpty()) return@withTimeoutOrNull SourceProbeResult(SourceHealth.CATALOG, "search-empty")
             stage = "chapters"
-            val chapters = source.chapters(title.id, source.chapterLanguages.firstOrNull() ?: "und")
-            val chapter = chapters.firstOrNull() ?: return@withTimeoutOrNull SourceProbeResult(SourceHealth.CATALOG, "no-chapters")
+            var candidate: MangaChapter? = null
+            for (sample in titles.take(3)) {
+                val chapters = source.chapters(sample.id, if (source.id == "mangadex") "und" else source.chapterLanguages.firstOrNull() ?: "und")
+                candidate = chapters.firstOrNull()
+                if (candidate != null) break
+            }
+            val chapter = candidate ?: return@withTimeoutOrNull SourceProbeResult(SourceHealth.CATALOG, "no-chapters")
             stage = "pages"
             val page = source.pages(chapter.id).firstOrNull() ?: return@withTimeoutOrNull SourceProbeResult(SourceHealth.CATALOG, "no-pages")
             stage = "image"
@@ -32,7 +37,6 @@ internal suspend fun probeMangaSource(source: MangaSource): SourceProbeResult {
                 builder.header("Range", "bytes=0-63")
                 MangaNetwork.client.newCall(builder.build()).execute().use { response ->
                     if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-                    if (!response.request.url.isHttps) throw IOException("Non-HTTPS image redirect")
                     val bytes = response.body.source().peek()
                     val prefix = ByteArray(16)
                     var count = 0

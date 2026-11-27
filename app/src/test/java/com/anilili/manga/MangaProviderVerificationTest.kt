@@ -14,7 +14,7 @@ class MangaProviderVerificationTest {
         val shard = System.getenv("MANGA_HEALTH_SHARD")?.toIntOrNull() ?: 0
         val shards = System.getenv("MANGA_HEALTH_SHARDS")?.toIntOrNull() ?: 1
         require(shards in 1..32 && shard in 0 until shards)
-        val sources = builtInKotatsuSources().sortedBy { it.id }.filterIndexed { index, _ -> index % shards == shard }
+        val sources = builtInKotatsuSources().filter { preferredMangaLanguage(it.languageTag) }.sortedBy { it.id }.filterIndexed { index, _ -> index % shards == shard }
         val file = File(requireNotNull(output))
         file.parentFile?.mkdirs()
         file.writeText("id\tstatus\tstage\n")
@@ -25,6 +25,17 @@ class MangaProviderVerificationTest {
                 delay(1500)
             }
         }
+    }
+
+    @Test fun normalizesLegacyPageUrls() {
+        val base = "https://example.com/chapter/1/"
+        org.junit.Assert.assertEquals("http://cdn.example.com/p.jpg", normalizePageUrl("http://cdn.example.com/p.jpg", base))
+        org.junit.Assert.assertEquals("https://cdn.example.com/p.jpg", normalizePageUrl("//cdn.example.com/p.jpg", base))
+        org.junit.Assert.assertEquals("https://example.com/chapter/1/p.jpg", normalizePageUrl("p.jpg", base))
+        org.junit.Assert.assertNull(normalizePageUrl("file:///etc/passwd", base))
+        org.junit.Assert.assertNull(normalizePageUrl("https://user:pass@example.com/p.jpg", base))
+        org.junit.Assert.assertTrue(preferredMangaLanguage("zh-HK"))
+        org.junit.Assert.assertFalse(preferredMangaLanguage("es"))
     }
 
     @Test fun imageHeadersAndVerifiedManifest() {

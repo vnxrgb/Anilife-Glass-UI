@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.CookieJar
 import okhttp3.OkHttpClient
 import okhttp3.Response
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.koitharu.kotatsu.parsers.DirectParsersAccess
 import org.koitharu.kotatsu.parsers.MangaLoaderContext
 import org.koitharu.kotatsu.parsers.ParsersBundle
@@ -77,6 +78,7 @@ private class KotatsuNativeSource(
     private val parser by lazy { context.newParserInstance(descriptor) }
     private val catalog = ConcurrentHashMap<String, Manga>()
     private val chapterCache = ConcurrentHashMap<String, ParserChapter>()
+    private val chapterBases = ConcurrentHashMap<String, String>()
     private fun key(manga: Manga) = if (isMangaDex) manga.url.removePrefix("/") else "${manga.id}|${manga.url}"
     override suspend fun search(query: String, limit: Int) = catalog(query, MangaKind.ALL, MangaOrder.POPULAR, 0, limit)
     override suspend fun catalog(query: String, kind: MangaKind, order: MangaOrder, offset: Int, limit: Int): List<MangaTitle> = withContext(Dispatchers.IO) {
@@ -125,15 +127,17 @@ private class KotatsuNativeSource(
         }.sortedByDescending { it.number }.map { chapter ->
             val chapterId = if (isMangaDex) chapter.url.removePrefix("/") else chapter.id.toString()
             chapterCache[chapterId] = chapter
+            chapterBases[chapterId] = normalizePageUrl(chapter.url, manga.publicUrl.toHttpUrlOrNull()?.toString() ?: "https://${parser.domain}/") ?: "https://${parser.domain}/"
             MangaChapter(id, chapterId, mangaId, chapter.title.orEmpty(), chapter.numberString(), language, listOfNotNull(chapter.scanlator), previousParserId = if (isMangaDex) chapter.id.toString() else null)
         }
     }
     override suspend fun pages(chapterId: String): List<MangaPage> = withContext(Dispatchers.IO) {
         val chapter = chapterCache[chapterId] ?: error("Open chapter list again to reload this chapter")
         val headers = parser.getRequestHeaders().toMultimap().mapValues { it.value.joinToString(", ") }
+        val base = chapterBases[chapterId] ?: "https://${parser.domain}/"
         parser.getPages(chapter).mapIndexed { index, page ->
-            val url = parser.getPageUrl(page)
-            require(url.startsWith("https://")) { "Insecure page URL" }
+            val url = normalizePageUrl(parser.getPageUrl(page), base)
+                ?: error("Provider returned an unsupported image URL")
             MangaPage(index, url, headers)
         }
     }
@@ -141,7 +145,19 @@ private class KotatsuNativeSource(
 
 /** Fail closed for categories outside ordinary manga/comics and known adult source identifiers. */
 internal fun sourceAllowed(type: ContentType, name: String, title: String, broken: Boolean): Boolean {
+    if (name.equals("MANGAGO", true) || name.startsWith("XCOMIC", true)) return false // Mixed-content sources pending separate review.
     if (broken || type !in setOf(ContentType.MANGA, ContentType.MANHWA, ContentType.MANHUA, ContentType.COMICS, ContentType.ONE_SHOT)) return false
     val label = (name + " " + title).lowercase(Locale.ROOT)
     return !Regex("hentai|hent[a-z]*|porn|adult|nsfw|18\\s*\\+|doujin|eromanga|ecchi|rule34|xxx|yaoi18|smut|lezhin18").containsMatchIn(label)
 }
+
+/** Accept ordinary HTTP/HTTPS plus relative URLs; reject non-web schemes and embedded credentials. */
+internal fun normalizePageUrl(raw: String, base: String): String? {
+    val value = raw.trim()
+    if (value.isEmpty()) return null
+    val parsed = value.toHttpUrlOrNull() ?: base.toHttpUrlOrNull()?.resolve(value) ?: return null
+    if (parsed.username.isNotEmpty() || parsed.password.isNotEmpty()) return null
+    return parsed.toString()
+}
+
+internal fun preferredMangaLanguage(tag: String): Boolean = tag.isBlank() || Locale.forLanguageTag(tag.replace('_', '-')).language in setOf("en", "ja", "zh", "ko")

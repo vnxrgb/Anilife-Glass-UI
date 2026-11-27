@@ -32,6 +32,13 @@ internal object MangaNetwork {
     val cookieJar: CookieJar = MangaSessionCookies()
     val client: OkHttpClient by lazy {
         OkHttpClient.Builder().cookieJar(cookieJar)
+            .addNetworkInterceptor { chain ->
+                val original = chain.request()
+                val request = if (original.url.isHttps) original else original.newBuilder()
+                    .removeHeader("Authorization").removeHeader("Proxy-Authorization")
+                    .removeHeader("Cookie").build()
+                chain.proceed(request)
+            }
             .connectTimeout(20, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS)
             .writeTimeout(20, TimeUnit.SECONDS).callTimeout(60, TimeUnit.SECONDS).build()
     }

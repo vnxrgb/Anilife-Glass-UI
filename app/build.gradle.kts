@@ -129,7 +129,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
-            manifestPlaceholders["usesCleartextTraffic"] = "false"
+            // Manga preview: legacy public HTTP pages require Android cleartext permission.
+            // MangaNetwork strips cookies and authorization on plaintext requests; TLS validation is unchanged.
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
