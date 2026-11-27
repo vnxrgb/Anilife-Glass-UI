@@ -113,14 +113,19 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     val healthContext = LocalContext.current
     val health = remember(healthContext) { MangaSourceHealthStore(healthContext) }
     val healthStates by health.states.collectAsState()
-    var verifiedIds by remember(healthContext) { mutableStateOf(MangaVerifiedSources.cached(healthContext)) }
+    LaunchedEffect(health) { while (true) { health.refresh(); delay(30_000L) } }
     val sourcePrefs = remember(healthContext) { healthContext.getSharedPreferences("manga_source_selection", android.content.Context.MODE_PRIVATE) }
-    val verifiedSources = remember(registry, verifiedIds) { registry.all().filter { it.id in verifiedIds && preferredMangaLanguage(it.languageTag) } }
-    val selectableSources = remember(verifiedSources, healthStates) { verifiedSources.filter { healthStates[it.id] !in setOf(SourceHealth.RESTRICTED, SourceHealth.SERVER_TLS, SourceHealth.FAILED) } }
+    val catalogSources = remember(registry) { registry.all().filter { it.available } }
+    val selectableSources = remember(catalogSources, healthStates) {
+        catalogSources.sortedWith(compareBy<MangaSource> { sourceHealthRank(healthStates[it.id] ?: SourceHealth.UNTESTED) }
+            .thenBy { !preferredMangaLanguage(it.languageTag) }.thenBy { it.id != "mangadex" }.thenBy { it.displayName.lowercase() })
+    }
     var sourceId by remember { mutableStateOf(sourcePrefs.getString("provider", "").orEmpty()) }
-    LaunchedEffect(healthContext) { verifiedIds = MangaVerifiedSources.refresh(healthContext) }
-    LaunchedEffect(verifiedSources) {
-        if (verifiedSources.none { it.id == sourceId }) sourceId = verifiedSources.firstOrNull { it.languageTag.startsWith("en") }?.id ?: verifiedSources.firstOrNull()?.id.orEmpty()
+    LaunchedEffect(catalogSources) {
+        if (catalogSources.none { it.id == sourceId }) {
+            sourceId = selectableSources.firstOrNull { sourceReady(healthStates[it.id] ?: SourceHealth.UNTESTED) && it.languageTag.startsWith("en") }?.id
+                ?: selectableSources.firstOrNull { sourceReady(healthStates[it.id] ?: SourceHealth.UNTESTED) }?.id.orEmpty()
+        }
     }
     LaunchedEffect(sourceId) { if (sourceId.isNotEmpty()) sourcePrefs.edit().putString("provider", sourceId).apply() }
     var query by rememberSaveable { mutableStateOf("") }
@@ -148,11 +153,11 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     var sourceMenu by remember { mutableStateOf(false) }
     var attribution by remember { mutableStateOf(false) }
     val openSaved: (MangaSaved, Boolean) -> Unit = { entry, resume ->
-        if (verifiedSources.any { it.id == entry.title.sourceId }) { readImmediately = resume; selected = entry.title }
+        if (catalogSources.any { it.id == entry.title.sourceId }) { readImmediately = resume; selected = entry.title }
         else unavailableTitle = entry.title
     }
     val scope = rememberCoroutineScope()
-    val provider = verifiedSources.firstOrNull { it.id == sourceId }
+    val provider = catalogSources.firstOrNull { it.id == sourceId }
     val home = section == MangaSection.HOME
     val browse = section == MangaSection.BROWSE
     val library = section == MangaSection.LIBRARY
@@ -173,7 +178,8 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         listState.scrollToItem(0)
         catalogGeneration++; moreLoading = false
         loading = true; error = null; results = emptyList(); recent = emptyList(); offset = 0; hasMore = false
-        if (provider == null) error = "No verified providers available. The provider list updates automatically."
+        if (provider == null) error = "Choose a provider to browse manga."
+        else if (!sourceReady(healthStates[provider.id] ?: SourceHealth.UNTESTED)) error = "This provider is temporarily unavailable. Choose another provider or try again after its cooldown."
         else resultOf { provider.catalog(if (browse) query.trim() else "", kind, order, limit = 24) }
             .onSuccess { results = it; offset = it.size; hasMore = it.size == 24; if (it.isNotEmpty()) health.record(provider.id, SourceHealth.CATALOG) }
             .onFailure { health.record(provider.id, classifySourceFailure(it)); error = healthError(it) }
@@ -183,16 +189,16 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
             resultOf { provider.catalog("", kind, MangaOrder.RECENT, limit = 12) }.onSuccess { recent = it }
         }
     }
-    if (sourceMenu) MangaSourcePicker(selectableSources, provider?.id, onDismiss = { sourceMenu = false }, onSelect = { source ->
+    if (sourceMenu) MangaSourcePicker(selectableSources, healthStates, provider?.id, onDismiss = { sourceMenu = false }, onSelect = { source ->
         sourceId = source.id; kind = MangaKind.ALL; genre = null; sourceMenu = false; retry++
     }, onInfo = { sourceMenu = false; attribution = true })
-    unavailableTitle?.let { unavailable -> AlertDialog(onDismissRequest = { unavailableTitle = null }, title = { Text("Provider unavailable") }, text = { Text("${unavailable.title} remains in your reading list. Its provider is not currently verified.") }, confirmButton = { TextButton(onClick = { unavailableTitle = null }) { Text("OK") } }) }
+    unavailableTitle?.let { unavailable -> AlertDialog(onDismissRequest = { unavailableTitle = null }, title = { Text("Provider unavailable") }, text = { Text("${unavailable.title} remains in your reading list. Its provider is no longer in the bundled catalog.") }, confirmButton = { TextButton(onClick = { unavailableTitle = null }) { Text("OK") } }) }
     if (attribution) AlertDialog(onDismissRequest = { attribution = false }, title = { Text("Built-in sources") },
-        text = { Text("Catalog and chapters come from the built-in Kotatsu-Redo parser library. Adult categories and unconfirmed content ratings are excluded. Known broken sources are omitted. Automated verification checks one safe sample on the CI network; local checks may differ. Catalog success is not proof every chapter works. Availability and access rights vary by provider; no external extensions are installed. Chapter credits are shown when provided.") },
+        text = { Text("Catalog and chapters come from the built-in Kotatsu-Redo parser library. Adult categories and unconfirmed content ratings are excluded. Known broken sources are omitted. Provider health is measured on this device; temporary failures cool down and may recover. Unchecked sources are not claimed to work. Catalog success is not proof every chapter works. Availability and access rights vary by provider; no external extensions are installed. Chapter credits are shown when provided.") },
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
     val title = selected
     val activeChapter = chapter
-    val titleSource = title?.let { entry -> verifiedSources.firstOrNull { it.id == entry.sourceId } }
+    val titleSource = title?.let { entry -> catalogSources.firstOrNull { it.id == entry.sourceId } }
     if (title != null && titleSource != null) {
         SideEffect { onHeroUnderBarsChanged(false) }
         AppChromeTakeoverEffect()
@@ -204,7 +210,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                 previousChapter = distinct.getOrNull(index + 1)?.takeIf { index >= 0 }?.let { entry -> { chapter = entry } },
                 nextChapter = distinct.getOrNull(index - 1)?.let { entry -> { chapter = entry } })
         } else {
-            MangaDetails(title, titleSource, store, saved.firstOrNull { it.title.identity() == title.identity() }, readImmediately, onBack = back,
+            MangaDetails(title, titleSource, store, health, saved.firstOrNull { it.title.identity() == title.identity() }, readImmediately, onBack = back,
                 onBookmark = { value -> store.bookmark(title, value); saved = store.all() },
                 onChapter = { entry, entries -> readImmediately = false; availableChapters = entries; chapter = entry })
         }
@@ -342,7 +348,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                                 Text(entry.title.title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 Text(entry.readLabel(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 if (entry.pageCount > 0) LinearProgressIndicator(progress = { ((entry.page + 1f) / entry.pageCount).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
-                                if (verifiedSources.none { it.id == entry.title.sourceId }) Text("Provider unavailable", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (catalogSources.none { it.id == entry.title.sourceId }) Text("Provider unavailable", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Icon(Icons.Default.ChevronRight, "Details")
                         }
@@ -477,7 +483,7 @@ private fun MangaContinueCard(entry: MangaSaved, modifier: Modifier, onClick: ()
 }
 
 @Composable
-private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaReadingStore, saved: MangaSaved?, readImmediately: Boolean, onBack: () -> Unit, onBookmark: (Boolean) -> Unit, onChapter: (MangaChapter, List<MangaChapter>) -> Unit) {
+private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaReadingStore, health: MangaSourceHealthStore, saved: MangaSaved?, readImmediately: Boolean, onBack: () -> Unit, onBookmark: (Boolean) -> Unit, onChapter: (MangaChapter, List<MangaChapter>) -> Unit) {
     var chapters by remember(title) { mutableStateOf<List<MangaChapter>>(emptyList()) }
     var loading by remember(title) { mutableStateOf(true) }
     var error by remember(title) { mutableStateOf<String?>(null) }
@@ -490,7 +496,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
     var chapterQuery by rememberSaveable(title.id) { mutableStateOf("") }
     LaunchedEffect(title.id, language, retry) {
         chapters = emptyList(); loading = true; error = null
-        resultOf { source.chapters(title.id, language) }.onSuccess { chapters = it; details = source.enrichedTitle(title) }.onFailure { error = healthError(it) }
+        resultOf { source.chapters(title.id, language) }.onSuccess { chapters = it; details = source.enrichedTitle(title); if (it.isNotEmpty()) health.record(source.id, SourceHealth.CATALOG) }.onFailure { health.record(source.id, classifySourceFailure(it)); error = healthError(it) }
         loading = false
     }
     val sorted = (if (ascending) chapters.reversed() else chapters).filter { chapterQuery.isBlank() || it.label().contains(chapterQuery, true) || it.title.contains(chapterQuery, true) }
@@ -617,7 +623,7 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
     var position by remember(chapter.id) { mutableIntStateOf(store.saved(title)?.takeIf { chapter.matchesSaved(it.chapterId) }?.page ?: 0) }
     LaunchedEffect(chapter.id, retry) {
         loading = true; error = null
-        resultOf { source.pages(chapter.id) }.onSuccess { pages = it; if (it.isNotEmpty()) position = position.coerceIn(0, it.lastIndex) }.onFailure { error = healthError(it) }
+        resultOf { source.pages(chapter.id) }.onSuccess { pages = it; if (it.isNotEmpty()) position = position.coerceIn(0, it.lastIndex) }.onFailure { health.record(source.id, classifySourceFailure(it)); error = healthError(it) }
         loading = false
     }
     if (chapterMenu) MangaChapterPicker(chapters, chapter, store, title, onDismiss = { chapterMenu = false }, onSelect = { chapterMenu = false; onChapter(it) })
@@ -986,14 +992,15 @@ private fun MangaChapterPicker(chapters: List<MangaChapter>, current: MangaChapt
 /** Virtualized source catalog: only the chosen parser is asked for content. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MangaSourcePicker(sources: List<MangaSource>, selected: String?, onDismiss: () -> Unit, onSelect: (MangaSource) -> Unit, onInfo: () -> Unit) {
+private fun MangaSourcePicker(sources: List<MangaSource>, health: Map<String, SourceHealth>, selected: String?, onDismiss: () -> Unit, onSelect: (MangaSource) -> Unit, onInfo: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     var language by rememberSaveable { mutableStateOf("All") }
-    val filtered = remember(sources, query, language) {
+    var showUnavailable by rememberSaveable { mutableStateOf(false) }
+    val filtered = remember(sources, health, query, language, showUnavailable) {
         sources.filter { source ->
             val tag = java.util.Locale.forLanguageTag(source.languageTag.replace('_', '-')).language
-            (language == "All" || tag.isBlank() || tag == language) && (query.isBlank() || source.displayName.contains(query.trim(), true) || source.languageLabel().contains(query.trim(), true))
-        }.sortedWith(compareBy<MangaSource> { it.id != selected }.thenBy { !it.languageTag.startsWith("en") }.thenBy { it.displayName.lowercase() })
+            (showUnavailable || sourceReady(health[source.id] ?: SourceHealth.UNTESTED)) && (language == "All" || tag.isBlank() || tag == language) && (query.isBlank() || source.displayName.contains(query.trim(), true) || source.languageLabel().contains(query.trim(), true))
+        }.sortedWith(compareBy<MangaSource> { it.id != selected }.thenBy { sourceHealthRank(health[it.id] ?: SourceHealth.UNTESTED) }.thenBy { !preferredMangaLanguage(it.languageTag) }.thenBy { it.displayName.lowercase() })
     }
     ModalBottomSheet(onDismissRequest = onDismiss, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1004,23 +1011,26 @@ private fun MangaSourcePicker(sources: List<MangaSource>, selected: String?, onD
             }
             PageSearchField(query, { query = it }, "Search providers", "Clear search")
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(listOf("All" to "All", "en" to "EN", "ja" to "JP", "zh" to "ZH", "ko" to "KO")) { (code, label) ->
+                items(listOf("All" to "All") + sources.map { java.util.Locale.forLanguageTag(it.languageTag.replace('_', '-')).language }.filter { it.isNotBlank() }.distinct().sorted().map { it to it.uppercase() }) { (code, label) ->
                     FilterChip(selected = language == code, onClick = { language = code }, label = { Text(label) }, colors = cinematicFilterChipColors(), shape = CircleShape)
                 }
             }
-            Text("${filtered.size} available providers", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("${filtered.size} providers", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                FilterChip(selected = showUnavailable, onClick = { showUnavailable = !showUnavailable }, label = { Text("Unavailable") }, shape = CircleShape)
+            }
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 items(filtered, key = { it.id }) { source ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(if (source.id == selected) glassSelectionColor() else Color.Transparent).clickable { onSelect(source) }.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(if (source.id == selected) glassSelectionColor() else Color.Transparent).clickable(enabled = sourceReady(health[source.id] ?: SourceHealth.UNTESTED)) { onSelect(source) }.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(Modifier.size(38.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) { Icon(Icons.Default.AutoStories, null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(19.dp)) }
-                        Column(Modifier.weight(1f)) { Text(source.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(source.languageLabel(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        Column(Modifier.weight(1f)) { Text(source.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(source.languageLabel() + " · " + (health[source.id] ?: SourceHealth.UNTESTED).label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         if (source.id == selected) Icon(Icons.Default.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary)
                         else Icon(Icons.Default.ChevronRight, "Select provider", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 if (filtered.isEmpty()) item { Text("No available providers match this filter.", Modifier.padding(12.dp)) }
             }
-            Text("Providers are automatically checked and updated.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Health reflects this device. Unchecked providers are tested when opened; temporary failures become eligible again.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -1028,5 +1038,6 @@ private fun MangaSourcePicker(sources: List<MangaSource>, selected: String?, onD
 private fun healthError(error: Throwable): String = when (classifySourceFailure(error)) {
     SourceHealth.RESTRICTED -> "This provider refused access or requires authorization. Try another source."
     SourceHealth.SERVER_TLS -> "The provider has a TLS/certificate error. Try another source; certificate verification remains enabled."
+    SourceHealth.RATE_LIMITED -> "The provider is rate limiting requests. Try another source or return later."
     else -> "The provider could not complete this request. Try another source or retry later."
 }

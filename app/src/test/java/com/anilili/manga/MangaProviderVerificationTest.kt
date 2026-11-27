@@ -38,12 +38,9 @@ class MangaProviderVerificationTest {
         org.junit.Assert.assertFalse(preferredMangaLanguage("es"))
     }
 
-    @Test fun imageHeadersAndVerifiedManifest() {
+    @Test fun imageHeaders() {
         org.junit.Assert.assertTrue(imageSignature(byteArrayOf(-1, -40, -1), 3))
         org.junit.Assert.assertFalse(imageSignature("<html>".toByteArray(), 6))
-        val now = 1_800_000_000_000L
-        val valid = "parser=${MangaVerifiedSources.REVISION}\nchecked=$now\nmangadex\nkotatsu:webtoons_en\n../../invalid"
-        org.junit.Assert.assertEquals(setOf("mangadex", "kotatsu:webtoons_en"), MangaVerifiedSources.parse(valid, now))
-        org.junit.Assert.assertTrue(MangaVerifiedSources.parse(valid, now + 259_200_001L).isEmpty())
+
     }
 }
