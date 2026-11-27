@@ -72,7 +72,7 @@ class RandomAnimeViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun moodDeck(genre: String): RandomAnimeDeck = RandomAnimeDeck(
         fetchPage = { page ->
-            repo.discover(DiscoverFilters(genres = setOf(genre), excludedGenres = MoodPolicy.excludedGenres(genre), hideWatched = WatchedFilter.STARTED), page).items
+            repo.discover(DiscoverFilters(genres = setOf(genre), hideWatched = WatchedFilter.STARTED), page).items
                 .filter { MoodPolicy.matches(it, genre) }
         },
         pageCount = 8,
