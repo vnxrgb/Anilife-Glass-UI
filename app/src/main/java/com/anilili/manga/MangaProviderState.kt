@@ -11,7 +11,11 @@ internal class MangaProviderState {
     val sources = mutableStateMapOf<String, MangaSource>()
     val status = mutableStateMapOf<String, String>()
     val diagnostics = mutableStateMapOf<String, ProviderDiagnostic>()
-    var selectedId by mutableStateOf(REVIEWED_SOURCE_ID)
+    var selectedId by mutableStateOf(MangaDiscoverySource.ID)
+    var pinned by mutableStateOf<Set<String>>(emptySet())
+    var languages by mutableStateOf<Set<String>>(setOf("en"))
+    fun togglePin(id: String) { pinned = if (id in pinned) pinned - id else pinned + id }
+    fun toggleLanguage(code: String) { languages = if (code in languages) languages - code else languages + code }
     var discovering by mutableStateOf(true)
     var generation = 0L
 }
@@ -33,9 +37,13 @@ internal fun rememberMangaProviderState(enabled: Boolean): MangaProviderState {
     val context = LocalContext.current
     val prefs = remember(context, profile) { context.getSharedPreferences("manga_provider_choice_" + (profile ?: "default"), android.content.Context.MODE_PRIVATE) }
     val state = remember(profile) { MangaProviderState().apply {
-        selectedId = prefs.getString("selected", REVIEWED_SOURCE_ID) ?: REVIEWED_SOURCE_ID
+        selectedId = prefs.getString("selected", MangaDiscoverySource.ID) ?: MangaDiscoverySource.ID
+        pinned = prefs.getStringSet("pinned", emptySet()).orEmpty().toSet()
+        languages = prefs.getStringSet("languages", setOf("en")).orEmpty().toSet()
     } }
-    LaunchedEffect(state, state.selectedId) { prefs.edit().putString("selected", state.selectedId).apply() }
+    LaunchedEffect(state, state.selectedId, state.pinned, state.languages) {
+        prefs.edit().putString("selected", state.selectedId).putStringSet("pinned", state.pinned).putStringSet("languages", state.languages).apply()
+    }
     val health = remember(context) { MangaProviderHealthCache(context.getSharedPreferences("manga_provider_health_v2", android.content.Context.MODE_PRIVATE)) }
     LaunchedEffect(state, enabled) {
         val generation = ++state.generation
