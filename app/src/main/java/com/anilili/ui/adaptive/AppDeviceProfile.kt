@@ -184,11 +184,12 @@ fun resolveAppDeviceProfile(
     uiScale: Float = 1f,
     signals: TelevisionSignals = TelevisionSignals(),
     preference: FormFactorPreference = FormFactorPreference.AUTOMATIC,
+    deviceSmallestWidthDp: Int = widthDp,
 ): AppDeviceProfile {
     val television = televisionSignal(uiModeType, widthDp, signals, preference)
     val formFactor = when {
         television != null -> AppFormFactor.TV
-        widthDp >= TELEVISION_MIN_WIDTH_DP -> AppFormFactor.TABLET
+        maxOf(widthDp, deviceSmallestWidthDp) >= TELEVISION_MIN_WIDTH_DP -> AppFormFactor.TABLET
         else -> AppFormFactor.PHONE
     }
     return AppDeviceProfile(formFactor, widthDp, isLowRamDevice, memoryClassMb, uiScale, television)
@@ -221,7 +222,7 @@ fun rememberAppDeviceProfile(): AppDeviceProfile {
     // Mobile users must never enter the ten-foot UI, even after migrating a
     // saved television override or running on hardware advertising Leanback.
     val resolvedPreference = if (BuildConfig.FLAVOR == "mobile") FormFactorPreference.HANDHELD else preference
-    return remember(uiModeType, configuration.screenWidthDp, lowRam, memoryClassMb, uiScale, signals, resolvedPreference) {
+    return remember(uiModeType, configuration.screenWidthDp, configuration.smallestScreenWidthDp, lowRam, memoryClassMb, uiScale, signals, resolvedPreference) {
         resolveAppDeviceProfile(
             uiModeType,
             configuration.screenWidthDp,
@@ -230,6 +231,7 @@ fun rememberAppDeviceProfile(): AppDeviceProfile {
             uiScale,
             signals,
             resolvedPreference,
+            configuration.smallestScreenWidthDp,
         )
     }
 }
