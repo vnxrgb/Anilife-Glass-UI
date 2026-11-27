@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +35,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import me.saket.telephoto.zoomable.coil.ZoomableAsyncImage
+import me.saket.telephoto.zoomable.rememberZoomableImageState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -511,26 +512,44 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
     }
 }
 
+/** Paged reading delegates zoom and pan to Telephoto; vertical reading retains natural-height Coil pages. */
 @Composable
 private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap: () -> Unit) {
-    var scale by remember(page.imageUrl) { mutableFloatStateOf(1f) }
-    var x by remember(page.imageUrl) { mutableFloatStateOf(0f) }
-    var y by remember(page.imageUrl) { mutableFloatStateOf(0f) }
     var retry by remember(page.imageUrl) { mutableIntStateOf(0) }
-    val zoom = if (fit) Modifier.pointerInput(page.imageUrl) {
-        detectTransformGestures { _, pan, factor, _ ->
-            scale = (scale * factor).coerceIn(1f, 4f)
-            if (scale > 1f) { x += pan.x; y += pan.y } else { x = 0f; y = 0f }
+    val tap by rememberUpdatedState(onTap)
+    val context = LocalContext.current
+    key(page.imageUrl, retry) {
+        if (fit) {
+            val state = rememberZoomableImageState()
+            val request = remember(context, page.imageUrl, retry) {
+                ImageRequest.Builder(context).data(page.imageUrl).build()
+            }
+            Box(modifier, contentAlignment = Alignment.Center) {
+                ZoomableAsyncImage(
+                    model = request,
+                    contentDescription = "Page ${page.index + 1}",
+                    modifier = Modifier.fillMaxSize(),
+                    state = state,
+                    onClick = { tap() },
+                    contentScale = ContentScale.Fit,
+                )
+                if (!state.isImageDisplayed && !state.isPlaceholderDisplayed) {
+                    var timedOut by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) { delay(15000); timedOut = true }
+                    if (timedOut) OutlinedButton(onClick = { retry++ }, colors = cinematicSecondaryButtonColors()) { Text("Retry page") }
+                    else CircularProgressIndicator()
+                }
+            }
+        } else {
+            SubcomposeAsyncImage(
+                model = page.imageUrl,
+                contentDescription = "Page ${page.index + 1}",
+                modifier = modifier.pointerInput(Unit) { detectTapGestures(onTap = { tap() }) },
+                contentScale = ContentScale.FillWidth,
+                loading = { Box(Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
+                error = { Box(Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) { Button(onClick = { retry++ }) { Text("Retry page") } } },
+            )
         }
-    } else Modifier
-    key(retry) {
-        SubcomposeAsyncImage(
-            model = page.imageUrl, contentDescription = "Page ${page.index + 1}",
-            modifier = modifier.pointerInput(Unit) { detectTapGestures(onTap = { onTap() }) }.then(zoom).clip(RoundedCornerShape(0.dp)).graphicsLayer { scaleX = scale; scaleY = scale; translationX = x; translationY = y },
-            contentScale = if (fit) ContentScale.Fit else ContentScale.FillWidth,
-            loading = { Box(Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
-            error = { Box(Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) { Button(onClick = { retry++ }) { Text("Retry page") } } }
-        )
     }
 }
 

@@ -23,3 +23,6 @@ See README.md and docs/ASSET-LICENCES.md for further acknowledgements.
 
 AniLumos is not affiliated with or endorsed by AniLife or Morphe.
 This notice is informational and does not replace, modify or override any license.
+
+Manga paged-image rendering uses Telephoto by Saket Narayan (Apache-2.0).
+https://github.com/saket/telephoto — see app/src/main/assets/licenses/telephoto-Apache-2.0.txt.
