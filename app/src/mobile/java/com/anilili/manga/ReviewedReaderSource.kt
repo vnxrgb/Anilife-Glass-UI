@@ -77,6 +77,12 @@ private class EngineCatalogSource(
         if (!accessOnly || classified.reason in setOf("RATE_LIMIT", "ACCESS_RESTRICTED")) failure(classified)
         throw classified
     }
+    override suspend fun findTitleMatch(reference: MangaTitle): MangaTitleMatch? {
+        // A lookup is not an active reader session. Dispose immediately after each match.
+        return EngineCatalogSource(provider, displayName, languageTag, sourceCategory, health, revision, onHealth).use { lookup ->
+            matchProviderTitle(lookup, reference)
+        }
+    }
     override val hasNativeCatalogue = true
     override suspend fun genreOptions(): List<String> = checked("SELECT_TITLE", accessOnly = true) { session().genres() }
     override suspend fun kindOptions(): List<MangaKind> = checked("SELECT_TITLE", accessOnly = true) { session().kinds() }.mapNotNull { value -> MangaKind.entries.firstOrNull { it.name == value } }

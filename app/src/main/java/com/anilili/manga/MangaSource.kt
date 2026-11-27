@@ -21,6 +21,8 @@ interface MangaSource {
     suspend fun genreOptions(): List<String> = emptyList()
     suspend fun kindOptions(): List<MangaKind> = emptyList()
     suspend fun prepareTitle(title: MangaTitle): MangaTitle = title
+    /** Match on demand; engine adapters may use an ephemeral lookup session. */
+    suspend fun findTitleMatch(reference: MangaTitle): MangaTitleMatch? = matchProviderTitle(this, reference)
     suspend fun chapters(mangaId: String, language: String = "en"): List<MangaChapter>
     suspend fun pages(chapterId: String): List<MangaPage>
     fun enrichedTitle(title: MangaTitle): MangaTitle = title

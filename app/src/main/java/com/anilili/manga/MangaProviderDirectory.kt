@@ -19,8 +19,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.util.Locale
 
-internal fun MangaSource.languageKey(): String = languageTag.trim().replace('_','-').substringBefore('-').lowercase(Locale.ROOT)
+internal fun MangaSource.languageKey(): String = languageTag.trim().replace('_','-').substringBefore('-').lowercase(Locale.ROOT).let { if (it in setOf("und", "mul")) "" else it }
 internal fun languageName(code: String): String = if (code.isBlank()) "Multilingual" else Locale.forLanguageTag(code).getDisplayLanguage(Locale.ENGLISH).ifBlank { code }
+
+/** Explicit language selections never include other or unknown-language providers. */
+internal fun providerLanguageMatches(key: String, filter: String, preferred: Set<String>): Boolean = when (filter) {
+    "all" -> true
+    "preferred" -> key in preferred
+    "multilingual" -> key.isBlank()
+    else -> key == filter
+}
 
 @Composable
 internal fun MangaProviderDirectory(state: MangaProviderState, current: String, onDismiss: () -> Unit, onSelect: (String) -> Unit) {
@@ -31,12 +39,7 @@ internal fun MangaProviderDirectory(state: MangaProviderState, current: String, 
     val languages = sources.map { it.languageKey() }.filter { it.isNotBlank() }.distinct().sortedBy(::languageName)
     val visible = sources.filter { source ->
         val key = source.languageKey()
-        val matchesLanguage = when (filter) {
-            "all" -> true
-            "pinned" -> source.id in state.pinned
-            "preferred" -> state.languages.isEmpty() || key.isBlank() || key in state.languages
-            else -> key == filter
-        }
+        val matchesLanguage = if (filter == "pinned") source.id in state.pinned else providerLanguageMatches(key, filter, state.languages)
         matchesLanguage && (source.displayName.contains(query, true) || source.languageLabel().contains(query, true))
     }.sortedWith(compareBy<MangaSource> { it.id !in state.pinned }.thenBy { providerRank(state.status[it.id]) }.thenBy { it.displayName.lowercase(Locale.ROOT) })
     val pinned = visible.filter { it.id in state.pinned }
@@ -61,7 +64,7 @@ internal fun MangaProviderDirectory(state: MangaProviderState, current: String, 
             OutlinedTextField(query, { query = it.take(80) }, modifier = Modifier.fillMaxWidth(), singleLine = true,
                 placeholder = { Text("Find provider") }, leadingIcon = { Icon(Icons.Default.Search, null) }, shape = RoundedCornerShape(24.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(listOf("preferred" to "Preferred", "all" to "All", "pinned" to "Pinned") + languages.map { it to languageName(it) }, key = { it.first }) { option ->
+                items(listOf("preferred" to "Preferred", "all" to "All", "pinned" to "Pinned", "multilingual" to "Multilingual") + languages.map { it to languageName(it) }, key = { it.first }) { option ->
                     FilterChip(selected = filter == option.first, onClick = { filter = option.first }, label = { Text(option.second) })
                 }
             }

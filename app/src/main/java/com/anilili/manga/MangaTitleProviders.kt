@@ -14,6 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import java.text.Normalizer
@@ -32,55 +35,72 @@ internal fun titleMatches(reference: MangaTitle, candidate: MangaTitle): Boolean
     return true
 }
 
+data class MangaTitleMatch(val title: MangaTitle, val count: Int)
+
+internal suspend fun matchProviderTitle(source: MangaSource, reference: MangaTitle): MangaTitleMatch? {
+    val candidates = source.search(reference.title, 20).filter { titleMatches(reference, it) }.distinctBy { it.id }
+    val candidate = candidates.singleOrNull() ?: return null
+    val prepared = source.prepareTitle(candidate)
+    if (!titleMatches(reference, prepared)) return null
+    val chapters = source.chapters(prepared.id, "und")
+    return if (chapters.isEmpty()) null else MangaTitleMatch(prepared, chapters.size)
+}
+
 private data class TitleProviderMatch(val source: MangaSource, val title: MangaTitle, val count: Int)
+
+internal const val TITLE_PROVIDER_BATCH = 100
+internal const val TITLE_PROVIDER_CONCURRENCY = 4
 
 @Composable
 internal fun MangaTitleProviders(title: MangaTitle, onChoose: (MangaTitle) -> Unit) {
     val state = LocalMangaProviderState.current
     var filter by remember(title.id) { mutableStateOf("preferred") }
-    var pages by remember(title.id, filter) { mutableIntStateOf(1) }
-    var matches by remember(title.id, filter) { mutableStateOf<List<TitleProviderMatch>>(emptyList()) }
-    var checked by remember(title.id, filter) { mutableStateOf<Set<String>>(emptySet()) }
-    var busy by remember(title.id, filter) { mutableStateOf(false) }
+    var pages by remember(title.id, filter, state.languages) { mutableIntStateOf(1) }
+    var matches by remember(title.id, filter, state.languages) { mutableStateOf<List<TitleProviderMatch>>(emptyList()) }
+    var checked by remember(title.id, filter, state.languages) { mutableStateOf<Set<String>>(emptySet()) }
+    var busy by remember(title.id, filter, state.languages) { mutableStateOf(false) }
     val all = state.sources.values.toList()
     val locales = all.map { it.languageKey() }.filter { it.isNotBlank() }.distinct().sortedBy(::languageName)
     val eligible = all.filter { source ->
         val key = source.languageKey()
-        when (filter) { "preferred" -> state.languages.isEmpty() || key.isBlank() || key in state.languages; "all" -> true; else -> key == filter || key.isBlank() }
+        providerLanguageMatches(key, filter, state.languages)
     }.sortedWith(compareBy<MangaSource> { it.id !in state.pinned }.thenBy { providerRank(state.status[it.id]) }.thenBy { it.displayName })
-    // A first batch of four, then four at a time only when requested. No full-inventory lookup.
-    LaunchedEffect(title.sourceId, title.id, filter, pages, state.discovering, all.size) {
+    // Up to 100 selected-language candidates per user-requested batch, not 100 concurrent requests.
+    // The current search is cancelled when the title, language filter or screen changes.
+    LaunchedEffect(title.sourceId, title.id, filter, pages, state.discovering, all.size, state.languages) {
         if (state.discovering) return@LaunchedEffect
         busy = true
         try {
-            val remaining = eligible.filter { it.id !in checked }.take((pages * 4 - checked.size).coerceIn(0, 4))
-            for (source in remaining) {
-                val match = try {
-                    withTimeoutOrNull(20_000L) {
-                        val candidates = source.search(title.title, 20).filter { titleMatches(title, it) }.distinctBy { it.id }
-                        val candidate = candidates.singleOrNull() ?: return@withTimeoutOrNull null
-                        val prepared = source.prepareTitle(candidate)
-                        if (!titleMatches(title, prepared)) return@withTimeoutOrNull null
-                        val chapters = source.chapters(prepared.id, "und")
-                        if (chapters.isEmpty()) null else TitleProviderMatch(source, prepared, chapters.size)
-                    }
-                } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
-                checked = checked + source.id
-                if (match != null) matches = matches + match
-                delay(350)
+            val remaining = eligible.filter { it.id !in checked }.take(TITLE_PROVIDER_BATCH)
+            for (group in remaining.chunked(TITLE_PROVIDER_CONCURRENCY)) {
+                coroutineScope {
+                    group.mapIndexed { index, source ->
+                        async {
+                            delay(index * 350L)
+                            val match = try {
+                                withTimeoutOrNull(20_000L) { source.findTitleMatch(title) }
+                            } catch (e: CancellationException) { throw e }
+                            catch (_: Exception) { null }
+                            catch (_: LinkageError) { null }
+                            checked = checked + source.id
+                            if (match != null) matches = matches + TitleProviderMatch(source, match.title, match.count)
+                        }
+                    }.awaitAll()
+                }
+                delay(350L)
             }
         } finally { busy = false }
     }
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Reading providers", style = MaterialTheme.typography.titleMedium)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(listOf("preferred" to "Preferred", "all" to "All languages") + locales.map { it to languageName(it) }, key = { it.first }) { option ->
+            items(listOf("preferred" to "Preferred", "all" to "All languages", "multilingual" to "Multilingual") + locales.map { it to languageName(it) }, key = { it.first }) { option ->
                 FilterChip(selected = filter == option.first, onClick = { filter = option.first }, label = { Text(option.second) })
             }
         }
         if (busy || state.discovering) LinearProgressIndicator(Modifier.fillMaxWidth())
-        Text("Matches with available chapter lists · provider language", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        matches.forEach { match ->
+        Text("Matches with available chapter lists · selected provider language", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        matches.sortedWith(compareBy<TitleProviderMatch> { it.source.languageLabel() }.thenBy { it.source.id !in state.pinned }.thenBy { it.source.displayName }).forEach { match ->
             Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f)) {
                 Row(Modifier.fillMaxWidth().clickable { onChoose(match.title) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(Icons.Default.Book, null, tint = MaterialTheme.colorScheme.primary)
@@ -93,7 +113,7 @@ internal fun MangaTitleProviders(title: MangaTitle, onChoose: (MangaTitle) -> Un
             }
         }
         if (!busy && !state.discovering && matches.isEmpty()) Text("No matching chapter lists found in the sources checked.", style = MaterialTheme.typography.bodySmall)
-        if (!busy && checked.size < eligible.size) OutlinedButton(onClick = { pages++ }, modifier = Modifier.fillMaxWidth()) { Text("Search more providers") }
-        Text("${checked.size} checked · no background scanning", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (!busy && checked.size < eligible.size) OutlinedButton(onClick = { pages++ }, modifier = Modifier.fillMaxWidth()) { Text("Search next ${minOf(TITLE_PROVIDER_BATCH, eligible.size - checked.size)} providers") }
+        Text("${checked.size} of ${eligible.size} matching-language providers checked", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
