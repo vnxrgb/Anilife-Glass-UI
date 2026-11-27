@@ -118,7 +118,14 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     val healthStates by health.states.collectAsState()
     LaunchedEffect(health) { while (true) { health.refresh(); delay(30_000L) } }
     val sourcePrefs = remember(healthContext) { healthContext.getSharedPreferences("manga_source_selection", android.content.Context.MODE_PRIVATE) }
-    val catalogSources = remember(registry) { registry.all().filter { it.available && it.id != LocalMangaSource.ID } }
+    var verifiedIds by remember(healthContext) { mutableStateOf(MangaVerifiedSources.cached(healthContext)) }
+    LaunchedEffect(healthContext) {
+        while (true) {
+            verifiedIds = MangaVerifiedSources.refresh(healthContext)
+            delay(30 * 60_000L)
+        }
+    }
+    val catalogSources = remember(registry, verifiedIds) { registry.all().filter { it.available && it.id != LocalMangaSource.ID && it.id in verifiedIds } }
     val providerPrefs = remember(healthContext) { MangaProviderPreferences(healthContext) }
     val enabledSources = remember(catalogSources, providerPrefs.disabled, providerPrefs.enabled) { catalogSources.filter { providerPrefs.isEnabled(it) } }
     val selectableSources = remember(enabledSources, healthStates, providerPrefs.pinned) {
@@ -213,7 +220,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         listState.scrollToItem(0)
         catalogGeneration++; moreLoading = false
         loading = true; error = null; results = emptyList(); recent = emptyList(); offset = 0; hasMore = false
-        if (provider == null) error = "Choose a provider to browse manga."
+        if (provider == null) error = if (catalogSources.isEmpty()) "No recently verified providers. Check your connection or try again later." else "Choose a provider to browse manga."
         else if (!sourceCanBrowse(healthStates[provider.id] ?: SourceHealth.UNTESTED)) error = "This provider has an active access, certificate or rate-limit restriction. Try again after its cooldown."
         else resultOf { provider.catalog(if (browse) query.trim() else "", kind, order, limit = 24) }
             .onSuccess { results = it; offset = (provider as? NativeConfigurableProvider)?.rawCatalogCount() ?: it.size; hasMore = offset > 0; if (it.isNotEmpty()) health.record(provider.id, SourceHealth.CATALOG) else if (offset > 0) { health.record(provider.id, SourceHealth.CATALOG); error = "Provider responded, but no titles met the content-rating filter." } }
@@ -229,7 +236,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     }, onInfo = { sourceMenu = false; attribution = true })
     unavailableTitle?.let { unavailable -> AlertDialog(onDismissRequest = { unavailableTitle = null }, title = { Text("Provider unavailable") }, text = { Text("${unavailable.title} remains in your reading list. Enable its provider in Manage providers if it is still available.") }, confirmButton = { TextButton(onClick = { unavailableTitle = null }) { Text("OK") } }) }
     if (attribution) AlertDialog(onDismissRequest = { attribution = false }, title = { Text("Built-in sources") },
-        text = { Text("Catalog and chapters come from the built-in Kotatsu-Redo parser library. Adult categories and unconfirmed content ratings are excluded. Known broken sources are omitted. Provider health is measured on this device; temporary failures cool down and may recover. Unchecked sources are not claimed to work. Catalog success is not proof every chapter works. Availability and access rights vary by provider; no external extensions are installed. Chapter credits are shown when provided.") },
+        text = { Text("Providers are shown only after a recent catalog, chapter, page and image sample passes verification. The verified list refreshes automatically and can add or remove built-in sources without an APK update. Temporary device-specific failures remain possible. Availability and access rights vary by provider. No external extensions are installed.") },
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
     val title = selected
     val activeChapter = chapter

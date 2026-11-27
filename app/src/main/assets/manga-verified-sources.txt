@@ -1,0 +1,9 @@
+parser=8e4b04f3df0c49ac7bc3fea8202c9c7e81a4e626
+checked=1795752682693
+kotatsu:atsumoe
+kotatsu:chikari
+kotatsu:elftoon
+kotatsu:klz9
+kotatsu:naver_webtoon
+kotatsu:stonescape
+mangadex
