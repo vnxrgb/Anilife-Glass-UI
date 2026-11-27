@@ -52,6 +52,16 @@ class GithubTvUpdateSourceTest {
         assertNull(GithubTvUpdateSource.select(releases(), json) { payload.replace("com.anilumos.app", "other.app") })
         assertNull(GithubTvUpdateSource.select(releases(), json) { payload.replace("a".repeat(64), "bad") })
     }
+    @Test fun invalidApkNeverTriggersMetadataDownload() {
+        var metadataRequests = 0
+        val invalidApk = releases().replace("\"size\":2048", "\"size\":536870913")
+        assertNull(GithubTvUpdateSource.select(invalidApk, json) {
+            metadataRequests++
+            payload
+        })
+        assertEquals(0, metadataRequests)
+    }
+
     @Test fun selectsHighestBuildRegardlessOfReleaseOrdering() {
         val older = releases().replace("run2", "run3")
         val newer = releases().replace("run2", "run4")
