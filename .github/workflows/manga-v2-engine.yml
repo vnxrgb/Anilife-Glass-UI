@@ -9,6 +9,23 @@ on:
       - 'gradle/libs.versions.toml'
       - '.github/workflows/manga-v2-engine.yml'
   workflow_dispatch:
+    inputs:
+      live_source:
+        description: 'Reviewed parser source ID (blank runs local tests only)'
+        type: string
+        required: false
+      live_hosts:
+        description: 'Approved HTTPS hostnames, comma separated'
+        type: string
+        required: false
+      live_title:
+        description: 'Exact title of an authorized test manga'
+        type: string
+        required: false
+      live_authorized:
+        description: 'I have permission for automated access to this source and title'
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -137,6 +154,11 @@ jobs:
           done
       - name: Run isolated Android instrumentation tests
         shell: bash
+        env:
+          LIVE_SOURCE: ${{ inputs.live_source }}
+          LIVE_HOSTS: ${{ inputs.live_hosts }}
+          LIVE_TITLE: ${{ inputs.live_title }}
+          LIVE_AUTHORIZED: ${{ inputs.live_authorized }}
         run: |
           set -euo pipefail
           export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
@@ -172,7 +194,17 @@ jobs:
             sleep 5
           done
           adb shell input keyevent 82
-          ./gradlew :manga-engine:connectedDebugAndroidTest --max-workers=2 --no-configuration-cache --console=plain --stacktrace
+          args=()
+          if [ -n "$LIVE_SOURCE$LIVE_HOSTS$LIVE_TITLE" ] || [ "$LIVE_AUTHORIZED" = true ]; then
+            if [ "$LIVE_AUTHORIZED" != true ] || [ -z "$LIVE_SOURCE" ] || [ -z "$LIVE_HOSTS" ] || [ -z "$LIVE_TITLE" ]; then
+              echo "::error::Live checks require source, hosts, exact authorized title and permission confirmation"
+              exit 1
+            fi
+            args+=("-Pandroid.testInstrumentationRunnerArguments.liveSource=$LIVE_SOURCE")
+            args+=("-Pandroid.testInstrumentationRunnerArguments.liveHosts=$LIVE_HOSTS")
+            args+=("-Pandroid.testInstrumentationRunnerArguments.liveTitle=$LIVE_TITLE")
+          fi
+          ./gradlew :manga-engine:connectedDebugAndroidTest --max-workers=2 --no-configuration-cache --console=plain --stacktrace "${args[@]}"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
