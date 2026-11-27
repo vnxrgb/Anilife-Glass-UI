@@ -12,6 +12,19 @@ import org.koitharu.kotatsu.parsers.model.SortOrder
 /** Explicit operator-approved single-title live test. Local CI never contacts provider sites. */
 @RunWith(AndroidJUnit4::class)
 class AuthorizedProviderDeviceTest {
+    @Test fun atsuLookismMetadataOnly() = runBlocking {
+        assumeTrue("No one-shot metadata check requested", InstrumentationRegistry.getArguments().getString("atsuMetadata") == "true")
+        val scope = SourceScope("ATSUMOE", setOf("atsu.moe"))
+        val registry = ParserRegistry()
+        SourceSession(scope).use { session ->
+            val repository = ParserRepository(registry, scope, session)
+            val catalog = repository.browse("", 0, SortOrder.POPULARITY)
+            assertTrue("Atsu catalog returned no entries", catalog.consumed > 0)
+            val search = repository.browse("Lookism", 0, SortOrder.RELEVANCE)
+            assertTrue("Exact safe Lookism title not found", search.titles.any { it.title.equals("Lookism", ignoreCase = true) })
+        }
+    }
+
     @Test fun approvedTitleFromCatalogToDecodedPage() = runBlocking {
         val args = InstrumentationRegistry.getArguments()
         val source = args.getString("liveSource").orEmpty()

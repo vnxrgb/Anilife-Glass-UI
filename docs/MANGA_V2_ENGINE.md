@@ -47,3 +47,7 @@ The branch-only workflow now includes a separate Android API 30 emulator job aft
 ## Opt-in live source validation
 
 Local CI including Android emulator decoding passed in run 45970972628. To test a real provider, manually dispatch Manga v2 engine contract on feature/manga-v2 with live_source (exact parser ID), live_hosts (reviewed exact HTTPS hosts), live_title (exact authorized title), and live_authorized=true. The instrumentation test checks a catalog response, exact safe search match, details, first chapter, first page and Android decode. No arbitrary fallback title, no bulk probe, no download retention, and no credentials. Ordinary push runs skip this test explicitly. Debug engine builds alone request INTERNET for the test; app remains unlinked. A green fixture run is not a live-provider pass. Root AniLife license is source-available and restricts redistribution; written rights and GPL compatibility must be established before packaging this module with the app.
+
+## Atsu one-shot metadata check
+
+Pinned parser ATSUMOE is present. The push commit named `Run one-shot Atsu metadata validation` opts into an Android instrumentation test checking catalog and exact safe Lookism search on the main host only. No chapter, image, or CDN requests are made by this check. Subsequent ordinary commits skip it. Reader validation still requires a specifically authorized title and chapter; local synthetic image tests are separate.

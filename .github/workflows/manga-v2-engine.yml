@@ -159,6 +159,7 @@ jobs:
           LIVE_HOSTS: ${{ inputs.live_hosts }}
           LIVE_TITLE: ${{ inputs.live_title }}
           LIVE_AUTHORIZED: ${{ inputs.live_authorized }}
+          ATSU_METADATA: ${{ github.event_name == 'push' && github.event.head_commit.message == 'Run one-shot Atsu metadata validation' }}
         run: |
           set -euo pipefail
           export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
@@ -195,6 +196,9 @@ jobs:
           done
           adb shell input keyevent 82
           args=()
+          if [ "$ATSU_METADATA" = true ]; then
+            args+=("-Pandroid.testInstrumentationRunnerArguments.atsuMetadata=true")
+          fi
           if [ -n "$LIVE_SOURCE$LIVE_HOSTS$LIVE_TITLE" ] || [ "$LIVE_AUTHORIZED" = true ]; then
             if [ "$LIVE_AUTHORIZED" != true ] || [ -z "$LIVE_SOURCE" ] || [ -z "$LIVE_HOSTS" ] || [ -z "$LIVE_TITLE" ]; then
               echo "::error::Live checks require source, hosts, exact authorized title and permission confirmation"
