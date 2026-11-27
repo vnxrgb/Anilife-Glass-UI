@@ -120,6 +120,10 @@ The stable app uses `com.anilumos.app`. Some signed preview builds use the same 
 
 Stable releases are intended for Android phones and tablets. Android TV builds are experimental and are not part of this stable mobile release.
 
+## Technical documentation
+
+For developers and contributors, the [technical guide](docs/TECHNICAL_GUIDE.md) explains the architecture, original feature implementations, UI and playback, data integrations, releases and [contribution/license boundaries](docs/CONTRIBUTION_MAP.md). Each guide links to the relevant source code and documents limitations and validation. Experimental work is kept separate from stable functionality.
+
 ## Building it yourself
 
 You'll need JDK 17, Android SDK 36 and the Gradle wrapper included in this repository.
