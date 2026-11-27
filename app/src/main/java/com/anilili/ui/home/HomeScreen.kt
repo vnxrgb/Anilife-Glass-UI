@@ -435,7 +435,8 @@ private fun HomeTopChrome(
         TopAppBar(
             title = {
                 if (showWordmark) {
-                    AnililiWordmark(modifier = Modifier.height(if (device.isTv) 36.dp else 30.dp), textColor = foreground)
+                    if (device.isTv) AnililiWordmark(modifier = Modifier.height(36.dp), textColor = foreground)
+                    else com.anilili.manga.ContentModeWordmark(textColor = foreground)
                 }
             },
             actions = {
@@ -481,7 +482,6 @@ private fun HomeTopChrome(
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = foreground, actionIconContentColor = foreground),
         )
-        if (!device.isTv) com.anilili.manga.ContentModeSwitcher()
         if (showGenres) GenrePillRow(
             onGenreClick = onGenreClick,
             backdrop = backdrop,

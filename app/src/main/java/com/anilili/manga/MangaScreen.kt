@@ -207,7 +207,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                     if (home) {
                         Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = device.pagePadding, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically) {
-                            AnililiWordmark(Modifier.height(30.dp), textColor = if (overHero) Color.White else MaterialTheme.colorScheme.onSurface)
+                            ContentModeWordmark(textColor = if (overHero) Color.White else MaterialTheme.colorScheme.onSurface)
                             Spacer(Modifier.weight(1f))
                             TextButton(onClick = { sourceMenu = true }) { Icon(Icons.Default.Storage, null, tint = if (overHero) Color.White else MaterialTheme.colorScheme.onSurface); Spacer(Modifier.width(4.dp)); Text("Providers", color = if (overHero) Color.White else MaterialTheme.colorScheme.onSurface) }
                         }
@@ -216,7 +216,6 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                         MangaSection.LIBRARY -> "My List"
                         else -> "Downloads"
                     }, trailing = { if (browse) TextButton(onClick = { sourceMenu = true }) { Icon(Icons.Default.Storage, null); Spacer(Modifier.width(4.dp)); Text("Providers") } })
-                    ContentModeSwitcher()
 
                 }
             }

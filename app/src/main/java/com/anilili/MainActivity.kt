@@ -1,10 +1,5 @@
 package com.anilili
 
-import com.anilili.manga.swipeHoldContentMode
-import com.anilili.manga.ContentModePreview
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.semantics.clearAndSetSemantics
 
 import com.anilili.ui.easteregg.HiddenSparks
 import com.anilili.ui.theme.appCanvas
@@ -1067,7 +1062,6 @@ private fun MiruroRoot(
     val journalProfileOverlay by com.anilili.ui.profiles.ProfilesUi.overlay.collectAsState()
     val chromeTakeover = remember { AppChromeTakeover() }
     val opticalBackdrop = rememberLayerBackdrop()
-    val modePreview = remember(modePrefs) { ContentModePreview() }
     CompositionLocalProvider(
         com.anilili.manga.LocalContentMode provides contentMode,
         com.anilili.manga.LocalSelectContentMode provides { mode ->
@@ -1109,8 +1103,6 @@ private fun MiruroRoot(
         NotificationPermissionEffect()
         UpdatePromptHost()
         Box(Modifier.fillMaxSize().nestedScroll(chromeScrollConnection)
-            .swipeHoldContentMode(!deviceProfile.isTv && !inPictureInPicture && showBottomBar && !chromeTakeover.active && !showRandomPick, modePreview)
-            .clipToBounds()
             .pointerInput(deviceProfile.isTv, chromeHideThresholdPx) {
                 if (deviceProfile.isTv) return@pointerInput
                 awaitEachGesture {
@@ -1160,11 +1152,6 @@ private fun MiruroRoot(
             val swipeTabIndex = navigationTabs.indexOfFirst { it.route == currentRoute }
             Scaffold(
                 containerColor = canvasColor(),
-                modifier = Modifier.graphicsLayer {
-                    val target = modePreview.target
-                    translationX = if (target == null) 0f else size.width * modePreview.progress.value *
-                        (if (target == com.anilili.manga.ContentMode.MANGA) -1f else 1f)
-                },
             ) { innerPadding ->
                 val showTvTopNavigation = !chromeTakeover.active && deviceProfile.isTv && !cinema &&
                     (showBottomBar || currentRoute == Routes.DETAIL)
@@ -1364,28 +1351,6 @@ private fun MiruroRoot(
                         "schedule" -> nav.navigateTab(Routes.SCHEDULE)
                         "downloads" -> nav.navigateTab(Routes.DOWNLOADS)
                         else -> nav.navigateTab(Routes.HOME)
-                    }
-                }
-            }
-            modePreview.target?.let { target ->
-                Box(Modifier.fillMaxSize().graphicsLayer {
-                    val direction = if (target == com.anilili.manga.ContentMode.MANGA) 1f else -1f
-                    translationX = size.width * (1f - modePreview.progress.value) * direction
-                }.background(canvasColor()).clearAndSetSemantics { }.zIndex(1f)) {
-                    CompositionLocalProvider(
-                        com.anilili.manga.LocalContentMode provides target,
-                        com.anilili.manga.LocalSelectContentMode provides {},
-                        LocalAppChromeTakeover provides remember { AppChromeTakeover() },
-                    ) {
-                        if (target == com.anilili.manga.ContentMode.MANGA) {
-                            com.anilili.manga.MangaScreen(onBack = {}, section = com.anilili.manga.MangaSection.HOME)
-                        } else {
-                            HomeScreen(
-                                onAnimeClick = {}, onWatchNow = {}, onResume = {}, onOpenDetails = {},
-                                onSearchClick = {}, onScheduleClick = {}, onGenreClick = {},
-                                onNotificationsClick = {},
-                            )
-                        }
                     }
                 }
             }

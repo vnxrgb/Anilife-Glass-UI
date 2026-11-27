@@ -149,7 +149,7 @@ fun Modifier.swipeBetweenTabs(
                             val event = awaitPointerEvent(PointerEventPass.Initial)
                             val change = event.changes.firstOrNull { it.id == claimed.id } ?: break
                             if (!change.pressed) {
-                                released = !change.isConsumed
+                                released = true
                                 break
                             }
                             velocity.addPointerInputChange(change)
@@ -166,7 +166,7 @@ fun Modifier.swipeBetweenTabs(
                         val far = abs(offset) > width * TAB_SWIPE_COMMIT_FRACTION
                         // A flick counts in the direction it was thrown, not merely in any direction.
                         val flicked = abs(speed) > flingVelocity && (speed < 0f) == (dir == 1)
-                        if (released && dir != 0 && (far || flicked)) {
+                        if (dir != 0 && (far || flicked)) {
                             state.direction = dir
                             state.onTurn(dir)
                             // The page on show keeps its dragged position as it slides out, and the
