@@ -86,10 +86,23 @@ internal class ParserRepository(
         require(chapter.source.name == scope.sourceName && title.chapters.orEmpty().any { it == chapter })
         parser.getPages(chapter).also { pages -> check(pages.all { it.source.name == scope.sourceName }) }
     }
-    suspend fun coverBytes(title: Manga): ByteArray? {
+    suspend fun coverBytes(title: Manga): ByteArray? = withContext(Dispatchers.IO) {
         require(title.source.name == scope.sourceName && PrimaryProviderProfiles.permitsRating(title.contentRating))
-        val url = title.largeCoverUrl ?: title.coverUrl ?: return null
-        return PageDelivery(scope, session).load(scope.requireImageUrl(url, "https://" + parser.domain + "/").toString())
+        val urls = listOfNotNull(title.largeCoverUrl, title.coverUrl).filter { it.isNotBlank() }.distinct()
+        var failure: Exception? = null
+        for (url in urls) {
+            try {
+                return@withContext PageDelivery(scope, session).load(scope.requireImageUrl(url, "https://" + parser.domain + "/").toString())
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: ProviderAccessException) {
+                throw e
+            } catch (e: Exception) {
+                failure = e
+            }
+        }
+        failure?.let { throw it }
+        null
     }
     suspend fun decodePage(page: MangaPage, width: Int = 2048, height: Int = 4096) =
         PageDecoder.decode(loadImage(page), width, height)
