@@ -116,7 +116,25 @@ jobs:
           "$ANDROID_HOME/emulator/emulator" -list-avds | tee "$RUNNER_TEMP/manga-avds.log"
           grep -Fx manga-ci "$RUNNER_TEMP/manga-avds.log"
       - name: Compile Android test APK before boot
-        run: ./gradlew :manga-engine:assembleDebugAndroidTest --max-workers=2 --no-configuration-cache --console=plain --stacktrace
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4; do
+            log="$RUNNER_TEMP/manga-device-build-attempt-$attempt.log"
+            set +e
+            ./gradlew :manga-engine:assembleDebugAndroidTest --max-workers=2 --no-configuration-cache --console=plain --stacktrace 2>&1 | tee "$log"
+            result=${PIPESTATUS[0]}
+            set -e
+            if [ "$result" -eq 0 ]; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 4 ] || ! grep -Eq 'Received status code (429|502|503|504)|Read timed out|Connection timed out|Connection reset' "$log" || ! grep -Eq 'Could not (GET|resolve|get resource|download)|Could not resolve all files' "$log"; then
+              exit "$result"
+            fi
+            delay=$((attempt * 60))
+            echo "::warning::Transient Android test dependency download failure; retrying after ${delay}s"
+            sleep "$delay"
+          done
       - name: Run isolated Android instrumentation tests
         shell: bash
         run: |
@@ -165,4 +183,5 @@ jobs:
             ${{ runner.temp }}/manga-emulator.log
             ${{ runner.temp }}/manga-emulator-libraries.log
             ${{ runner.temp }}/manga-avds.log
+            ${{ runner.temp }}/manga-device-build-attempt-*.log
           if-no-files-found: ignore
