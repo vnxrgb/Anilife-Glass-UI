@@ -52,4 +52,24 @@ class GithubTvUpdateSourceTest {
         assertNull(GithubTvUpdateSource.select(releases(), json) { payload.replace("com.anilumos.app", "other.app") })
         assertNull(GithubTvUpdateSource.select(releases(), json) { payload.replace("a".repeat(64), "bad") })
     }
+    @Test fun selectsHighestBuildRegardlessOfReleaseOrdering() {
+        val older = releases().replace("run2", "run3")
+        val newer = releases().replace("run2", "run4")
+        val combined = older.dropLast(1) + "," + newer.drop(1)
+        val selected = GithubTvUpdateSource.select(combined, json) { url ->
+            if (url.contains("run4")) payload.replace("\"build\":124", "\"build\":125")
+            else payload
+        }
+        assertEquals(125, selected?.build)
+        assertTrue(selected?.url?.contains("run4") == true)
+    }
+
+    @Test fun skipsInvalidReleaseWithoutDiscardingValidCandidates() {
+        val malformed = releases().replace("run2", "run5")
+            .replace("\"size\":256", "\"size\":9000")
+        val combined = malformed.dropLast(1) + "," + releases().drop(1)
+        val selected = GithubTvUpdateSource.select(combined, json) { payload }
+        assertEquals(124, selected?.build)
+        assertTrue(selected?.url?.contains("run2") == true)
+    }
 }
