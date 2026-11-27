@@ -18,7 +18,8 @@ class TabletNarrowWindowColumnsTest {
         assertEquals(2, tablet.homePosterColumns(276.dp, 12.dp))
         assertEquals(2, tablet.homePosterColumns(419.dp, 12.dp))
         assertEquals(3, tablet.homePosterColumns(420.dp, 12.dp))
-        assertEquals(6, tablet.homePosterColumns(1600.dp, 12.dp))
+        assertEquals(4, tablet.homePosterColumns(1600.dp, 12.dp))
+        assertEquals(6, expandedTablet.homePosterColumns(1600.dp, 12.dp))
     }
 
     @Test fun expandedTabletUsesLargerPosterMinimum() {
