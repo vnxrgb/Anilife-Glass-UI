@@ -30,7 +30,7 @@ permissions:
   contents: read
 concurrency:
   group: manga-v2-engine-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   engine:
     if: github.ref == 'refs/heads/feature/manga-v2'
@@ -160,6 +160,7 @@ jobs:
           LIVE_TITLE: ${{ inputs.live_title }}
           LIVE_AUTHORIZED: ${{ inputs.live_authorized }}
           ATSU_METADATA: ${{ github.event_name == 'push' && github.event.head_commit.message == 'Run one-shot Atsu metadata validation' }}
+          ATSU_CHICO: ${{ github.event_name == 'push' && github.event.head_commit.message == 'Run one-shot Atsu Chico chapter 3 validation' }}
         run: |
           set -euo pipefail
           export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
@@ -198,6 +199,9 @@ jobs:
           args=()
           if [ "$ATSU_METADATA" = true ]; then
             args+=("-Pandroid.testInstrumentationRunnerArguments.atsuMetadata=true")
+          fi
+          if [ "$ATSU_CHICO" = true ]; then
+            args+=("-Pandroid.testInstrumentationRunnerArguments.atsuChico=true")
           fi
           if [ -n "$LIVE_SOURCE$LIVE_HOSTS$LIVE_TITLE" ] || [ "$LIVE_AUTHORIZED" = true ]; then
             if [ "$LIVE_AUTHORIZED" != true ] || [ -z "$LIVE_SOURCE" ] || [ -z "$LIVE_HOSTS" ] || [ -z "$LIVE_TITLE" ]; then

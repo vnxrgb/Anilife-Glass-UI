@@ -12,6 +12,29 @@ import org.koitharu.kotatsu.parsers.model.SortOrder
 /** Explicit operator-approved single-title live test. Local CI never contacts provider sites. */
 @RunWith(AndroidJUnit4::class)
 class AuthorizedProviderDeviceTest {
+    @Test fun atsuChicoChapterThreeDecodedPage() = runBlocking {
+        assumeTrue("No one-shot Chico reader check requested", InstrumentationRegistry.getArguments().getString("atsuChico") == "true")
+        val scope = SourceScope("ATSUMOE", setOf("atsu.moe", "cdn.atsu.moe"))
+        val registry = ParserRegistry()
+        SourceSession(scope).use { session ->
+            val repository = ParserRepository(registry, scope, session)
+            val search = repository.browse("Chico", 0, SortOrder.RELEVANCE)
+            val matches = search.titles.filter { it.title.equals("Chico", ignoreCase = true) }.distinctBy { it.id }
+            assertEquals("Expected one unambiguous safe Chico title", 1, matches.size)
+            val details = repository.details(matches.single())
+            val chapter = details.chapters.orEmpty().firstOrNull { it.number == 3f }
+                ?: error("Approved chapter 3 not found; no fallback")
+            val page = repository.pages(details, chapter).firstOrNull()
+                ?: error("Approved chapter 3 returned no pages")
+            val bitmap = repository.decodePage(page)
+            try {
+                assertTrue("Decoded page must have valid dimensions", bitmap.width > 0 && bitmap.height > 0)
+            } finally {
+                bitmap.recycle()
+            }
+        }
+    }
+
     @Test fun atsuLookismMetadataOnly() = runBlocking {
         assumeTrue("No one-shot metadata check requested", InstrumentationRegistry.getArguments().getString("atsuMetadata") == "true")
         val scope = SourceScope("ATSUMOE", setOf("atsu.moe"))

@@ -51,3 +51,7 @@ Local CI including Android emulator decoding passed in run 45970972628. To test 
 ## Atsu one-shot metadata check
 
 Pinned parser ATSUMOE is present. The push commit named `Run one-shot Atsu metadata validation` opts into an Android instrumentation test checking catalog and exact safe Lookism search on the main host only. No chapter, image, or CDN requests are made by this check. Subsequent ordinary commits skip it. Reader validation still requires a specifically authorized title and chapter; local synthetic image tests are separate.
+
+## Atsu one-shot Chico reader check
+
+Operator confirmed permission for automated retrieval of Chico chapter 3. The push commit `Run one-shot Atsu Chico chapter 3 validation` enables only the exact safe Chico title, chapter number 3, and first page decoded on Android using the reviewed Atsu main and CDN hosts. An ambiguous title, missing chapter or access restriction fails without fallback. If several chapter-3 uploads exist, the parser's first matching entry is used. No image retained. Ordinary pushes skip the live check; workflows queue instead of cancelling in-progress checks. This does not establish distribution permission for the app or other works.
