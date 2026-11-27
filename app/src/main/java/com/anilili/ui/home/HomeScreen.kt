@@ -1247,7 +1247,7 @@ private fun HeroCard(
  * Blur is inside the same painted pill, rather than decorating Material's larger touch bounds.
  */
 @Composable
-private fun HomeHeroAction(
+internal fun HomeHeroAction(
     label: String,
     icon: ImageVector,
     primary: Boolean,

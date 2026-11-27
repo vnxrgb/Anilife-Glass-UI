@@ -102,7 +102,8 @@ private class KotatsuNativeSource(
             catalog[mangaId] = manga
             MangaTitle(id, mangaId, manga.title, manga.description.orEmpty(), manga.coverUrl,
                 kind = if (isMangaDex) kind.takeUnless { it == MangaKind.ALL } ?: MangaKind.OTHER else sourceKind,
-                genres = manga.tags.map { it.title }, status = manga.state?.name?.lowercase(Locale.ROOT).orEmpty())
+                genres = manga.tags.map { it.title }, status = manga.state?.name?.lowercase(Locale.ROOT).orEmpty(),
+                authors = manga.authors.toList(), alternativeTitles = manga.altTitles.toList(), largeCoverUrl = manga.largeCoverUrl)
         }.filter { kind == MangaKind.ALL || it.kind == kind }.take(limit)
     }
     override suspend fun chapters(mangaId: String, language: String): List<MangaChapter> = withContext(Dispatchers.IO) {
@@ -130,6 +131,14 @@ private class KotatsuNativeSource(
             chapterBases[chapterId] = normalizePageUrl(chapter.url, manga.publicUrl.toHttpUrlOrNull()?.toString() ?: "https://${parser.domain}/") ?: "https://${parser.domain}/"
             MangaChapter(id, chapterId, mangaId, chapter.title.orEmpty(), chapter.numberString(), language, listOfNotNull(chapter.scanlator), previousParserId = if (isMangaDex) chapter.id.toString() else null)
         }
+    }
+    override fun enrichedTitle(title: MangaTitle): MangaTitle {
+        val details = catalog[title.id] ?: return title
+        return title.copy(description = details.description?.takeIf { it.isNotBlank() } ?: title.description,
+            coverUrl = details.coverUrl ?: title.coverUrl, largeCoverUrl = details.largeCoverUrl,
+            authors = details.authors.filter { it.isNotBlank() }, alternativeTitles = details.altTitles.filter { it.isNotBlank() },
+            genres = details.tags.map { it.title }.ifEmpty { title.genres },
+            status = details.state?.name?.lowercase(Locale.ROOT) ?: title.status)
     }
     override suspend fun pages(chapterId: String): List<MangaPage> = withContext(Dispatchers.IO) {
         val chapter = chapterCache[chapterId] ?: error("Open chapter list again to reload this chapter")

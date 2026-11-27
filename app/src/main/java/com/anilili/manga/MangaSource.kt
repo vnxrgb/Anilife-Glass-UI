@@ -13,6 +13,7 @@ interface MangaSource {
         if (offset == 0) search(query, limit).filter { kind == MangaKind.ALL || it.kind == kind } else emptyList()
     suspend fun chapters(mangaId: String, language: String = "en"): List<MangaChapter>
     suspend fun pages(chapterId: String): List<MangaPage>
+    fun enrichedTitle(title: MangaTitle): MangaTitle = title
 }
 
 enum class MangaKind(val label: String) {
@@ -39,6 +40,9 @@ data class MangaTitle(
     val genres: List<String> = emptyList(),
     val status: String = "",
     val year: Int? = null,
+    val authors: List<String> = emptyList(),
+    val alternativeTitles: List<String> = emptyList(),
+    val largeCoverUrl: String? = null,
 )
 
 data class MangaChapter(

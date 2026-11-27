@@ -861,7 +861,7 @@ private fun MiruroRoot(
     val menuLanguage by SettingsStore.menuLanguage.collectAsState()
     val appLayoutMode by SettingsStore.appLayoutMode.collectAsState()
     val cinema = appLayoutMode == AppLayoutMode.CINEMA
-    val navigationTabs = if (cinema) cinemaPhoneTabs else phoneTabs
+    val navigationTabs = (if (cinema) cinemaPhoneTabs else phoneTabs).filter { contentMode != com.anilili.manga.ContentMode.MANGA || it.route != Routes.DOWNLOADS }
     val railTabs = if (cinema) cinemaTabs else Tab.entries
     var chromeVisible by remember { mutableStateOf(true) }
     var dockCollapsed by remember { mutableStateOf(false) }
@@ -1254,7 +1254,7 @@ private fun MiruroRoot(
                 // that one with a drawn books-on-a-shelf vector, which was the right picture for a
                 // destination called "Library" and the wrong one for a list: a shelf says "things
                 // you own", and a bookmark says "things you marked", which is what the page is.
-                val navItems = remember(menuLanguage, cinema) {
+                val navItems = remember(menuLanguage, cinema, contentMode) {
                     navigationTabs.map { tab ->
                         FloatingNavItem(
                             route = tab.route,
