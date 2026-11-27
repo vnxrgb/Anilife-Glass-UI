@@ -27,12 +27,11 @@ import java.util.Locale
 /** No executable bundle loader, browser automation, or external extension installations. */
 @OptIn(DirectParsersAccess::class)
 private class NativeParserContext : MangaLoaderContext() {
-    override val cookieJar: CookieJar = CookieJar.NO_COOKIES
-    override val httpClient = OkHttpClient.Builder()
-        .cookieJar(cookieJar).connectTimeout(15, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).build()
+    override val cookieJar: CookieJar = MangaNetwork.cookieJar
+    override val httpClient = MangaNetwork.client
     override val parsers: ParsersBundle = ParsersBundleImpl
     override fun getDefaultUserAgent() = "AniLumos (Android; manga reader)"
-    override fun getPreferredLocales(): List<Locale> = listOf(Locale.ENGLISH)
+    override fun getPreferredLocales(): List<Locale> = listOf(Locale.getDefault(), Locale.ENGLISH).distinct()
     override fun getConfig(source: ParserSource): MangaSourceConfig = object : MangaSourceConfig {
         override fun <T> get(key: ConfigKey<T>): T = key.defaultValue
     }
@@ -48,7 +47,8 @@ private class NativeParserContext : MangaLoaderContext() {
 /** Expose every compiled descriptor, including upstream-broken entries as unavailable. */
 internal fun builtInKotatsuSources(): List<MangaSource> {
     val context = NativeParserContext()
-    return context.parsers.sources.distinctBy { it.name }.map { KotatsuNativeSource(context, it) }
+    return context.parsers.sources.filter { source -> sourceAllowed(source.contentType, source.name, source.title, source.isBroken) }
+        .distinctBy { it.name }.map { KotatsuNativeSource(context, it) }
         .sortedWith(compareBy<MangaSource> { it.id != "mangadex" }.thenBy { !it.available }.thenBy { it.displayName.lowercase(Locale.ROOT) })
 }
 
@@ -95,7 +95,7 @@ private class KotatsuNativeSource(
         } else null
         if (!isMangaDex && kind != MangaKind.ALL && kind != sourceKind) return@withContext emptyList()
         val filter = MangaListFilter(query = query.trim().takeIf { it.isNotEmpty() }, originalLocale = originalLocale, contentRating = setOf(ContentRating.SAFE))
-        parser.getList(offset, sort, filter).filter { it.contentRating != ContentRating.ADULT && it.contentRating != ContentRating.SUGGESTIVE }.map { manga ->
+        parser.getList(offset, sort, filter).filter { it.contentRating == ContentRating.SAFE }.map { manga ->
             val mangaId = key(manga)
             catalog[mangaId] = manga
             MangaTitle(id, mangaId, manga.title, manga.description.orEmpty(), manga.coverUrl,
@@ -114,6 +114,7 @@ private class KotatsuNativeSource(
                 authors = emptySet(), source = descriptor)
         }
         val details = parser.getDetails(manga)
+        require(details.contentRating == ContentRating.SAFE || (details.contentRating == null && manga.contentRating == ContentRating.SAFE)) { "Title is not confirmed safe" }
         catalog[mangaId] = details
         details.chapters.orEmpty().filter { chapter ->
             if (!isMangaDex || language == "und") true else {
@@ -136,4 +137,11 @@ private class KotatsuNativeSource(
             MangaPage(index, url, headers)
         }
     }
+}
+
+/** Fail closed for categories outside ordinary manga/comics and known adult source identifiers. */
+internal fun sourceAllowed(type: ContentType, name: String, title: String, broken: Boolean): Boolean {
+    if (broken || type !in setOf(ContentType.MANGA, ContentType.MANHWA, ContentType.MANHUA, ContentType.COMICS, ContentType.ONE_SHOT)) return false
+    val label = (name + " " + title).lowercase(Locale.ROOT)
+    return !Regex("hentai|hent[a-z]*|porn|adult|nsfw|18\\s*\\+|doujin|eromanga|ecchi|rule34|xxx|yaoi18|smut|lezhin18").containsMatchIn(label)
 }

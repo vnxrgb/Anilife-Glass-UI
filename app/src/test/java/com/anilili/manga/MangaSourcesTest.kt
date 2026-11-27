@@ -13,11 +13,21 @@ class MangaSourcesTest {
 
     @Test fun kotatsuCatalogExposesAllDescriptorsAndSingleMangaDex() {
         val sources = builtInKotatsuSources()
-        assertTrue(sources.size >= 1000)
+        assertTrue(sources.isNotEmpty())
+        assertTrue(sources.all { it.available })
         assertEquals(sources.size, sources.map { it.id }.distinct().size)
         assertEquals(1, sources.count { it.id == "mangadex" })
         assertTrue(sources.any { it.languageTag == "en" })
         assertSame(MangaSources(sources).byId("mangadex"), MangaSources(sources).byId("kotatsu:mangadex"))
+    }
+
+    @Test fun adultAndBrokenSourcesExcluded() {
+        assertFalse(sourceAllowed(org.koitharu.kotatsu.parsers.model.ContentType.HENTAI, "TEST", "Test", false))
+        assertFalse(sourceAllowed(org.koitharu.kotatsu.parsers.model.ContentType.MANGA, "ADULT_TEST", "Test", false))
+        assertFalse(sourceAllowed(org.koitharu.kotatsu.parsers.model.ContentType.MANGA, "TEST", "Test", true))
+        assertTrue(sourceAllowed(org.koitharu.kotatsu.parsers.model.ContentType.MANGA, "TEST", "Test", false))
+        assertEquals(SourceHealth.RESTRICTED, classifySourceFailure(IllegalStateException("HTTP 403")))
+        assertEquals(SourceHealth.SERVER_TLS, classifySourceFailure(IllegalStateException("HTTP 526")))
     }
 
     @Test fun canonicalChapterMatchesPriorKotatsuIdentity() {

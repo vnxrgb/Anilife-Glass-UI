@@ -71,6 +71,9 @@ fun MangaScreen(onBack: () -> Unit, section: MangaSection = MangaSection.HOME) {
 @Composable
 private fun MangaDestination(store: MangaReadingStore, section: MangaSection, onBack: () -> Unit) {
     val registry = remember { MangaSources(builtInKotatsuSources()) }
+    val healthContext = LocalContext.current
+    val health = remember(healthContext) { MangaSourceHealthStore(healthContext) }
+    val healthStates by health.states.collectAsState()
     var sourceId by rememberSaveable { mutableStateOf("mangadex") }
     var query by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf(MangaKind.ALL) }
@@ -116,19 +119,19 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         loading = true; error = null; results = emptyList(); recent = emptyList(); offset = 0; hasMore = false
         if (provider == null) error = "Source unavailable"
         else resultOf { provider.catalog(if (browse) query.trim() else "", kind, order, limit = 24) }
-            .onSuccess { results = it; offset = it.size; hasMore = it.size == 24 }
-            .onFailure { error = it.message ?: "Unable to load titles" }
+            .onSuccess { results = it; offset = it.size; hasMore = it.size == 24; if (it.isNotEmpty()) health.record(provider.id, SourceHealth.CATALOG) }
+            .onFailure { health.record(provider.id, classifySourceFailure(it)); error = healthError(it) }
         loading = false
-        if (home && provider != null) {
+        if (home && provider != null && error == null && results.isNotEmpty()) {
             delay(350)
             resultOf { provider.catalog("", kind, MangaOrder.RECENT, limit = 12) }.onSuccess { recent = it }
         }
     }
-    if (sourceMenu) MangaSourcePicker(registry.all(), provider?.id, onDismiss = { sourceMenu = false }, onSelect = { source ->
-        sourceId = source.id; kind = MangaKind.ALL; genre = null; sourceMenu = false
+    if (sourceMenu) MangaSourcePicker(registry.all(), healthStates, provider?.id, onDismiss = { sourceMenu = false }, onSelect = { source ->
+        sourceId = source.id; kind = MangaKind.ALL; genre = null; sourceMenu = false; retry++
     }, onInfo = { sourceMenu = false; attribution = true })
     if (attribution) AlertDialog(onDismissRequest = { attribution = false }, title = { Text("Built-in sources") },
-        text = { Text("Catalog and chapters come from the built-in Kotatsu-Redo parser library. Upstream-broken entries are listed but disabled. Availability and access rights vary by provider; no external extensions are installed. Chapter credits are shown when provided.") },
+        text = { Text("Catalog and chapters come from the built-in Kotatsu-Redo parser library. Adult categories and unconfirmed content ratings are excluded. Known broken sources are omitted. Health is observed locally; catalog success is not proof every chapter works. Availability and access rights vary by provider; no external extensions are installed. Chapter credits are shown when provided.") },
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
     val title = selected
     val activeChapter = chapter
@@ -138,7 +141,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         if (activeChapter != null) {
             val distinct = availableChapters.distinctBy { it.chapterNumber ?: it.id }
             val index = distinct.indexOfFirst { it.id == activeChapter.id || it.chapterNumber != null && it.chapterNumber == activeChapter.chapterNumber }
-            MangaReader(title, activeChapter, titleSource, store, availableChapters, onBack = back,
+            MangaReader(title, activeChapter, titleSource, store, availableChapters, health, onBack = back,
                 onChapter = { chapter = it },
                 previousChapter = distinct.getOrNull(index + 1)?.takeIf { index >= 0 }?.let { entry -> { chapter = entry } },
                 nextChapter = distinct.getOrNull(index - 1)?.let { entry -> { chapter = entry } })
@@ -308,7 +311,7 @@ private fun MangaEmpty(title: String, body: String) {
 @Composable
 private fun MangaHero(title: MangaTitle, action: String, enabled: Boolean = true, onRead: () -> Unit) {
     Box(Modifier.fillMaxWidth().height(280.dp).clip(RoundedCornerShape(26.dp)).background(MaterialTheme.colorScheme.surfaceContainer)) {
-        AsyncImage(title.coverUrl, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        AsyncImage(title.coverUrl, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, imageLoader = MangaNetwork.imageLoader(LocalContext.current))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .08f), Color.Black.copy(alpha = .82f), Color.Black.copy(alpha = .95f)))))
         Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title.title, color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -323,7 +326,7 @@ private fun MangaHero(title: MangaTitle, action: String, enabled: Boolean = true
 @Composable
 private fun MangaPoster(title: MangaTitle, modifier: Modifier = Modifier, subtitle: String? = null, onClick: () -> Unit) {
     Column(modifier.clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        AsyncImage(title.coverUrl, title.title, Modifier.fillMaxWidth().aspectRatio(.68f).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainer), contentScale = ContentScale.Crop)
+        AsyncImage(title.coverUrl, title.title, Modifier.fillMaxWidth().aspectRatio(.68f).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainer), contentScale = ContentScale.Crop, imageLoader = MangaNetwork.imageLoader(LocalContext.current))
         Text(title.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(subtitle ?: title.kind.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
@@ -366,7 +369,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
     var expanded by rememberSaveable(title.id) { mutableStateOf(false) }
     LaunchedEffect(title.id, language, retry) {
         chapters = emptyList(); loading = true; error = null
-        resultOf { source.chapters(title.id, language) }.onSuccess { chapters = it }.onFailure { error = it.message ?: "Unable to load chapters" }
+        resultOf { source.chapters(title.id, language) }.onSuccess { chapters = it }.onFailure { error = healthError(it) }
         loading = false
     }
     val sorted = if (ascending) chapters.reversed() else chapters
@@ -432,7 +435,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
 }
 
 @Composable
-private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaSource, store: MangaReadingStore, chapters: List<MangaChapter>, onBack: () -> Unit, onChapter: (MangaChapter) -> Unit, previousChapter: (() -> Unit)? = null, nextChapter: (() -> Unit)? = null) {
+private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaSource, store: MangaReadingStore, chapters: List<MangaChapter>, health: MangaSourceHealthStore, onBack: () -> Unit, onChapter: (MangaChapter) -> Unit, previousChapter: (() -> Unit)? = null, nextChapter: (() -> Unit)? = null) {
     var pages by remember(chapter.id) { mutableStateOf<List<MangaPage>>(emptyList()) }
     var loading by remember(chapter.id) { mutableStateOf(true) }
     var error by remember(chapter.id) { mutableStateOf<String?>(null) }
@@ -446,7 +449,7 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
     var position by remember(chapter.id) { mutableIntStateOf(store.saved(title)?.takeIf { chapter.matchesSaved(it.chapterId) }?.page ?: 0) }
     LaunchedEffect(chapter.id, retry) {
         loading = true; error = null
-        resultOf { source.pages(chapter.id) }.onSuccess { pages = it; if (it.isNotEmpty()) position = position.coerceIn(0, it.lastIndex) }.onFailure { error = it.message ?: "Unable to load pages" }
+        resultOf { source.pages(chapter.id) }.onSuccess { pages = it; if (it.isNotEmpty()) position = position.coerceIn(0, it.lastIndex) }.onFailure { val status = classifySourceFailure(it); if (status == SourceHealth.RESTRICTED || status == SourceHealth.SERVER_TLS) health.record(source.id, status); error = healthError(it) }
         loading = false
     }
     if (chapterMenu) AlertDialog(onDismissRequest = { chapterMenu = false }, title = { Text("Chapters") },
@@ -487,9 +490,9 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
             }
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 if (mode == ReadingMode.WEBTOON) LazyColumn(Modifier.fillMaxHeight().widthIn(max = 760.dp).fillMaxWidth(), state = list) {
-                    items(pages, key = { it.index }) { page -> ReaderImage(page, Modifier.fillMaxWidth(), fit = false, onTap = { controls = !controls }) }
+                    items(pages, key = { it.index }) { page -> ReaderImage(page, Modifier.fillMaxWidth(), fit = false, onTap = { controls = !controls }, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) }) }
                 } else HorizontalPager(state = pager, reverseLayout = mode == ReadingMode.RTL, modifier = Modifier.fillMaxSize()) { index ->
-                    ReaderImage(pages[index], Modifier.fillMaxSize(), fit = true, onTap = { controls = !controls })
+                    ReaderImage(pages[index], Modifier.fillMaxSize(), fit = true, onTap = { controls = !controls }, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) })
                 }
             }
             AnimatedVisibility(visible = controls) {
@@ -517,17 +520,20 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
 
 /** Paged reading delegates zoom and pan to Telephoto; vertical reading retains natural-height Coil pages. */
 @Composable
-private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap: () -> Unit) {
+private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap: () -> Unit, onLoaded: () -> Unit) {
     var retry by remember(page.imageUrl) { mutableIntStateOf(0) }
     val tap by rememberUpdatedState(onTap)
+    val loaded by rememberUpdatedState(onLoaded)
     val context = LocalContext.current
     val request = remember(context, page, retry) { ImageRequest.Builder(context).data(page.imageUrl).headers(page.headers.toHeaders()).build() }
     key(page.imageUrl, retry) {
         if (fit) {
             val state = rememberZoomableImageState()
+            LaunchedEffect(state.isImageDisplayed) { if (state.isImageDisplayed) loaded() }
             Box(modifier, contentAlignment = Alignment.Center) {
                 ZoomableAsyncImage(
                     model = request,
+                    imageLoader = MangaNetwork.imageLoader(context),
                     contentDescription = "Page ${page.index + 1}",
                     modifier = Modifier.fillMaxSize(),
                     state = state,
@@ -544,6 +550,8 @@ private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap
         } else {
             SubcomposeAsyncImage(
                 model = request,
+                imageLoader = MangaNetwork.imageLoader(context),
+                onSuccess = { loaded() },
                 contentDescription = "Page ${page.index + 1}",
                 modifier = modifier.pointerInput(Unit) { detectTapGestures(onTap = { tap() }) },
                 contentScale = ContentScale.FillWidth,
@@ -564,20 +572,32 @@ private fun MangaError(message: String, retry: () -> Unit) {
 
 /** Virtualized source catalog: only the chosen parser is asked for content. */
 @Composable
-private fun MangaSourcePicker(sources: List<MangaSource>, selected: String?, onDismiss: () -> Unit, onSelect: (MangaSource) -> Unit, onInfo: () -> Unit) {
+private fun MangaSourcePicker(sources: List<MangaSource>, health: Map<String, SourceHealth>, selected: String?, onDismiss: () -> Unit, onSelect: (MangaSource) -> Unit, onInfo: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     var language by rememberSaveable { mutableStateOf<String?>(null) }
+    var filter by rememberSaveable { mutableStateOf("Working") }
     val languages = remember(sources) { sources.map { it.languageLabel() }.distinct().sorted() }
-    val filtered = remember(sources, query, language) {
+    val filtered = remember(sources, query, language, filter, health) {
         val q = query.trim()
-        sources.filter { source -> (language == null || source.languageLabel() == language) &&
+        sources.filter { source -> val status = health[source.id] ?: SourceHealth.UNTESTED
+            val matchesHealth = when (filter) {
+                "Working" -> status == SourceHealth.CATALOG || status == SourceHealth.VERIFIED
+                "Untested" -> status == SourceHealth.UNTESTED
+                else -> status in setOf(SourceHealth.RESTRICTED, SourceHealth.SERVER_TLS, SourceHealth.FAILED)
+            }
+            matchesHealth && (language == null || source.languageLabel() == language) &&
             (q.isEmpty() || listOf(source.displayName, source.languageTag, source.languageLabel(), source.sourceCategory).any { it.contains(q, true) }) }
     }
     val state = rememberLazyListState()
-    LaunchedEffect(query, language) { state.scrollToItem(0) }
+    LaunchedEffect(query, language, filter) { if (filtered.isNotEmpty()) state.scrollToItem(0) }
     AlertDialog(onDismissRequest = onDismiss, title = { Text("Manga sources") }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PageSearchField(query, { query = it }, "Search sources or languages", "Clear search")
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                listOf("Working", "Untested", "Failed").forEach { label -> FilterChip(selected = filter == label, onClick = { filter = label }, label = { Text(label) }, shape = CircleShape, colors = cinematicFilterChipColors()) }
+            }
+            if (filter == "Untested") Text("Choose a source to check its catalog on your network.", style = MaterialTheme.typography.labelSmall)
+            if (filter == "Failed") Text("Choose a source only to retry it. Access restrictions and server TLS errors are not bypassed.", style = MaterialTheme.typography.labelSmall)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 FilterChip(selected = language == null, onClick = { language = null }, label = { Text("All") }, shape = CircleShape, colors = cinematicFilterChipColors())
                 languages.forEach { label -> FilterChip(selected = language == label, onClick = { language = label }, label = { Text(label) }, shape = CircleShape, colors = cinematicFilterChipColors()) }
@@ -588,13 +608,19 @@ private fun MangaSourcePicker(sources: List<MangaSource>, selected: String?, onD
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(enabled = source.available) { onSelect(source) }.padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(source.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(listOf(source.languageLabel(), source.sourceCategory, if (source.available) null else "Unavailable upstream").filterNotNull().joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(listOf(source.languageLabel(), source.sourceCategory, (health[source.id] ?: SourceHealth.UNTESTED).label).filterNotNull().joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         if (source.id == selected) Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
-                if (filtered.isEmpty()) item { Text("No matching sources", Modifier.padding(12.dp)) }
+                if (filtered.isEmpty()) item { Text(if (filter == "Working") "No working sources observed yet. Check a source under Untested." else "No matching sources", Modifier.padding(12.dp)) }
             }
         }
     }, confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }, dismissButton = { TextButton(onClick = onInfo) { Text("Credits") } })
+}
+
+private fun healthError(error: Throwable): String = when (classifySourceFailure(error)) {
+    SourceHealth.RESTRICTED -> "This provider refused access or requires authorization. Try another source."
+    SourceHealth.SERVER_TLS -> "The provider has a TLS/certificate error. Try another source; certificate verification remains enabled."
+    else -> "The provider could not complete this request. Try another source or retry later."
 }
