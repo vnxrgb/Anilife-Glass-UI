@@ -644,6 +644,12 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
     var bookmarked by remember(title.id, chapter.id) { mutableStateOf(store.isChapterBookmarked(title, chapter.id)) }
     val toggleBookmark = { bookmarked = !bookmarked; store.bookmarkChapter(title, chapter.id, bookmarked) }
     val activity = context.findActivity()
+    DisposableEffect(activity, options.secureScreen) {
+        val window = activity?.window
+        val wasSecure = window?.attributes?.flags?.and(WindowManager.LayoutParams.FLAG_SECURE) != 0
+        if (options.secureScreen) window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose { if (options.secureScreen && !wasSecure) window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
+    }
     DisposableEffect(activity, options.rotation) {
         val previous = activity?.requestedOrientation
         options.rotation.orientation?.let { activity?.requestedOrientation = it }
@@ -765,14 +771,14 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
                 }
                 val pageModifier = Modifier.padding(horizontal = options.padding.dp)
                 if (mode == ReadingMode.WEBTOON) LazyColumn(Modifier.fillMaxHeight().widthIn(max = 760.dp).fillMaxWidth().then(pageModifier).then(if (ambient) Modifier.padding(horizontal = 12.dp) else Modifier), state = list, verticalArrangement = Arrangement.spacedBy(options.gap.dp)) {
-                    items(pages, key = { it.index }) { page -> ReaderImage(page, Modifier.fillMaxWidth(), fit = false, onTap = tapPage, magnifierActive = magnify, options = options, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) }) }
+                    items(pages, key = { it.index }) { page -> ReaderImage(page, Modifier.fillMaxWidth(), fit = false, onTap = tapPage, magnifierActive = magnify, options = options, onLoaded = { if (source.id != LocalMangaSource.ID) health.record(source.id, SourceHealth.VERIFIED) }) }
                 } else {
                     val spread: @Composable (Int) -> Unit = { index ->
                         val raw = groups[index]
                         val ordered = if ((mode == ReadingMode.RTL) xor options.reverseSpread) raw.reversed() else raw
                         Row(Modifier.fillMaxSize().then(pageModifier), horizontalArrangement = Arrangement.spacedBy(options.gap.dp), verticalAlignment = Alignment.CenterVertically) {
                             ordered.forEach { page ->
-                                ReaderImage(pages[page], Modifier.weight(1f).fillMaxHeight(), fit = true, onTap = tapPage, magnifierActive = magnify, options = options, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) })
+                                ReaderImage(pages[page], Modifier.weight(1f).fillMaxHeight(), fit = true, onTap = tapPage, magnifierActive = magnify, options = options, onLoaded = { if (source.id != LocalMangaSource.ID) health.record(source.id, SourceHealth.VERIFIED) })
                             }
                         }
                     }
@@ -870,6 +876,7 @@ private fun MangaReaderSettings(mode: ReadingMode, background: ReaderBackground,
                     ReaderToggle("Hide controls when scrolling", options.autoHide) { options.autoHide = it }
                     ReaderToggle("Volume keys turn pages", options.volume) { options.volume = it }
                     ReaderToggle("Incognito · pause reading history", options.incognito) { options.incognito = it }
+                    ReaderToggle("Protect reader screenshots", options.secureScreen) { options.secureScreen = it }
                 }
                 ReaderSettingsTab.PAGES -> {
                     if (mode != ReadingMode.WEBTOON) {
