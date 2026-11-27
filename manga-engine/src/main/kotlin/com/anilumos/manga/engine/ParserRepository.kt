@@ -21,7 +21,7 @@ internal fun catalogPage(raw: List<Manga>, offset: Int): CatalogPage {
 internal class ParserRepository(
     registry: ParserRegistry,
     private val scope: SourceScope,
-    session: SourceSession,
+    private val session: SourceSession,
 ) {
     private val parser = registry.bundle.newParser(registry.requireSource(scope), AndroidParserContext(registry.bundle, session))
     init { scope.requireUrl("https://" + parser.domain + "/") }
@@ -47,6 +47,7 @@ internal class ParserRepository(
         require(chapter.source.name == scope.sourceName && title.chapters.orEmpty().any { it == chapter })
         parser.getPages(chapter).also { pages -> check(pages.all { it.source.name == scope.sourceName }) }
     }
+    suspend fun loadImage(page: MangaPage): ByteArray = PageDelivery(scope, session).load(imageUrl(page))
     suspend fun imageUrl(page: MangaPage): String = withContext(Dispatchers.IO) {
         require(page.source.name == scope.sourceName)
         scope.requireUrl(parser.getPageUrl(page), "https://" + parser.domain + "/").toString()
