@@ -44,6 +44,7 @@ data class MangaTitle(
     val authors: List<String> = emptyList(),
     val alternativeTitles: List<String> = emptyList(),
     val largeCoverUrl: String? = null,
+    val unrated: Boolean = false,
 )
 
 data class MangaChapter(

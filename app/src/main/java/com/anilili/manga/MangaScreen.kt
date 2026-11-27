@@ -216,7 +216,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         if (provider == null) error = "Choose a provider to browse manga."
         else if (!sourceReady(healthStates[provider.id] ?: SourceHealth.UNTESTED)) error = "This provider is temporarily unavailable. Choose another provider or try again after its cooldown."
         else resultOf { provider.catalog(if (browse) query.trim() else "", kind, order, limit = 24) }
-            .onSuccess { results = it; offset = (provider as? NativeConfigurableProvider)?.rawCatalogCount() ?: it.size; hasMore = offset > 0; if (it.isNotEmpty()) health.record(provider.id, SourceHealth.CATALOG) else if (offset > 0) error = "Provider responded, but no titles met the content-rating filter." }
+            .onSuccess { results = it; offset = (provider as? NativeConfigurableProvider)?.rawCatalogCount() ?: it.size; hasMore = offset > 0; if (it.isNotEmpty()) health.record(provider.id, SourceHealth.CATALOG) else if (offset > 0) { health.record(provider.id, SourceHealth.CATALOG); error = "Provider responded, but no titles met the content-rating filter." } }
             .onFailure { health.record(provider.id, classifySourceFailure(it)); error = healthError(it) }
         loading = false
         if (home && provider != null && error == null && results.isNotEmpty()) {
@@ -563,6 +563,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
             val overview: @Composable () -> Unit = {
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (details.genres.isNotEmpty()) GenreRow(details.genres.distinct())
+                    if (details.unrated) Text("Publisher has not supplied an age rating for this title.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Description(details.description)
                     Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(18.dp)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         listOf("Provider" to source.displayName, "Status" to details.status, "Authors" to details.authors.joinToString(", "), "Alternative titles" to details.alternativeTitles.joinToString(" · "), "Chapters" to chapters.size.takeIf { it > 0 }?.toString().orEmpty()).filter { it.second.isNotBlank() }.forEach { (name, value) ->

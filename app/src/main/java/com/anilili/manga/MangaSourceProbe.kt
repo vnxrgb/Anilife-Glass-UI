@@ -17,12 +17,14 @@ internal suspend fun probeMangaSource(source: MangaSource): SourceProbeResult {
             val titles = source.catalog("", MangaKind.ALL, MangaOrder.POPULAR, limit = 5)
             if (titles.isEmpty()) return@withTimeoutOrNull SourceProbeResult(if ((source as? NativeConfigurableProvider)?.rawCatalogCount()?.let { it > 0 } == true) SourceHealth.CATALOG else SourceHealth.FAILED, "no-safe-catalog")
             stage = "search"
-            val title = titles.first()
+            val safeSamples = titles.filterNot { it.unrated }
+            if (safeSamples.isEmpty()) return@withTimeoutOrNull SourceProbeResult(SourceHealth.CATALOG, "publisher-catalog-unrated")
+            val title = safeSamples.first()
             val matches = source.search(title.title.take(120), limit = 5)
             if (matches.isEmpty()) return@withTimeoutOrNull SourceProbeResult(SourceHealth.CATALOG, "search-empty")
             stage = "chapters"
             var candidate: MangaChapter? = null
-            for (sample in titles.take(3)) {
+            for (sample in safeSamples.take(3)) {
                 val chapters = source.chapters(sample.id, if (source.id == "mangadex") "und" else source.chapterLanguages.firstOrNull() ?: "und")
                 candidate = chapters.firstOrNull()
                 if (candidate != null) break

@@ -118,16 +118,17 @@ private class KotatsuNativeSource(
         } else null
         rawCount = 0
         if (!isMangaDex && kind != MangaKind.ALL && kind != sourceKind) return@withContext emptyList()
-        val filter = MangaListFilter(query = query.trim().takeIf { it.isNotEmpty() }, originalLocale = originalLocale, contentRating = if (query.isBlank() || parser.filterCapabilities.isSearchWithFiltersSupported) setOf(ContentRating.SAFE) else emptySet())
+        val filter = MangaListFilter(query = query.trim().takeIf { it.isNotEmpty() }, originalLocale = originalLocale, contentRating = if (!allowsUnratedPublisherTitles(descriptor.name, parser.domain) && (query.isBlank() || parser.filterCapabilities.isSearchWithFiltersSupported)) setOf(ContentRating.SAFE) else emptySet())
         val raw = paced { parser.getList(offset, sort, filter) }
         rawCount = raw.size
-        raw.filter { it.contentRating == ContentRating.SAFE }.map { manga ->
+        raw.filter { publisherRatingAllowed(descriptor.name, parser.domain, it.contentRating) }.map { manga ->
             val mangaId = key(manga)
             catalog[mangaId] = manga
             MangaTitle(id, mangaId, manga.title, manga.description.orEmpty(), manga.coverUrl,
                 kind = if (isMangaDex) kind.takeUnless { it == MangaKind.ALL } ?: MangaKind.OTHER else sourceKind,
                 genres = manga.tags.map { it.title }, status = manga.state?.name?.lowercase(Locale.ROOT).orEmpty(),
-                authors = manga.authors.toList(), alternativeTitles = manga.altTitles.toList(), largeCoverUrl = manga.largeCoverUrl)
+                authors = manga.authors.toList(), alternativeTitles = manga.altTitles.toList(), largeCoverUrl = manga.largeCoverUrl,
+                unrated = manga.contentRating == null)
         }.filter { kind == MangaKind.ALL || it.kind == kind }
     }
     override suspend fun chapters(mangaId: String, language: String): List<MangaChapter> = withContext(Dispatchers.IO) {
@@ -141,7 +142,7 @@ private class KotatsuNativeSource(
                 authors = emptySet(), source = descriptor)
         }
         val details = paced { parser.getDetails(manga) }
-        require(details.contentRating == ContentRating.SAFE || (details.contentRating == null && manga.contentRating == ContentRating.SAFE)) { "Title is not confirmed safe" }
+        require(publisherRatingAllowed(descriptor.name, parser.domain, details.contentRating ?: manga.contentRating)) { "Title is not confirmed eligible for this catalog" }
         catalog[mangaId] = details
         details.chapters.orEmpty().filter { chapter ->
             if (!isMangaDex || language == "und") true else {
@@ -162,7 +163,8 @@ private class KotatsuNativeSource(
             coverUrl = details.coverUrl ?: title.coverUrl, largeCoverUrl = details.largeCoverUrl,
             authors = details.authors.filter { it.isNotBlank() }, alternativeTitles = details.altTitles.filter { it.isNotBlank() },
             genres = details.tags.map { it.title }.ifEmpty { title.genres },
-            status = details.state?.name?.lowercase(Locale.ROOT) ?: title.status)
+            status = details.state?.name?.lowercase(Locale.ROOT) ?: title.status,
+            unrated = details.contentRating == null && title.unrated)
     }
     override suspend fun pages(chapterId: String): List<MangaPage> = withContext(Dispatchers.IO) {
         val chapter = chapterCache[chapterId] ?: error("Open chapter list again to reload this chapter")
@@ -175,6 +177,16 @@ private class KotatsuNativeSource(
         }
     }
 }
+
+/** A missing rating is not an adult flag or a safety certification. Only public publisher catalogs
+ * with a known metadata limitation may surface unrated entries; explicit adult/suggestive ratings
+ * remain excluded everywhere. Match both the bundled descriptor and publisher domain. */
+internal fun allowsUnratedPublisherTitles(name: String, domain: String): Boolean =
+    (name.startsWith("MANGAPLUSPARSER_") && domain.equals("mangaplus.shueisha.co.jp", true)) ||
+    ((name.startsWith("WEBTOONS_") || name.startsWith("LINEWEBTOONS_")) && domain.equals("webtoons.com", true))
+
+internal fun publisherRatingAllowed(name: String, domain: String, rating: ContentRating?): Boolean =
+    rating == ContentRating.SAFE || (rating == null && allowsUnratedPublisherTitles(name, domain))
 
 /** Fail closed for categories outside ordinary manga/comics and known adult source identifiers. */
 internal fun sourceAllowed(type: ContentType, name: String, title: String, broken: Boolean): Boolean {
