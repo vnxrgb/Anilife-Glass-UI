@@ -113,7 +113,7 @@ fun MangaScreen(onBack: () -> Unit, section: MangaSection = MangaSection.HOME, o
 private fun MangaDestination(store: MangaReadingStore, section: MangaSection, onBack: () -> Unit, onHeroUnderBarsChanged: (Boolean) -> Unit) {
     val healthContext = LocalContext.current
     val localSource = remember(healthContext) { LocalMangaSource(healthContext) }
-    val registry = remember(localSource) { MangaSources(builtInKotatsuSources() + localSource) }
+    val registry = remember(localSource) { MangaSources(builtInKotatsuSources(healthContext) + localSource) }
     val health = remember(healthContext) { MangaSourceHealthStore(healthContext) }
     val healthStates by health.states.collectAsState()
     LaunchedEffect(health) { while (true) { health.refresh(); delay(30_000L) } }
@@ -216,7 +216,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         if (provider == null) error = "Choose a provider to browse manga."
         else if (!sourceReady(healthStates[provider.id] ?: SourceHealth.UNTESTED)) error = "This provider is temporarily unavailable. Choose another provider or try again after its cooldown."
         else resultOf { provider.catalog(if (browse) query.trim() else "", kind, order, limit = 24) }
-            .onSuccess { results = it; offset = it.size; hasMore = it.size == 24; if (it.isNotEmpty()) health.record(provider.id, SourceHealth.CATALOG) }
+            .onSuccess { results = it; offset = (provider as? NativeConfigurableProvider)?.rawCatalogCount() ?: it.size; hasMore = offset > 0; if (it.isNotEmpty()) health.record(provider.id, SourceHealth.CATALOG) else if (offset > 0) error = "Provider responded, but no titles met the content-rating filter." }
             .onFailure { health.record(provider.id, classifySourceFailure(it)); error = healthError(it) }
         loading = false
         if (home && provider != null && error == null && results.isNotEmpty()) {
@@ -224,7 +224,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
             resultOf { provider.catalog("", kind, MangaOrder.RECENT, limit = 12) }.onSuccess { recent = it }
         }
     }
-    if (sourceMenu) MangaProviderHub(catalogSources, providerPrefs, healthStates, provider?.id, onDismiss = { sourceMenu = false }, onSelect = { source ->
+    if (sourceMenu) MangaProviderHub(catalogSources, providerPrefs, health, healthStates, provider?.id, onDismiss = { sourceMenu = false }, onSelect = { source ->
         sourceId = source.id; kind = MangaKind.ALL; genre = null; sourceMenu = false; retry++
     }, onInfo = { sourceMenu = false; attribution = true })
     unavailableTitle?.let { unavailable -> AlertDialog(onDismissRequest = { unavailableTitle = null }, title = { Text("Provider unavailable") }, text = { Text("${unavailable.title} remains in your reading list. Enable its provider in Manage providers if it is still available.") }, confirmButton = { TextButton(onClick = { unavailableTitle = null }) { Text("OK") } }) }
@@ -351,7 +351,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                                     val generation = catalogGeneration
                                     moreLoading = true
                                     resultOf { provider.catalog(query.trim(), kind, order, offset, 24) }.onSuccess { batch ->
-                                        if (generation == catalogGeneration) { results = (results + batch).distinctBy { it.identity() }; offset += batch.size; hasMore = batch.size == 24 }
+                                        if (generation == catalogGeneration) { results = (results + batch).distinctBy { it.identity() }; val consumed = (provider as? NativeConfigurableProvider)?.rawCatalogCount() ?: batch.size; offset += consumed; hasMore = consumed > 0 && batch.isNotEmpty() }
                                     }.onFailure { if (generation == catalogGeneration) error = healthError(it) }
                                     if (generation == catalogGeneration) moreLoading = false
                                 }

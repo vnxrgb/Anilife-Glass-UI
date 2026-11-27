@@ -27,15 +27,13 @@ import java.util.Locale
 
 /** No executable bundle loader, browser automation, or external extension installations. */
 @OptIn(DirectParsersAccess::class)
-private class NativeParserContext : MangaLoaderContext() {
+private class NativeParserContext(private val androidContext: android.content.Context? = null) : MangaLoaderContext() {
     override val cookieJar: CookieJar = MangaNetwork.cookieJar
     override val httpClient = MangaNetwork.client
     override val parsers: ParsersBundle = ParsersBundleImpl
-    override fun getDefaultUserAgent() = "AniLumos (Android; manga reader)"
+    override fun getDefaultUserAgent() = org.koitharu.kotatsu.parsers.network.UserAgents.FIREFOX_MOBILE
     override fun getPreferredLocales(): List<Locale> = listOf(Locale.getDefault(), Locale.ENGLISH).distinct()
-    override fun getConfig(source: ParserSource): MangaSourceConfig = object : MangaSourceConfig {
-        override fun <T> get(key: ConfigKey<T>): T = key.defaultValue
-    }
+    override fun getConfig(source: ParserSource): MangaSourceConfig = NativeSourceConfig(androidContext, source.name)
     @Deprecated("No browser scripting in native preview")
     override suspend fun evaluateJs(script: String): String? = null
     override suspend fun evaluateJs(baseUrl: String, script: String, timeout: Long): String? = null
@@ -46,8 +44,8 @@ private class NativeParserContext : MangaLoaderContext() {
 }
 
 /** Expose every compiled descriptor, including upstream-broken entries as unavailable. */
-internal fun builtInKotatsuSources(): List<MangaSource> {
-    val context = NativeParserContext()
+internal fun builtInKotatsuSources(androidContext: android.content.Context? = null): List<MangaSource> {
+    val context = NativeParserContext(androidContext?.applicationContext)
     return context.parsers.sources.filter { source -> sourceAllowed(source.contentType, source.name, source.title, source.isBroken) }
         .distinctBy { it.name }.map { KotatsuNativeSource(context, it) }
         .sortedWith(compareBy<MangaSource> { it.id != "mangadex" }.thenBy { !it.available }.thenBy { it.displayName.lowercase(Locale.ROOT) })
@@ -56,7 +54,7 @@ internal fun builtInKotatsuSources(): List<MangaSource> {
 private class KotatsuNativeSource(
     context: NativeParserContext,
     private val descriptor: ParserMangaSource,
-) : MangaSource {
+) : MangaSource, NativeConfigurableProvider {
     private val isMangaDex = descriptor.name == "MANGADEX"
     override val id = if (isMangaDex) "mangadex" else "kotatsu:" + descriptor.name.lowercase(Locale.ROOT)
     override val displayName = descriptor.title
@@ -76,6 +74,12 @@ private class KotatsuNativeSource(
         else -> MangaKind.OTHER
     }
     private val parser by lazy { context.newParserInstance(descriptor) }
+    override fun configKeys(): List<ConfigKey<*>> = mutableListOf<ConfigKey<*>>().also { parser.onCreateConfig(it) }.distinctBy { it.key }
+    override fun sourceConfig(): NativeSourceConfig = parser.config as NativeSourceConfig
+    override fun supportedSorts(): List<SortOrder> = parser.availableSortOrders.toList()
+    override fun currentDomain(): String = parser.domain
+    @Volatile private var rawCount = 0
+    override fun rawCatalogCount(): Int = rawCount
     override fun websiteUrl(): String? = runCatching { "https://${parser.domain}/".toHttpUrlOrNull()?.toString() }.getOrNull()
     private val catalog = ConcurrentHashMap<String, Manga>()
     private val chapterCache = ConcurrentHashMap<String, ParserChapter>()
@@ -89,23 +93,27 @@ private class KotatsuNativeSource(
             order == MangaOrder.RECENT -> SortOrder.UPDATED
             else -> SortOrder.POPULARITY
         }
-        val sort = requested.takeIf { it in parser.availableSortOrders } ?: parser.availableSortOrders.first()
+        val sort = (if (query.isBlank() && order == MangaOrder.POPULAR) sourceConfig().defaultSort() else null)?.takeIf { it in parser.availableSortOrders }
+            ?: requested.takeIf { it in parser.availableSortOrders } ?: parser.availableSortOrders.first()
         val originalLocale = if (isMangaDex) when (kind) {
             MangaKind.MANGA -> Locale.JAPANESE
             MangaKind.MANHWA -> Locale.KOREAN
             MangaKind.MANHUA -> Locale.CHINESE
             else -> null
         } else null
+        rawCount = 0
         if (!isMangaDex && kind != MangaKind.ALL && kind != sourceKind) return@withContext emptyList()
-        val filter = MangaListFilter(query = query.trim().takeIf { it.isNotEmpty() }, originalLocale = originalLocale, contentRating = setOf(ContentRating.SAFE))
-        parser.getList(offset, sort, filter).filter { it.contentRating == ContentRating.SAFE }.map { manga ->
+        val filter = MangaListFilter(query = query.trim().takeIf { it.isNotEmpty() }, originalLocale = originalLocale, contentRating = if (query.isBlank() || parser.filterCapabilities.isSearchWithFiltersSupported) setOf(ContentRating.SAFE) else emptySet())
+        val raw = parser.getList(offset, sort, filter)
+        rawCount = raw.size
+        raw.filter { it.contentRating == ContentRating.SAFE }.map { manga ->
             val mangaId = key(manga)
             catalog[mangaId] = manga
             MangaTitle(id, mangaId, manga.title, manga.description.orEmpty(), manga.coverUrl,
                 kind = if (isMangaDex) kind.takeUnless { it == MangaKind.ALL } ?: MangaKind.OTHER else sourceKind,
                 genres = manga.tags.map { it.title }, status = manga.state?.name?.lowercase(Locale.ROOT).orEmpty(),
                 authors = manga.authors.toList(), alternativeTitles = manga.altTitles.toList(), largeCoverUrl = manga.largeCoverUrl)
-        }.filter { kind == MangaKind.ALL || it.kind == kind }.take(limit)
+        }.filter { kind == MangaKind.ALL || it.kind == kind }
     }
     override suspend fun chapters(mangaId: String, language: String): List<MangaChapter> = withContext(Dispatchers.IO) {
         check(available) { "This source is marked unavailable upstream" }

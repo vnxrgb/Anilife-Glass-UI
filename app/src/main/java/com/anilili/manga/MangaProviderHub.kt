@@ -34,6 +34,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.anilili.ui.components.*
 import com.anilili.ui.adaptive.LocalAppDeviceProfile
 import java.util.Locale
+import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 internal class MangaProviderPreferences(context: Context) {
@@ -85,7 +86,7 @@ private enum class ProviderFilter(val label: String) { ALL("All"), ENABLED("Enab
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun MangaProviderHub(
-    sources: List<MangaSource>, prefs: MangaProviderPreferences, health: Map<String, SourceHealth>, selected: String?,
+    sources: List<MangaSource>, prefs: MangaProviderPreferences, healthStore: MangaSourceHealthStore, health: Map<String, SourceHealth>, selected: String?,
     onDismiss: () -> Unit, onSelect: (MangaSource) -> Unit, onInfo: () -> Unit,
 ) {
     var manage by rememberSaveable { mutableStateOf(false) }
@@ -124,7 +125,7 @@ internal fun MangaProviderHub(
                     }
                 }
                 if (settings != null) {
-                    ProviderSettings(settings, prefs, health[settings.id] ?: SourceHealth.UNTESTED, context)
+                    ProviderSettings(settings, prefs, healthStore, health[settings.id] ?: SourceHealth.UNTESTED, context)
                 } else {
                     Text("$enabledCount of ${sources.size} enabled", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     PageSearchField(query, { query = it }, "Search providers", "Clear search")
@@ -218,10 +219,13 @@ private fun ProviderMonogram(source: MangaSource, modifier: Modifier = Modifier)
 }
 
 @Composable
-private fun ProviderSettings(source: MangaSource, prefs: MangaProviderPreferences, health: SourceHealth, context: Context) {
+private fun ProviderSettings(source: MangaSource, prefs: MangaProviderPreferences, healthStore: MangaSourceHealthStore, health: SourceHealth, context: Context) {
     var message by remember(source.id) { mutableStateOf<String?>(null) }
     var website by remember(source.id) { mutableStateOf<String?>(null) }
-    LaunchedEffect(source.id) { website = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { source.websiteUrl() } }
+    var revision by remember(source.id) { mutableIntStateOf(0) }
+    var testing by remember(source.id) { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(source.id, revision) { website = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { source.websiteUrl() } }
     LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(20.dp)).padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -237,6 +241,21 @@ private fun ProviderSettings(source: MangaSource, prefs: MangaProviderPreference
             Text("Connection", style = MaterialTheme.typography.titleMedium)
             Text(health.label, color = MaterialTheme.colorScheme.onSurfaceVariant)
             website?.let { Text("Domain: " + (it.toHttpUrlOrNull()?.host ?: it), style = MaterialTheme.typography.bodyMedium) }
+        }
+        item {
+            OutlinedButton(enabled = !testing && sourceReady(health), onClick = {
+                testing = true
+                scope.launch {
+                    try {
+                        val result = probeMangaSource(source)
+                        healthStore.record(source.id, result.health)
+                        message = result.health.label + " · " + result.stage
+                    } finally { testing = false }
+                }
+            }, modifier = Modifier.fillMaxWidth()) { Text(if (testing) "Checking catalog, chapters and image…" else "Test provider") }
+        }
+        if (source is NativeConfigurableProvider) item {
+            NativeProviderSettings(source) { revision++; healthStore.reset(source.id) }
         }
         item {
             Row(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(18.dp)).clickable { prefs.pin(source) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {

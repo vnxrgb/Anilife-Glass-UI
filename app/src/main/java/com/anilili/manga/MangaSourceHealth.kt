@@ -58,6 +58,7 @@ internal class MangaSourceHealthStore(context: Context) {
     val states = mutable.asStateFlow()
     private fun snapshot(): Map<String, SourceHealth> = observations.mapValues { it.value.current(System.currentTimeMillis()) }
     @Synchronized fun refresh() { mutable.value = snapshot() }
+    @Synchronized fun reset(id: String) { observations.remove(id); prefs.edit().remove(id).apply(); mutable.value = snapshot() }
     @Synchronized fun record(id: String, status: SourceHealth) {
         val old = observations[id]
         if (status == SourceHealth.CATALOG && old?.current(System.currentTimeMillis()) == SourceHealth.VERIFIED) return
