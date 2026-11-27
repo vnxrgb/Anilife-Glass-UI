@@ -20,6 +20,27 @@ class TabletNarrowWindowColumnsTest {
         assertEquals(6, tablet.homePosterColumns(1600.dp, 12.dp))
     }
 
+    @Test fun narrowTabletWindowKeepsTabletPolicy() {
+        val profile = resolveAppDeviceProfile(
+            uiModeType = android.content.res.Configuration.UI_MODE_TYPE_NORMAL,
+            widthDp = 320,
+            deviceSmallestWidthDp = 700,
+        )
+        assertEquals(AppFormFactor.TABLET, profile.formFactor)
+        assertEquals(1, profile.homePosterColumns(180.dp, 12.dp))
+        assertEquals(2, profile.homePosterColumns(312.dp, 12.dp))
+    }
+
+    @Test fun narrowPhoneDoesNotBecomeTablet() {
+        val profile = resolveAppDeviceProfile(
+            uiModeType = android.content.res.Configuration.UI_MODE_TYPE_NORMAL,
+            widthDp = 390,
+            deviceSmallestWidthDp = 390,
+        )
+        assertEquals(AppFormFactor.PHONE, profile.formFactor)
+        assertEquals(3, profile.homePosterColumns(180.dp, 12.dp))
+    }
+
     @Test fun phoneAndTvPoliciesRemainUnchanged() {
         assertEquals(3, AppDeviceProfile(AppFormFactor.PHONE, 390).homePosterColumns(100.dp, 12.dp))
         assertEquals(3, AppDeviceProfile(AppFormFactor.PHONE, 390).homePosterColumns(212.dp, 12.dp))
