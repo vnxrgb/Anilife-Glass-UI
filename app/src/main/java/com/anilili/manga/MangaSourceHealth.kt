@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 internal enum class SourceHealth(val label: String) {
-    UNTESTED("Untested"), CATALOG("Catalog works"), VERIFIED("Page loaded"),
+    UNTESTED("Untested"), CATALOG("Catalog works"), VERIFIED("Image verified"),
     RESTRICTED("Access restricted"), SERVER_TLS("Provider SSL error"), FAILED("Unavailable")
 }
 internal fun classifySourceFailure(error: Throwable): SourceHealth {

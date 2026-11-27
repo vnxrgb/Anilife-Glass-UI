@@ -606,7 +606,7 @@ private fun MangaSourcePicker(sources: List<MangaSource>, health: Map<String, So
                 listOf("Working", "Additional", "Failed").forEach { label -> FilterChip(selected = filter == label, onClick = { filter = label }, label = { Text(label) }, shape = CircleShape, colors = cinematicFilterChipColors()) }
             }
             if (filter == "Additional") Text("Check a source on your current network before selecting it.", style = MaterialTheme.typography.labelSmall)
-            if (filter == "Failed") Text("Choose a source only to retry it. Access restrictions and server TLS errors are not bypassed.", style = MaterialTheme.typography.labelSmall)
+            if (filter == "Failed") Text("Use Check to retry on this network. Access restrictions and server TLS errors are not bypassed.", style = MaterialTheme.typography.labelSmall)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 FilterChip(selected = language == null, onClick = { language = null }, label = { Text("All") }, shape = CircleShape, colors = cinematicFilterChipColors())
                 languages.forEach { label -> FilterChip(selected = language == label, onClick = { language = label }, label = { Text(label) }, shape = CircleShape, colors = cinematicFilterChipColors()) }
@@ -614,7 +614,7 @@ private fun MangaSourcePicker(sources: List<MangaSource>, health: Map<String, So
             Text("${filtered.size} of ${sources.size} built-in sources", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             LazyColumn(state = state, modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
                 items(filtered, key = { it.id }) { source ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(enabled = source.available) { onSelect(source) }.padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(enabled = source.available && (health[source.id] == SourceHealth.VERIFIED || (source.id in verifiedIds && (health[source.id] == null || health[source.id] == SourceHealth.CATALOG)))) { onSelect(source) }.padding(horizontal = 8.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(source.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(listOf(source.languageLabel(), source.sourceCategory, (health[source.id]?.label ?: if (source.id in verifiedIds) "CI verified" else "Untested")).filterNotNull().joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
