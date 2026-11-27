@@ -31,6 +31,20 @@ class TabletNarrowWindowColumnsTest {
         assertEquals(2, profile.homePosterColumns(312.dp, 12.dp))
     }
 
+    @Test fun narrowTabletUsesPhoneSizedMarginsUntilWindowIsMedium() {
+        val narrow = resolveAppDeviceProfile(
+            uiModeType = android.content.res.Configuration.UI_MODE_TYPE_NORMAL,
+            widthDp = 320,
+            deviceSmallestWidthDp = 700,
+        )
+        assertEquals(AppFormFactor.TABLET, narrow.formFactor)
+        assertEquals(16.dp, narrow.pagePadding)
+        assertEquals(24.dp, narrow.copy(widthDp = 600).pagePadding)
+        assertEquals(32.dp, narrow.copy(widthDp = 840).pagePadding)
+        assertEquals(16.dp, AppDeviceProfile(AppFormFactor.PHONE, 390).pagePadding)
+        assertEquals(48.dp, AppDeviceProfile(AppFormFactor.TV, 1920).pagePadding)
+    }
+
     @Test fun narrowPhoneDoesNotBecomeTablet() {
         val profile = resolveAppDeviceProfile(
             uiModeType = android.content.res.Configuration.UI_MODE_TYPE_NORMAL,
