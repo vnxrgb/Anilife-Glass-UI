@@ -273,6 +273,20 @@ val syncParityCorpus = tasks.register<Sync>("syncParityCorpus") {
 // processing, the lint models) runs after it, so Gradle never sees a reader racing the write.
 tasks.named("preBuild") { dependsOn(syncParityCorpus) }
 
+// OkHttp 5 has separate Android and JVM implementations. Local JVM tests must use
+// the JVM variant, whose public-suffix database is a classpath resource, not an Android asset.
+// Keep production Android dependencies and DNS behavior unchanged.
+configurations.configureEach {
+    if (name.contains("UnitTest", ignoreCase = true)) {
+        resolutionStrategy.dependencySubstitution {
+            substitute(module("com.squareup.okhttp3:okhttp"))
+                .using(module("com.squareup.okhttp3:okhttp-jvm:${libs.versions.okhttp.get()}"))
+            substitute(module("com.squareup.okhttp3:okhttp-android"))
+                .using(module("com.squareup.okhttp3:okhttp-jvm:${libs.versions.okhttp.get()}"))
+        }
+    }
+}
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
 
