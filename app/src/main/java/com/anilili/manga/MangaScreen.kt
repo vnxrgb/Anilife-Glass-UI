@@ -60,9 +60,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -85,7 +89,7 @@ import kotlin.math.roundToInt
 
 private enum class ReaderBackground(val label: String) { THEME("Match app"), LIGHT("Light"), DARK("Dark"), BLACK("AMOLED") }
 private enum class MangaDetailTab(val label: String) { OVERVIEW("Overview"), CHAPTERS("Chapters") }
-private enum class ReadingMode(val label: String) { WEBTOON("Vertical"), RTL("Right to left"), LTR("Left to right") }
+private enum class ReadingMode(val label: String) { WEBTOON("Webtoon"), VERTICAL("Vertical paged"), RTL("Right to left"), LTR("Left to right") }
 private enum class LibraryFilter(val label: String) { ALL("All"), READING("Reading"), SAVED("Bookmarked") }
 private suspend fun <T> resultOf(block: suspend () -> T): Result<T> =
     try { Result.success(block()) } catch (e: CancellationException) { throw e } catch (e: Exception) { Result.failure(e) }
@@ -588,6 +592,16 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
     var brightness by rememberSaveable { mutableFloatStateOf(prefs.getFloat("brightness", -1f)) }
     var ambientStrength by rememberSaveable { mutableFloatStateOf(prefs.getFloat("ambient_strength", .55f).coerceIn(.15f, .85f)) }
     var pageMenu by remember { mutableStateOf(false) }
+    val options = remember(prefs) { ReaderPreferences(prefs) }
+    LaunchedEffect(options) { snapshotFlow { options.save() }.collect {} }
+    var bookmarked by remember(title.id, chapter.id) { mutableStateOf(store.isChapterBookmarked(title, chapter.id)) }
+    val toggleBookmark = { bookmarked = !bookmarked; store.bookmarkChapter(title, chapter.id, bookmarked) }
+    val activity = context.findActivity()
+    DisposableEffect(activity, options.rotation) {
+        val previous = activity?.requestedOrientation
+        options.rotation.orientation?.let { activity?.requestedOrientation = it }
+        onDispose { if (previous != null) activity?.requestedOrientation = previous }
+    }
     LaunchedEffect(brightness, ambientStrength) {
         prefs.edit().putFloat("brightness", brightness).putFloat("ambient_strength", ambientStrength).apply()
     }
@@ -606,8 +620,8 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
         resultOf { source.pages(chapter.id) }.onSuccess { pages = it; if (it.isNotEmpty()) position = position.coerceIn(0, it.lastIndex) }.onFailure { error = healthError(it) }
         loading = false
     }
-    if (chapterMenu) MangaChapterPicker(chapters, chapter, onDismiss = { chapterMenu = false }, onSelect = { chapterMenu = false; onChapter(it) })
-    if (modeMenu) MangaReaderSettings(mode, background, ambient, fullscreen, magnify, awake, brightness, ambientStrength,
+    if (chapterMenu) MangaChapterPicker(chapters, chapter, store, title, onDismiss = { chapterMenu = false }, onSelect = { chapterMenu = false; onChapter(it) })
+    if (modeMenu) MangaReaderSettings(mode, background, ambient, fullscreen, magnify, awake, brightness, ambientStrength, options,
         onMode = { mode = it; magnify = false }, onBackground = { background = it }, onAmbient = { ambient = it },
         onFullscreen = { fullscreen = it; if (it) controls = false }, onMagnify = { magnify = it; controls = true },
         onAwake = { awake = it }, onBrightness = { brightness = it }, onAmbientStrength = { ambientStrength = it },
@@ -631,13 +645,20 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
         if (loading) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         else if (error != null) Surface(color = MaterialTheme.colorScheme.surface) { MangaError(error.orEmpty()) { retry++ } }
         else if (pages.isEmpty()) Surface(color = MaterialTheme.colorScheme.surface) { Text("No pages available.", Modifier.padding(16.dp)) }
-        else key(chapter.id, mode) {
+        else BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val double = mode != ReadingMode.WEBTOON && when(options.layout) { ReaderLayout.SINGLE -> false; ReaderLayout.DOUBLE -> true; ReaderLayout.AUTO -> maxWidth > maxHeight }
+            val groups = remember(pages.size, double, options.shift) { readerPageGroups(pages.size, double, options.shift) }
+            key(chapter.id, mode, double, options.shift) {
+            Column(Modifier.fillMaxSize()) {
             val scope = rememberCoroutineScope()
             val list = rememberLazyListState(initialFirstVisibleItemIndex = position.coerceIn(0, pages.lastIndex))
-            val pager = rememberPagerState(initialPage = position.coerceIn(0, pages.lastIndex), pageCount = { pages.size })
+            val pager = rememberPagerState(initialPage = groups.indexOfFirst { position in it }.coerceAtLeast(0), pageCount = { groups.size })
             val jump: (Int) -> Unit = { target -> scope.launch {
                 val index = target.coerceIn(0, pages.lastIndex)
-                if (mode == ReadingMode.WEBTOON) list.scrollToItem(index) else pager.scrollToPage(index)
+                if (mode == ReadingMode.WEBTOON) list.scrollToItem(index) else {
+                    val group = groups.indexOfFirst { index in it }.coerceAtLeast(0)
+                    if (options.animate && kotlin.math.abs(group - pager.currentPage) == 1) pager.animateScrollToPage(group) else pager.scrollToPage(group)
+                }
                 position = index
             } }
             if (pageMenu) {
@@ -649,9 +670,25 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
                     dismissButton = { TextButton(onClick = { pageMenu = false }) { Text("Cancel") } })
             }
             LaunchedEffect(list, pager, mode) {
-                snapshotFlow { if (mode == ReadingMode.WEBTOON) list.firstVisibleItemIndex else pager.settledPage }.distinctUntilChanged().collect { index ->
+                snapshotFlow { if (mode == ReadingMode.WEBTOON) list.firstVisibleItemIndex else groups.getOrNull(pager.settledPage)?.firstOrNull() ?: 0 }.distinctUntilChanged().collect { index ->
                     position = index; store.progress(title, chapter.id, index, chapter.chapterNumber, pages.size)
                 }
+            }
+            val turn: (Int) -> Unit = { direction ->
+                if (mode == ReadingMode.WEBTOON) jump(position + direction)
+                else groups.getOrNull(pager.currentPage + direction)?.firstOrNull()?.let(jump)
+            }
+            val currentTurn by rememberUpdatedState(turn)
+            DisposableEffect(options.volume, modeMenu, chapterMenu, pageMenu) {
+                if (options.volume && !modeMenu && !chapterMenu && !pageMenu) ReaderVolumeKeys.turn = { currentTurn(it) }
+                onDispose { ReaderVolumeKeys.turn = null }
+            }
+            LaunchedEffect(options.autoHide, list, pager) {
+                if (options.autoHide) snapshotFlow { if (mode == ReadingMode.WEBTOON) list.isScrollInProgress else pager.isScrollInProgress }.collect { if (it) controls = false }
+            }
+            val tapPage: (Float, Float) -> Unit = { x, y ->
+                val dir = readerTapDirection(x, y, options.zones, mode == ReadingMode.RTL, options.invertZones)
+                if (dir == 0) controls = !controls else turn(dir)
             }
             var lensCenter by remember { mutableStateOf(Offset.Unspecified) }
             val lensModifier = if (magnify && Build.VERSION.SDK_INT >= 28) Modifier.magnifier(sourceCenter = { lensCenter }, zoom = if (Build.VERSION.SDK_INT >= 29) 2f else Float.NaN).pointerInput(magnify) {
@@ -665,11 +702,24 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
                         AsyncImage(ambientRequest, null, imageLoader = MangaNetwork.imageLoader(context), modifier = Modifier.fillMaxSize().blur(42.dp), contentScale = ContentScale.Crop, alpha = ambientStrength)
                     }
                 }
-                if (mode == ReadingMode.WEBTOON) LazyColumn(Modifier.fillMaxHeight().widthIn(max = 760.dp).fillMaxWidth().then(if (ambient) Modifier.padding(horizontal = 12.dp) else Modifier), state = list, userScrollEnabled = true) {
-                    items(pages, key = { it.index }) { page -> ReaderImage(page, Modifier.fillMaxWidth(), fit = false, onTap = { controls = !controls }, magnifierActive = magnify, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) }) }
-                } else HorizontalPager(state = pager, reverseLayout = mode == ReadingMode.RTL, userScrollEnabled = true, modifier = Modifier.fillMaxSize()) { index ->
-                    ReaderImage(pages[index], Modifier.fillMaxSize(), fit = true, onTap = { controls = !controls }, magnifierActive = magnify, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) })
+                val pageModifier = Modifier.padding(horizontal = options.padding.dp)
+                if (mode == ReadingMode.WEBTOON) LazyColumn(Modifier.fillMaxHeight().widthIn(max = 760.dp).fillMaxWidth().then(pageModifier).then(if (ambient) Modifier.padding(horizontal = 12.dp) else Modifier), state = list, verticalArrangement = Arrangement.spacedBy(options.gap.dp)) {
+                    items(pages, key = { it.index }) { page -> ReaderImage(page, Modifier.fillMaxWidth(), fit = false, onTap = tapPage, magnifierActive = magnify, options = options, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) }) }
+                } else {
+                    val spread: @Composable (Int) -> Unit = { index ->
+                        val raw = groups[index]
+                        val ordered = if ((mode == ReadingMode.RTL) xor options.reverseSpread) raw.reversed() else raw
+                        Row(Modifier.fillMaxSize().then(pageModifier), horizontalArrangement = Arrangement.spacedBy(options.gap.dp), verticalAlignment = Alignment.CenterVertically) {
+                            ordered.forEach { page ->
+                                ReaderImage(pages[page], Modifier.weight(1f).fillMaxHeight(), fit = true, onTap = tapPage, magnifierActive = magnify, options = options, onLoaded = { health.record(source.id, SourceHealth.VERIFIED) })
+                            }
+                        }
+                    }
+                    if (mode == ReadingMode.VERTICAL) androidx.compose.foundation.pager.VerticalPager(state = pager, modifier = Modifier.fillMaxSize(), pageContent = { spread(it) })
+                    else HorizontalPager(state = pager, reverseLayout = mode == ReadingMode.RTL, modifier = Modifier.fillMaxSize()) { spread(it) }
                 }
+                if (options.pageNumber && !controls) Text("${position + 1} / ${pages.size}", color = Color.White, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp).clip(CircleShape).background(Color.Black.copy(alpha = .65f)).padding(horizontal = 9.dp, vertical = 3.dp))
+
             }
             AnimatedVisibility(visible = controls) {
                 val panel = Color(0xFF16171C)
@@ -681,24 +731,27 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
                     var scrub by remember { mutableStateOf<Long?>(null) }
                     CompositionLocalProvider(LocalContentColor provides ink) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { jump(position - 1) }, enabled = position > 0) { Icon(Icons.Default.ChevronLeft, "Previous page") }
+                            IconButton(onClick = { turn(-1) }, enabled = position > 0) { Icon(Icons.Default.ChevronLeft, "Previous page") }
                             PlayerSeekBar(positionMs = position * 1000L, durationMs = pages.lastIndex * 1000L,
                                 bufferedPositionMs = position * 1000L, onSeek = { jump((it / 1000f).roundToInt()) },
                                 onScrubChange = { scrub = it }, modifier = Modifier.weight(1f), touchHeight = 28.dp)
-                            IconButton(onClick = { jump(position + 1) }, enabled = position < pages.lastIndex) { Icon(Icons.Default.ChevronRight, "Next page") }
+                            IconButton(onClick = { turn(1) }, enabled = position < pages.lastIndex) { Icon(Icons.Default.ChevronRight, "Next page") }
                             TextButton(onClick = { pageMenu = true }) { Text("${(scrub?.let { (it / 1000f).roundToInt() } ?: position) + 1}/${pages.size}", color = ink) }
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             IconButton(enabled = previousChapter != null, onClick = { previousChapter?.invoke() }) { Icon(Icons.Default.SkipPrevious, "Previous chapter") }
-                            IconButton(onClick = { modeMenu = true }) { Icon(Icons.Default.MenuBook, "Reading mode") }
-                            if (Build.VERSION.SDK_INT >= 31) IconButton(onClick = { ambient = !ambient }) { Icon(Icons.Default.Lightbulb, "Ambient light", tint = if (ambient) MaterialTheme.colorScheme.primaryContainer else ink) }
-                            if (Build.VERSION.SDK_INT >= 28) IconButton(onClick = { magnify = !magnify }) { Icon(Icons.Default.ZoomIn, "Magnifier", tint = if (magnify) MaterialTheme.colorScheme.primaryContainer else ink) }
-                            IconButton(onClick = { magnify = false; controls = false }) { Icon(Icons.Default.VisibilityOff, "Hide controls") }
+                            if (options.chapterShortcut) IconButton(onClick = { chapterMenu = true }) { Icon(Icons.Default.List, "Chapters") }
+                            IconButton(onClick = { modeMenu = true }) { Icon(Icons.Default.Tune, "Reader settings") }
+                            if (options.ambientShortcut && Build.VERSION.SDK_INT >= 31) IconButton(onClick = { ambient = !ambient }) { Icon(Icons.Default.Lightbulb, "Ambient light", tint = if (ambient) MaterialTheme.colorScheme.primaryContainer else ink) }
+                            if (options.magnifierShortcut && Build.VERSION.SDK_INT >= 28) IconButton(onClick = { magnify = !magnify }) { Icon(Icons.Default.ZoomIn, "Magnifier", tint = if (magnify) MaterialTheme.colorScheme.primaryContainer else ink) }
+                            if (options.bookmarkShortcut) IconButton(onClick = toggleBookmark) { Icon(if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, "Chapter bookmark") }
                             IconButton(enabled = nextChapter != null, onClick = { nextChapter?.invoke() }) { Icon(Icons.Default.SkipNext, "Next chapter") }
                         }
                         if (magnify) Text("Touch and hold, then drag to magnify · swipe normally to read", color = ink.copy(alpha = .8f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(6.dp))
                     }
                 }
+            }
+            }
             }
         }
     }
@@ -737,60 +790,113 @@ private fun MangaReaderWindow(fullscreen: Boolean, awake: Boolean, brightness: F
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MangaReaderSettings(mode: ReadingMode, background: ReaderBackground, ambient: Boolean, fullscreen: Boolean, magnify: Boolean, awake: Boolean, brightness: Float, ambientStrength: Float, onMode: (ReadingMode) -> Unit, onBackground: (ReaderBackground) -> Unit, onAmbient: (Boolean) -> Unit, onFullscreen: (Boolean) -> Unit, onMagnify: (Boolean) -> Unit, onAwake: (Boolean) -> Unit, onBrightness: (Float) -> Unit, onAmbientStrength: (Float) -> Unit, onDismiss: () -> Unit) {
+private fun MangaReaderSettings(mode: ReadingMode, background: ReaderBackground, ambient: Boolean, fullscreen: Boolean, magnify: Boolean, awake: Boolean, brightness: Float, ambientStrength: Float, options: ReaderPreferences, onMode: (ReadingMode) -> Unit, onBackground: (ReaderBackground) -> Unit, onAmbient: (Boolean) -> Unit, onFullscreen: (Boolean) -> Unit, onMagnify: (Boolean) -> Unit, onAwake: (Boolean) -> Unit, onBrightness: (Float) -> Unit, onAmbientStrength: (Float) -> Unit, onDismiss: () -> Unit) {
+    var tab by rememberSaveable { mutableStateOf(ReaderSettingsTab.GENERAL) }
     PlayerModalSheet(title = "Reader settings", closeDescription = "Close reader settings", onDismiss = onDismiss) {
-        Column(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Reading mode", style = MaterialTheme.typography.titleSmall)
-            ReadingMode.entries.forEach { option ->
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (mode == option) glassSelectionColor() else Color.Transparent).clickable { onMode(option) }.padding(horizontal = 10.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(if (option == ReadingMode.WEBTOON) Icons.Default.ViewStream else Icons.Default.MenuBook, null); Spacer(Modifier.width(10.dp)); Text(if (option == ReadingMode.WEBTOON) "Webtoon · Vertical" else "Comic · " + option.label, Modifier.weight(1f)); RadioButton(selected = mode == option, onClick = { onMode(option) })
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ReaderSettingsTab.entries.forEach { option -> FilterChip(selected = tab == option, onClick = { tab = option }, label = { Text(option.label) }, shape = CircleShape) }
+        }
+        Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            when(tab) {
+                ReaderSettingsTab.GENERAL -> {
+                    ReaderChoices("Reading mode", ReadingMode.entries, mode, { it.label }, onMode)
+                    ReaderChoices("Rotation", ReaderRotation.entries, options.rotation, { it.label }) { options.rotation = it }
+                    ReaderChoices("Background", ReaderBackground.entries, background, { it.label }, onBackground)
+                    ReaderToggle("Show page number", options.pageNumber) { options.pageNumber = it }
+                    ReaderToggle("Keep screen awake", awake, onAwake)
+                    ReaderToggle("Fullscreen", fullscreen, onFullscreen)
+                    ReaderToggle("Hide controls when scrolling", options.autoHide) { options.autoHide = it }
+                    ReaderToggle("Volume keys turn pages", options.volume) { options.volume = it }
+                }
+                ReaderSettingsTab.PAGES -> {
+                    if (mode != ReadingMode.WEBTOON) {
+                        ReaderChoices("Scale type", ReaderScale.entries, options.scale, { it.label }) { options.scale = it }
+                        ReaderChoices("Page layout", ReaderLayout.entries, options.layout, { it.label }) { options.layout = it }
+                        ReaderToggle("Shift double pages", options.shift) { options.shift = it }
+                        ReaderToggle("Reverse double pages", options.reverseSpread) { options.reverseSpread = it }
+                        ReaderToggle("Animate page transitions", options.animate) { options.animate = it }
+                    }
+                    ReaderChoices("Tap zones", ReaderTapZones.entries, options.zones, { it.label }) { options.zones = it }
+                    ReaderToggle("Invert tap zones", options.invertZones) { options.invertZones = it }
+                    Text("Side padding · ${options.padding.roundToInt()} dp", style = MaterialTheme.typography.titleSmall)
+                    Slider(options.padding, { options.padding = it }, valueRange = 0f..32f)
+                    Text("Page gap · ${options.gap.roundToInt()} dp", style = MaterialTheme.typography.titleSmall)
+                    Slider(options.gap, { options.gap = it }, valueRange = 0f..32f)
+                }
+                ReaderSettingsTab.FILTERS -> {
+                    ReaderToggle("Grayscale", options.grayscale) { options.grayscale = it }
+                    ReaderToggle("Invert colours", options.invert) { options.invert = it }
+                    Text("Warm reading filter", style = MaterialTheme.typography.titleSmall)
+                    Slider(options.warm, { options.warm = it })
+                    ReaderToggle("Custom brightness", brightness >= 0f) { onBrightness(if (it) .5f else -1f) }
+                    if (brightness >= 0f) Slider(brightness, onBrightness, valueRange = .05f..1f)
+                    if (Build.VERSION.SDK_INT >= 31) {
+                        ReaderToggle("Ambient lighting", ambient, onAmbient)
+                        if (ambient) Slider(ambientStrength, onAmbientStrength, valueRange = .15f..0.85f)
+                    }
+                }
+                ReaderSettingsTab.TOOLBAR -> {
+                    ReaderToggle("Chapter list", options.chapterShortcut) { options.chapterShortcut = it }
+                    if (Build.VERSION.SDK_INT >= 31) ReaderToggle("Ambient shortcut", options.ambientShortcut) { options.ambientShortcut = it }
+                    if (Build.VERSION.SDK_INT >= 28) {
+                        ReaderToggle("Magnifier shortcut", options.magnifierShortcut) { options.magnifierShortcut = it }
+                        ReaderToggle("Enable magnifier", magnify, onMagnify)
+                    }
+                    ReaderToggle("Chapter bookmark", options.bookmarkShortcut) { options.bookmarkShortcut = it }
                 }
             }
-            Text("Appearance", style = MaterialTheme.typography.titleSmall)
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { ReaderBackground.entries.forEach { option -> FilterChip(selected = background == option, onClick = { onBackground(option) }, label = { Text(option.label) }, shape = CircleShape, colors = cinematicFilterChipColors()) } }
-            Text("Brightness", style = MaterialTheme.typography.titleSmall)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.BrightnessLow, null)
-                Slider(value = if (brightness < 0f) .5f else brightness, onValueChange = onBrightness, valueRange = .05f..1f, modifier = Modifier.weight(1f))
-                TextButton(onClick = { onBrightness(-1f) }) { Text("System") }
-            }
-            if (ambient && Build.VERSION.SDK_INT >= 31) {
-                Text("Ambient intensity", style = MaterialTheme.typography.titleSmall)
-                Slider(value = ambientStrength, onValueChange = onAmbientStrength, valueRange = .15f..0.85f)
-            }
-            val toggles = buildList {
-                add(Triple("Fullscreen", fullscreen, onFullscreen))
-                add(Triple("Keep screen awake", awake, onAwake))
-                if (Build.VERSION.SDK_INT >= 31) add(Triple("Ambient light", ambient, onAmbient))
-                if (Build.VERSION.SDK_INT >= 28) add(Triple("Magnifier", magnify, onMagnify))
-            }
-            toggles.forEach { (name, checked, change) -> Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) { Text(name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge); Switch(checked = checked, onCheckedChange = change) } }
-            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), shape = CircleShape, colors = cinematicPrimaryButtonColors()) { Text("Done") }
         }
+    }
+
+}
+
+@Composable
+private fun ReaderToggle(label: String, checked: Boolean, change: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Switch(checked = checked, onCheckedChange = change)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun <T> ReaderChoices(label: String, choices: List<T>, selected: T, name: (T) -> String, change: (T) -> Unit) {
+    Text(label, style = MaterialTheme.typography.titleSmall)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        choices.forEach { choice -> FilterChip(selected = choice == selected, onClick = { change(choice) }, label = { Text(name(choice)) }, shape = CircleShape) }
     }
 }
 
 /** Paged reading delegates zoom and pan to Telephoto; vertical reading retains natural-height Coil pages. */
 @Composable
-private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap: () -> Unit, magnifierActive: Boolean, onLoaded: () -> Unit) {
+private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap: (Float, Float) -> Unit, magnifierActive: Boolean, options: ReaderPreferences, onLoaded: () -> Unit) {
     var retry by remember(page.imageUrl) { mutableIntStateOf(0) }
     val tap by rememberUpdatedState(onTap)
     val loaded by rememberUpdatedState(onLoaded)
     val context = LocalContext.current
     val request = remember(context, page, retry) { ImageRequest.Builder(context).data(page.imageUrl).headers(page.headers.toHeaders()).build() }
+    var measured by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    val imageModifier = modifier.then(Modifier.onSizeChanged { measured = it }).drawWithContent {
+        if (!options.grayscale && !options.invert && options.warm == 0f) drawContent() else {
+            val paint = Paint().apply { colorFilter = ColorFilter.colorMatrix(options.matrix()) }
+            drawContext.canvas.saveLayer(Rect(Offset.Zero, size), paint)
+            try { drawContent() } finally { drawContext.canvas.restore() }
+        }
+    }
+    val handleTap: (Offset) -> Unit = { offset -> tap(offset.x / measured.width.coerceAtLeast(1), offset.y / measured.height.coerceAtLeast(1)) }
     key(page.imageUrl, retry) {
         if (fit && !magnifierActive) {
             val state = rememberZoomableImageState()
             LaunchedEffect(state.isImageDisplayed) { if (state.isImageDisplayed) loaded() }
-            Box(modifier, contentAlignment = Alignment.Center) {
+            Box(imageModifier, contentAlignment = Alignment.Center) {
                 ZoomableAsyncImage(
                     model = request,
                     imageLoader = MangaNetwork.imageLoader(context),
                     contentDescription = "Page ${page.index + 1}",
                     modifier = Modifier.fillMaxSize(),
                     state = state,
-                    onClick = { tap() },
-                    contentScale = ContentScale.Fit,
+                    onClick = { offset -> handleTap(offset) },
+                    contentScale = options.scale.scale,
                 )
                 if (!state.isImageDisplayed && !state.isPlaceholderDisplayed) {
                     var timedOut by remember { mutableStateOf(false) }
@@ -805,8 +911,8 @@ private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap
                 imageLoader = MangaNetwork.imageLoader(context),
                 onSuccess = { loaded() },
                 contentDescription = "Page ${page.index + 1}",
-                modifier = modifier.then(Modifier.pointerInput(Unit) { detectTapGestures(onTap = { tap() }) }),
-                contentScale = if (fit) ContentScale.Fit else ContentScale.FillWidth,
+                modifier = imageModifier.then(Modifier.pointerInput(Unit) { detectTapGestures(onTap = { handleTap(it) }) }),
+                contentScale = if (fit) options.scale.scale else ContentScale.FillWidth,
                 loading = { Box(Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
                 error = { Box(Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) { Button(onClick = { retry++ }) { Text("Retry page") } } },
             )
@@ -824,7 +930,7 @@ private fun MangaError(message: String, retry: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MangaChapterPicker(chapters: List<MangaChapter>, current: MangaChapter, onDismiss: () -> Unit, onSelect: (MangaChapter) -> Unit) {
+private fun MangaChapterPicker(chapters: List<MangaChapter>, current: MangaChapter, store: MangaReadingStore, title: MangaTitle, onDismiss: () -> Unit, onSelect: (MangaChapter) -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     var newest by rememberSaveable { mutableStateOf(true) }
     val groups = remember(chapters, query, newest) {
@@ -861,6 +967,8 @@ private fun MangaChapterPicker(chapters: List<MangaChapter>, current: MangaChapt
                                 Text(release.scanlationGroups.joinToString(", ").ifBlank { "Release " + (releases.indexOf(release) + 1) }, style = MaterialTheme.typography.bodyMedium)
                                 Text(java.util.Locale.forLanguageTag(release.language).getDisplayLanguage().ifBlank { release.language }, style = MaterialTheme.typography.labelSmall)
                             }
+                            var saved by remember(release.id) { mutableStateOf(store.isChapterBookmarked(title, release.id)) }
+                            IconButton(onClick = { saved = !saved; store.bookmarkChapter(title, release.id, saved) }) { Icon(if (saved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, "Bookmark chapter") }
                             if (release.id == current.id) Icon(Icons.Default.Check, "Current release", tint = MaterialTheme.colorScheme.primary)
                         }
                     }

@@ -37,6 +37,12 @@ class MangaReadingStore(context: Context, profileId: String?) {
         write(title, saved(title)?.bookmarked ?: false, chapterId, page.coerceAtLeast(0), chapterNumber, pageCount)
     }
 
+    private fun chapterBookmarkKey(title: MangaTitle, chapterId: String) = "chapter_bookmark:" + key(title) + ":" + chapterId
+    fun isChapterBookmarked(title: MangaTitle, chapterId: String): Boolean = prefs.getBoolean(chapterBookmarkKey(title, chapterId), false)
+    fun bookmarkChapter(title: MangaTitle, chapterId: String, value: Boolean) {
+        prefs.edit().putBoolean(chapterBookmarkKey(title, chapterId), value).apply()
+    }
+
     private fun write(title: MangaTitle, bookmarked: Boolean, chapterId: String?, page: Int, chapterNumber: String?, pageCount: Int) {
         val j = JSONObject().put("source", title.sourceId).put("id", title.id)
             .put("title", title.title).put("description", title.description).put("cover", title.coverUrl.orEmpty())

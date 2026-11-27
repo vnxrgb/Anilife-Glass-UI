@@ -533,6 +533,11 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val readerTurn = com.anilili.manga.ReaderVolumeKeys.turn
+        if (readerTurn != null && (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) readerTurn(if (event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) 1 else -1)
+            return true
+        }
         // Volume stays live while the startup animation has focus.
         val volume = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
             event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN ||
