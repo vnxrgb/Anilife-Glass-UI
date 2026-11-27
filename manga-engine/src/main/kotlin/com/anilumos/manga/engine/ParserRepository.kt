@@ -25,10 +25,15 @@ internal class ParserRepository(
 ) {
     private val parser = registry.bundle.newParser(registry.requireSource(scope), AndroidParserContext(registry.bundle, session))
     init { scope.requireUrl("https://" + parser.domain + "/") }
+    val supportsSearch: Boolean get() = parser.filterCapabilities.isSearchSupported
+    suspend fun approvedTitle(query: String): ApprovedTitleResult {
+        val catalog = browse("", 0, SortOrder.POPULARITY)
+        return selectApprovedTitle(query, supportsSearch, catalog) { browse(it, 0, SortOrder.RELEVANCE) }
+    }
     suspend fun browse(query: String, offset: Int, requested: SortOrder): CatalogPage = withContext(Dispatchers.IO) {
         require(offset >= 0)
         val clean = query.trim()
-        if (clean.isNotEmpty()) if (!parser.filterCapabilities.isSearchSupported) throw UnsupportedOperationException("Search unsupported")
+        if (clean.isNotEmpty()) if (!supportsSearch) throw UnsupportedOperationException("Search unsupported")
         val filter = MangaListFilter(query = clean.ifEmpty { null })
         val order = requested.takeIf { it in parser.availableSortOrders } ?: parser.availableSortOrders.first()
         val raw = parser.getList(offset, order, filter)

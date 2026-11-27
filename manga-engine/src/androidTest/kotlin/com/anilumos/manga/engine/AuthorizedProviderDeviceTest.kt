@@ -61,11 +61,8 @@ class AuthorizedProviderDeviceTest {
         val scope = SourceScope(source, hosts)
         SourceSession(scope).use { session ->
             val repository = ParserRepository(registry, scope, session)
-            val catalog = repository.browse("", 0, SortOrder.POPULARITY)
-            assertTrue("Catalog returned no entries", catalog.consumed > 0)
-            val search = repository.browse(title, 0, SortOrder.RELEVANCE)
-            val match = search.titles.filter { it.title.equals(title, ignoreCase = true) }.distinctBy { it.id }.singleOrNull()
-                ?: error("Exact approved safe title absent or ambiguous")
+            val selection = repository.approvedTitle(title)
+            val match = selection.title ?: error("Approved title selection: ${selection.state}")
             val details = repository.details(match)
             val chapter = details.chapters.orEmpty().firstOrNull { it.number == chapterNumber } ?: error("Exact approved chapter not found")
             val page = repository.pages(details, chapter).firstOrNull() ?: error("No page for approved chapter")

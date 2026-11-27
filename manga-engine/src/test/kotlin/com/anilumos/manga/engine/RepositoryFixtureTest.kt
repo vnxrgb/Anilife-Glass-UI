@@ -26,13 +26,13 @@ class RepositoryFixtureTest {
         authors = emptySet(), source = source,
     )
 
-    private fun bundle(raw: List<Manga>, image: String = "/images/page.png"): ParsersBundle {
+    private fun bundle(raw: List<Manga>, image: String = "/images/page.png", supportsSearch: Boolean = true): ParsersBundle {
         val proxy = Proxy.newProxyInstance(MangaParser::class.java.classLoader, arrayOf(MangaParser::class.java)) { _, method, args ->
             when (method.name) {
                 "getDomain" -> "example.org"
                 "getSource" -> source
                 "getAvailableSortOrders" -> setOf(SortOrder.POPULARITY)
-                "getFilterCapabilities" -> MangaListFilterCapabilities(isSearchSupported = true)
+                "getFilterCapabilities" -> MangaListFilterCapabilities(isSearchSupported = supportsSearch)
                 "getList" -> raw
                 "getDetails" -> (args!![0] as Manga).copy(chapters = listOf(chapter))
                 "getPages" -> listOf(page)
@@ -49,6 +49,37 @@ class RepositoryFixtureTest {
             override fun newParser(source: ParserMangaSource, context: MangaLoaderContext): MangaParser = proxy
             override suspend fun resolveLink(context: MangaLoaderContext, link: HttpUrl): Manga? = null
         }
+    }
+    @Test fun browseOnlyParserCanSelectExactApprovedTitle() = runBlocking {
+        val scope = SourceScope(source.name, setOf("example.org"))
+        SourceSession(scope, offline = true).use { session ->
+            val repo = ParserRepository(ParserRegistry(bundle(listOf(title(1, ContentRating.SAFE)), supportsSearch = false)), scope, session)
+            assertFalse(repo.supportsSearch)
+            assertEquals(1L, repo.approvedTitle("Fixture 1").title?.id)
+            assertEquals(ProviderState.TITLE_NOT_FOUND, repo.approvedTitle("Other").state)
+        }
+    }
+
+    @Test fun approvedSelectionNeverFallsBackToUnrelatedTitle() = runBlocking {
+        val scope = SourceScope(source.name, setOf("example.org"))
+        SourceSession(scope, offline = true).use { session ->
+            val repo = ParserRepository(ParserRegistry(bundle(listOf(title(1, ContentRating.SAFE)))), scope, session)
+            assertEquals(ProviderState.TITLE_NOT_FOUND, repo.approvedTitle("Other").state)
+        }
+    }
+    @Test fun ambiguousApprovedTitleIsRejected() = runBlocking {
+        val scope = SourceScope(source.name, setOf("example.org"))
+        val raw = listOf(title(1, ContentRating.SAFE), title(2, ContentRating.SAFE).copy(title = "Fixture 1"))
+        SourceSession(scope, offline = true).use { session ->
+            val repo = ParserRepository(ParserRegistry(bundle(raw)), scope, session)
+            assertEquals(ProviderState.AMBIGUOUS_TITLE, repo.approvedTitle("Fixture 1").state)
+        }
+    }
+    @Test fun fullyFilteredCatalogCanStillSearchForApprovedTitle() = runBlocking {
+        val selection = selectApprovedTitle("Fixture 1", true, catalogPage(listOf(title(2, null)), 0)) {
+            catalogPage(listOf(title(1, ContentRating.SAFE)), 0)
+        }
+        assertEquals(1L, selection.title?.id)
     }
     @Test fun rawOffsetSurvivesFilteringAndDetailsLeadToPages() = runBlocking {
         val scope = SourceScope(source.name, setOf("example.org"))

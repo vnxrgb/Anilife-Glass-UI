@@ -4,7 +4,7 @@ import kotlinx.coroutines.CancellationException
 import org.koitharu.kotatsu.parsers.model.SortOrder
 import java.io.IOException
 
-internal enum class ProviderState { UNCHECKED, READY, EMPTY, FILTERED, NO_CHAPTERS, NO_PAGES, RESTRICTED, UNSUPPORTED, NETWORK_ERROR, FAILED }
+internal enum class ProviderState { UNCHECKED, READY, EMPTY, FILTERED, TITLE_NOT_FOUND, AMBIGUOUS_TITLE, NO_CHAPTERS, NO_PAGES, RESTRICTED, UNSUPPORTED, NETWORK_ERROR, FAILED }
 internal data class ProviderCheck(val state: ProviderState, val checkedAt: Long)
 internal class ProviderAccessException(val status: Int) : IOException("Provider access or rate limit: HTTP $status")
 
@@ -32,13 +32,8 @@ internal class ProviderHealth(private val now: () -> Long = System::currentTimeM
         check(scope.sourceName) {
             SourceSession(scope, headers = headers).use { session ->
                 val repository = ParserRepository(registry, scope, session)
-                val catalog = repository.browse("", 0, SortOrder.POPULARITY)
-                if (catalog.consumed == 0) return@check ProviderState.EMPTY
-                if (catalog.titles.isEmpty()) return@check ProviderState.FILTERED
-                val search = repository.browse(query, 0, SortOrder.RELEVANCE)
-                if (search.consumed == 0) return@check ProviderState.EMPTY
-                val matches = search.titles.filter { it.title.equals(query, ignoreCase = true) }.distinctBy { it.id }
-                val title = matches.singleOrNull() ?: return@check ProviderState.FILTERED
+                val selection = repository.approvedTitle(query)
+                val title = selection.title ?: return@check selection.state
                 val details = repository.details(title)
                 val chapter = details.chapters.orEmpty().firstOrNull { it.number == chapterNumber } ?: return@check ProviderState.NO_CHAPTERS
                 val page = repository.pages(details, chapter).firstOrNull() ?: return@check ProviderState.NO_PAGES
