@@ -75,7 +75,7 @@ data class AppDeviceProfile(
         get() = when {
             isTv -> 48.dp
             isExpanded -> 32.dp
-            isTablet -> 24.dp
+            isTablet && widthDp >= 600 -> 24.dp
             else -> 16.dp
         }
 
