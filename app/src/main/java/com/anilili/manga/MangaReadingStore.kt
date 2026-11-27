@@ -43,6 +43,23 @@ class MangaReadingStore(context: Context, profileId: String?) {
         prefs.edit().putBoolean(chapterBookmarkKey(title, chapterId), value).apply()
     }
 
+    private fun pageBookmarkKey(title: MangaTitle, chapterId: String) = "page_bookmarks:" + key(title) + ":" + chapterId
+    fun pageBookmarks(title: MangaTitle, chapterId: String): Set<Int> =
+        prefs.getStringSet(pageBookmarkKey(title, chapterId), emptySet()).orEmpty().mapNotNull { it.toIntOrNull() }.filter { it >= 0 }.toSet()
+    fun bookmarkPage(title: MangaTitle, chapterId: String, page: Int, value: Boolean) {
+        val old = pageBookmarks(title, chapterId)
+        val next = if (value) old + page else old - page
+        prefs.edit().putStringSet(pageBookmarkKey(title, chapterId), next.map { it.toString() }.toSet()).apply()
+    }
+    private fun categoryKey(title: MangaTitle) = "category:" + key(title)
+    fun category(title: MangaTitle): String? = prefs.getString(categoryKey(title), null)
+    fun categories(): List<String> = prefs.all.filterKeys { it.startsWith("category:") }.values.filterIsInstance<String>().filter { it.isNotBlank() }.distinct().sorted()
+    fun setCategory(title: MangaTitle, value: String?) {
+        val clean = value?.trim()?.take(60).orEmpty()
+        if (clean.isEmpty()) prefs.edit().remove(categoryKey(title)).apply()
+        else prefs.edit().putString(categoryKey(title), clean).apply()
+    }
+
     private fun write(title: MangaTitle, bookmarked: Boolean, chapterId: String?, page: Int, chapterNumber: String?, pageCount: Int) {
         val j = JSONObject().put("source", title.sourceId).put("id", title.id)
             .put("title", title.title).put("description", title.description).put("cover", title.coverUrl.orEmpty())

@@ -52,6 +52,28 @@ internal class MangaProviderPreferences(context: Context) {
         enabled = if (value) enabled + ids else enabled - ids
         prefs.edit().putStringSet("disabled", disabled).putStringSet("enabled", enabled).apply()
     }
+    var presets by mutableStateOf(readPresets())
+        private set
+    private fun readPresets(): Map<String, Set<String>> = prefs.all.filterKeys { it.startsWith("preset:") }.mapNotNull { (key, value) ->
+        (value as? Set<*>)?.filterIsInstance<String>()?.toSet()?.let { key.removePrefix("preset:") to it }
+    }.toMap()
+    fun savePreset(name: String, sources: List<MangaSource>) {
+        val clean = name.trim().take(50)
+        if (clean.isEmpty()) return
+        val ids = sources.filter { isEnabled(it) }.map { it.id }.toSet()
+        prefs.edit().putStringSet("preset:" + clean, ids).apply()
+        presets = presets + (clean to ids)
+    }
+    fun applyPreset(name: String, sources: List<MangaSource>) {
+        val ids = presets[name] ?: return
+        enabled = ids.intersect(sources.map { it.id }.toSet())
+        disabled = sources.map { it.id }.toSet() - enabled
+        prefs.edit().putStringSet("enabled", enabled).putStringSet("disabled", disabled).apply()
+    }
+    fun removePreset(name: String) {
+        prefs.edit().remove("preset:" + name).apply()
+        presets = presets - name
+    }
     fun pin(source: MangaSource) {
         pinned = if (source.id in pinned) pinned - source.id else pinned + source.id
         prefs.edit().putStringSet("pinned", pinned).apply()
@@ -73,6 +95,8 @@ internal fun MangaProviderHub(
     var category by rememberSaveable { mutableStateOf("All") }
     var filter by rememberSaveable { mutableStateOf(ProviderFilter.ALL) }
     var bulk by remember { mutableStateOf<Boolean?>(null) }
+    var presetsMenu by remember { mutableStateOf(false) }
+    var presetName by remember { mutableStateOf("") }
     val settings = sources.firstOrNull { it.id == settingsId }
     val context = LocalContext.current
     val enabledCount = sources.count { prefs.isEnabled(it) }
@@ -95,6 +119,7 @@ internal fun MangaProviderHub(
                     Text(settings?.displayName ?: if (manage) "Manage providers" else "Providers", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     if (settings == null) {
                         IconButton(onClick = { if (manage) { manage = false; query = ""; language = "All"; category = "All" } else manage = true }) { Icon(if (manage) Icons.Default.Check else Icons.Default.Settings, if (manage) "Done" else "Manage providers") }
+                        IconButton(onClick = { presetsMenu = true }) { Icon(Icons.Default.CollectionsBookmark, "Provider presets") }
                         IconButton(onClick = onInfo) { Icon(Icons.Default.Info, "Sources and credits") }
                     }
                 }
@@ -159,6 +184,20 @@ internal fun MangaProviderHub(
                 }
             }
         }
+        if (presetsMenu) AlertDialog(onDismissRequest = { presetsMenu = false }, title = { Text("Provider presets") },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Save your currently enabled providers as a reusable preset.", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(presetName, { presetName = it.take(50) }, label = { Text("Preset name") }, singleLine = true)
+                TextButton(onClick = { prefs.savePreset(presetName, sources); presetName = "" }, enabled = presetName.isNotBlank()) { Text("Save current selection") }
+                LazyColumn(Modifier.heightIn(max = 260.dp)) {
+                    items(prefs.presets.keys.sorted()) { name ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(onClick = { prefs.applyPreset(name, sources); presetsMenu = false }, modifier = Modifier.weight(1f)) { Text(name + " · " + prefs.presets[name].orEmpty().size) }
+                            IconButton(onClick = { prefs.removePreset(name) }) { Icon(Icons.Default.DeleteOutline, "Delete preset") }
+                        }
+                    }
+                }
+            } }, confirmButton = { TextButton(onClick = { presetsMenu = false }) { Text("Done") } })
         bulk?.let { value ->
             AlertDialog(onDismissRequest = { bulk = null }, title = { Text(if (value) "Enable providers?" else "Disable providers?") },
                 text = { Text("Apply to ${filtered.size} providers currently shown. Your reading history is kept.") },

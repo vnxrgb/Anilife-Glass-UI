@@ -63,7 +63,9 @@ internal class ReaderPreferences(private val prefs: SharedPreferences) {
     var ambientShortcut by mutableStateOf(prefs.getBoolean("shortcut_ambient", true))
     var magnifierShortcut by mutableStateOf(prefs.getBoolean("shortcut_magnifier", true))
     var bookmarkShortcut by mutableStateOf(prefs.getBoolean("shortcut_bookmark", false))
-    fun snapshot(): List<Any> = listOf(scale, rotation, layout, zones, invertZones, animate, pageNumber, volume, shift, reverseSpread, grayscale, invert, warm, padding, gap, autoHide, chapterShortcut, ambientShortcut, magnifierShortcut, bookmarkShortcut)
+    var pageBookmarkShortcut by mutableStateOf(prefs.getBoolean("shortcut_page_bookmark", true))
+    var incognito by mutableStateOf(prefs.getBoolean("incognito", false))
+    fun snapshot(): List<Any> = listOf(scale, rotation, layout, zones, invertZones, animate, pageNumber, volume, shift, reverseSpread, grayscale, invert, warm, padding, gap, autoHide, chapterShortcut, ambientShortcut, magnifierShortcut, bookmarkShortcut, pageBookmarkShortcut, incognito)
     fun save() {
         prefs.edit().putString("scale", scale.name).putString("rotation", rotation.name)
             .putString("layout", layout.name).putString("tap_zones", zones.name)
@@ -74,7 +76,7 @@ internal class ReaderPreferences(private val prefs: SharedPreferences) {
             .putFloat("warm", warm).putFloat("side_padding", padding).putFloat("page_gap", gap)
             .putBoolean("auto_hide", autoHide).putBoolean("shortcut_chapters", chapterShortcut)
             .putBoolean("shortcut_ambient", ambientShortcut).putBoolean("shortcut_magnifier", magnifierShortcut)
-            .putBoolean("shortcut_bookmark", bookmarkShortcut).apply()
+            .putBoolean("shortcut_bookmark", bookmarkShortcut).putBoolean("shortcut_page_bookmark", pageBookmarkShortcut).putBoolean("incognito", incognito).apply()
     }
     fun matrix(): ColorMatrix {
         val matrix = ColorMatrix()

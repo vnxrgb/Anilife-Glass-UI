@@ -151,12 +151,29 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     var libraryFilter by rememberSaveable { mutableStateOf(LibraryFilter.ALL) }
     var libraryGrid by rememberSaveable { mutableStateOf(true) }
     var librarySort by rememberSaveable { mutableStateOf("Recent") }
+    var collection by rememberSaveable { mutableStateOf<String?>(null) }
+    var collectionEdit by remember { mutableStateOf<MangaTitle?>(null) }
+    var collectionGeneration by remember { mutableIntStateOf(0) }
+    val collections = remember(saved, collectionGeneration) { store.categories() }
     var unavailableTitle by remember { mutableStateOf<MangaTitle?>(null) }
     var sourceMenu by remember { mutableStateOf(false) }
     var attribution by remember { mutableStateOf(false) }
     val openSaved: (MangaSaved, Boolean) -> Unit = { entry, resume ->
         if (enabledSources.any { it.id == entry.title.sourceId }) { readImmediately = resume; selected = entry.title }
         else unavailableTitle = entry.title
+    }
+    collectionEdit?.let { entry ->
+        var value by remember(entry.id) { mutableStateOf(store.category(entry).orEmpty()) }
+        AlertDialog(onDismissRequest = { collectionEdit = null }, title = { Text("Reading collection") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value, { value = it.take(60) }, label = { Text("Collection name") }, singleLine = true)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(collections) { name -> FilterChip(selected = value == name, onClick = { value = name }, label = { Text(name) }) }
+                    }
+                }
+            }, confirmButton = { TextButton(onClick = { store.setCategory(entry, value); collectionGeneration++; collectionEdit = null }) { Text("Save") } },
+            dismissButton = { TextButton(onClick = { store.setCategory(entry, null); collectionGeneration++; collectionEdit = null }) { Text("Remove") } })
     }
     val scope = rememberCoroutineScope()
     val provider = enabledSources.firstOrNull { it.id == sourceId }
@@ -246,7 +263,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     ) { padding ->
         val side = device.pagePadding
         val filtered = results.filter { genre == null || genre in it.genres }
-        val list = saved.filter { entry -> registry.byId(entry.title.sourceId) != null }.filter { entry -> when (libraryFilter) {
+        val list = saved.filter { entry -> collection == null || store.category(entry.title) == collection }.filter { entry -> when (libraryFilter) {
             LibraryFilter.ALL -> entry.bookmarked || entry.chapterId != null
             LibraryFilter.READING -> entry.chapterId != null
             LibraryFilter.SAVED -> entry.bookmarked
@@ -332,6 +349,12 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                         }
                     }
                     item {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            item { FilterChip(selected = collection == null, onClick = { collection = null }, label = { Text("All collections") }) }
+                            items(collections) { name -> FilterChip(selected = collection == name, onClick = { collection = name }, label = { Text(name) }) }
+                        }
+                    }
+                    item {
                         PageFilterRow {
                             PageFilterPill("Sort: $librarySort", listOf("Recent", "Title", "Progress").map { PageFilterOption(it, it) }, { librarySort = it ?: "Recent" }, Modifier.weight(1f))
                             IconButton(onClick = { libraryGrid = !libraryGrid }) { Icon(if (libraryGrid) Icons.Default.ViewList else Icons.Default.GridView, if (libraryGrid) "List view" else "Grid view") }
@@ -340,7 +363,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                     if (list.isEmpty()) item { MangaEmpty("Your reading list is empty", "Bookmark a title or start a chapter to see it here.") }
                     if (libraryGrid) items(list.chunked(columns)) { row ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            row.forEach { entry -> MangaPoster(entry.title, Modifier.weight(1f), subtitle = entry.readLabel(), progress = if (entry.pageCount > 0) (entry.page + 1f) / entry.pageCount else null) { openSaved(entry, false) } }
+                            row.forEach { entry -> Column(Modifier.weight(1f)) { MangaPoster(entry.title, Modifier.fillMaxWidth(), subtitle = entry.readLabel(), progress = if (entry.pageCount > 0) (entry.page + 1f) / entry.pageCount else null) { openSaved(entry, false) }; TextButton(onClick = { collectionEdit = entry.title }) { Text(store.category(entry.title) ?: "Collection", maxLines = 1, overflow = TextOverflow.Ellipsis) } } }
                             repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     } else items(list, key = { it.title.identity() }) { entry ->
@@ -352,7 +375,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                                 if (entry.pageCount > 0) LinearProgressIndicator(progress = { ((entry.page + 1f) / entry.pageCount).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
                                 if (catalogSources.none { it.id == entry.title.sourceId }) Text("Provider unavailable", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Icon(Icons.Default.ChevronRight, "Details")
+                            IconButton(onClick = { collectionEdit = entry.title }) { Icon(Icons.Default.FolderOpen, "Reading collection") }
                         }
                     }
                 } else item { MangaEmpty("No downloaded chapters", "Offline chapter downloads are not available in this preview.") }
@@ -622,6 +645,8 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
     }
     MangaReaderWindow(fullscreen, awake, brightness, background == ReaderBackground.LIGHT || (background == ReaderBackground.THEME && MaterialTheme.colorScheme.background.luminance() > .5f))
     BackHandler(!controls || magnify) { magnify = false; controls = true }
+    var pageBookmarks by remember(title.id, chapter.id) { mutableStateOf(store.pageBookmarks(title, chapter.id)) }
+    var bookmarksMenu by remember { mutableStateOf(false) }
     var position by remember(chapter.id) { mutableIntStateOf(store.saved(title)?.takeIf { chapter.matchesSaved(it.chapterId) }?.page ?: 0) }
     LaunchedEffect(chapter.id, retry) {
         loading = true; error = null
@@ -669,17 +694,29 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
                 }
                 position = index
             } }
+            if (bookmarksMenu) {
+                AlertDialog(onDismissRequest = { bookmarksMenu = false }, title = { Text("Page bookmarks") },
+                    text = { LazyColumn(Modifier.heightIn(max = 320.dp)) {
+                        if (pageBookmarks.isEmpty()) item { Text("No bookmarked pages in this chapter.") }
+                        items(pageBookmarks.sorted().filter { it in pages.indices }) { savedPage ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                TextButton(onClick = { jump(savedPage); bookmarksMenu = false }, modifier = Modifier.weight(1f)) { Text("Page " + (savedPage + 1)) }
+                                IconButton(onClick = { store.bookmarkPage(title, chapter.id, savedPage, false); pageBookmarks = pageBookmarks - savedPage }) { Icon(Icons.Default.DeleteOutline, "Remove bookmark") }
+                            }
+                        }
+                    } }, confirmButton = { TextButton(onClick = { bookmarksMenu = false }) { Text("Close") } })
+            }
             if (pageMenu) {
                 var pageInput by remember { mutableStateOf((position + 1).toString()) }
                 AlertDialog(onDismissRequest = { pageMenu = false }, title = { Text("Go to page") },
                     text = { OutlinedTextField(pageInput, { pageInput = it.filter(Char::isDigit).take(6) }, singleLine = true,
                         label = { Text("Page 1–" + pages.size) }, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)) },
                     confirmButton = { TextButton(enabled = (pageInput.toIntOrNull() ?: 0) in 1..pages.size, onClick = { jump((pageInput.toIntOrNull() ?: 1) - 1); pageMenu = false }) { Text("Go") } },
-                    dismissButton = { TextButton(onClick = { pageMenu = false }) { Text("Cancel") } })
+                    dismissButton = { TextButton(onClick = { pageMenu = false; bookmarksMenu = true }) { Text("Bookmarks") } })
             }
             LaunchedEffect(list, pager, mode) {
                 snapshotFlow { if (mode == ReadingMode.WEBTOON) list.firstVisibleItemIndex else groups.getOrNull(pager.settledPage)?.firstOrNull() ?: 0 }.distinctUntilChanged().collect { index ->
-                    position = index; store.progress(title, chapter.id, index, chapter.chapterNumber, pages.size)
+                    position = index; if (!options.incognito) store.progress(title, chapter.id, index, chapter.chapterNumber, pages.size)
                 }
             }
             val turn: (Int) -> Unit = { direction ->
@@ -687,8 +724,8 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
                 else groups.getOrNull(pager.currentPage + direction)?.firstOrNull()?.let(jump)
             }
             val currentTurn by rememberUpdatedState(turn)
-            DisposableEffect(options.volume, modeMenu, chapterMenu, pageMenu) {
-                if (options.volume && !modeMenu && !chapterMenu && !pageMenu) ReaderVolumeKeys.turn = { currentTurn(it) }
+            DisposableEffect(options.volume, modeMenu, chapterMenu, pageMenu, bookmarksMenu) {
+                if (options.volume && !modeMenu && !chapterMenu && !pageMenu && !bookmarksMenu) ReaderVolumeKeys.turn = { currentTurn(it) }
                 onDispose { ReaderVolumeKeys.turn = null }
             }
             LaunchedEffect(options.autoHide, list, pager) {
@@ -752,6 +789,7 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
                             IconButton(onClick = { modeMenu = true }) { Icon(Icons.Default.Tune, "Reader settings") }
                             if (options.ambientShortcut && Build.VERSION.SDK_INT >= 31) IconButton(onClick = { ambient = !ambient }) { Icon(Icons.Default.Lightbulb, "Ambient light", tint = if (ambient) MaterialTheme.colorScheme.primaryContainer else ink) }
                             if (options.magnifierShortcut && Build.VERSION.SDK_INT >= 28) IconButton(onClick = { magnify = !magnify }) { Icon(Icons.Default.ZoomIn, "Magnifier", tint = if (magnify) MaterialTheme.colorScheme.primaryContainer else ink) }
+                            if (options.pageBookmarkShortcut) IconButton(onClick = { val add = position !in pageBookmarks; store.bookmarkPage(title, chapter.id, position, add); pageBookmarks = if (add) pageBookmarks + position else pageBookmarks - position }) { Icon(if (position in pageBookmarks) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, "Bookmark page") }
                             if (options.bookmarkShortcut) IconButton(onClick = toggleBookmark) { Icon(if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, "Chapter bookmark") }
                             IconButton(enabled = nextChapter != null, onClick = { nextChapter?.invoke() }) { Icon(Icons.Default.SkipNext, "Next chapter") }
                         }
@@ -815,6 +853,7 @@ private fun MangaReaderSettings(mode: ReadingMode, background: ReaderBackground,
                     ReaderToggle("Fullscreen", fullscreen, onFullscreen)
                     ReaderToggle("Hide controls when scrolling", options.autoHide) { options.autoHide = it }
                     ReaderToggle("Volume keys turn pages", options.volume) { options.volume = it }
+                    ReaderToggle("Incognito · pause reading history", options.incognito) { options.incognito = it }
                 }
                 ReaderSettingsTab.PAGES -> {
                     if (mode != ReadingMode.WEBTOON) {
@@ -851,6 +890,7 @@ private fun MangaReaderSettings(mode: ReadingMode, background: ReaderBackground,
                         ReaderToggle("Enable magnifier", magnify, onMagnify)
                     }
                     ReaderToggle("Chapter bookmark", options.bookmarkShortcut) { options.bookmarkShortcut = it }
+                    ReaderToggle("Page bookmark", options.pageBookmarkShortcut) { options.pageBookmarkShortcut = it }
                 }
             }
         }
