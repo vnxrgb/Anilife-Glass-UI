@@ -15,6 +15,9 @@ interface MangaSource {
     suspend fun chapters(mangaId: String, language: String = "en"): List<MangaChapter>
     suspend fun pages(chapterId: String): List<MangaPage>
     fun enrichedTitle(title: MangaTitle): MangaTitle = title
+    /** Scoped artwork: a decoded bitmap or an app-private local URI, never a remote URL. */
+    suspend fun artwork(mangaId: String): Any? = null
+    val sampleOnly: Boolean get() = false
 }
 
 enum class MangaKind(val label: String) {

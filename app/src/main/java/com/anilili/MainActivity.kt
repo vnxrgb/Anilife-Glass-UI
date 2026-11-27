@@ -1059,7 +1059,9 @@ private fun MiruroRoot(
     val journalProfileOverlay by com.anilili.ui.profiles.ProfilesUi.overlay.collectAsState()
     val chromeTakeover = remember { AppChromeTakeover() }
     val opticalBackdrop = rememberLayerBackdrop()
+    val mangaProviders = com.anilili.manga.rememberMangaProviderState(mangaMode)
     CompositionLocalProvider(
+        com.anilili.manga.LocalMangaProviderState provides mangaProviders,
         com.anilili.manga.LocalContentMode provides if (mangaMode) com.anilili.manga.ContentMode.MANGA else com.anilili.manga.ContentMode.ANIME,
         com.anilili.manga.LocalContentModeSwitchEnabled provides (!deviceProfile.isTv && !inPictureInPicture),
         com.anilili.manga.LocalSelectContentMode provides { mode ->
@@ -1250,7 +1252,7 @@ private fun MiruroRoot(
                 // that one with a drawn books-on-a-shelf vector, which was the right picture for a
                 // destination called "Library" and the wrong one for a list: a shelf says "things
                 // you own", and a bookmark says "things you marked", which is what the page is.
-                val navItems = remember(menuLanguage, cinema) {
+                val navItems = remember(menuLanguage, cinema, mangaMode) {
                     navigationTabs.map { tab ->
                         FloatingNavItem(
                             route = tab.route,
@@ -1274,7 +1276,7 @@ private fun MiruroRoot(
                 com.anilili.ui.easteregg.HiddenSparkText(Modifier.align(Alignment.BottomCenter).zIndex(20f).padding(bottom = navBarInsetForChrome + (if (showPhoneCapsule) PhoneNavigationBarHeight + 12.dp else 20.dp)), enabled = !inPictureInPicture && !Routes.hostsPlayer(currentRoute) && !showRandomPick && !chromeTakeover.active)
             }
             com.anilili.ui.journal.JournalOverlay(
-                visible = !deviceProfile.isTv && !inPictureInPicture && currentRoute != null &&
+                visible = !mangaMode && !deviceProfile.isTv && !inPictureInPicture && currentRoute != null &&
                     currentRoute != Routes.SETTINGS && currentRoute != Routes.DOWNLOAD &&
                     !journalContext.fullscreen && journalProfileOverlay == null && !showRandomPick && !chromeTakeover.active &&
                     (!com.anilili.ui.tour.WhatsNewTour.active || com.anilili.ui.tour.WhatsNewTour.journalButtonDemo),

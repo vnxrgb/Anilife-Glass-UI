@@ -34,6 +34,10 @@ internal class LocalMangaSource(context: Context) : MangaSource {
             val sorted = if (order == MangaOrder.RECENT) entries.sortedByDescending { File(folder(it.id), "title.txt").lastModified() } else entries.sortedBy { it.title.lowercase() }
             sorted.drop(offset).take(limit)
         }
+    override suspend fun artwork(mangaId: String): Any? = withContext(Dispatchers.IO) {
+        folder(mangaId).listFiles().orEmpty().filter { it.name.startsWith("page-") && it.isFile }
+            .sortedBy { it.name }.firstOrNull()?.let { Uri.fromFile(it) }
+    }
     override suspend fun chapters(mangaId: String, language: String): List<MangaChapter> = withContext(Dispatchers.IO) {
         require(File(folder(mangaId), "title.txt").isFile) { "Local archive not found" }
         listOf(MangaChapter(ID, mangaId, mangaId, "Local comic", "1", "und"))

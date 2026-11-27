@@ -10,6 +10,7 @@ import java.io.Closeable
 public class ApprovedReader private constructor(
     private val bridge: ReaderSessionBridge,
     private val handles: List<ReaderSessionBridge.Page>,
+    private val titleHandle: ReaderSessionBridge.Title,
     public val title: Title,
     public val chapter: Chapter,
 ) : Closeable {
@@ -22,6 +23,7 @@ public class ApprovedReader private constructor(
         require(index in handles.indices && width in 1..2048 && height in 1..4096)
         return bridge.decode(handles[index], width, height)
     }
+    public suspend fun cover(): Bitmap? = bridge.cover(titleHandle)
     override fun close() = bridge.close()
     public companion object {
         /** Explicit foreground action. Scope limited to the previously authorized title/chapter. */
@@ -35,7 +37,7 @@ public class ApprovedReader private constructor(
                 require(pages.isNotEmpty() && pages.size <= 2000) { "Invalid page list" }
                 bridge.decode(pages.first()).recycle()
                 val title = details.title
-                ApprovedReader(bridge, pages, Title(title.sourceId, title.id, title.title, details.description,
+                ApprovedReader(bridge, pages, title, Title(title.sourceId, title.id, title.title, details.description,
                     title.genres, title.authors, title.status.orEmpty(), title.alternativeTitles),
                     Chapter(chapter.id, chapter.label, chapter.number, chapter.scanlator))
             } catch (e: Throwable) {

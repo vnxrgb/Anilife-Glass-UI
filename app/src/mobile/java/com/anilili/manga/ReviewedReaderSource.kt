@@ -10,6 +10,11 @@ private class EngineSampleSource(private val reader: ApprovedReader) : MangaSour
     override val id = REVIEWED_SOURCE_ID
     override val displayName = "Atsu"
     override val languageTag = "en"
+    override val sampleOnly = true
+    override suspend fun artwork(mangaId: String): Any? {
+        require(mangaId == title.id)
+        return reader.cover()
+    }
     override val chapterLanguages = listOf("und")
     private val title = reader.title.let {
         MangaTitle(id, it.id, it.name, androidx.core.text.HtmlCompat.fromHtml(it.description,

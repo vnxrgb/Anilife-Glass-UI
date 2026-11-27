@@ -19,6 +19,10 @@ internal class ReaderSessionBridge private constructor(
     private val owner = Any()
     private val lock = Mutex()
     @Volatile private var closed = false
+    private val encodedPages = LinkedHashMap<MangaPage, ByteArray>(4, .75f, true)
+    private var encodedBytes = 0
+    private var coverBytes: ByteArray? = null
+    private var coverAttempted = false
 
     internal class Title internal constructor(internal val owner: Any, internal val raw: Manga) {
         val sourceId get() = raw.source.name
@@ -71,7 +75,31 @@ internal class ReaderSessionBridge private constructor(
     /** Caller owns the bounded decoded bitmap; the Compose reader must recycle it on disposal. */
     suspend fun decode(page: Page, width: Int = 2048, height: Int = 4096): Bitmap = lock.withLock {
         owned(page.owner)
-        val bitmap = repository.decodePage(page.raw, width, height)
+        val bytes = encodedPages[page.raw] ?: repository.loadImage(page.raw).also { fresh ->
+            if (!closed && fresh.size <= 12 * 1024 * 1024) {
+                while (encodedPages.isNotEmpty() && (encodedPages.size >= 3 || encodedBytes + fresh.size > 12 * 1024 * 1024)) {
+                    val key = encodedPages.keys.first()
+                    encodedBytes -= encodedPages.remove(key)!!.size
+                }
+                encodedPages[page.raw] = fresh
+                encodedBytes += fresh.size
+            }
+        }
+        val bitmap = PageDecoder.decode(bytes, width, height)
+        if (closed) { bitmap.recycle(); error("Reader session closed") }
+        bitmap
+    }
+    suspend fun cover(title: Title): Bitmap? = lock.withLock {
+        owned(title.owner)
+        if (!coverAttempted) {
+            try {
+                coverBytes = repository.coverBytes(title.raw)?.takeIf { it.size <= 4 * 1024 * 1024 }
+                coverAttempted = true
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { coverAttempted = true }
+        }
+        val bytes = coverBytes ?: return@withLock null
+        val bitmap = PageDecoder.decode(bytes, 768, 1152)
         if (closed) { bitmap.recycle(); error("Reader session closed") }
         bitmap
     }

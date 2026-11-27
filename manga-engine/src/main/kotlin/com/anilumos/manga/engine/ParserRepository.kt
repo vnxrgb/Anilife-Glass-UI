@@ -73,6 +73,11 @@ internal class ParserRepository(
         require(chapter.source.name == scope.sourceName && title.chapters.orEmpty().any { it == chapter })
         parser.getPages(chapter).also { pages -> check(pages.all { it.source.name == scope.sourceName }) }
     }
+    suspend fun coverBytes(title: Manga): ByteArray? {
+        require(title.source.name == scope.sourceName && title.contentRating == ContentRating.SAFE)
+        val url = title.largeCoverUrl ?: title.coverUrl ?: return null
+        return PageDelivery(scope, session).load(scope.requireUrl(url, "https://" + parser.domain + "/").toString())
+    }
     suspend fun decodePage(page: MangaPage, width: Int = 2048, height: Int = 4096) =
         PageDecoder.decode(loadImage(page), width, height)
     suspend fun loadImage(page: MangaPage): ByteArray = PageDelivery(scope, session).load(imageUrl(page))
