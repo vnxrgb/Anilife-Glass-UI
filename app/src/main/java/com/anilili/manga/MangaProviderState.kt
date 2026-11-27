@@ -20,7 +20,7 @@ internal class MangaProviderState {
     val sources = mutableStateMapOf<String, MangaSource>()
     val checking = mutableStateMapOf<String, Boolean>()
     val unavailable = mutableStateMapOf<String, Boolean>()
-    var selectedId by mutableStateOf(MangaDiscoverySource.ID)
+    var selectedId by mutableStateOf(REVIEWED_SOURCE_ID)
     val failures = mutableMapOf<String, Long>()
     var generation = 0L
 }
@@ -35,7 +35,7 @@ internal fun rememberMangaProviderState(enabled: Boolean): MangaProviderState {
     val context = LocalContext.current
     val prefs = remember(context, profile) { context.getSharedPreferences("manga_provider_choice_" + (profile ?: "default"), android.content.Context.MODE_PRIVATE) }
     val state = remember(profile) { MangaProviderState().apply {
-        selectedId = prefs.getString("selected", MangaDiscoverySource.ID) ?: MangaDiscoverySource.ID
+        selectedId = prefs.getString("selected", REVIEWED_SOURCE_ID) ?: REVIEWED_SOURCE_ID
     } }
     LaunchedEffect(state, state.selectedId) { prefs.edit().putString("selected", state.selectedId).apply() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle

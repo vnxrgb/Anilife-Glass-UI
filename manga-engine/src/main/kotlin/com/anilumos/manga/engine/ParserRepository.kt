@@ -41,6 +41,19 @@ internal class ParserRepository(
         check(raw.all { it.source.name == scope.sourceName }) { "Unexpected catalog source" }
         catalogPage(raw, offset)
     }
+    private var cachedOptions: org.koitharu.kotatsu.parsers.model.MangaListFilterOptions? = null
+    suspend fun catalogueOptions(): org.koitharu.kotatsu.parsers.model.MangaListFilterOptions =
+        cachedOptions ?: filterOptions().also { cachedOptions = it }
+    suspend fun catalogueBrowse(query: String, offset: Int, recent: Boolean, genre: String?, kind: String?): CatalogPage {
+        val requested = if (recent) SortOrder.UPDATED else SortOrder.POPULARITY
+        if (genre == null && kind == null) return browse(query, offset, requested)
+        val options = catalogueOptions()
+        val tags = if (genre == null) emptySet() else setOf(options.availableTags.firstOrNull { it.title.equals(genre, true) }
+            ?: throw UnsupportedOperationException("Genre unavailable"))
+        val types = if (kind == null) emptySet() else setOf(options.availableContentTypes.firstOrNull { it.name == kind }
+            ?: throw UnsupportedOperationException("Content type unavailable"))
+        return browseFiltered(query, offset, requested, tags = tags, types = types)
+    }
     suspend fun filterOptions(): org.koitharu.kotatsu.parsers.model.MangaListFilterOptions = withContext(Dispatchers.IO) {
         parser.getFilterOptions().also { options ->
             check(options.availableTags.all { it.source.name == scope.sourceName }) { "Unexpected genre source" }
@@ -55,7 +68,7 @@ internal class ParserRepository(
     ): CatalogPage = withContext(Dispatchers.IO) {
         require(offset >= 0)
         val filter = reviewedFilter(scope.sourceName, query, tags, excluded, types, states,
-            parser.filterCapabilities, filterOptions())
+            parser.filterCapabilities, catalogueOptions())
         if (requested !in parser.availableSortOrders) throw UnsupportedOperationException("Sort unsupported")
         val raw = parser.getList(offset, requested, filter)
         check(raw.all { it.source.name == scope.sourceName })

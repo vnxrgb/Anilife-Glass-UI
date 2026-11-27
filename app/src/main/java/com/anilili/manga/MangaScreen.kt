@@ -128,6 +128,14 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     val reviewedError = providerState.unavailable.values.any { it }
     val registry = LocalMangaRegistry.current
     val provider = registry.byId(providerState.selectedId) ?: registry.byId(MangaDiscoverySource.ID) ?: localSource
+    var nativeGenres by remember(provider.id) { mutableStateOf<List<String>>(emptyList()) }
+    var nativeKinds by remember(provider.id) { mutableStateOf<List<MangaKind>>(emptyList()) }
+    LaunchedEffect(provider.id) {
+        if (provider.hasNativeCatalogue) {
+            resultOf { provider.genreOptions() }.onSuccess { nativeGenres = it }
+            resultOf { provider.kindOptions() }.onSuccess { nativeKinds = it }
+        }
+    }
     var providerMenu by remember { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf(MangaKind.ALL) }
@@ -218,7 +226,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     }
     unavailableTitle?.let { unavailable -> AlertDialog(onDismissRequest = { unavailableTitle = null }, title = { Text("Provider unavailable") }, text = { Text("${unavailable.title} remains in your reading list. Its provider is not currently verified. Your saved progress is preserved.") }, confirmButton = { TextButton(onClick = { unavailableTitle = null }) { Text("OK") } }) }
     if (attribution) AlertDialog(onDismissRequest = { attribution = false }, title = { Text("Built-in sources") },
-        text = { Text("AniList provides discovery metadata and official publisher links. In-app reading: local archives and reviewed manga chapters. Metadata-only titles do not include readable chapters. Other manga reader sources require review. Credits: AniLife and Kotatsu-Redo.") },
+        text = { Text("AniList provides discovery metadata and official publisher links. In-app reading uses available built-in provider catalogues and local archives. Only sources that pass catalogue, chapter and page checks appear. AniList is discovery metadata, not a reading source. Credits: AniLife and Kotatsu-Redo.") },
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
     val title = selected
     val activeChapter = chapter
@@ -292,7 +300,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         }
     ) { padding ->
         val side = device.pagePadding
-        val filtered = results.filter { genre == null || genre in it.genres }
+        val filtered = if (provider.hasNativeCatalogue) results else results.filter { genre == null || genre in it.genres }
         val list = saved.filter { entry -> collection == null || store.category(entry.title) == collection }.filter { entry -> when (libraryFilter) {
             LibraryFilter.ALL -> entry.bookmarked || entry.chapterId != null
             LibraryFilter.READING -> entry.chapterId != null
@@ -320,14 +328,14 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                         Text("Checking provider availability…", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                if ((home || browse) && provider.metadataOnly) item("filters") {
+                if ((home || browse) && (provider.metadataOnly || provider.hasNativeCatalogue)) item("filters") {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(listOf(MangaKind.ALL, MangaKind.MANGA, MangaKind.MANHWA, MangaKind.MANHUA)) { option ->
+                            items(if (provider.metadataOnly) listOf(MangaKind.ALL, MangaKind.MANGA, MangaKind.MANHWA, MangaKind.MANHUA) else listOf(MangaKind.ALL) + nativeKinds) { option ->
                                 GenrePill(option.label, kind == option, { kind = option; genre = null })
                             }
                         }
-                        val genres = MangaDiscoverySource.GENRES
+                        val genres = if (provider.metadataOnly) MangaDiscoverySource.GENRES else nativeGenres
                         if (browse) PageFilterRow {
                             PageFilterPill(genre ?: "Genres", listOf(PageFilterOption(null, "All genres")) + genres.map { PageFilterOption(it, it) }, { genre = it }, Modifier.weight(1f))
                             PageFilterPill(if (order == MangaOrder.POPULAR) "Popular" else "Recent", listOf(PageFilterOption("popular", "Popular"), PageFilterOption("recent", "Updated listings")), { value -> order = if (value == "recent") MangaOrder.RECENT else MangaOrder.POPULAR; genre = null }, Modifier.weight(1f))
@@ -591,7 +599,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
     LaunchedEffect(title.id, language, retry) {
         chapters = emptyList(); loading = true; error = null
         if (source.metadataOnly) { loading = false; return@LaunchedEffect }
-        resultOf { source.chapters(title.id, language) }.onSuccess { chapters = it; details = source.enrichedTitle(title); Unit }.onFailure { error = healthError(it) }
+        resultOf { val prepared = source.prepareTitle(title); val entries = source.chapters(prepared.id, language); prepared to entries }.onSuccess { (prepared, entries) -> chapters = entries; details = source.enrichedTitle(prepared); Unit }.onFailure { error = healthError(it) }
         loading = false
     }
     val sorted = (if (ascending) chapters.reversed() else chapters).filter { chapterQuery.isBlank() || it.label().contains(chapterQuery, true) || it.title.contains(chapterQuery, true) }

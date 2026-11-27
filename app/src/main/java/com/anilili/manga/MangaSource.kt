@@ -17,6 +17,10 @@ interface MangaSource {
         return MangaCatalogPage(batch.filter { genre == null || genre in it.genres }, if (batch.size == limit) offset + batch.size else null)
     }
     val metadataOnly: Boolean get() = false
+    val hasNativeCatalogue: Boolean get() = false
+    suspend fun genreOptions(): List<String> = emptyList()
+    suspend fun kindOptions(): List<MangaKind> = emptyList()
+    suspend fun prepareTitle(title: MangaTitle): MangaTitle = title
     suspend fun chapters(mangaId: String, language: String = "en"): List<MangaChapter>
     suspend fun pages(chapterId: String): List<MangaPage>
     fun enrichedTitle(title: MangaTitle): MangaTitle = title

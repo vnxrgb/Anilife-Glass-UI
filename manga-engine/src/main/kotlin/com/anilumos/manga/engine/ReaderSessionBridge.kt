@@ -53,6 +53,24 @@ internal class ReaderSessionBridge private constructor(
         val result = repository.browse(query, offset, order)
         Listing(result.titles.map { Title(owner, it) }, result.consumed, result.nextOffset)
     }
+    suspend fun catalogueBrowse(query: String, offset: Int, recent: Boolean, genre: String?, kind: String?): Listing = lock.withLock {
+        active()
+        val result = repository.catalogueBrowse(query, offset, recent, genre, kind)
+        Listing(result.titles.map { Title(owner, it) }, result.consumed, result.nextOffset)
+    }
+    suspend fun catalogueGenres(): List<String> = lock.withLock {
+        active()
+        repository.catalogueOptions().availableTags.map { it.title }.distinct().sorted()
+    }
+    suspend fun catalogueKinds(): List<String> = lock.withLock {
+        active()
+        repository.catalogueOptions().availableContentTypes.map { it.name }.filter { it in setOf("MANGA", "MANHWA", "MANHUA") }
+    }
+    suspend fun restoreTitle(id: String, name: String): Title? = lock.withLock {
+        active()
+        val result = repository.browse(name, 0, SortOrder.POPULARITY)
+        result.titles.firstOrNull { it.id.toString() == id }?.let { Title(owner, it) }
+    }
     suspend fun approvedDetails(query: String, chapterNumber: Float): Details = lock.withLock {
         active()
         val selection = repository.approvedTitle(query)
@@ -118,9 +136,12 @@ internal class ReaderSessionBridge private constructor(
     companion object {
         /** Opening a session requires a reviewed profile; this factory does not discover or enable hosts. */
         fun open(registry: ParserRegistry, profile: ReviewedProfile): ReaderSessionBridge {
-            val session = SourceSession(profile.scope, headers = profile.headers)
+            return open(registry, profile.scope, profile.headers)
+        }
+        fun open(registry: ParserRegistry, scope: SourceScope, headers: SourceHeaders = SourceHeaders(scope)): ReaderSessionBridge {
+            val session = SourceSession(scope, headers = headers)
             return try {
-                ReaderSessionBridge(session, ParserRepository(registry, profile.scope, session))
+                ReaderSessionBridge(session, ParserRepository(registry, scope, session))
             } catch (e: Throwable) {
                 session.close()
                 throw e

@@ -15,7 +15,13 @@ internal suspend fun openReviewedReader(): MangaSource = reviewedReaderProviders
 private class EngineCatalogSource(provider: String, override val displayName: String, private val catalog: ReviewedCatalog) : MangaSource, Closeable {
     override val id = reviewedSourceId(provider)
     override val languageTag = "en"
-    override val sampleOnly = true
+    override val hasNativeCatalogue = true
+    override suspend fun genreOptions(): List<String> = catalog.genres()
+    override suspend fun kindOptions(): List<MangaKind> = catalog.kinds().mapNotNull { value -> MangaKind.entries.firstOrNull { it.name == value } }
+    override suspend fun prepareTitle(title: MangaTitle): MangaTitle {
+        check(catalog.restore(title.id, title.title)) { "Saved title could not be resolved" }
+        return catalog.detail(title.id)?.let(::convert) ?: title
+    }
     override val chapterLanguages = listOf("und")
     private val covers = LinkedHashMap<String, android.graphics.Bitmap?>(4, .75f, true)
     private val lock = Mutex()
@@ -32,8 +38,8 @@ private class EngineCatalogSource(provider: String, override val displayName: St
     override suspend fun search(query: String, limit: Int): List<MangaTitle> =
         catalogPage(query, MangaKind.ALL, MangaOrder.POPULAR, null, 0, limit.coerceIn(1, 30)).items
     override suspend fun catalogPage(query: String, kind: MangaKind, order: MangaOrder, genre: String?, offset: Int, limit: Int): MangaCatalogPage {
-        val result = catalog.list(query.take(200), offset, limit, genre)
-        return MangaCatalogPage(result.items.map(::convert), result.nextOffset)
+        val result = catalog.list(query.take(200), offset, limit, genre, order == MangaOrder.RECENT, kind.name.takeUnless { kind == MangaKind.ALL || kind == MangaKind.OTHER })
+        return MangaCatalogPage(result.items.map { convert(it).copy(kind = if (kind == MangaKind.ALL) MangaKind.OTHER else kind) }, result.nextOffset)
     }
     override suspend fun chapters(mangaId: String, language: String): List<MangaChapter> =
         catalog.chapters(mangaId).map { MangaChapter(id, it.id, it.titleId, it.label, it.number, "und", listOfNotNull(it.scanlator)) }
