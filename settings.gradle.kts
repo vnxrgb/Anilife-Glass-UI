@@ -14,6 +14,14 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        // Upstream libavif documents this official Maven Central endpoint.
+        // Keep routing scoped to this single module in the research branch.
+        exclusiveContent {
+            forRepository {
+                maven { url = uri("https://repo1.maven.org/maven2") }
+            }
+            filter { includeModule("org.aomedia.avif.android", "avif") }
+        }
         google()
         mavenCentral()
         exclusiveContent {
