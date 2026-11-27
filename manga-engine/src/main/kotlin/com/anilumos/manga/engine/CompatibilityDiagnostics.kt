@@ -15,3 +15,7 @@ internal fun compatibilityFailure(stage: ProbeStage, error: Exception): Provider
     is IOException -> ProviderCompatibilityException(if (stage == ProbeStage.IMAGE_DECODE) "IMAGE_DECODE" else "NETWORK_OR_RESPONSE", stage.name)
     else -> ProviderCompatibilityException("PARSER_FAILURE", stage.name)
 }
+
+/** Sanitize errors from ordinary on-demand reader operations as well as explicit probes. */
+public fun classifyProviderFailure(stage: String, error: Exception): ProviderCompatibilityException =
+    compatibilityFailure(ProbeStage.entries.firstOrNull { it.name == stage } ?: ProbeStage.INITIALIZE, error)

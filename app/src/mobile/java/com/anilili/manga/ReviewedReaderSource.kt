@@ -8,6 +8,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.anilumos.manga.engine.ProviderCompatibilityException
+import com.anilumos.manga.engine.classifyProviderFailure
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -55,7 +56,8 @@ private class EngineCatalogSource(
     private suspend fun success(readable: Boolean) {
         val previous = health?.read(id, revision)
         // Catalogue success is not proof of a readable chapter. Never downgrade a verified reader.
-        val status = if (readable || previous?.reason == "READY") "READY" else "CATALOGUE"
+        if (!readable && previous?.reason == "READY") return
+        val status = if (readable) "READY" else "CATALOGUE"
         health?.record(id, revision, true, status)
         withContext(Dispatchers.Main.immediate) { if (!closed) onHealth(status, null) }
     }
@@ -67,13 +69,17 @@ private class EngineCatalogSource(
         health?.record(id, revision, false, reason)
         withContext(Dispatchers.Main.immediate) { if (!closed) onHealth(reason, diagnostic) }
     }
-    private suspend fun <T> checked(block: suspend () -> T): T = try {
+    private suspend fun <T> checked(stage: String, accessOnly: Boolean = false, block: suspend () -> T): T = try {
         block()
     } catch (e: CancellationException) { throw e }
-    catch (e: Exception) { failure(e); throw e }
+    catch (e: Exception) {
+        val classified = classifyProviderFailure(stage, e)
+        if (!accessOnly || classified.reason in setOf("RATE_LIMIT", "ACCESS_RESTRICTED")) failure(classified)
+        throw classified
+    }
     override val hasNativeCatalogue = true
-    override suspend fun genreOptions(): List<String> = session().genres()
-    override suspend fun kindOptions(): List<MangaKind> = session().kinds().mapNotNull { value -> MangaKind.entries.firstOrNull { it.name == value } }
+    override suspend fun genreOptions(): List<String> = checked("SELECT_TITLE", accessOnly = true) { session().genres() }
+    override suspend fun kindOptions(): List<MangaKind> = checked("SELECT_TITLE", accessOnly = true) { session().kinds() }.mapNotNull { value -> MangaKind.entries.firstOrNull { it.name == value } }
     override suspend fun prepareTitle(title: MangaTitle): MangaTitle {
         check(session().restore(title.id, title.title)) { "Saved title could not be resolved" }
         return session().detail(title.id)?.let(::convert) ?: title
@@ -97,16 +103,15 @@ private class EngineCatalogSource(
         catalogPage(query, MangaKind.ALL, MangaOrder.POPULAR, null, 0, limit.coerceIn(1, 30)).items
     override suspend fun catalogPage(query: String, kind: MangaKind, order: MangaOrder, genre: String?, offset: Int, limit: Int): MangaCatalogPage {
         val initial = query.isBlank() && offset == 0 && genre == null && kind == MangaKind.ALL && order == MangaOrder.POPULAR
-        val result = if (initial) checked { session().list(query.take(200), offset, limit, genre, order == MangaOrder.RECENT, null) }
-            else session().list(query.take(200), offset, limit, genre, order == MangaOrder.RECENT, kind.name.takeUnless { kind == MangaKind.ALL || kind == MangaKind.OTHER })
+        val result = checked("SELECT_TITLE", accessOnly = !initial) { session().list(query.take(200), offset, limit, genre, order == MangaOrder.RECENT, kind.name.takeUnless { kind == MangaKind.ALL || kind == MangaKind.OTHER }) }
         if (initial && result.items.isNotEmpty()) success(false)
         return MangaCatalogPage(result.items.map { convert(it).copy(kind = if (kind == MangaKind.ALL) MangaKind.OTHER else kind) }, result.nextOffset)
     }
     override suspend fun chapters(mangaId: String, language: String): List<MangaChapter> =
-        session().chapters(mangaId).map { MangaChapter(id, it.id, it.titleId, it.label, it.number, "und", listOfNotNull(it.scanlator)) }
+        checked("CHAPTER", accessOnly = true) { session().chapters(mangaId) }.map { MangaChapter(id, it.id, it.titleId, it.label, it.number, "und", listOfNotNull(it.scanlator)) }
     override suspend fun pages(chapterId: String): List<MangaPage> =
-        List(checked { session().pageCount(chapterId) }) { index -> MangaPage(index, "", decode = { w, h ->
-            val image = checked { session().decode(chapterId, index, w, h) }
+        List(checked("PAGE_LIST") { session().pageCount(chapterId) }) { index -> MangaPage(index, "", decode = { w, h ->
+            val image = checked("IMAGE_DECODE") { session().decode(chapterId, index, w, h) }
             if (health?.read(id, revision)?.reason != "READY") success(true)
             image
         }) }
