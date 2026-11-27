@@ -5,7 +5,10 @@ plugins {
 android {
     namespace = "com.anilumos.manga.engine"
     compileSdk = 36
-    defaultConfig { minSdk = 26 }
+    defaultConfig {
+        minSdk = 26
+        testInstrumentationRunner = "android.test.InstrumentationTestRunner"
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

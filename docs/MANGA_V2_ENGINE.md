@@ -35,3 +35,7 @@ Image delivery now accepts at most three same-origin HTTPS redirects within the 
 ## Reviewed request defaults
 
 Optional per-host Accept and Accept-Language defaults preserve parser-supplied headers and do not leak across hosts. Credentials, identity spoofing and access bypass are not supported by the configuration. No real provider profiles have been enabled. Android device tests and licensing remain pending.
+
+## Android decoding and foreground refresh
+
+Bitmap decoding uses a sampled raster budget of four million pixels and caller-owned bitmaps. Health readiness now requires Android decoding, not only valid headers. Reviewed profiles can be refreshed serially on demand with a 15-minute minimum interval, including failures. No background scheduling or real profiles are enabled. The local Android instrumentation fixture requires an emulator/device and :manga-engine:connectedDebugAndroidTest. JVM sampling and refresh tests run in existing CI. No app integration or licensing clearance is claimed.

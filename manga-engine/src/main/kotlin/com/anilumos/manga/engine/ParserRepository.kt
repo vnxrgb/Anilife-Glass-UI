@@ -28,7 +28,7 @@ internal class ParserRepository(
     suspend fun browse(query: String, offset: Int, requested: SortOrder): CatalogPage = withContext(Dispatchers.IO) {
         require(offset >= 0)
         val clean = query.trim()
-        if (clean.isNotEmpty()) check(parser.filterCapabilities.isSearchSupported) { "Search unsupported" }
+        if (clean.isNotEmpty()) if (!parser.filterCapabilities.isSearchSupported) throw UnsupportedOperationException("Search unsupported")
         val filter = MangaListFilter(query = clean.ifEmpty { null })
         val order = requested.takeIf { it in parser.availableSortOrders } ?: parser.availableSortOrders.first()
         val raw = parser.getList(offset, order, filter)
@@ -47,6 +47,8 @@ internal class ParserRepository(
         require(chapter.source.name == scope.sourceName && title.chapters.orEmpty().any { it == chapter })
         parser.getPages(chapter).also { pages -> check(pages.all { it.source.name == scope.sourceName }) }
     }
+    suspend fun decodePage(page: MangaPage, width: Int = 2048, height: Int = 4096) =
+        PageDecoder.decode(loadImage(page), width, height)
     suspend fun loadImage(page: MangaPage): ByteArray = PageDelivery(scope, session).load(imageUrl(page))
     suspend fun imageUrl(page: MangaPage): String = withContext(Dispatchers.IO) {
         require(page.source.name == scope.sourceName)

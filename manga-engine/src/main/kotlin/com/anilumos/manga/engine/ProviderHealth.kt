@@ -28,9 +28,9 @@ internal class ProviderHealth(private val now: () -> Long = System::currentTimeM
         return record(source, state)
     }
 
-    suspend fun probe(registry: ParserRegistry, scope: SourceScope, query: String): ProviderCheck =
+    suspend fun probe(registry: ParserRegistry, scope: SourceScope, query: String, headers: SourceHeaders = SourceHeaders(scope)): ProviderCheck =
         check(scope.sourceName) {
-            SourceSession(scope).use { session ->
+            SourceSession(scope, headers = headers).use { session ->
                 val repository = ParserRepository(registry, scope, session)
                 val catalog = repository.browse("", 0, SortOrder.POPULARITY)
                 if (catalog.consumed == 0) return@check ProviderState.EMPTY
@@ -41,7 +41,8 @@ internal class ProviderHealth(private val now: () -> Long = System::currentTimeM
                 val details = repository.details(title)
                 val chapter = details.chapters.orEmpty().firstOrNull() ?: return@check ProviderState.NO_CHAPTERS
                 val page = repository.pages(details, chapter).firstOrNull() ?: return@check ProviderState.NO_PAGES
-                repository.loadImage(page)
+                val bitmap = repository.decodePage(page)
+                bitmap.recycle()
                 ProviderState.READY
             }
         }
