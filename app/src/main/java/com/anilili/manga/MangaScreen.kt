@@ -181,7 +181,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     ) { padding ->
         val side = device.pagePadding
         val filtered = results.filter { genre == null || genre in it.genres }
-        val list = saved.filter { entry -> when (libraryFilter) {
+        val list = saved.filter { entry -> registry.byId(entry.title.sourceId) != null }.filter { entry -> when (libraryFilter) {
             LibraryFilter.ALL -> entry.bookmarked || entry.chapterId != null
             LibraryFilter.READING -> entry.chapterId != null
             LibraryFilter.SAVED -> entry.bookmarked
@@ -311,7 +311,7 @@ private fun MangaEmpty(title: String, body: String) {
 @Composable
 private fun MangaHero(title: MangaTitle, action: String, enabled: Boolean = true, onRead: () -> Unit) {
     Box(Modifier.fillMaxWidth().height(280.dp).clip(RoundedCornerShape(26.dp)).background(MaterialTheme.colorScheme.surfaceContainer)) {
-        AsyncImage(title.coverUrl, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, imageLoader = MangaNetwork.imageLoader(LocalContext.current))
+        AsyncImage(title.coverUrl, null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop, imageLoader = MangaNetwork.imageLoader(LocalContext.current))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .08f), Color.Black.copy(alpha = .82f), Color.Black.copy(alpha = .95f)))))
         Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title.title, color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -326,7 +326,7 @@ private fun MangaHero(title: MangaTitle, action: String, enabled: Boolean = true
 @Composable
 private fun MangaPoster(title: MangaTitle, modifier: Modifier = Modifier, subtitle: String? = null, onClick: () -> Unit) {
     Column(modifier.clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        AsyncImage(title.coverUrl, title.title, Modifier.fillMaxWidth().aspectRatio(.68f).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainer), contentScale = ContentScale.Crop, imageLoader = MangaNetwork.imageLoader(LocalContext.current))
+        AsyncImage(title.coverUrl, title.title, modifier = Modifier.fillMaxWidth().aspectRatio(.68f).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainer), contentScale = ContentScale.Crop, imageLoader = MangaNetwork.imageLoader(LocalContext.current))
         Text(title.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(subtitle ?: title.kind.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
@@ -347,7 +347,7 @@ private fun MangaRail(label: String, titles: List<MangaTitle>, onClick: (MangaTi
 private fun MangaContinueCard(entry: MangaSaved, modifier: Modifier, onClick: () -> Unit) {
     Column(modifier.clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick), verticalArrangement = Arrangement.spacedBy(5.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(1.6f).clip(RoundedCornerShape(14.dp))) {
-            AsyncImage(entry.title.coverUrl, entry.title.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            AsyncImage(entry.title.coverUrl, entry.title.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop, imageLoader = MangaNetwork.imageLoader(LocalContext.current))
             Box(Modifier.align(Alignment.Center).size(38.dp).clip(CircleShape).background(Color.Black.copy(alpha = .58f)), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.PlayArrow, "Continue reading", tint = Color.White)
             }
