@@ -1,22 +1,19 @@
 package com.anilili.manga
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.composed
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
-import com.anilili.ui.components.glassCard
+import android.view.HapticFeedbackConstants
+import kotlin.math.abs
 
 enum class ContentMode { ANIME, MANGA }
 enum class MangaSection { HOME, BROWSE, LIBRARY, DOWNLOADS }
@@ -24,23 +21,55 @@ enum class MangaSection { HOME, BROWSE, LIBRARY, DOWNLOADS }
 val LocalContentMode = staticCompositionLocalOf { ContentMode.ANIME }
 val LocalSelectContentMode = staticCompositionLocalOf<(ContentMode) -> Unit> { {} }
 
+// The old header switch is intentionally no longer rendered.
 @Composable
-fun ContentModeSwitcher(modifier: Modifier = Modifier) {
-    val selected = LocalContentMode.current
-    val select = LocalSelectContentMode.current
-    Row(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp), horizontalArrangement = Arrangement.Center) {
-        Row(Modifier.width(212.dp).glassCard(CircleShape, tint = MaterialTheme.colorScheme.surfaceContainerHighest)
-            .padding(3.dp).selectableGroup(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            ContentMode.entries.forEach { mode ->
-                val active = mode == selected
-                val fill by animateColorAsState(if (active) MaterialTheme.colorScheme.primary else Color.Transparent, label = "mode fill")
-                val ink by animateColorAsState(if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, label = "mode ink")
-                Box(Modifier.weight(1f).heightIn(min = 38.dp).clip(CircleShape).background(fill)
-                    .selectable(selected = active, role = Role.Tab, onClick = { select(mode) }),
-                    contentAlignment = Alignment.Center) {
-                    Text(if (mode == ContentMode.ANIME) "Anime" else "Manga", color = ink,
-                        style = MaterialTheme.typography.labelLarge, fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium)
+fun ContentModeSwitcher(modifier: Modifier = Modifier) = Unit
+
+internal const val CONTENT_MODE_HOLD_MS = 400L
+
+fun Modifier.swipeHoldContentMode(enabled: Boolean): Modifier = composed {
+    val mode by rememberUpdatedState(LocalContentMode.current)
+    val select by rememberUpdatedState(LocalSelectContentMode.current)
+    val view = LocalView.current
+    if (!enabled) Modifier else Modifier.pointerInput(view) {
+        val distance = 56.dp.toPx()
+        val drift = 10.dp.toPx()
+        val edge = 24.dp.toPx()
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            if (down.position.x < edge || down.position.x > size.width - edge) return@awaitEachGesture
+            val initialMode = mode
+            val direction = if (initialMode == ContentMode.ANIME) -1 else 1
+            var anchor = down.position
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val change = event.changes.firstOrNull { it.id == down.id } ?: return@awaitEachGesture
+                if (!change.pressed || event.changes.count { it.pressed } != 1) return@awaitEachGesture
+                val delta = change.position - down.position
+                if (abs(delta.y) > distance / 2 && abs(delta.y) > abs(delta.x) / 2) return@awaitEachGesture
+                if (delta.x * direction < -distance / 2) return@awaitEachGesture
+                if (delta.x * direction >= distance && abs(delta.x) > abs(delta.y) * 2) {
+                    anchor = change.position
+                    break
                 }
+            }
+            // A timeout means the finger remained stationary; a release or reversal cancels.
+            val cancelled = withTimeoutOrNull(CONTENT_MODE_HOLD_MS) {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                    if (!change.pressed || event.changes.count { it.pressed } != 1 ||
+                        (change.position - anchor).getDistance() > drift) break
+                }
+                true
+            }
+            if (cancelled == null && mode == initialMode) {
+                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                select(if (initialMode == ContentMode.ANIME) ContentMode.MANGA else ContentMode.ANIME)
+                do {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    event.changes.forEach { it.consume() }
+                } while (event.changes.any { it.pressed })
             }
         }
     }
