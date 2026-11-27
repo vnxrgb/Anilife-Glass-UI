@@ -31,3 +31,7 @@ An explicit reviewed-scope probe checks browse, search, details, chapters and fi
 ## Image validation checkpoint
 
 Image delivery now accepts at most three same-origin HTTPS redirects within the reviewed scope, rejects loops and cross-origin redirects, and checks raster signatures against declared media types. AVIF support is conservative (major brand avif/avis). Full device decoding, provider-specific headers, authorized live checks and licensing remain pending.
+
+## Reviewed request defaults
+
+Optional per-host Accept and Accept-Language defaults preserve parser-supplied headers and do not leak across hosts. Credentials, identity spoofing and access bypass are not supported by the configuration. No real provider profiles have been enabled. Android device tests and licensing remain pending.
