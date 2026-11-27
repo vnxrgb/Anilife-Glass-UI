@@ -1469,10 +1469,16 @@ private fun SeriesWatchProgress(resume: HistoryEntry, totalEpisodes: Int, isMovi
 }
 
 @Composable
-private fun DetailTabs(
-    selected: DetailTab,
-    tabs: List<DetailTab>,
-    onSelect: (DetailTab) -> Unit,
+private fun DetailTabs(selected: DetailTab, tabs: List<DetailTab>, onSelect: (DetailTab) -> Unit, downFocus: FocusRequester? = null) {
+    SharedDetailTabs(selected, tabs, onSelect, { it.label }, downFocus)
+}
+
+@Composable
+internal fun <T> SharedDetailTabs(
+    selected: T,
+    tabs: List<T>,
+    onSelect: (T) -> Unit,
+    label: (T) -> String,
     downFocus: FocusRequester? = null,
 ) {
     val device = LocalAppDeviceProfile.current
@@ -1518,7 +1524,7 @@ private fun DetailTabs(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = tab.label,
+                        text = label(tab),
                         style = MaterialTheme.typography.labelLarge,
                         textAlign = TextAlign.Center,
                         color = focus.content(if (active) MaterialTheme.colorScheme.onSurface
@@ -1589,7 +1595,7 @@ private fun NextAiringCard(airingAt: Long, episode: Int?) {
 }
 
 @Composable
-private fun GenreRow(genres: List<String>) {
+internal fun GenreRow(genres: List<String>) {
     // Centred while the chips fit, scrolling once they do not — the same rule as the tabs.
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Row(
@@ -1614,7 +1620,7 @@ private fun GenreRow(genres: List<String>) {
 }
 
 @Composable
-private fun Description(description: String?) {
+internal fun Description(description: String?) {
     if (description.isNullOrBlank()) return
     var expanded by remember { mutableStateOf(false) }
     val clean = remember(description) { androidx.core.text.HtmlCompat.fromHtml(description, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString().trim() }

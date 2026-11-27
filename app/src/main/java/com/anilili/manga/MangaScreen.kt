@@ -27,6 +27,14 @@ import com.anilili.ui.watch.PlayerSeekBar
 import com.anilili.ui.dialogs.popupGlass
 import com.anilili.ui.dialogs.rememberPopupBackdrop
 import com.anilili.ui.home.HomeHeroAction
+import com.anilili.ui.home.GenrePill
+import com.anilili.ui.home.RailTitle
+import com.anilili.ui.home.heroVisibleIndicatorIndices
+import com.anilili.ui.detail.SharedDetailTabs
+import com.anilili.ui.detail.GenreRow
+import com.anilili.ui.detail.Description
+import com.anilili.ui.watch.PlayerModalSheet
+import androidx.compose.ui.unit.sp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import androidx.compose.foundation.clickable
@@ -251,7 +259,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(listOf(MangaKind.ALL, MangaKind.MANGA, MangaKind.MANHWA, MangaKind.MANHUA)) { option ->
-                                FilterChip(selected = kind == option, onClick = { kind = option; genre = null }, label = { Text(option.label) }, colors = cinematicFilterChipColors(), shape = CircleShape)
+                                GenrePill(option.label, kind == option, { kind = option; genre = null })
                             }
                         }
                         val genres = results.flatMap { it.genres }.distinct().sorted()
@@ -259,8 +267,8 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                             PageFilterPill(genre ?: "Genres", listOf(PageFilterOption(null, "All genres")) + genres.map { PageFilterOption(it, it) }, { genre = it }, Modifier.weight(1f))
                             PageFilterPill(if (order == MangaOrder.POPULAR) "Popular" else "Recent", listOf(PageFilterOption("popular", "Popular"), PageFilterOption("recent", "Recently updated")), { value -> order = if (value == "recent") MangaOrder.RECENT else MangaOrder.POPULAR; genre = null }, Modifier.weight(1f))
                         } else if (genres.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            item { FilterChip(selected = genre == null, onClick = { genre = null }, label = { Text("All genres") }, colors = cinematicFilterChipColors(), shape = CircleShape) }
-                            items(genres) { option -> FilterChip(selected = genre == option, onClick = { genre = if (genre == option) null else option }, label = { Text(option) }, colors = cinematicFilterChipColors(), shape = CircleShape) }
+                            item { GenrePill("All genres", genre == null, { genre = null }) }
+                            items(genres) { option -> GenrePill(option, genre == option, { genre = if (genre == option) null else option }) }
                         }
                     }
                 }
@@ -347,9 +355,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
 }
 
 @Composable
-private fun MangaHeading(label: String) {
-    Text(label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-}
+private fun MangaHeading(label: String) { RailTitle(label, dragHandle = null) }
 
 @Composable
 private fun MangaEmpty(title: String, body: String) {
@@ -374,7 +380,7 @@ private fun MangaHomeCarousel(titles: List<MangaTitle>, modifier: Modifier, topI
             pager.animateScrollToPage((pager.settledPage + 1) % titles.size)
         }
     }
-    Box(modifier.height(height)) {
+    Box(modifier.height(height).clip(RoundedCornerShape(0.dp))) {
         HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = 1, key = { titles[it].identity() }) { index ->
             val title = titles[index]
             val art = remember { HazeState() }
@@ -386,12 +392,14 @@ private fun MangaHomeCarousel(titles: List<MangaTitle>, modifier: Modifier, topI
                     AsyncImage(title.largeCoverUrl ?: title.coverUrl, null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop, imageLoader = MangaNetwork.imageLoader(LocalContext.current))
                     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = .26f), .30f to Color.Black.copy(alpha = .06f), .50f to Color.Black.copy(alpha = .20f), .68f to Color.Black.copy(alpha = .54f), .84f to Color.Black.copy(alpha = .68f), 1f to Color.Black.copy(alpha = .35f))))
                 }
-                Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal = device.pagePadding).padding(bottom = if (titles.size > 1) 64.dp else 40.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(title.title, color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth(if (device.isExpanded) .8f else 1f).padding(horizontal = device.pagePadding).padding(top = 8.dp, bottom = if (titles.size > 1) 64.dp else 40.dp)) {
+                    Box(Modifier.fillMaxWidth(if (device.isExpanded) .6f else .78f).height(if (device.isExpanded) 68.dp else 64.dp), contentAlignment = Alignment.CenterStart) {
+                        ShrinkingTitle(text = title.title, style = (if (device.isExpanded) MaterialTheme.typography.displaySmall else MaterialTheme.typography.titleLarge).copy(fontWeight = FontWeight.Black, lineHeight = if (device.isExpanded) 42.sp else 28.sp), color = Color.White, maxLines = 2, minFontSize = 17.sp)
+                    }
                     Text(listOf(title.metadata(), title.genres.take(3).joinToString(" · ")).filter { it.isNotBlank() }.joinToString(" · "), color = Color.White.copy(alpha = .9f), style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val summary = remember(title.description) { org.jsoup.Jsoup.parse(title.description).text() }
-                    if (summary.isNotBlank()) Text(summary, color = Color.White.copy(alpha = .9f), style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Row(Modifier.padding(top = 6.dp).widthIn(max = 286.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (summary.isNotBlank()) Text(summary, color = Color.White.copy(alpha = .9f), style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp).fillMaxWidth(.86f))
+                    Row(Modifier.padding(top = 12.dp, bottom = 2.dp).widthIn(max = 286.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         HomeHeroAction("Read Now", Icons.Default.Book, true, art, { onRead(title) }, Modifier.weight(1f))
                         HomeHeroAction("Details", Icons.Default.Info, false, art, { onDetails(title) }, Modifier.weight(1f))
                     }
@@ -399,8 +407,8 @@ private fun MangaHomeCarousel(titles: List<MangaTitle>, modifier: Modifier, topI
             }
         }
         if (titles.size > 1) Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            titles.indices.forEach { i -> Box(Modifier.size(24.dp).clickable { scope.launch { pager.animateScrollToPage(i) } }, contentAlignment = Alignment.Center) {
-                Box(Modifier.size(if (i == pager.currentPage) 18.dp else 6.dp, 6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onSurface.copy(alpha = if (i == pager.currentPage) 1f else .35f)))
+            heroVisibleIndicatorIndices(pager.currentPage, titles.size).forEach { i -> Box(Modifier.size(21.dp).clickable { scope.launch { pager.animateScrollToPage(i) } }, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(if (i == pager.currentPage) 12.dp else 4.dp, 4.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onSurface.copy(alpha = if (i == pager.currentPage) 1f else .35f)))
             } }
         }
     }
@@ -418,7 +426,7 @@ private fun MangaDetailHero(title: MangaTitle, source: MangaSource) {
         Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal = device.pagePadding, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
             AsyncImage(title.coverUrl, title.title, modifier = Modifier.width(if (device.isTablet) 90.dp else 78.dp).aspectRatio(2f/3f).clip(RoundedCornerShape(18.dp)), imageLoader = MangaNetwork.imageLoader(LocalContext.current), contentScale = ContentScale.Crop)
             Column(Modifier.weight(1f).padding(bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                ShrinkingTitle(text = title.title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black), maxLines = 3, minFontSize = 15.sp)
                 Text(listOf(title.metadata(), source.displayName).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -499,24 +507,12 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
                         Icon(if (saved?.bookmarked == true) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, null, Modifier.size(18.dp)); Spacer(Modifier.width(5.dp)); Text(if (saved?.bookmarked == true) "Saved" else "My List", maxLines = 1)
                     }
                 }
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    MangaDetailTab.entries.forEach { option ->
-                        val active = tab == option
-                        Box(Modifier.weight(1f).heightIn(min = 48.dp).clip(CircleShape).background(if (active) glassSelectionColor() else glassPanelColor().copy(alpha = .38f)).border(1.dp, glassRimColor().copy(alpha = if (active) 1f else .45f), CircleShape).clickable { tab = option }, contentAlignment = Alignment.Center) {
-                            Text(option.label, style = MaterialTheme.typography.labelLarge, color = if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
+                SharedDetailTabs(tab, MangaDetailTab.entries, { tab = it }, { it.label })
             }
             val overview: @Composable () -> Unit = {
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (details.genres.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(details.genres.distinct()) { genre -> Box(Modifier.glassCard(CircleShape).padding(horizontal = 12.dp, vertical = 7.dp)) { Text(genre, style = MaterialTheme.typography.labelMedium) } }
-                    }
-                    Text("Overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    val synopsis = remember(details.description) { org.jsoup.Jsoup.parse(details.description).text() }
-                    Text(synopsis.ifBlank { "No description available." }, maxLines = if (expanded) Int.MAX_VALUE else 5, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
-                    if (synopsis.length > 180) TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Show less" else "Read more") }
+                    if (details.genres.isNotEmpty()) GenreRow(details.genres.distinct())
+                    Description(details.description)
                     Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(18.dp)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         listOf("Provider" to source.displayName, "Status" to details.status, "Authors" to details.authors.joinToString(", "), "Alternative titles" to details.alternativeTitles.joinToString(" · "), "Chapters" to chapters.size.takeIf { it > 0 }?.toString().orEmpty()).filter { it.second.isNotBlank() }.forEach { (name, value) ->
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text(name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(.4f)); Text(value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(.6f)) }
@@ -742,12 +738,11 @@ private fun MangaReaderWindow(fullscreen: Boolean, awake: Boolean, brightness: F
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MangaReaderSettings(mode: ReadingMode, background: ReaderBackground, ambient: Boolean, fullscreen: Boolean, magnify: Boolean, awake: Boolean, brightness: Float, ambientStrength: Float, onMode: (ReadingMode) -> Unit, onBackground: (ReaderBackground) -> Unit, onAmbient: (Boolean) -> Unit, onFullscreen: (Boolean) -> Unit, onMagnify: (Boolean) -> Unit, onAwake: (Boolean) -> Unit, onBrightness: (Float) -> Unit, onAmbientStrength: (Float) -> Unit, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Reader settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    PlayerModalSheet(title = "Reader settings", closeDescription = "Close reader settings", onDismiss = onDismiss) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Reading mode", style = MaterialTheme.typography.titleSmall)
             ReadingMode.entries.forEach { option ->
-                Row(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(18.dp)).clickable { onMode(option) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (mode == option) glassSelectionColor() else Color.Transparent).clickable { onMode(option) }.padding(horizontal = 10.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(if (option == ReadingMode.WEBTOON) Icons.Default.ViewStream else Icons.Default.MenuBook, null); Spacer(Modifier.width(10.dp)); Text(if (option == ReadingMode.WEBTOON) "Webtoon · Vertical" else "Comic · " + option.label, Modifier.weight(1f)); RadioButton(selected = mode == option, onClick = { onMode(option) })
                 }
             }
@@ -769,7 +764,7 @@ private fun MangaReaderSettings(mode: ReadingMode, background: ReaderBackground,
                 if (Build.VERSION.SDK_INT >= 31) add(Triple("Ambient light", ambient, onAmbient))
                 if (Build.VERSION.SDK_INT >= 28) add(Triple("Magnifier", magnify, onMagnify))
             }
-            toggles.forEach { (name, checked, change) -> Row(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(18.dp)).padding(horizontal = 14.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) { Text(name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge); Switch(checked = checked, onCheckedChange = change) } }
+            toggles.forEach { (name, checked, change) -> Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) { Text(name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge); Switch(checked = checked, onCheckedChange = change) } }
             Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), shape = CircleShape, colors = cinematicPrimaryButtonColors()) { Text("Done") }
         }
     }
