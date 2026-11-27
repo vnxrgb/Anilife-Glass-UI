@@ -134,7 +134,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalContext
@@ -1062,6 +1061,13 @@ private fun MiruroRoot(
     val opticalBackdrop = rememberLayerBackdrop()
     CompositionLocalProvider(
         com.anilili.manga.LocalContentMode provides if (mangaMode) com.anilili.manga.ContentMode.MANGA else com.anilili.manga.ContentMode.ANIME,
+        com.anilili.manga.LocalContentModeSwitchEnabled provides (!deviceProfile.isTv && !inPictureInPicture),
+        com.anilili.manga.LocalSelectContentMode provides { mode ->
+            if (!deviceProfile.isTv && !inPictureInPicture) {
+                mangaSelected = mode == com.anilili.manga.ContentMode.MANGA
+                if (currentRoute != Routes.HOME) nav.navigateTab(Routes.HOME)
+            }
+        },
         LocalAppChromeTakeover provides chromeTakeover,
         com.anilili.ui.journal.LocalOpenJournal provides { journalOpenRequest++ },
         com.anilili.ui.journal.LocalJournalReport provides { report -> journalReport = journalEntryId to report },
@@ -1187,29 +1193,6 @@ private fun MiruroRoot(
                             },
                             modifier = Modifier
                                 .weight(1f)
-                                .pointerInput(deviceProfile.isTv, currentRoute, mangaMode, chromeTakeover.active, inPictureInPicture) {
-                                     if (deviceProfile.isTv || inPictureInPicture || chromeTakeover.active || currentRoute !in listOf(Routes.HOME, Routes.SEARCH, Routes.MORE)) return@pointerInput
-                                     awaitEachGesture {
-                                         val down = awaitFirstDown(requireUnconsumed = false)
-                                         val edge = 24.dp.toPx()
-                                         val fromLeft = down.position.x <= edge
-                                         if (!fromLeft && down.position.x < size.width - edge) return@awaitEachGesture
-                                         val hold = awaitLongPressOrCancellation(down.id) ?: return@awaitEachGesture
-                                         val initial = hold.position.x
-                                         while (true) {
-                                             val event = awaitPointerEvent()
-                                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                             if (!change.pressed) break
-                                             val distance = change.position.x - initial
-                                             if ((fromLeft && distance >= 96.dp.toPx()) || (!fromLeft && distance <= -96.dp.toPx())) {
-                                                 change.consume()
-                                                 mangaSelected = !mangaMode
-                                                 nav.navigateTab(Routes.HOME)
-                                                 break
-                                             }
-                                         }
-                                     }
-                                 }
                                  .swipeBetweenTabs(
                                     state = tabSwipe,
                                     enabled = showPhoneCapsule && swipeTabIndex >= 0,

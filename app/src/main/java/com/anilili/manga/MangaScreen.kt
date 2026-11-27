@@ -266,7 +266,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                     if (home) {
                         Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = device.pagePadding, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically) {
-                            AnililiWordmark(Modifier.height(30.dp), textColor = if (overHero) Color.White else MaterialTheme.colorScheme.onSurface)
+                            ContentModeWordmark(textColor = if (overHero) Color.White else MaterialTheme.colorScheme.onSurface)
                             Spacer(Modifier.weight(1f))
                             TextButton(onClick = { importArchive.launch(arrayOf("application/zip", "application/vnd.comicbook+zip", "application/octet-stream")) }, enabled = !importBusy) { Text(if (importBusy) "Importing…" else "Import", color = if (overHero) Color.White else MaterialTheme.colorScheme.onSurface) }
                         }
