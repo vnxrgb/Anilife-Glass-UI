@@ -26,3 +26,6 @@ This notice is informational and does not replace, modify or override any licens
 
 Manga paged-image rendering uses Telephoto by Saket Narayan (Apache-2.0).
 https://github.com/saket/telephoto — see app/src/main/assets/licenses/telephoto-Apache-2.0.txt.
+
+Kotatsu-Redo native parser preview: https://github.com/Kotatsu-Redo/kotatsu-parsers-redo
+Pinned source revision: 8e4b04f3df0c49ac7bc3fea8202c9c7e81a4e626. Upstream GPL-3.0 license retained in app/src/main/assets/licenses/kotatsu-parsers-GPL-3.0.txt. Integration relies on the project owner's stated permission; written scope and relevant rights-holder approval must be retained before distribution. Source code permissions do not authorize access to third-party media.

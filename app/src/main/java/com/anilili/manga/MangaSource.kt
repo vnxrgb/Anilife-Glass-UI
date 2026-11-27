@@ -47,7 +47,7 @@ data class MangaChapter(
     val scanlationGroups: List<String> = emptyList(),
 )
 
-data class MangaPage(val index: Int, val imageUrl: String)
+data class MangaPage(val index: Int, val imageUrl: String, val headers: Map<String, String> = emptyMap())
 
 /** Explicit built-in registry. Future providers are added here, not installed as APKs. */
 class MangaSources(private val sources: List<MangaSource>) {

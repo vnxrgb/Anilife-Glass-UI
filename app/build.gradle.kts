@@ -325,6 +325,10 @@ dependencies {
     implementation(libs.coil.compose)
     // Telephoto 0.16.0 is built for Coil 2.7; do not migrate the app to Coil 3.
     implementation("me.saket.telephoto:zoomable-image-coil:0.16.0")
+    // Native compiled parsers; pin a reviewed revision, never load executable extension bundles.
+    implementation("com.github.Kotatsu-Redo:kotatsu-parsers-redo:8e4b04f3df0c49ac7bc3fea8202c9c7e81a4e626") {
+        exclude(group = "org.json", module = "json")
+    }
     implementation(libs.qrcodegen)
     // Permission-free QR scanning for the mobile-to-TV pairing address.
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")

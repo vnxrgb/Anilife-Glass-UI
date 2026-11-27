@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import okhttp3.Headers.Companion.toHeaders
 import me.saket.telephoto.zoomable.coil.ZoomableAsyncImage
 import me.saket.telephoto.zoomable.rememberZoomableImageState
 import kotlinx.coroutines.CancellationException
@@ -69,7 +70,7 @@ fun MangaScreen(onBack: () -> Unit, section: MangaSection = MangaSection.HOME) {
 
 @Composable
 private fun MangaDestination(store: MangaReadingStore, section: MangaSection, onBack: () -> Unit) {
-    val registry = remember { MangaSources(listOf(MangaDexSource())) }
+    val registry = remember { MangaSources(listOf(MangaDexSource()) + builtInKotatsuSources()) }
     var sourceId by rememberSaveable { mutableStateOf("mangadex") }
     var query by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf(MangaKind.ALL) }
@@ -124,7 +125,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
         }
     }
     if (attribution) AlertDialog(onDismissRequest = { attribution = false }, title = { Text("Built-in sources") },
-        text = { Text("Catalog and chapters supplied by MangaDex and contributing scanlation groups. Availability varies by title. Chapter credits are shown in the details and reader.") },
+        text = { Text("Catalog and chapters come from the selected built-in provider, including MangaDex and Kotatsu-Redo adapters. Availability varies by title. Chapter credits are shown when provided.") },
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
     val title = selected
     val activeChapter = chapter
@@ -518,12 +519,10 @@ private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap
     var retry by remember(page.imageUrl) { mutableIntStateOf(0) }
     val tap by rememberUpdatedState(onTap)
     val context = LocalContext.current
+    val request = remember(context, page, retry) { ImageRequest.Builder(context).data(page.imageUrl).headers(page.headers.toHeaders()).build() }
     key(page.imageUrl, retry) {
         if (fit) {
             val state = rememberZoomableImageState()
-            val request = remember(context, page.imageUrl, retry) {
-                ImageRequest.Builder(context).data(page.imageUrl).build()
-            }
             Box(modifier, contentAlignment = Alignment.Center) {
                 ZoomableAsyncImage(
                     model = request,
@@ -542,7 +541,7 @@ private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap
             }
         } else {
             SubcomposeAsyncImage(
-                model = page.imageUrl,
+                model = request,
                 contentDescription = "Page ${page.index + 1}",
                 modifier = modifier.pointerInput(Unit) { detectTapGestures(onTap = { tap() }) },
                 contentScale = ContentScale.FillWidth,
