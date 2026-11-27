@@ -55,3 +55,7 @@ Pinned parser ATSUMOE is present. The push commit named `Run one-shot Atsu metad
 ## Atsu one-shot Chico reader check
 
 Operator confirmed permission for automated retrieval of Chico chapter 3. The push commit `Run one-shot Atsu Chico chapter 3 validation` enables only the exact safe Chico title, chapter number 3, and first page decoded on Android using the reviewed Atsu main and CDN hosts. An ambiguous title, missing chapter or access restriction fails without fallback. If several chapter-3 uploads exist, the parser's first matching entry is used. No image retained. Ordinary pushes skip the live check; workflows queue instead of cancelling in-progress checks. This does not establish distribution permission for the app or other works.
+
+## Image compatibility retest
+
+Run 45972277365 passed Atsu metadata; run 45972637735 reached Chico chapter 3 first-page decoding but failed BitmapFactory dimension inspection on API 30. AVIF is a plausible cause, not yet measured. Advertise only supported common image formats on older Android and report detected image format, byte count and API on bounds failure without storing content. The one-shot authorized retest uses API 34 (native AVIF support), ordinary CI remains API 30; minSdk remains unchanged. A modern-device pass does not establish old-device AVIF compatibility. No access restriction handling has changed.

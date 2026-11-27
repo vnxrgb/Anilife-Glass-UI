@@ -1,5 +1,6 @@
 package com.anilumos.manga.engine
 
+import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
@@ -15,7 +16,7 @@ internal class PageDelivery(private val scope: SourceScope, private val session:
         val visited = mutableSetOf<HttpUrl>()
         repeat(4) { hop ->
             if (!visited.add(current)) throw IOException("Image redirect loop")
-            val request = Request.Builder().url(current).header("Accept", "image/*").build()
+            val request = Request.Builder().url(current).header("Accept", imageAccept(Build.VERSION.SDK_INT)).build()
             session.client.newCall(request).execute().use { response ->
                 if (response.code !in setOf(301, 302, 303, 307, 308)) return@withContext readImage(response)
                 if (hop == 3) throw IOException("Image redirect limit")
@@ -25,6 +26,9 @@ internal class PageDelivery(private val scope: SourceScope, private val session:
         throw IOException("Image redirect limit")
     }
     companion object {
+        internal fun imageAccept(api: Int): String =
+            if (api >= 31) "image/avif,image/webp,image/png,image/jpeg,image/gif"
+            else "image/webp,image/png,image/jpeg,image/gif"
         private const val MAX_BYTES = 16 * 1024 * 1024
         internal fun redirectTarget(scope: SourceScope, from: HttpUrl, location: String?): HttpUrl {
             val next = scope.requireUrl(location ?: throw IOException("Missing redirect location"), from.toString())

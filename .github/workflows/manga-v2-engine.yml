@@ -80,6 +80,8 @@ jobs:
     needs: engine
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    env:
+      MANGA_DEVICE_API: ${{ (github.event_name == 'push' && github.event.head_commit.message == 'Retest Atsu Chico with Android image format compatibility') && '34' || '30' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -108,7 +110,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libpulse0 libgl1 libegl1 libnss3 libx11-6 libxcb1 libxcomposite1 libxcursor1 libxi6 libxrandr2 libxrender1 libxtst6 libxkbcommon0 libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1 libdbus-1-3 libfontconfig1 libasound2t64
           sudo chmod a+rw /dev/kvm
-          "$sdk_tools/sdkmanager" --sdk_root="$ANDROID_HOME" 'emulator' 'platform-tools' 'system-images;android-30;default;x86_64'
+          "$sdk_tools/sdkmanager" --sdk_root="$ANDROID_HOME" 'emulator' 'platform-tools' "system-images;android-$MANGA_DEVICE_API;default;x86_64"
           test -x "$ANDROID_HOME/emulator/emulator"
           qemu="$ANDROID_HOME/emulator/qemu/linux-x86_64/qemu-system-x86_64"
           test -x "$qemu"
@@ -126,10 +128,10 @@ jobs:
           echo "ANDROID_USER_HOME=$ANDROID_USER_HOME" >> "$GITHUB_ENV"
           echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
           avd_dir="$ANDROID_AVD_HOME/manga-ci.avd"
-          printf 'no\n' | "$sdk_tools/avdmanager" create avd --force --name manga-ci --package 'system-images;android-30;default;x86_64' --path "$avd_dir"
+          printf 'no\n' | "$sdk_tools/avdmanager" create avd --force --name manga-ci --package "system-images;android-$MANGA_DEVICE_API;default;x86_64" --path "$avd_dir"
           test -s "$avd_dir/config.ini"
           # Use an absolute AVD pointer, independent of SDK tool home-directory defaults.
-          printf 'avd.ini.encoding=UTF-8\npath=%s\ntarget=android-30\n' "$avd_dir" > "$ANDROID_AVD_HOME/manga-ci.ini"
+          printf 'avd.ini.encoding=UTF-8\npath=%s\ntarget=android-%s\n' "$avd_dir" "$MANGA_DEVICE_API" > "$ANDROID_AVD_HOME/manga-ci.ini"
           "$ANDROID_HOME/emulator/emulator" -list-avds | tee "$RUNNER_TEMP/manga-avds.log"
           grep -Fx manga-ci "$RUNNER_TEMP/manga-avds.log"
       - name: Compile Android test APK before boot
@@ -160,7 +162,7 @@ jobs:
           LIVE_TITLE: ${{ inputs.live_title }}
           LIVE_AUTHORIZED: ${{ inputs.live_authorized }}
           ATSU_METADATA: ${{ github.event_name == 'push' && github.event.head_commit.message == 'Run one-shot Atsu metadata validation' }}
-          ATSU_CHICO: ${{ github.event_name == 'push' && github.event.head_commit.message == 'Run one-shot Atsu Chico chapter 3 validation' }}
+          ATSU_CHICO: ${{ github.event_name == 'push' && (github.event.head_commit.message == 'Run one-shot Atsu Chico chapter 3 validation' || github.event.head_commit.message == 'Retest Atsu Chico with Android image format compatibility') }}
         run: |
           set -euo pipefail
           export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"

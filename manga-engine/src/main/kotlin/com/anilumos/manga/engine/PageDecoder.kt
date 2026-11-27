@@ -2,6 +2,7 @@ package com.anilumos.manga.engine
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -25,7 +26,12 @@ internal object PageDecoder {
             if (bytes.isEmpty() || bytes.size > 16 * 1024 * 1024) throw IOException("Invalid image size")
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw IOException("Invalid image dimensions")
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                val format = listOf("avif", "webp", "jpeg", "png", "gif").firstOrNull {
+                    PageDelivery.matchesImageHeader(bytes, it)
+                } ?: "unknown"
+                throw IOException("Invalid or unsupported image dimensions (format=$format, API=${Build.VERSION.SDK_INT}, bytes=${bytes.size})")
+            }
             val options = BitmapFactory.Options().apply {
                 inSampleSize = sampleSize(bounds.outWidth, bounds.outHeight, targetWidth, targetHeight)
                 inPreferredConfig = Bitmap.Config.ARGB_8888
