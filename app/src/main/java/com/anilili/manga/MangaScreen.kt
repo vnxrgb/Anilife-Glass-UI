@@ -4,6 +4,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
@@ -79,6 +82,7 @@ import okhttp3.Headers.Companion.toHeaders
 import me.saket.telephoto.zoomable.coil.ZoomableAsyncImage
 import me.saket.telephoto.zoomable.rememberZoomableImageState
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.collect
@@ -112,8 +116,16 @@ fun MangaScreen(onBack: () -> Unit, section: MangaSection = MangaSection.HOME, o
 private fun MangaDestination(store: MangaReadingStore, section: MangaSection, onBack: () -> Unit, onHeroUnderBarsChanged: (Boolean) -> Unit) {
     val healthContext = LocalContext.current
     val localSource = remember(healthContext) { LocalMangaSource(healthContext) }
-    val registry = remember(localSource) { MangaSources(listOf(localSource)) }
-    val provider = localSource
+    var reviewedSource by remember { mutableStateOf<MangaSource?>(null) }
+    var reviewedBusy by remember { mutableStateOf(false) }
+    var reviewedError by remember { mutableStateOf(false) }
+    var remoteSelected by remember { mutableStateOf(false) }
+    DisposableEffect(reviewedSource) {
+        val owned = reviewedSource
+        onDispose { (owned as? java.io.Closeable)?.close() }
+    }
+    val registry = remember(localSource, reviewedSource) { MangaSources(listOfNotNull(localSource, reviewedSource)) }
+    val provider = if (remoteSelected) reviewedSource ?: localSource else localSource
     var query by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf(MangaKind.ALL) }
     var order by rememberSaveable { mutableStateOf(MangaOrder.POPULAR) }
@@ -142,7 +154,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     var unavailableTitle by remember { mutableStateOf<MangaTitle?>(null) }
     var attribution by remember { mutableStateOf(false) }
     val openSaved: (MangaSaved, Boolean) -> Unit = { entry, resume ->
-        if (entry.title.sourceId == LocalMangaSource.ID) { readImmediately = resume; selected = entry.title }
+        if (registry.byId(entry.title.sourceId) != null) { readImmediately = resume; selected = entry.title }
         else unavailableTitle = entry.title
     }
     collectionEdit?.let { entry ->
@@ -159,6 +171,23 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
             dismissButton = { TextButton(onClick = { store.setCategory(entry, null); collectionGeneration++; collectionEdit = null }) { Text("Remove") } })
     }
     val scope = rememberCoroutineScope()
+    val openSample: () -> Unit = {
+        if (!reviewedBusy && reviewedSource == null) scope.launch {
+            reviewedBusy = true; reviewedError = false
+            try {
+                val opened = openReviewedReader()
+                try {
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    reviewedSource = opened; remoteSelected = true; kind = MangaKind.ALL; genre = null
+                } catch (e: Throwable) {
+                    (opened as? java.io.Closeable)?.close()
+                    throw e
+                }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { reviewedError = true }
+            finally { reviewedBusy = false }
+        }
+    }
     var importBusy by remember { mutableStateOf(false) }
     var importError by remember { mutableStateOf<String?>(null) }
     val importArchive = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -203,7 +232,7 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
     }
     unavailableTitle?.let { unavailable -> AlertDialog(onDismissRequest = { unavailableTitle = null }, title = { Text("Provider unavailable") }, text = { Text("${unavailable.title} remains in your reading list. Its provider is not currently verified. Your saved progress is preserved.") }, confirmButton = { TextButton(onClick = { unavailableTitle = null }) { Text("OK") } }) }
     if (attribution) AlertDialog(onDismissRequest = { attribution = false }, title = { Text("Built-in sources") },
-        text = { Text("This experimental interface supports user-imported comic archives only. Online providers are not enabled in this app checkpoint. Credits: AniLife and Kotatsu-Redo.") },
+        text = { Text("Local archives and the explicitly reviewed Atsu sample (Chico chapter 3) are supported in this experimental checkpoint. Other providers and chapters are not enabled. Credits: AniLife and Kotatsu-Redo.") },
         confirmButton = { TextButton(onClick = { attribution = false }) { Text("Close") } })
     val title = selected
     val activeChapter = chapter
@@ -273,6 +302,20 @@ private fun MangaDestination(store: MangaReadingStore, section: MangaSection, on
                 }
                 if (browse || library) item("search") {
                     PageSearchField(query, { query = it }, if (browse) "Search manga, manhwa, manhua" else "Search reading list", "Clear search")
+                }
+                if ((home || browse) && reviewedReaderSupported()) item("reviewed-provider") {
+                    Column(Modifier.fillMaxWidth().glassCard().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Providers", style = MaterialTheme.typography.titleSmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(selected = !remoteSelected, onClick = { remoteSelected = false; kind = MangaKind.ALL; genre = null }, label = { Text("Local library") })
+                            if (reviewedSource != null) FilterChip(selected = remoteSelected, onClick = { remoteSelected = true; kind = MangaKind.ALL; genre = null }, label = { Text("Atsu") })
+                        }
+                        if (reviewedSource == null) OutlinedButton(onClick = openSample, enabled = !reviewedBusy) {
+                            Text(if (reviewedBusy) "Checking sample…" else "Check reviewed sample")
+                        }
+                        if (reviewedError) Text("Sample unavailable. No provider has been enabled.", color = MaterialTheme.colorScheme.error)
+                        if (remoteSelected) Text("Reviewed sample only · Chico, chapter 3", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
                 if (home || browse) item("filters") {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -739,7 +782,9 @@ private fun MangaReader(title: MangaTitle, chapter: MangaChapter, source: MangaS
             Box(Modifier.weight(1f).fillMaxWidth().then(lensModifier), contentAlignment = Alignment.Center) {
                 if (ambient && Build.VERSION.SDK_INT >= 31) {
                     val current = pages.getOrNull(position)
-                    if (current != null) {
+                    if (current?.decode != null) {
+                        EnginePageBitmap(current, Modifier.fillMaxSize().blur(42.dp).graphicsLayer { alpha = ambientStrength }, ContentScale.Crop, 160, 240)
+                    } else if (current != null) {
                         val ambientRequest = remember(context, current) { ImageRequest.Builder(context).data(current.imageUrl).headers(current.headers.toHeaders()).size(160, 240).build() }
                         AsyncImage(ambientRequest, null, imageLoader = MangaNetwork.imageLoader(context), modifier = Modifier.fillMaxSize().blur(42.dp), contentScale = ContentScale.Crop, alpha = ambientStrength)
                     }
@@ -916,6 +961,34 @@ private fun <T> ReaderChoices(label: String, choices: List<T>, selected: T, name
 /** Paged reading delegates zoom and pan to Telephoto; vertical reading retains natural-height Coil pages. */
 @Composable
 private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap: (Float, Float) -> Unit, magnifierActive: Boolean, options: ReaderPreferences, onLoaded: () -> Unit) {
+    if (page.decode != null) {
+        var zoom by remember(page) { mutableFloatStateOf(1f) }
+        var pan by remember(page) { mutableStateOf(Offset.Zero) }
+        var measured by remember(page) { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+        val transformed = modifier.onSizeChanged { measured = it }
+            .then(if (fit && !magnifierActive) Modifier.pointerInput(page) {
+                detectTransformGestures { _, drag, scale, _ ->
+                    zoom = (zoom * scale).coerceIn(1f, 4f)
+                    val maxX = measured.width * (zoom - 1f) / 2f
+                    val maxY = measured.height * (zoom - 1f) / 2f
+                    pan = Offset((pan.x + drag.x).coerceIn(-maxX, maxX), (pan.y + drag.y).coerceIn(-maxY, maxY))
+                }
+            } else Modifier)
+            .pointerInput(page) { detectTapGestures { tap -> onTap(tap.x / measured.width.coerceAtLeast(1), tap.y / measured.height.coerceAtLeast(1)) } }
+            .drawWithContent {
+                if (!options.grayscale && !options.invert && options.warm == 0f) drawContent() else {
+                    val paint = Paint().apply { colorFilter = ColorFilter.colorMatrix(options.matrix()) }
+                    drawContext.canvas.saveLayer(Rect(Offset.Zero, size), paint)
+                    try { drawContent() } finally { drawContext.canvas.restore() }
+                }
+            }
+        Box(transformed.clip(RoundedCornerShape(0.dp)), contentAlignment = Alignment.Center) {
+            EnginePageBitmap(page, (if (fit) Modifier.fillMaxSize() else Modifier.fillMaxWidth())
+                .graphicsLayer { scaleX = zoom; scaleY = zoom; translationX = pan.x; translationY = pan.y },
+                if (fit) options.scale.scale else ContentScale.FillWidth, 2048, 4096, onLoaded)
+        }
+        return
+    }
     var retry by remember(page.imageUrl) { mutableIntStateOf(0) }
     val tap by rememberUpdatedState(onTap)
     val loaded by rememberUpdatedState(onLoaded)
@@ -963,6 +1036,37 @@ private fun ReaderImage(page: MangaPage, modifier: Modifier, fit: Boolean, onTap
                 error = { Box(Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) { Button(onClick = { retry++ }) { Text("Retry page") } } },
             )
         }
+    }
+}
+
+/** Decoded pixels stay within the engine path; never hand a remote URL to Coil. */
+@Composable
+private fun EnginePageBitmap(page: MangaPage, modifier: Modifier, scale: ContentScale,
+    width: Int, height: Int, onLoaded: () -> Unit = {}) {
+    var retry by remember(page) { mutableIntStateOf(0) }
+    var bitmap by remember(page, width, height, retry) { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var failed by remember(page, retry) { mutableStateOf(false) }
+    val callback by rememberUpdatedState(onLoaded)
+    LaunchedEffect(page, width, height, retry) {
+        var decoded: android.graphics.Bitmap? = null
+        try {
+            decoded = requireNotNull(page.decode).invoke(width, height)
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            bitmap = decoded
+            callback()
+            kotlinx.coroutines.awaitCancellation()
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { failed = true }
+        finally {
+            bitmap = null
+            decoded?.recycle()
+        }
+    }
+    val value = bitmap
+    when {
+        value != null -> Image(value.asImageBitmap(), "Page ${page.index + 1}", modifier = modifier, contentScale = scale)
+        failed -> Box(modifier.heightIn(min = 100.dp), contentAlignment = Alignment.Center) { TextButton(onClick = { retry++ }) { Text("Retry page") } }
+        else -> Box(modifier.heightIn(min = 100.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
     }
 }
 

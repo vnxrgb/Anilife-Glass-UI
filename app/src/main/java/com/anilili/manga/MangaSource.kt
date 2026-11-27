@@ -58,7 +58,10 @@ data class MangaChapter(
     val previousParserId: String? = null,
 )
 
-data class MangaPage(val index: Int, val imageUrl: String, val headers: Map<String, String> = emptyMap())
+internal const val REVIEWED_SOURCE_ID = "engine:ATSUMOE:chico3"
+
+data class MangaPage(val index: Int, val imageUrl: String, val headers: Map<String, String> = emptyMap(),
+    val decode: (suspend (Int, Int) -> android.graphics.Bitmap)? = null)
 
 /** Explicit built-in registry. Future providers are added here, not installed as APKs. */
 class MangaSources(private val sources: List<MangaSource>) {

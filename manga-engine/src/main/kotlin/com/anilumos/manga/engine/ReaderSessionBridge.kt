@@ -50,6 +50,15 @@ internal class ReaderSessionBridge private constructor(
         val result = repository.browse(query, offset, order)
         Listing(result.titles.map { Title(owner, it) }, result.consumed, result.nextOffset)
     }
+    suspend fun approvedDetails(query: String, chapterNumber: Float): Details = lock.withLock {
+        active()
+        val selection = repository.approvedTitle(query)
+        val raw = selection.title ?: error("Approved title unavailable: ${selection.state}")
+        val detailed = Title(owner, repository.details(raw))
+        val chapter = detailed.raw.chapters.orEmpty().filter { it.number == chapterNumber }.distinctBy { it.id }.singleOrNull()
+            ?: error("Approved chapter missing or ambiguous")
+        Details(detailed, listOf(Chapter(owner, detailed, chapter)), detailed.raw.description.orEmpty())
+    }
     suspend fun details(title: Title): Details = lock.withLock {
         owned(title.owner)
         val detailed = Title(owner, repository.details(title.raw))
