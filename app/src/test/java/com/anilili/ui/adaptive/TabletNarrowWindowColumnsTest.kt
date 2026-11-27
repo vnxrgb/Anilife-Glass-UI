@@ -13,10 +13,10 @@ class TabletNarrowWindowColumnsTest {
     }
 
     @Test fun resizingRestoresColumnsAtActualCardBoundaries() {
-        assertEquals(1, tablet.homePosterColumns(311.dp, 12.dp))
-        assertEquals(2, tablet.homePosterColumns(312.dp, 12.dp))
-        assertEquals(2, tablet.homePosterColumns(473.dp, 12.dp))
-        assertEquals(3, tablet.homePosterColumns(474.dp, 12.dp))
+        assertEquals(1, tablet.homePosterColumns(275.dp, 12.dp))
+        assertEquals(2, tablet.homePosterColumns(276.dp, 12.dp))
+        assertEquals(2, tablet.homePosterColumns(419.dp, 12.dp))
+        assertEquals(3, tablet.homePosterColumns(420.dp, 12.dp))
         assertEquals(6, tablet.homePosterColumns(1600.dp, 12.dp))
     }
 
