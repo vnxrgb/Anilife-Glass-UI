@@ -27,3 +27,7 @@ Do not report provider count as working count. No signed beta until actual reade
 ## Provider health checkpoint
 
 An explicit reviewed-scope probe checks browse, search, details, chapters and first page bytes. Results expire after 15 minutes; unchecked and failed sources are hidden by the visibility predicate. No UI integration, automatic bulk probes, live provider certification or device image decoding yet. Restricted responses remain blocked. Synthetic tests cover state isolation and expiry.
+
+## Image validation checkpoint
+
+Image delivery now accepts at most three same-origin HTTPS redirects within the reviewed scope, rejects loops and cross-origin redirects, and checks raster signatures against declared media types. AVIF support is conservative (major brand avif/avis). Full device decoding, provider-specific headers, authorized live checks and licensing remain pending.
