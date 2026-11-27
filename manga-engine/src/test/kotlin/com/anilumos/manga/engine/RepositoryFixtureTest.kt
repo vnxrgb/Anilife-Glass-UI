@@ -26,7 +26,7 @@ class RepositoryFixtureTest {
         authors = emptySet(), source = source,
     )
 
-    private fun bundle(raw: List<Manga>, image: String = "/images/page.png", supportsSearch: Boolean = true): ParsersBundle {
+    private fun bundle(raw: List<Manga>, image: String = "/images/page.png", supportsSearch: Boolean = true, detailRating: ContentRating? = null): ParsersBundle {
         val proxy = Proxy.newProxyInstance(MangaParser::class.java.classLoader, arrayOf(MangaParser::class.java)) { _, method, args ->
             when (method.name) {
                 "getDomain" -> "example.org"
@@ -34,7 +34,7 @@ class RepositoryFixtureTest {
                 "getAvailableSortOrders" -> setOf(SortOrder.POPULARITY)
                 "getFilterCapabilities" -> MangaListFilterCapabilities(isSearchSupported = supportsSearch)
                 "getList" -> raw
-                "getDetails" -> (args!![0] as Manga).copy(chapters = listOf(chapter))
+                "getDetails" -> (args!![0] as Manga).let { it.copy(chapters = listOf(chapter), contentRating = detailRating ?: it.contentRating) }
                 "getPages" -> listOf(page)
                 "getPageUrl" -> image
                 else -> error("Unexpected fixture call: ${method.name}")
@@ -115,7 +115,7 @@ class RepositoryFixtureTest {
         }
     }
     @Test fun fullyFilteredCatalogCanStillSearchForApprovedTitle() = runBlocking {
-        val selection = selectApprovedTitle("Fixture 1", true, catalogPage(listOf(title(2, null)), 0)) {
+        val selection = selectApprovedTitle("Fixture 1", true, catalogPage(listOf(title(2, ContentRating.ADULT)), 0)) {
             catalogPage(listOf(title(1, ContentRating.SAFE)), 0)
         }
         assertEquals(1L, selection.title?.id)
@@ -127,8 +127,9 @@ class RepositoryFixtureTest {
             val result = repo.browse("fixture", 24, SortOrder.RELEVANCE)
             assertEquals(3, result.consumed)
             assertEquals(27, result.nextOffset)
-            assertEquals(listOf(3L), result.titles.map { it.id })
-            val details = repo.details(result.titles.single())
+            assertEquals(listOf(1L, 3L), result.titles.map { it.id })
+            val details = repo.details(result.titles.first())
+            assertNull(details.contentRating)
             assertEquals(listOf(chapter), details.chapters)
             val pages = repo.pages(details, chapter)
             assertEquals(listOf(page), pages)
@@ -138,11 +139,20 @@ class RepositoryFixtureTest {
     @Test fun fullyFilteredPageStillAdvancesRawOffset() = runBlocking {
         val scope = SourceScope(source.name, setOf("example.org"))
         SourceSession(scope).use { session ->
-            val repo = ParserRepository(ParserRegistry(bundle(listOf(title(1, null), title(2, ContentRating.SUGGESTIVE)))), scope, session)
+            val repo = ParserRepository(ParserRegistry(bundle(listOf(title(1, ContentRating.ADULT), title(2, ContentRating.SUGGESTIVE)))), scope, session)
             val result = repo.browse("", 10, SortOrder.POPULARITY)
             assertTrue(result.titles.isEmpty())
             assertEquals(2, result.consumed)
             assertEquals(12, result.nextOffset)
+        }
+    }
+    @Test fun laterExplicitRestrictedRatingStillPreventsReading() = runBlocking {
+        val scope = SourceScope(source.name, setOf("example.org"))
+        SourceSession(scope, offline = true).use { session ->
+            val repo = ParserRepository(ParserRegistry(bundle(listOf(title(1, null)), detailRating = ContentRating.ADULT)), scope, session)
+            val listed = repo.browse("", 0, SortOrder.POPULARITY).titles.single()
+            assertNull(listed.contentRating)
+            assertTrue(runCatching { repo.details(listed) }.exceptionOrNull() is IllegalStateException)
         }
     }
     @Test fun pageUrlCannotEscapeReviewedHosts() = runBlocking {

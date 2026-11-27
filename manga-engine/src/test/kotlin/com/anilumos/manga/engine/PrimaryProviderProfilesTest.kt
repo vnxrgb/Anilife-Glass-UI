@@ -14,13 +14,11 @@ class PrimaryProviderProfilesTest {
             assertNotNull(descriptors[profile.scope.sourceName])
         }
     }
-    @Test fun unratedPolicyIsSpecificAndDoesNotRelabel() {
-        assertTrue(PrimaryProviderProfiles.permitsRating("MANGAPILL", null))
-        assertTrue(PrimaryProviderProfiles.permitsRating("MANGAKATANA", null))
-        assertFalse(PrimaryProviderProfiles.permitsRating("ATSUMOE", null))
-        assertFalse(PrimaryProviderProfiles.permitsRating("MANGAPILL", ContentRating.ADULT))
-        assertFalse(PrimaryProviderProfiles.permitsRating("MANGAKATANA", ContentRating.SUGGESTIVE))
-        assertTrue(PrimaryProviderProfiles.permitsRating("MANGAKATANA", ContentRating.SAFE))
+    @Test fun unratedPolicyIsGlobalAndDoesNotRelabel() {
+        assertTrue(PrimaryProviderProfiles.permitsRating(null))
+        assertTrue(PrimaryProviderProfiles.permitsRating(ContentRating.SAFE))
+        assertFalse(PrimaryProviderProfiles.permitsRating(ContentRating.ADULT))
+        assertFalse(PrimaryProviderProfiles.permitsRating(ContentRating.SUGGESTIVE))
     }
     @Test fun safeFiltersAndScopedHosts() {
         assertEquals(setOf(ContentRating.SAFE), PrimaryProviderProfiles.restrictFilter("MANGADEX", MangaListFilter()).contentRating)

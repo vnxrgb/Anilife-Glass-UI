@@ -145,7 +145,7 @@ public class ReviewedCatalog private constructor(
     }
     override fun close() { closed = true; bridge.close() }
     public companion object {
-        public fun compatibilityRevision(): String = ParserRegistry().revision + ":compat-4"
+        public fun compatibilityRevision(): String = ParserRegistry().revision + ":compat-5"
         public suspend fun providers(): List<Provider> = withContext(Dispatchers.IO) {
             LiveProviderProfiles.all.map { Provider(it.scope.sourceName, it.label, it.locale, it.category) }
         }

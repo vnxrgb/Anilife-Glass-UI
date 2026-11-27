@@ -19,8 +19,7 @@ internal object PrimaryProviderProfiles {
         "MANGADEX", "WEEBCENTRAL" -> filter.copy(contentRating = setOf(ContentRating.SAFE))
         else -> filter
     }
-    // Owner explicitly approved unrated catalogue entries for these two parsers.
-    // Unknown is not equivalent to SAFE. Explicit non-safe ratings stay excluded.
-    fun permitsRating(id: String, rating: ContentRating?): Boolean =
-        rating == ContentRating.SAFE || (rating == null && id in setOf("MANGAPILL", "MANGAKATANA"))
+    // Unclassified is not an explicit content restriction; retain its original null rating.
+    fun permitsRating(rating: ContentRating?): Boolean =
+        rating == null || rating == ContentRating.SAFE
 }
