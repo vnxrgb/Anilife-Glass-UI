@@ -104,7 +104,7 @@ private class EngineCatalogSource(
     }
     private fun convert(title: ReviewedCatalog.Title) = MangaTitle(id, title.id, title.name,
         cleanMangaDescription(androidx.core.text.HtmlCompat.fromHtml(title.description, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString()), null,
-        genres = title.genres, authors = title.authors, status = title.status, alternativeTitles = title.alternatives)
+        genres = title.genres, authors = title.authors, status = title.status, alternativeTitles = title.alternatives, unrated = title.unrated)
     override suspend fun search(query: String, limit: Int): List<MangaTitle> =
         catalogPage(query, MangaKind.ALL, MangaOrder.POPULAR, null, 0, limit.coerceIn(1, 30)).items
     override suspend fun catalogPage(query: String, kind: MangaKind, order: MangaOrder, genre: String?, offset: Int, limit: Int): MangaCatalogPage {

@@ -13,7 +13,7 @@ import org.koitharu.kotatsu.parsers.model.SortOrder
 internal data class CatalogPage(val titles: List<Manga>, val consumed: Int, val nextOffset: Int?)
 internal fun catalogPage(raw: List<Manga>, offset: Int): CatalogPage {
     require(offset >= 0)
-    return CatalogPage(raw.filter { it.contentRating == ContentRating.SAFE }, raw.size,
+    return CatalogPage(raw.filter { PrimaryProviderProfiles.permitsRating(it.source.name, it.contentRating) }, raw.size,
         if (raw.isEmpty()) null else Math.addExact(offset, raw.size))
 }
 
@@ -37,7 +37,7 @@ internal class ParserRepository(
         if (clean.isNotEmpty()) if (!supportsSearch) throw UnsupportedOperationException("Search unsupported")
         val filter = MangaListFilter(query = clean.ifEmpty { null })
         val order = requested.takeIf { it in parser.availableSortOrders } ?: parser.availableSortOrders.first()
-        val raw = parser.getList(offset, order, filter)
+        val raw = parser.getList(offset, order, PrimaryProviderProfiles.restrictFilter(scope.sourceName, filter))
         check(raw.all { it.source.name == scope.sourceName }) { "Unexpected catalog source" }
         catalogPage(raw, offset)
     }
@@ -70,24 +70,24 @@ internal class ParserRepository(
         val filter = reviewedFilter(scope.sourceName, query, tags, excluded, types, states,
             parser.filterCapabilities, catalogueOptions())
         if (requested !in parser.availableSortOrders) throw UnsupportedOperationException("Sort unsupported")
-        val raw = parser.getList(offset, requested, filter)
+        val raw = parser.getList(offset, requested, PrimaryProviderProfiles.restrictFilter(scope.sourceName, filter))
         check(raw.all { it.source.name == scope.sourceName })
         catalogPage(raw, offset)
     }
     suspend fun details(title: Manga): Manga = withContext(Dispatchers.IO) {
-        require(title.source.name == scope.sourceName && title.contentRating == ContentRating.SAFE)
+        require(title.source.name == scope.sourceName && PrimaryProviderProfiles.permitsRating(scope.sourceName, title.contentRating))
         val result = parser.getDetails(title)
         check(result.source.name == scope.sourceName && result.id == title.id && result.url == title.url)
-        check((result.contentRating ?: title.contentRating) == ContentRating.SAFE)
+        check(PrimaryProviderProfiles.permitsRating(scope.sourceName, result.contentRating ?: title.contentRating))
         result.copy(contentRating = result.contentRating ?: title.contentRating)
     }
     suspend fun pages(title: Manga, chapter: MangaChapter): List<MangaPage> = withContext(Dispatchers.IO) {
-        require(title.source.name == scope.sourceName && title.contentRating == ContentRating.SAFE)
+        require(title.source.name == scope.sourceName && PrimaryProviderProfiles.permitsRating(scope.sourceName, title.contentRating))
         require(chapter.source.name == scope.sourceName && title.chapters.orEmpty().any { it == chapter })
         parser.getPages(chapter).also { pages -> check(pages.all { it.source.name == scope.sourceName }) }
     }
     suspend fun coverBytes(title: Manga): ByteArray? {
-        require(title.source.name == scope.sourceName && title.contentRating == ContentRating.SAFE)
+        require(title.source.name == scope.sourceName && PrimaryProviderProfiles.permitsRating(scope.sourceName, title.contentRating))
         val url = title.largeCoverUrl ?: title.coverUrl ?: return null
         return PageDelivery(scope, session).load(scope.requireUrl(url, "https://" + parser.domain + "/").toString())
     }

@@ -18,7 +18,7 @@ internal class MangaTitleMatchCache(private val prefs: SharedPreferences, privat
         val id = j.getString("id").takeIf { it.isNotBlank() && it.length <= 200 } ?: return null
         val name = j.getString("name").takeIf { it.isNotBlank() && it.length <= 500 } ?: return null
         val count = j.getInt("count").takeIf { it > 0 } ?: return null
-        MangaTitleMatch(MangaTitle(source.id, id, name, "", null), count)
+        MangaTitleMatch(MangaTitle(source.id, id, name, "", null, unrated = j.optBoolean("unrated", false)), count)
     }.getOrNull()
     fun put(reference: MangaTitle, source: MangaSource, revision: String, match: MangaTitleMatch) {
         if (match.title.sourceId != source.id || match.count <= 0 || match.title.id.length > 200 || match.title.title.length > 500) return
@@ -30,7 +30,7 @@ internal class MangaTitleMatchCache(private val prefs: SharedPreferences, privat
                 .take(entries.size - MAX_ENTRIES + 1).forEach { editor.remove(it.key) }
         }
         editor.putString(key, JSONObject().put("revision", revision).put("time", now())
-            .put("id", match.title.id).put("name", match.title.title).put("count", match.count).toString()).apply()
+            .put("id", match.title.id).put("name", match.title.title).put("count", match.count).put("unrated", match.title.unrated).toString()).apply()
     }
     fun forget(reference: MangaTitle, source: MangaSource) { prefs.edit().remove(key(reference, source)).apply() }
     fun last(reference: MangaTitle): String? = prefs.getString("last:" + reference.sourceId + ":" + reference.id, null)

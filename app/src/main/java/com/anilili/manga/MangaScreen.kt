@@ -607,7 +607,7 @@ private fun MangaDetails(title: MangaTitle, source: MangaSource, store: MangaRea
             val overview: @Composable () -> Unit = {
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (details.genres.isNotEmpty()) GenreRow(details.genres.distinct())
-                    if (details.unrated) Text("Publisher has not supplied an age rating for this title.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (details.unrated) Text("This provider has not supplied a content rating for this title.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Description(cleanMangaDescription(details.description))
                     Column(Modifier.fillMaxWidth().glassCard(RoundedCornerShape(18.dp)).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         listOf("Provider" to source.displayName, "Status" to details.status.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }, "Authors" to details.authors.joinToString(", "), "Alternative titles" to details.alternativeTitles.joinToString(" · "), (if (source.sampleOnly) "Reviewed chapters" else "Chapters") to (details.knownChapterCount ?: chapters.size.takeIf { it > 0 })?.toString().orEmpty()).filter { it.second.isNotBlank() }.forEach { (name, value) ->

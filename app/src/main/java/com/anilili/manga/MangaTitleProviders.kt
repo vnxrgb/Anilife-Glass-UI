@@ -40,9 +40,16 @@ internal fun titleMatches(reference: MangaTitle, candidate: MangaTitle): Boolean
 data class MangaTitleMatch(val title: MangaTitle, val count: Int)
 
 internal suspend fun matchProviderTitle(source: MangaSource, reference: MangaTitle): MangaTitleMatch? {
-    val candidates = source.search(reference.title, 20).filter { titleMatches(reference, it) }.distinctBy { it.id }
-    val candidate = candidates.singleOrNull() ?: return null
-    val prepared = source.prepareTitle(candidate)
+    val queries = (listOf(reference.title) + if (MangaProviderPolicy.isCurated(source.id)) reference.alternativeTitles else emptyList())
+        .filter { it.isNotBlank() }.distinctBy(::normalizedMangaName).take(2)
+    var candidate: MangaTitle? = null
+    for (query in queries) {
+        val candidates = source.search(query, 20).filter { titleMatches(reference, it) }.distinctBy { it.id }
+        if (candidates.size > 1) return null
+        if (candidates.size == 1) { candidate = candidates.single(); break }
+    }
+    val selected = candidate ?: return null
+    val prepared = source.prepareTitle(selected)
     if (!titleMatches(reference, prepared)) return null
     val chapters = source.chapters(prepared.id, "und")
     return if (chapters.isEmpty()) null else MangaTitleMatch(prepared, chapters.size)
@@ -128,14 +135,14 @@ internal fun MangaTitleProviders(title: MangaTitle, onChoose: (MangaTitle) -> Un
                     Icon(Icons.Default.Book, null, tint = MaterialTheme.colorScheme.primary)
                     Column(Modifier.weight(1f)) {
                         Text(match.source.displayName, style = MaterialTheme.typography.titleSmall)
-                        Text("${match.source.languageLabel()} · ${match.count} chapter entries" + if (match.cached) " · Previously found" else "", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("${match.source.languageLabel()} · ${match.count} chapter entries" + (if (match.title.unrated) " · Unrated" else "") + (if (match.cached) " · Previously found" else ""), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Icon(Icons.Default.ChevronRight, "View chapters")
                 }
             }
         }
         if (!busy && !state.discovering && matches.isEmpty()) Text(if (checked.isEmpty()) "No preferred sources for this language. Search other providers below." else "No matching chapter lists found in the sources checked.", style = MaterialTheme.typography.bodySmall)
-        if (!busy && checked.size < eligible.size) OutlinedButton(onClick = { pages++ }, modifier = Modifier.fillMaxWidth()) { Text("Search next ${minOf(TITLE_PROVIDER_BATCH, eligible.size - checked.size)} providers") }
+        if (!busy && checked.size < eligible.size) OutlinedButton(onClick = { batch++ }, modifier = Modifier.fillMaxWidth()) { Text("Search next ${minOf(TITLE_PROVIDER_BATCH, eligible.size - checked.size)} providers") }
         if (!busy && matches.any { it.cached }) TextButton(onClick = { batch = 0; refresh++ }) { Text("Refresh preferred matches") }
         Text("${checked.size} of ${eligible.size} matching-language providers checked or remembered", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

@@ -22,11 +22,9 @@ internal data class LiveProviderProfile(val scope: SourceScope, val label: Strin
  * Discover technical candidates from the pinned parser bundle without network I/O.
  * Known multi-host providers retain narrowly scoped CDN overrides. */
 internal object LiveProviderProfiles {
-    private val known = listOf(
-        LiveProviderProfile(SourceScope("ATSUMOE", setOf("atsu.moe", "cdn.atsu.moe"), imageRedirectHosts = setOf("cdn.atsu.moe")), "Atsu", "en", probeTitle = "Chico", probeChapter = 3f),
-        LiveProviderProfile(SourceScope("MANGADEX", setOf("mangadex.org", "api.mangadex.org", "uploads.mangadex.org", "mangadex.network"), setOf("mangadex.network"), imageRedirectHosts = setOf("uploads.mangadex.org")), "MangaDex"),
-        LiveProviderProfile(SourceScope("COMICK_FUN", setOf("comick.live", "comick.art")), "ComicK")
-    ).associateBy { it.scope.sourceName }
+    private val known = (PrimaryProviderProfiles.profiles + LiveProviderProfile(
+        SourceScope("COMICK_FUN", setOf("comick.live", "comick.art")), "ComicK"
+    )).associateBy { it.scope.sourceName }
     private val discovered by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { discover(ParserRegistry()) }
     val all: List<LiveProviderProfile> get() = discovered
     internal fun domain(value: String): String? {
@@ -57,7 +55,7 @@ internal object LiveProviderProfiles {
                 } catch (e: LinkageError) { null }
                 catch (e: Exception) { null }
             }.sortedWith(compareBy<LiveProviderProfile> {
-                when (it.scope.sourceName) { "ATSUMOE" -> 0; "MANGADEX" -> 1; "COMICK_FUN" -> 2; else -> if (it.locale.substringBefore('-').substringBefore('_') == "en") 3 else 4 }
+                PrimaryProviderProfiles.ids.indexOf(it.scope.sourceName).takeIf { rank -> rank >= 0 } ?: if (it.locale.substringBefore('-').substringBefore('_') == "en") 10 else 11
             }.thenBy { it.label }.thenBy { it.scope.sourceName }).toList()
 }
 
@@ -68,7 +66,7 @@ public class ReviewedCatalog private constructor(
 ) : Closeable {
     public data class Provider(val id: String, val label: String, val locale: String, val category: String)
     public data class Title(val id: String, val name: String, val description: String, val genres: List<String>,
-        val authors: List<String>, val status: String, val alternatives: List<String>, val hasReadingGrant: Boolean)
+        val authors: List<String>, val status: String, val alternatives: List<String>, val hasReadingGrant: Boolean, val unrated: Boolean = false)
     public data class Chapter(val id: String, val titleId: String, val label: String, val number: String?, val scanlator: String?)
     public data class Listing(val items: List<Title>, val nextOffset: Int?)
     private val gate = Mutex()
@@ -93,7 +91,7 @@ public class ReviewedCatalog private constructor(
         }
     }
     private fun present(title: ReaderSessionBridge.Title) = Title(title.id, title.title, title.raw.description.orEmpty(), title.genres,
-        title.authors, title.status.orEmpty(), title.alternativeTitles, true)
+        title.authors, title.status.orEmpty(), title.alternativeTitles, true, title.raw.contentRating == null)
     public suspend fun genres(): List<String> = gate.withLock { active(); bridge.catalogueGenres() }
     public suspend fun kinds(): List<String> = gate.withLock { active(); bridge.catalogueKinds() }
     public suspend fun list(query: String, offset: Int, limit: Int, genre: String? = null, recent: Boolean = false, kind: String? = null): Listing = gate.withLock {
@@ -147,7 +145,7 @@ public class ReviewedCatalog private constructor(
     }
     override fun close() { closed = true; bridge.close() }
     public companion object {
-        public fun compatibilityRevision(): String = ParserRegistry().revision + ":compat-3"
+        public fun compatibilityRevision(): String = ParserRegistry().revision + ":compat-4"
         public suspend fun providers(): List<Provider> = withContext(Dispatchers.IO) {
             LiveProviderProfiles.all.map { Provider(it.scope.sourceName, it.label, it.locale, it.category) }
         }

@@ -18,6 +18,12 @@ class MangaProviderPolicyTest {
         assertEquals(listOf(pinned.id, atsu.id, dex.id), MangaProviderPolicy.primary(ordered, setOf(pinned.id), emptyMap(), null).map { it.id })
         assertTrue(MangaProviderPolicy.primary(listOf(other), emptySet(), emptyMap(), null).isEmpty())
     }
+    @Test fun himmyInspiredPrimarySetIncludesAllFive() {
+        val ids = listOf(REVIEWED_SOURCE_ID, "engine:WEEBCENTRAL", "engine:MANGADEX", "engine:MANGAPILL", "engine:MANGAKATANA")
+        val sources = ids.map { source(it, it) }
+        val ordered = MangaProviderPolicy.order(sources.reversed(), emptySet(), emptyMap(), null)
+        assertEquals(ids, MangaProviderPolicy.primary(ordered, emptySet(), emptyMap(), null).map { it.id })
+    }
     @Test fun positiveCacheExpiresAfterSevenDays() {
         assertTrue(MangaTitleMatchCache.fresh(1000, 1000 + MangaTitleMatchCache.TTL - 1))
         assertFalse(MangaTitleMatchCache.fresh(1000, 1000 + MangaTitleMatchCache.TTL))
