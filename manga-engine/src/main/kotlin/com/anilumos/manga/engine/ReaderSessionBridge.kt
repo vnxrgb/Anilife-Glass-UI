@@ -71,7 +71,9 @@ internal class ReaderSessionBridge private constructor(
     /** Caller owns the bounded decoded bitmap; the Compose reader must recycle it on disposal. */
     suspend fun decode(page: Page, width: Int = 2048, height: Int = 4096): Bitmap = lock.withLock {
         owned(page.owner)
-        repository.decodePage(page.raw, width, height)
+        val bitmap = repository.decodePage(page.raw, width, height)
+        if (closed) { bitmap.recycle(); error("Reader session closed") }
+        bitmap
     }
     override fun close() {
         closed = true
