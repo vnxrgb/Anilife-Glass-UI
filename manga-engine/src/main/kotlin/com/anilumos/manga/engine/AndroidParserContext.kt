@@ -25,12 +25,12 @@ internal class AndroidParserContext(
     override fun getConfig(source: MangaSource): MangaSourceConfig = sourceConfig
     @Deprecated("Provide base URL")
     override suspend fun evaluateJs(script: String): String? =
-        throw UnsupportedOperationException("Browser execution is not enabled in this phase")
+        throw ProviderFeatureException(UnsupportedFeature.BROWSER_EXECUTION)
     override suspend fun evaluateJs(baseUrl: String, script: String, timeout: Long): String? =
-        throw UnsupportedOperationException("Browser execution is not enabled in this phase")
+        throw ProviderFeatureException(UnsupportedFeature.BROWSER_EXECUTION)
     override fun redrawImageResponse(response: Response, redraw: (Bitmap) -> Bitmap): Response =
-        throw UnsupportedOperationException("Parser image transformation is not enabled in this phase")
+        throw ProviderFeatureException(UnsupportedFeature.PARSER_IMAGE_TRANSFORM)
     override fun createBitmap(width: Int, height: Int): Bitmap =
-        throw UnsupportedOperationException("Parser image transformation is not enabled in this phase")
+        throw ProviderFeatureException(UnsupportedFeature.PARSER_IMAGE_TRANSFORM)
 
 }

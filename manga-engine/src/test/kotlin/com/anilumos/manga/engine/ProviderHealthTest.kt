@@ -20,6 +20,32 @@ class ProviderHealthTest {
         health.check("a") { ProviderState.READY }
         assertTrue(health.visible("a"))
     }
+    @Test fun diagnosticStagesDifferentiateImageFailureAndRestriction() = runBlocking {
+        val health = ProviderHealth { 123L }
+        val image = health.checkStaged("image") { stage ->
+            stage(ProbeStage.IMAGE_DECODE)
+            throw IOException("fixture secret URL")
+        }
+        assertEquals(ProviderState.IMAGE_ERROR, image.state)
+        assertEquals(ProbeStage.IMAGE_DECODE, image.stage)
+        val restricted = health.checkStaged("restricted") { stage ->
+            stage(ProbeStage.PAGE_DOWNLOAD)
+            throw ProviderAccessException(429)
+        }
+        assertEquals(429, restricted.httpStatus)
+        assertEquals(ProbeStage.PAGE_DOWNLOAD, restricted.stage)
+        val browser = health.checkStaged("browser") { stage ->
+            stage(ProbeStage.SELECT_TITLE)
+            throw ProviderFeatureException(UnsupportedFeature.BROWSER_EXECUTION)
+        }
+        assertEquals(ProviderState.UNSUPPORTED, browser.state)
+        assertEquals(UnsupportedFeature.BROWSER_EXECUTION, browser.feature)
+        assertFalse(health.snapshot().toString().contains("fixture secret URL"))
+        health.checkStaged("good") { ProviderState.READY }
+        assertTrue(health.visible("good"))
+        assertEquals(ProbeStage.COMPLETE, health.snapshot()["good"]?.stage)
+        assertFalse(health.visible("image"))
+    }
     @Test fun restrictionsUnsupportedAndCancellationAreDistinct() = runBlocking {
         val health = ProviderHealth()
         assertEquals(ProviderState.RESTRICTED, health.check("a") { throw ProviderAccessException(429) }.state)
