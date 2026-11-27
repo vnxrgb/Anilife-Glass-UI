@@ -77,8 +77,10 @@ jobs:
         run: |
           set -euo pipefail
           sudo chmod a+rw /dev/kvm
+          sdkmanager 'emulator' 'platform-tools' 'system-images;android-30;default;x86_64'
+          test -x "$ANDROID_HOME/emulator/emulator"
+          "$ANDROID_HOME/emulator/emulator" -version
           "$ANDROID_HOME/emulator/emulator" -accel-check
-          sdkmanager 'platform-tools' 'system-images;android-30;default;x86_64'
           echo no | avdmanager create avd --force --name manga-ci --package 'system-images;android-30;default;x86_64'
           "$ANDROID_HOME/emulator/emulator" -list-avds
       - name: Run isolated Android instrumentation tests
@@ -88,7 +90,7 @@ jobs:
           export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
           log="$RUNNER_TEMP/manga-emulator.log"
           adb start-server
-          emulator -avd manga-ci -port 5554 -no-window -no-audio -no-boot-anim -gpu swiftshader -no-snapshot -no-metrics -memory 2048 -cores 2 > "$log" 2>&1 &
+          "$ANDROID_HOME/emulator/emulator" -avd manga-ci -port 5554 -no-window -no-audio -no-boot-anim -gpu swiftshader -no-snapshot -no-metrics -memory 2048 -cores 2 > "$log" 2>&1 &
           emulator_pid=$!
           cleanup() {
             result=$?
