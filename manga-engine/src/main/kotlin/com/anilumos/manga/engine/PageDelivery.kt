@@ -36,22 +36,22 @@ internal class PageDelivery(private val scope: SourceScope, private val session:
             return next
         }
         internal fun readImage(response: Response): ByteArray {
-            if (!response.isSuccessful) throw IOException("Image HTTP ${response.code}")
+            if (!response.isSuccessful) throw ProviderCompatibilityException("IMAGE_HTTP_ERROR", ProbeStage.PAGE_DOWNLOAD.name, response.code)
             val body = response.body
             val type = body.contentType()
             val format = type?.takeIf { it.type == "image" }?.subtype
             val genericBinary = type == null || (type.type == "application" && type.subtype == "octet-stream")
             if (!genericBinary && format !in setOf("jpeg", "png", "webp", "gif", "avif"))
-                throw IOException("Unsupported image content")
-            if (body.contentLength() > MAX_BYTES) throw IOException("Image exceeds size limit")
+                throw ProviderCompatibilityException("IMAGE_CONTENT_TYPE", ProbeStage.PAGE_DOWNLOAD.name)
+            if (body.contentLength() > MAX_BYTES) throw ProviderCompatibilityException("IMAGE_SIZE_LIMIT", ProbeStage.PAGE_DOWNLOAD.name)
             val input = body.source()
             input.request(MAX_BYTES.toLong() + 1)
-            if (input.buffer.size > MAX_BYTES) throw IOException("Image exceeds size limit")
+            if (input.buffer.size > MAX_BYTES) throw ProviderCompatibilityException("IMAGE_SIZE_LIMIT", ProbeStage.PAGE_DOWNLOAD.name)
             val bytes = input.readByteArray()
-            if (bytes.isEmpty()) throw IOException("Empty image")
+            if (bytes.isEmpty()) throw ProviderCompatibilityException("EMPTY_IMAGE", ProbeStage.PAGE_DOWNLOAD.name)
             if (genericBinary) {
-                if (listOf("jpeg", "png", "webp", "gif", "avif").none { matchesImageHeader(bytes, it) }) throw IOException("Image signature mismatch")
-            } else if (!matchesImageHeader(bytes, requireNotNull(format))) throw IOException("Image signature mismatch")
+                if (listOf("jpeg", "png", "webp", "gif", "avif").none { matchesImageHeader(bytes, it) }) throw ProviderCompatibilityException("IMAGE_SIGNATURE_MISMATCH", ProbeStage.PAGE_DOWNLOAD.name)
+            } else if (!matchesImageHeader(bytes, requireNotNull(format))) throw ProviderCompatibilityException("IMAGE_SIGNATURE_MISMATCH", ProbeStage.PAGE_DOWNLOAD.name)
             return bytes
         }
         // Header validation is not a substitute for full Android image decoding.
