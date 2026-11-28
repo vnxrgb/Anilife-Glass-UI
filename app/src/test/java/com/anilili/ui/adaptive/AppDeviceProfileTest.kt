@@ -33,7 +33,9 @@ class AppDeviceProfileTest {
         val tablet = resolveAppDeviceProfile(Configuration.UI_MODE_TYPE_NORMAL, 700)
         assertEquals(4, tablet.homePosterColumns(652.dp, 9.dp))
         assertEquals(3, tablet.homePosterColumns(420.dp, 9.dp))
-        assertEquals(2, tablet.homePosterColumns(270.dp, 9.dp))
+        // Two 132 dp cards plus a 9 dp gap need 273 dp of content width.
+        assertEquals(1, tablet.homePosterColumns(270.dp, 9.dp))
+        assertEquals(2, tablet.homePosterColumns(273.dp, 9.dp))
     }
 
     @Test
